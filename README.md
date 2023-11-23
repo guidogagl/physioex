@@ -9,6 +9,8 @@ InterSleep currently support the [Sequence-to-Sequence](https://iopscience.iop.o
 SS models take as input a sequence of L input sleep epochs and process them using two Encoders, an epoch Encoder and a sequence encoder. The epoch encoder acts as an epoch-wise feature extractor which transforms an input epoch in the input sequence into an epoch-feature vector for
 representation. As a result, the input sequence is transformed into a sequence of feature vectors. Then the epochs sequence is processed using a sequence encoder which takes as input L-feature vectors and produce as output L-features vectors using a RNN aproach to represent intra-sequences information. Then the models provide as output L classes.
 
+[![Sequence-to-Sequence framework](img/ss-framework.jpg)](https://iopscience.iop.org/article/10.1088/1361-6579/ac6049/meta)
+
 The supported models in the SS framework are:
 - [TinySleepNet](https://github.com/akaraspt/tinysleepnet)
 
