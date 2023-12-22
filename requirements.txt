@@ -1,0 +1,11 @@
+moabb
+braindecode
+pyyaml
+loguru
+
+lightning
+rich
+pytorch_metric_learning
+
+boto3
+h5py
