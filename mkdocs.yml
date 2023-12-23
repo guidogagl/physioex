@@ -3,15 +3,15 @@ site_url: https://guidogagl.github.io/physioex/
 nav:
     - Home: index.md
     - Train: train.md
-    - Explain: page2.md
-    - Data: page2.md
-    - Examples: page2.md
-    - Contribute: page2.md
+    - Explain: unavailable.md
+    - Data: unavailable.md
+    - Examples: unavailable.md
+    - Contribute: unavailable.md
 theme:
   name: material
+  favicon: fontawesome/solid/kiwi-bird
   icon:
     logo: fontawesome/solid/kiwi-bird
-    favicon: fontawesome/solid/kiwi-bird
   features:
     - navigation.tabs
     - navigation.sections

@@ -31,13 +31,14 @@ Currently, there are two experiments available in the repository:
 - `chambon2018`: This experiment uses the [Chambon2018](https://ieeexplore.ieee.org/document/8307462) model for sleep stage classification.
 - `tinysleepnet`: This experiment uses the [TinySleepNet](https://github.com/akaraspt/tinysleepnet)
  model for sleep stage classification.
+
 To run an experiment, use the `-e` or `--experiment` argument followed by the name of the experiment. For example:
 
 ```bash
 train --experiment chambon2018
 ```
 ### Dataset-experiment compatibility
-|               | PhysioNet | Dreem |
+|               | SleepPhysioNet | Dreem |
 |---------------|:---------:|:-----:|
 | chambon2018   |     ✔️     |   ✔️   |
 | tinysleepnet  |     ✔️     |   ✔️   |

@@ -1,3 +1,5 @@
+<i class="fa-solid fa-kiwi-bird"></i>
+
 # Homepage
 
 For full documentation visit [mkdocs.org](https://www.mkdocs.org).
