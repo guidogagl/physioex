@@ -9,7 +9,7 @@ nav:
     - Contribute: unavailable.md
 theme:
   name: material
-  favicon: assets/images/favicon.png
+  favicon: assets/images/logo.svg
   icon:
     logo: fontawesome/solid/kiwi-bird
   features:
