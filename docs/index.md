@@ -1,5 +1,5 @@
-![Alt text](./img/logo.svg)
-<img src="./img/logo.svg">
+![Alt text](img/logo.svg)
+<img src="img/logo.svg">
 
 # Homepage
 
