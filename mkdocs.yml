@@ -34,9 +34,9 @@ extra:
   social:
     - icon: fontawesome/brands/github-alt
       link: https://github.com/guidogagl
-    - icon: fontawesome/brands/globe
+    - icon: fontawesome/solid/globe
       link: https://guidogagl.github.io/
-    #- icon: fontawesome/brands/scholar
+    - icon: fontawesome/brands/google-scholar
     #  link: https://scholar.google.com/citations?hl=en&user=8EczeSIAAAAJ&view_op=list_works&authuser=1&gmla=AH70aAXBbb_-rGzDj_dBksWED8IN9ZEu82KU8sbVIEl7KzRmvje06i4p0K4QxpdLOhJnQFneN4VMBPIkc99NwVe0
 
 markdown_extensions:
