@@ -9,3 +9,5 @@ pytorch_metric_learning
 
 boto3
 h5py
+
+mkdocs-material
