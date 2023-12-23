@@ -9,6 +9,8 @@ nav:
     - Contribute: page2.md
 theme:
   name: material
+  icon:
+    logo: fontawesome/solid/kiwi-bird
   features:
     - navigation.tabs
     - navigation.sections
@@ -21,13 +23,15 @@ theme:
     - content.code.copy
   language: en
   palette:
-    primary: red
-    accent: red
+    scheme: slate
+    primary: pink
+    accent: pink
 
 repo_name: guidogagl/physioex
 repo_url: https://github.com/guidogagl/physioex
 
 plugins:
+  - search
   - social
 
 extra:
