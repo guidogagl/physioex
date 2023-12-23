@@ -171,7 +171,15 @@ class Classifier(nn.Module):
         x = x.reshape(batch_size, seq_len, -1)
         # x = torch.permute(x, (0, 2, 1))
         return x
+    
+    def encode(self, x):
+        batch_size, seq_len, feature_size = x.size()
+        x, _ = self.rnn(x)
+        x = x.reshape(-1, self.config["n_rnn_units"])
 
+        x = self.rnn_dropout(x)
+        x = x.reshape(batch_size, seq_len, -1)
+        return x
 
 class TinySleepNet( SeqtoSeq ):
     def __init__(self, module_config = module_config):

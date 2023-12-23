@@ -28,6 +28,16 @@ class SeqtoSeqModule( nn.Module ):
         
         return self.decoder(x)
 
+    def encode(self, x):
+        batch_size, sequence_lenght, modalities, input_dim = x.size()        
+
+        x = x.reshape(batch_size * sequence_lenght, modalities, input_dim)
+        x = self.encoder(x)
+
+        x = x.reshape( batch_size, sequence_lenght, -1)
+        
+        return self.decoder.encode(x), self.decoder(x)
+
 
 class SeqtoSeq(pl.LightningModule):
     def __init__(
@@ -51,7 +61,10 @@ class SeqtoSeq(pl.LightningModule):
 
     def forward(self, x):
         return self.nn(x)
-
+    
+    def encode(self, x):
+        return self.nn.encode(x)
+    
     def compute_loss(
         self, outputs, targets, log: str = "train", log_metrics: bool = False
     ):
