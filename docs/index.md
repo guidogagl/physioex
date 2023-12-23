@@ -1,5 +1,4 @@
-![Alt text](assets/images/favicon.png)
-<img src="assets/images/favicon.png">
+<img src="assets/images/logo.svg", width="150" height="150">
 
 # Homepage
 
