@@ -1,4 +1,5 @@
-<i class="fa-solid fa-kiwi-bird"></i>
+![Alt text](./img/logo.svg)
+<img src="./img/logo.svg">
 
 # Homepage
 
