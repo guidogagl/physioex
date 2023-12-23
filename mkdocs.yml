@@ -1,5 +1,12 @@
 site_name: PhysioEx 
 site_url: https://guidogagl.github.io/physioex/
+nav:
+    - Home: index.md
+    - Train: page2.md
+    - Explain: page2.md
+    - Data: page2.md
+    - Examples: page2.md
+    - Contribute: page2.md
 theme:
   name: material
   features:
