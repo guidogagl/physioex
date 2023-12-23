@@ -2,7 +2,7 @@ site_name: PhysioEx
 site_url: https://guidogagl.github.io/physioex/
 nav:
     - Home: index.md
-    - Train: page2.md
+    - Train: train.md
     - Explain: page2.md
     - Data: page2.md
     - Examples: page2.md
@@ -11,6 +11,7 @@ theme:
   name: material
   icon:
     logo: fontawesome/solid/kiwi-bird
+    favicon: fontawesome/solid/kiwi-bird
   features:
     - navigation.tabs
     - navigation.sections
