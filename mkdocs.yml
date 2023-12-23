@@ -14,18 +14,11 @@ theme:
     - content.code.copy
   language: en
   palette:
-    - scheme: default
-      toggle:
-        icon: material/toggle-switch-off-outline 
-        name: Switch to dark mode
-      primary: teal
-      accent: purple 
-    - scheme: slate 
-      toggle:
-        icon: material/toggle-switch
-        name: Switch to light mode    
-      primary: teal
-      accent: lime
+    primary: red
+    accent: red
+
+repo_name: guidogagl/physioex
+repo_url: https://github.com/guidogagl/physioex
 
 plugins:
   - social
@@ -51,7 +44,12 @@ markdown_extensions:
   - pymdownx.details
   - pymdownx.superfences
   - pymdownx.mark
+  - pymdownx.highlight
+  - pymdownx.superfences 
+  - toc:
+      permalink: true
   - attr_list
+
   - pymdownx.emoji:
       emoji_index: !!python/name:materialx.emoji.twemoji
       emoji_generator: !!python/name:materialx.emoji.to_svg
