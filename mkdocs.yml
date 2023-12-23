@@ -36,8 +36,8 @@ extra:
       link: https://github.com/guidogagl
     - icon: fontawesome/brands/globe
       link: https://guidogagl.github.io/
-    - icon: fontawesome/brands/scholar
-      link: https://scholar.google.com/citations?hl=en&user=8EczeSIAAAAJ&view_op=list_works&authuser=1&gmla=AH70aAXBbb_-rGzDj_dBksWED8IN9ZEu82KU8sbVIEl7KzRmvje06i4p0K4QxpdLOhJnQFneN4VMBPIkc99NwVe0
+    #- icon: fontawesome/brands/scholar
+    #  link: https://scholar.google.com/citations?hl=en&user=8EczeSIAAAAJ&view_op=list_works&authuser=1&gmla=AH70aAXBbb_-rGzDj_dBksWED8IN9ZEu82KU8sbVIEl7KzRmvje06i4p0K4QxpdLOhJnQFneN4VMBPIkc99NwVe0
 
 markdown_extensions:
   - pymdownx.highlight:
@@ -56,7 +56,6 @@ markdown_extensions:
   - toc:
       permalink: true
   - attr_list
-
   - pymdownx.emoji:
       emoji_index: !!python/name:materialx.emoji.twemoji
       emoji_generator: !!python/name:materialx.emoji.to_svg
