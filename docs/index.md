@@ -1,5 +1,5 @@
-![Alt text](img/logo.svg)
-<img src="img/logo.svg">
+![Alt text](assets/images/favicon.png)
+<img src="assets/images/favicon.png">
 
 # Homepage
 
