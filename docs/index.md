@@ -1,4 +1,5 @@
-# :fontawesome-solid-kiwi-bird: Homepage
+:fontawesome-solid-kiwi-bird:{.logo}
+# PhysioEx
 
 For full documentation visit [mkdocs.org](https://www.mkdocs.org).
 
