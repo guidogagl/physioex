@@ -63,7 +63,7 @@ The train command is used to train models. Here are the available arguments:
 <img src="evaluations/ccl_seqlen=3.svg" alt="results table" width="100%"/>
 ///
 
-i
+
 /// tab | similarity models
 <img src="evaluations/scl_seqlen=3.svg" alt="results table" width="100%"/>
 ///
