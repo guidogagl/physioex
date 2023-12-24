@@ -60,8 +60,7 @@ The train command is used to train models. Here are the available arguments:
 ### Sequence Lenght: 3
 
 === "Standard models"
-    <img src="docs/evaluations/ccl_seqlen=3.svg" alt="results table" width="100%"/>
-
+    ![results table](evaluations/ccl_seqlen=3.svg){ width="100%" }
 
 === "Similarity models"
-    <img src="docs/evaluations/scl_seqlen=3.svg" alt="results table" width="100%"/>
+    ![results table](evaluations/scl_seqlen=3.svg){ width="100%" }

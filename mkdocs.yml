@@ -46,6 +46,7 @@ extra:
 markdown_extensions:
   - pymdownx.highlight:
       anchor_linenums: true
+  - md_in_html
   - pymdownx.inlinehilite
   - pymdownx.snippets
   - admonition
