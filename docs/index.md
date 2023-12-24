@@ -1,4 +1,4 @@
-<i class="fa fa-gear fa-spin fa-2x" style="color: firebrick"></i> Configuration
+![fa-icon](https://fontawesome.com/icons/kiwi-bird)
 
 # Homepage
 
