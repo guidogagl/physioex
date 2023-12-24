@@ -1,4 +1,4 @@
-:fontawesome-solid-kiwi-bird:{.logo}
+<img src="images/logo.png" alt="PhysioEx Logo">
 # PhysioEx
 
 For full documentation visit [mkdocs.org](https://www.mkdocs.org).
