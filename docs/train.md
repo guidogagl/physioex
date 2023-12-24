@@ -55,3 +55,11 @@ The train command is used to train models. Here are the available arguments:
 - `-me`, `--max_epoch`: Specify the maximum number of epochs for training. Expected `type: int`. `Default: 20`.
 - `-vci`, `--val_check_interval`: Specify the validation check interval during training. Expected `type: int`. `Default: 300`.
 - `-bs`, `--batch_size`: Specify the batch size for training. Expected `type: int`. `Default: 32`.
+
+## Experimental Results
+
+### sequence-lenght = 3, standard models
+![results table](evaluations/ccl_seqlen=3.svg)
+
+### sequence-lenght = 3, similarity models
+![results table](evaluations/scl_seqlen=3.svg)
