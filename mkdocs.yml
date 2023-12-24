@@ -18,10 +18,8 @@ theme:
     favicon: fontawesome/solid/kiwi-bird
     logo: fontawesome/solid/kiwi-bird
   features:
-    - navigation.sections
     - navigation.path
     - navigation.top
-    - toc.integrate
     - search.suggest
     - search.highlight
     - content.tabs.link
