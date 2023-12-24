@@ -7,7 +7,7 @@ nav:
     - Data: unavailable.md
     - Examples: 
       - Visualize Latent Space: examples/latent_space_visualization.md
-    - Contribute: unavailable.md
+    - Contribute: contribute.md
 theme:
   name: material
   palette:
@@ -56,13 +56,13 @@ markdown_extensions:
   - pymdownx.superfences
   - pymdownx.mark
   - pymdownx.highlight
-  - pymdownx.superfences 
   - toc:
       permalink: true
   - attr_list
   - pymdownx.emoji:
       emoji_index: !!python/name:materialx.emoji.twemoji
       emoji_generator: !!python/name:materialx.emoji.to_svg
+  - admonition
 
 copyright: |
   &copy; 2023 <a href="https://github.com/guidogagl"  target="_blank" rel="noopener">Guido Gagliardi</a>
