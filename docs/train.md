@@ -57,11 +57,11 @@ The train command is used to train models. Here are the available arguments:
 - `-bs`, `--batch_size`: Specify the batch size for training. Expected `type: int`. `Default: 32`.
 
 ## Experimental Results
-### sequence-lenght = 3
+### Sequence Lenght: 3
 
 === "Standard models"
-    <img src="evaluations/ccl_seqlen=3.svg" alt="results table" width="100%"/>
+    <img src="docs/evaluations/ccl_seqlen=3.svg" alt="results table" width="100%"/>
 
 
 === "Similarity models"
-    <img src="evaluations/scl_seqlen=3.svg" alt="results table" width="100%"/>
+    <img src="docs/evaluations/scl_seqlen=3.svg" alt="results table" width="100%"/>
