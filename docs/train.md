@@ -58,8 +58,10 @@ The train command is used to train models. Here are the available arguments:
 
 ## Experimental Results
 
-### sequence-lenght = 3, standard models
-![results table](evaluations/ccl_seqlen=3.svg)
-
-### sequence-lenght = 3, similarity models
-![results table](evaluations/scl_seqlen=3.svg)
+### sequence-lenght = 3
+/// tab | standard models
+<img src="evaluations/ccl_seqlen=3.svg" alt="results table" width="100%"/>
+///
+/// tab | similarity models
+<img src="evaluations/scl_seqlen=3.svg" alt="results table" width="100%"/>
+///
