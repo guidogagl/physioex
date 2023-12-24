@@ -1,8 +1,9 @@
 <div style = "text-align: center;">
 <img src="images/logo.svg" alt="PhysioEx Logo">
 
-# PhysioEx
+<h1> PhysioEx </h1>
 </div>
+
 For full documentation visit [mkdocs.org](https://www.mkdocs.org).
 
 ## Code Annotation Examples
