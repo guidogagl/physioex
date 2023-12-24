@@ -1,6 +1,4 @@
-![fa-icon](https://fontawesome.com/icons/kiwi-bird)
-
-# Homepage
+# :fontawesome-solid-kiwi-bird: Homepage
 
 For full documentation visit [mkdocs.org](https://www.mkdocs.org).
 
