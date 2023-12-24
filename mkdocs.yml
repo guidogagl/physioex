@@ -17,10 +17,10 @@ theme:
   favicon: assets/images/logo.svg
   logo: assets/images/logo.svg
   features:
-    - navigation.tabs
     - navigation.sections
-    - toc.integrate
+    - navigation.path
     - navigation.top
+    - toc.integrate
     - search.suggest
     - search.highlight
     - content.tabs.link
