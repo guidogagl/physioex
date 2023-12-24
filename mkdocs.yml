@@ -15,7 +15,7 @@ theme:
     primary: pink
     accent: pink
   favicon: assets/images/logo.svg
-  logo: fontawesome/solid/kiwi-bird
+  logo: assets/images/logo.svg
   features:
     - navigation.tabs
     - navigation.sections
