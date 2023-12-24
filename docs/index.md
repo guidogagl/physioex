@@ -1,4 +1,4 @@
-<img src="images/logo.png" alt="PhysioEx Logo">
+<img src="images/logo.svg" alt="PhysioEx Logo">
 # PhysioEx
 
 For full documentation visit [mkdocs.org](https://www.mkdocs.org).
