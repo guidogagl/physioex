@@ -5,13 +5,17 @@ nav:
     - Train: train.md
     - Explain: unavailable.md
     - Data: unavailable.md
-    - Examples: unavailable.md
+    - Examples: 
+      - Visualize Latent Space: examples/latent_space_visualization.md
     - Contribute: unavailable.md
 theme:
   name: material
+  palette:
+    scheme: slate
+    primary: pink
+    accent: pink
   favicon: assets/images/logo.svg
-  icon:
-    logo: fontawesome/solid/kiwi-bird
+  logo: fontawesome/solid/kiwi-bird
   features:
     - navigation.tabs
     - navigation.sections
@@ -23,11 +27,7 @@ theme:
     - content.code.annotation
     - content.code.copy
   language: en
-  palette:
-    scheme: slate
-    primary: pink
-    accent: pink
-
+  
 repo_name: guidogagl/physioex
 repo_url: https://github.com/guidogagl/physioex
 
