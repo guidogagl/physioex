@@ -1,4 +1,4 @@
-<i class="fa-solid fa-kiwi-bird fa-10x"></i>
+:fontawesome-solid-kiwi-bird-10x:
 
 # Homepage
 
