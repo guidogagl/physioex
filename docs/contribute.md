@@ -12,6 +12,17 @@ An additional method of contribution involves reporting any issues you encounter
 
 <iframe src="https://ghbtns.com/github-btn.html?user=guidogagl&repo=physioex&type=star&count=true&size=large" frameborder="0" scrolling="0" width="170" height="30" title="GitHub"></iframe>
 
+### Adviced contributing fields
+
+1. Adding support for a new physiological signal dataset (e.g. checking [PhysioNet](https://physionet.org) or [MOABB](https://moabb.neurotechx.com/docs/))
+2. Adding support for a new deep learning architecture for physiological signal analysis.
+3. Proposing a novel Explainable AI algorithm.
+
+Consider also this other very important fields of contribution:
+
+- Documentation improving, note: check the official [MkDocs Material doc](https://squidfunk.github.io/mkdocs-material/). as reference.
+- Code improving and issues solving.
+
 ## How to Contribute
 
 We welcome contributions from everyone. PhysioEx is a GitHub hosted libray, to know more about GitHub collaborative devolpment check their [ufficial doc](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/getting-started/about-collaborative-development-models).To get started, follow these steps:
