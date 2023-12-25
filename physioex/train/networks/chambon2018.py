@@ -46,7 +46,7 @@ class Chambon2018Net( SeqtoSeq ):
         super(Chambon2018Net, self).__init__(None, None, module_config)
 
         encoder = SleepStagerChambon2018(
-            n_channels = module_config["n_channels"],
+            n_chans = module_config["n_channels"],
             sfreq = module_config["sfreq"], 
             n_outputs= module_config["n_classes"],
             n_times=module_config["n_times"],

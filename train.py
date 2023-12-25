@@ -9,7 +9,7 @@ def main():
     parser.add_argument('-ckpt', '--chekpoint', default=None, type = str, help='Specify where to save the checkpoint. Expected type: str. Default: None')
     
     # dataset args
-    parser.add_argument('-d', '--dataset', default='SleepPhysionet', type = str, help='Specify the dataset to use. Expected type: str. Default: "SleepPhysionet"')
+    parser.add_argument('-d', '--dataset', default='sleep_physionet', type = str, help='Specify the dataset to use. Expected type: str. Default: "SleepPhysionet"')
     parser.add_argument('-v', '--version', default='2018', type = str, help='Specify the version of the dataset. Expected type: str. Default: "2018"')
     parser.add_argument('-c', '--use_cache', default=True, type = bool, help='Specify whether to use cache for the dataset. Expected type: bool. Default: True')
     
@@ -28,9 +28,9 @@ def main():
     Trainer(                
         model_name = args.experiment, 
         dataset_name = args.dataset, 
-        ckp_path = args.ckp_path,
+        ckp_path = args.chekpoint,
         version = args.version, 
-        use_cache = args.cache, 
+        use_cache = args.use_cache, 
         sequence_lenght  = args.sequence_lenght, 
         max_epoch = args.max_epoch, 
         val_check_interval = args.val_check_interval, 

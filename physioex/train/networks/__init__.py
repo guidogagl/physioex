@@ -1,5 +1,5 @@
-from physioex.train.networks.tinysleepnet import TinySleepNet, ContrTinySleepNet
-from physioex.train.networks.chambon2018 import Chambon2018Net, ContrChambon2018Net
+from physioex.train.networks.tinysleepnet import TinySleepNet, ContrTinySleepNet,target_transforms as tiny_target, inpunt_transforms as tiny_input
+from physioex.train.networks.chambon2018 import Chambon2018Net, ContrChambon2018Net, target_transforms as chambon2018_target, inpunt_transforms as chambon2018_input
 
 import physioex as physioex
 
@@ -24,15 +24,15 @@ models = {
 }
 
 target_transform = {
-    "tinysleepnet": physioex.train.networks.tinysleepnet.target_transform,
-    "contr_tinysleepnet": physioex.train.networks.tinysleepnet.target_transform,
-    "chambon2018": physioex.train.networks.chambon2018.target_transform,
-    "contr_chambon2018": physioex.train.networks.chambon2018.target_transform
+    "tinysleepnet": tiny_target,
+    "contr_tinysleepnet": tiny_target,
+    "chambon2018": chambon2018_target,
+    "contr_chambon2018": chambon2018_target
 }
 
 input_transform = {
-    "tinysleepnet": physioex.train.networks.tinysleepnet.input_transform,
-    "contr_tinysleepnet": physioex.train.networks.tinysleepnet.input_transform,
-    "chambon2018": physioex.train.networks.chambon2018.input_transform,
-    "contr_chambon2018": physioex.train.networks.chambon2018.input_transform,
+    "tinysleepnet": tiny_input,
+    "contr_tinysleepnet": tiny_input,
+    "chambon2018": chambon2018_input,
+    "contr_chambon2018": chambon2018_input,
 }

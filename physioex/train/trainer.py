@@ -1,9 +1,10 @@
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint, RichProgressBar
+from lightning.pytorch import seed_everything
 
 from pathlib import Path
 
-from physioex.train.networks import models, model_config, input_transform, target_transform
+from physioex.train.networks import models, module_config, input_transform, target_transform
 from physioex.data import datasets, TimeDistributedModule
 
 import uuid
@@ -27,7 +28,7 @@ class Trainer():
                 batch_size : int = 32,
                 n_jobs : int = 10
                 ):
-
+        seed_everything(42, workers=True)
         self.model_call = models[model_name]
         self.dataset_call = datasets[dataset_name]
         self.input_transform = input_transform[model_name]
@@ -45,8 +46,8 @@ class Trainer():
         else:
             self.ckp_path = "models/" + model_name + "/seqlen=" + str(sequence_lenght) + "/" + dataset_name + "/" + version + "/" 
         
-        self.model_config = dict( model_config )
-        self.model_confg["seq_len"] = sequence_lenght
+        self.module_config = dict( module_config )
+        self.module_config["seq_len"] = sequence_lenght
 
         Path(self.ckp_path).mkdir(parents=True, exist_ok=True)
 
@@ -57,7 +58,7 @@ class Trainer():
         dataset.split( fold )
 
         datamodule = TimeDistributedModule(dataset = dataset, 
-                                            sequence_lenght = self.model_config["seq_len"], 
+                                            sequence_lenght = self.module_config["seq_len"], 
                                             batch_size = self.batch_size, 
                                             transform = self.input_transform, 
                                             target_transform = self.target_transform
@@ -91,7 +92,7 @@ class Trainer():
     
     def run(self):
         with ProcessPoolExecutor(max_workers=self.n_jobs) as executor:
-            futures = [executor.submit(self.train_evaluate, fold) for fold in range(self.n_folds)]
+            futures = [executor.submit(self.train_evaluate, fold) for fold in folds]
             
         # Raccogli i risultati da ogni future
         results = [future.result() for future in futures]

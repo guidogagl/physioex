@@ -42,6 +42,8 @@ train --experiment chambon2018
 |---------------|:---------:|:-----:|
 | chambon2018   |     ✔️     |   ✔️   |
 | tinysleepnet  |     ✔️     |   ✔️   |
+| contr_chambon2018   |     ✔️     |   ✔️   |
+| contr_tinysleepnet  |     ✔️     |   ✔️   |
 
 ## Train Command
 The train command is used to train models. Here are the available arguments:
