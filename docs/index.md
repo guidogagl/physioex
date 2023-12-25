@@ -13,10 +13,6 @@ The main purpose of the library is to propose a standard and fast methodology to
 
 With PhysioEx you can simulate a state-of-the-art experiment just running the `train` command; evaluating and saving the trained model; and start focusing on the explainability task! The `train` command will also take charge of downloading and processing the specified dataset if unavailable.
 
-<div style = "text-align: center;">
-    <a class="github-button" href="https://github.com/guidogagl/physioex" data-color-scheme="no-preference: dark_dimmed; light: dark_dimmed; dark: dark_dimmed;" data-icon="octicon-star" data-size="large" data-show-count="true" aria-label="Star guidogagl/physioex on GitHub">Star</a>
-</div>
-
 ## Supported deep learning architectures
 
 - [Chambon2018](https://ieeexplore.ieee.org/document/8307462) model for sleep stage classification.
