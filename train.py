@@ -1,12 +1,12 @@
 import argparse
-import physioex.train as train
+from physioex.train import Trainer
 
 def main():
     parser = argparse.ArgumentParser(description='Training script')
     
     # experiment arguments
     parser.add_argument('-e', '--experiment', default='chambon2018', type = str, help='Specify the experiment to run. Expected type: str. Default: "chambon2018"')
-    parser.add_argument('-s', '--similarity', default=False, type = bool, help='Specify whether to use similarity in the model. Expected type: bool. Default: False')
+    parser.add_argument('-ckpt', '--chekpoint', default=None, type = str, help='Specify where to save the checkpoint. Expected type: str. Default: None')
     
     # dataset args
     parser.add_argument('-d', '--dataset', default='SleepPhysionet', type = str, help='Specify the dataset to use. Expected type: str. Default: "SleepPhysionet"')
@@ -20,15 +20,23 @@ def main():
     parser.add_argument('-me', '--max_epoch', default=20, type = int, help='Specify the maximum number of epochs for training. Expected type: int. Default: 20')
     parser.add_argument('-vci', '--val_check_interval', default=300, type = int, help='Specify the validation check interval during training. Expected type: int. Default: 300')
     parser.add_argument('-bs', '--batch_size', default=32, type = int, help='Specify the batch size for training. Expected type: int. Default: 32')
-    
-    # Aggiungi altri argomenti di default o specifici di PyTorch Lightning
 
+    parser.add_argument('-nj', '--n_jobs', default=10, type = int, help='Specify the number of jobs for parallelization. Expected type: int. Default: 10')
+    
     args = parser.parse_args()
-    
-    experiment = getattr(train, args.experiment)
-    
-    experiment(args.similarity, args.dataset, args.version, args.use_cache, int(args.sequence_lenght), int(args.max_epoch), int(args.val_check_interval), int(args.batch_size))
-
+       
+    Trainer(                
+        model_name = args.experiment, 
+        dataset_name = args.dataset, 
+        ckp_path = args.ckp_path,
+        version = args.version, 
+        use_cache = args.cache, 
+        sequence_lenght  = args.sequence_lenght, 
+        max_epoch = args.max_epoch, 
+        val_check_interval = args.val_check_interval, 
+        batch_size = args.batch_size,
+        n_jobs = args.n_jobs
+        ).run()
     
 if __name__ == '__main__':
     main()

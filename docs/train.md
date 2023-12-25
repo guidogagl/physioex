@@ -47,7 +47,7 @@ train --experiment chambon2018
 The train command is used to train models. Here are the available arguments:
 
 - `-e`, `--experiment`: Specify the experiment to run. Expected `type: str`. `Default: "chambon2018"`.
-- `-s`, `--similarity`: Specify whether to add a similarity loss in the model to order the latent space projections. Expected `type: bool`. `Default: False`.
+- `-ckpt`, `--chekpoint`:  Specify where to save the checkpoint. Expected `type: str`. `Default: None`    
 - `-d`, `--dataset`: Specify the dataset to use. Expected `type: str`. `Default: "SleepPhysionet"`.
 - `-v`, `--version`: Specify the version of the dataset. Expected `type: str`. `Default: "2018"`.
 - `-c`, `--use_cache`: Specify whether to use cache for the dataset. Expected `type: bool`. `Default: True`.
@@ -55,6 +55,7 @@ The train command is used to train models. Here are the available arguments:
 - `-me`, `--max_epoch`: Specify the maximum number of epochs for training. Expected `type: int`. `Default: 20`.
 - `-vci`, `--val_check_interval`: Specify the validation check interval during training. Expected `type: int`. `Default: 300`.
 - `-bs`, `--batch_size`: Specify the batch size for training. Expected `type: int`. `Default: 32`.
+- `-nj`, `--n_jobs`: Specify the number of jobs for parallelization. Expected `type: int`. `Default: 10`
 
 ## Experimental Results
 ### Sequence Lenght: 3

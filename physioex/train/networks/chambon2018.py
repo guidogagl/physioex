@@ -18,9 +18,11 @@ module_config = {
     "latent_space_dim": 32
 }
 
+def get_mid_label( labels ):
+    return labels[ int((len(labels) - 1) / 2) ]
 
-
-
+inpunt_transforms = None
+target_transforms = get_mid_label
 
 class CustModule( nn.Module ):
     def __init__(self, encoder, decoder):

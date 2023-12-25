@@ -34,6 +34,9 @@ module_config = {
     "latent_space_dim": 32
 }
 
+inpunt_transforms = None
+target_transforms = None
+
 
 class FeatureExtractor( nn.Module ):
     def __init__(self, config = module_config):
