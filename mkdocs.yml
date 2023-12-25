@@ -15,8 +15,8 @@ theme:
     primary: pink
     accent: pink
   
-  favicon: assets/images/logo_bw.ico
-  logo: assets/images/logo.svg
+  favicon: assets/images/logo_bar.svg
+  logo: assets/images/logo_bar.svg
   
   features:
     - navigation.path
