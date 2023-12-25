@@ -4,7 +4,7 @@
 <h1> PhysioEx </h1>
 </div>
 
-PhysioEx ( Physiological Signal Explainer ) is a versatile python library tailored for building, training, and explaining deep learning models for physiological signal analysis. 
+**PhysioEx ( Physiological Signal Explainer )** is a versatile python library tailored for building, training, and explaining deep learning models for physiological signal analysis. 
 
 The main purpose of the library is to propose a standard and fast methodology to train and evalutate state-of-the-art deep learning architectures for physiological signal analysis, to shift the attention from the architecture building task to the explainability task. 
 
