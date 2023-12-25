@@ -10,8 +10,6 @@ Should you discover an error in the documentation, or have implemented improveme
 
 An additional method of contribution involves reporting any issues you encounter, and endorsing issues reported by others that are pertinent to you by giving them a “thumbs up”. Your support in promoting the project is also beneficial: mention the project in your blog posts and articles, provide a link to it from your website, or simply give it a star to indicate your usage of it.
 
-<iframe src="https://ghbtns.com/github-btn.html?user=guidogagl&repo=physioex&type=star&count=true&size=large" frameborder="0" scrolling="0" width="170" height="30" title="GitHub"></iframe>
-
 ### Adviced contributing fields
 
 1. Adding support for a new physiological signal dataset (e.g. checking [PhysioNet](https://physionet.org) or [MOABB](https://moabb.neurotechx.com/docs/))
@@ -30,7 +28,6 @@ We welcome contributions from everyone. PhysioEx is a GitHub hosted libray, to k
 1. Fork the Repository
 
 Fork this repository to your GitHub account by clicking on the 'Fork' button on the top right of the page. This creates a copy of the repository in your account.
-<iframe src="https://ghbtns.com/github-btn.html?user=guidogagl&repo=physioex&type=fork&count=true&size=large" frameborder="0" scrolling="0" width="170" height="30" title="GitHub"></iframe>
 
 2. Clone your fork of the physioex repo from your GitHub account to your local disk:
 
