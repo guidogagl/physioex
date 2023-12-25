@@ -17,18 +17,20 @@ folds = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
 
 class Trainer():
     def __init__(self, 
-                model_name : str = "chambon2018", 
-                dataset_name : str = "sleep_physioex", 
-                ckp_path : str = None,
-                version : str = "2018", 
-                use_cache : bool = True, 
-                sequence_lenght : int = 3, 
-                max_epoch : int = 20, 
-                val_check_interval : int = 300, 
-                batch_size : int = 32,
-                n_jobs : int = 10
-                ):
+            model_name : str = "chambon2018", 
+            dataset_name : str = "sleep_physioex", 
+            ckp_path : str = None,
+            version : str = "2018", 
+            use_cache : bool = True, 
+            sequence_lenght : int = 3, 
+            max_epoch : int = 20, 
+            val_check_interval : int = 300, 
+            batch_size : int = 32,
+            n_jobs : int = 10
+        ):
+
         seed_everything(42, workers=True)
+
         self.model_call = models[model_name]
         self.dataset_call = datasets[dataset_name]
         self.input_transform = input_transform[model_name]
@@ -41,14 +43,14 @@ class Trainer():
         self.use_cache = use_cache 
         self.n_jobs = n_jobs
 
-        if ckp_path is None:
-            self.ckp_path = "models/" + str(uuid.uuid4()) + "/"
-        else:
-            self.ckp_path = "models/" + model_name + "/seqlen=" + str(sequence_lenght) + "/" + dataset_name + "/" + version + "/" 
-        
         self.module_config = dict( module_config )
         self.module_config["seq_len"] = sequence_lenght
 
+        if ckp_path is None:
+            self.ckp_path = "models/" + str(uuid.uuid4()) + "/"
+        else:
+            self.ckp_path = ckp_path
+             
         Path(self.ckp_path).mkdir(parents=True, exist_ok=True)
 
     def train_evaluate(self, fold : int = 0):
@@ -57,12 +59,13 @@ class Trainer():
         dataset = self.dataset_call( version=self.version, use_cache=self.use_cache)
         dataset.split( fold )
 
-        datamodule = TimeDistributedModule(dataset = dataset, 
-                                            sequence_lenght = self.module_config["seq_len"], 
-                                            batch_size = self.batch_size, 
-                                            transform = self.input_transform, 
-                                            target_transform = self.target_transform
-                                            )
+        datamodule = TimeDistributedModule(
+            dataset = dataset, 
+            sequence_lenght = self.module_config["seq_len"], 
+            batch_size = self.batch_size, 
+            transform = self.input_transform, 
+            target_transform = self.target_transform
+        )
 
         # Definizione delle callback
         checkpoint_callback = ModelCheckpoint(
