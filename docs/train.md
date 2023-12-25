@@ -29,8 +29,7 @@ Before using the `train` command, you need to set up a virtual environment and i
 Currently, there are two experiments available in the repository:
 
 - `chambon2018`: This experiment uses the [Chambon2018](https://ieeexplore.ieee.org/document/8307462) model for sleep stage classification.
-- `tinysleepnet`: This experiment uses the [TinySleepNet](https://github.com/akaraspt/tinysleepnet)
- model for sleep stage classification.
+- `tinysleepnet`: This experiment uses the [TinySleepNet](https://github.com/akaraspt/tinysleepnet) model for sleep stage classification.
 
 To run an experiment, use the `-e` or `--experiment` argument followed by the name of the experiment. For example:
 

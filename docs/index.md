@@ -4,69 +4,42 @@
 <h1> PhysioEx </h1>
 </div>
 
-For full documentation visit [mkdocs.org](https://www.mkdocs.org).
+PhysioEx ( Physiological Signal Explainer ) is a versatile python library tailored for building, training, and explaining deep learning models for physiological signal analysis. 
 
-## Code Annotation Examples
+The main purpose of the library is to propose a standard and fast methodology to train and evalutate state-of-the-art deep learning architectures for physiological signal analysis, to shift the attention from the architecture building task to the explainability task. 
 
-### Codeblocks
+With PhysioEx you can simulate a state-of-the-art experiment just running the `train` command; evaluating and saving the trained model; and start focusing on the explainability task! The `train` command will also take charge of downloading and processing the specified dataset if unavailable.
 
-Some `code` goes here.
+<div style = "text-align: center;">
+    <a class="github-button" href="https://github.com/guidogagl/physioex" data-color-scheme="no-preference: dark_dimmed; light: dark_dimmed; dark: dark_dimmed;" data-icon="octicon-star" data-size="large" data-show-count="true" aria-label="Star guidogagl/physioex on GitHub">Star</a>
+</div>
 
-### Plain codeblock
+## Supported deep learning architectures
 
-A plain codeblock:
+- [Chambon2018](https://ieeexplore.ieee.org/document/8307462) model for sleep stage classification.
+- [TinySleepNet](https://github.com/akaraspt/tinysleepnet) model for sleep stage classification.
 
+## Supported datasets
+
+- [SleepEDF (version 2018-2013)](https://physionet.org/physiobank/database/sleep-edfx/sleep-cassette/) sleep staging dataset.
+- [Dreem (version DODO-DODH)](https://github.com/Dreem-Organization/dreem-learning-open) sleep staging dataset.
+
+## Installation guidelines
+
+1. **Clone the Repository:**
+```bash
+   git clone https://github.com/guidogagl/physioex.git
+   cd physioex
 ```
-Some code here
-def myfunction()
-// some comment
+2. **Create a Virtual Environment (Optional but Recommended)**
+```bash
+    conda create -n physioex python==3.10
+    conda activate physioex
+    conda install pip
+    pip install --upgrade pip  # On Windows, use `venv\Scripts\activate`
 ```
-
-#### Code for a specific language
-
-Some more code with the `py` at the start:
-
-``` py
-import tensorflow as tf
-def whatever()
-```
-
-#### With a title
-
-``` py title="bubble_sort.py"
-def bubble_sort(items):
-    for i in range(len(items)):
-        for j in range(len(items) - 1 - i):
-            if items[j] > items[j + 1]:
-                items[j], items[j + 1] = items[j + 1], items[j]
-```
-
-#### With line numbers
-
-``` py linenums="1"
-def bubble_sort(items):
-    for i in range(len(items)):
-        for j in range(len(items) - 1 - i):
-            if items[j] > items[j + 1]:
-                items[j], items[j + 1] = items[j + 1], items[j]
+3. **Install Dependencies and Package in Development Mode**
+```bash
+    pip install -e .
 ```
 
-#### Highlighting lines
-
-``` py hl_lines="2 3"
-def bubble_sort(items):
-    for i in range(len(items)):
-        for j in range(len(items) - 1 - i):
-            if items[j] > items[j + 1]:
-                items[j], items[j + 1] = items[j + 1], items[j]
-```
-
-## Icons and Emojs
-
-:smile: 
-
-:fontawesome-regular-face-laugh-wink:
-
-:fontawesome-brands-twitter:{ .twitter }
-
-:octicons-heart-fill-24:{ .heart }
