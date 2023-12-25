@@ -1,4 +1,4 @@
-<p style = "text-align: center;">
+<p align="center">
 <img src="assets/images/logo.svg" width = "250px", alt="PhysioEx Logo">
 
 <h1>PhysioEx</h1>
