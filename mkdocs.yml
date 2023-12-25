@@ -14,9 +14,10 @@ theme:
     scheme: slate
     primary: pink
     accent: pink
-  icon:
-    favicon: fontawesome/solid/kiwi-bird
-    logo: fontawesome/solid/kiwi-bird
+  
+  favicon: assets/images/logo_bw.ico
+  logo: assets/images/logo.svg
+  
   features:
     - navigation.path
     - navigation.top
