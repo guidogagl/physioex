@@ -17,6 +17,7 @@ With PhysioEx you can simulate a state-of-the-art experiment just running the `t
 
 - [Chambon2018](https://ieeexplore.ieee.org/document/8307462) model for sleep stage classification.
 - [TinySleepNet](https://github.com/akaraspt/tinysleepnet) model for sleep stage classification.
+- [SeqSleepNet](https://arxiv.org/pdf/1809.10932.pdf) model for sleep stage classification (time-frequency images as input).
 
 ## Supported datasets
 
