@@ -159,7 +159,7 @@ class Dreem(PhysioExDataset):
         
         self.windows_dataset = windows_dataset
 
-    def split(self, fold : int = 0, scaler = StandardScaler):
+    def split(self, fold : int = 0):
         
         window_dataset = [ self.windows_dataset["X"], self.windows_dataset["y"]]
 
@@ -193,15 +193,6 @@ class Dreem(PhysioExDataset):
         logger.info("Train shape X " + str(X_train.shape) + ", y " + str( y_train.shape) )
         logger.info("Valid shape X " + str(X_valid.shape) + ", y " + str( y_valid.shape) )
         logger.info("Test shape X " + str(X_test.shape) + ", y " + str( y_test.shape) )
-
-        # scaling
-        if scaler is not None:
-            for i in range( X_train.shape[1] ):
-                scl = scaler()
-                X_train[:, i, :] = scl.fit_transform( X_train[:,i,:] )
-                X_valid[:, i, :] = scl.transform( X_valid[:,i,:] )
-                X_test[:, i, :] = scl.transform( X_test[:,i,:] )
-
 
         train_set, valid_set, test_set = [],[],[]
 

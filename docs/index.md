@@ -14,12 +14,11 @@ The main purpose of the library is to propose a standard and fast methodology to
 With PhysioEx you can simulate a state-of-the-art experiment just running the `train` command; evaluating and saving the trained model; and start focusing on the explainability task! The `train` command will also take charge of downloading and processing the specified dataset if unavailable.
 
 ## Supported deep learning architectures
-
 - [Chambon2018](https://ieeexplore.ieee.org/document/8307462) model for sleep stage classification.
 - [TinySleepNet](https://github.com/akaraspt/tinysleepnet) model for sleep stage classification.
+- [SeqSleepNet](https://arxiv.org/pdf/1809.10932.pdf) model for sleep stage classification (time-frequency images as input).
 
 ## Supported datasets
-
 - [SleepEDF (version 2018-2013)](https://physionet.org/physiobank/database/sleep-edfx/sleep-cassette/) sleep staging dataset.
 - [Dreem (version DODO-DODH)](https://github.com/Dreem-Organization/dreem-learning-open) sleep staging dataset.
 

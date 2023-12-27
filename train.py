@@ -6,7 +6,7 @@ def main():
     
     # experiment arguments
     parser.add_argument('-e', '--experiment', default='chambon2018', type = str, help='Specify the experiment to run. Expected type: str. Default: "chambon2018"')
-    parser.add_argument('-ckpt', '--chekpoint', default=None, type = str, help='Specify where to save the checkpoint. Expected type: str. Default: None')
+    parser.add_argument('-ckpt', '--checkpoint', default=None, type = str, help='Specify where to save the checkpoint. Expected type: str. Default: None')
     
     # dataset args
     parser.add_argument('-d', '--dataset', default='sleep_physionet', type = str, help='Specify the dataset to use. Expected type: str. Default: "SleepPhysionet"')
@@ -28,7 +28,7 @@ def main():
     Trainer(                
         model_name = args.experiment, 
         dataset_name = args.dataset, 
-        ckp_path = args.chekpoint,
+        ckp_path = args.checkpoint,
         version = args.version, 
         use_cache = args.use_cache, 
         sequence_lenght  = args.sequence_lenght, 

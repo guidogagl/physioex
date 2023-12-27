@@ -59,6 +59,21 @@ class SeqtoSeq(pl.LightningModule):
         # loss
         self.loss = nn.CrossEntropyLoss()
 
+        self.module_config = config
+
+    def configure_optimizers(self):
+        # Definisci il tuo ottimizzatore
+        self.opt = optim.Adam(
+            self.nn.parameters(),
+            lr= float(self.module_config["learning_rate"]),
+            betas=(
+                float(self.module_config["adam_beta_1"]),
+                float(self.module_config["adam_beta_2"]),
+            ),
+            eps=float(self.module_config["adam_epsilon"]),
+        )
+        return self.opt
+    
     def forward(self, x):
         return self.nn(x)
     

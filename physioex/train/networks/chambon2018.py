@@ -5,24 +5,7 @@ import torch.optim as optim
 from torch import nn 
 import torch 
 
-module_config = {
-    "n_classes": 5,
-    "n_channels": 1,
-    "sfreq": 100,
-    "n_times": 3000,
-    "seq_len": 3,
-    "learning_rate": 1e-4,
-    "adam_beta_1": 0.9,
-    "adam_beta_2": 0.999,
-    "adam_epsilon": 1e-8,
-    "latent_space_dim": 32
-}
-
-def get_mid_label( labels ):
-    return labels[ int((len(labels) - 1) / 2) ]
-
-inpunt_transforms = None
-target_transforms = get_mid_label
+module_config = dict()
 
 class CustModule( nn.Module ):
     def __init__(self, encoder, decoder):
@@ -59,19 +42,7 @@ class Chambon2018Net( SeqtoSeq ):
         )
 
         self.nn = CustModule( encoder=encoder, decoder=decoder)
-    
-    def configure_optimizers(self):
-        # Definisci il tuo ottimizzatore
-        self.opt = optim.Adam(
-            self.nn.parameters(),
-            lr=module_config["learning_rate"],
-            betas=(
-                module_config["adam_beta_1"],
-                module_config["adam_beta_2"],
-            ),
-            eps=module_config["adam_epsilon"],
-        )
-        return self.opt
+
     
     def compute_loss(
         self, outputs, targets, log: str = "train", log_metrics: bool = False
@@ -126,17 +97,4 @@ class ContrChambon2018Net( ContrSeqtoSeq ):
         projections = projections.unsqueeze( dim = 1)
 
         return super().compute_loss( (projections, outputs), targets, log, log_metrics) 
-    
-    def configure_optimizers(self):
-        # Definisci il tuo ottimizzatore
-        self.opt = optim.Adam(
-            self.nn.parameters(),
-            lr=module_config["learning_rate"],
-            betas=(
-                module_config["adam_beta_1"],
-                module_config["adam_beta_2"],
-            ),
-            eps=module_config["adam_epsilon"],
-        )
-        return self.opt 
-
+     

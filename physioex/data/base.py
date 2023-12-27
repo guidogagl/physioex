@@ -7,7 +7,7 @@ import torch
 import numpy as np
 
 from sklearn.utils import compute_class_weight
-
+from sklearn.preprocessing import StandardScaler
 class PhysioExDataset(ABC):
     @abstractmethod
     def split(self):
@@ -19,6 +19,8 @@ class PhysioExDataset(ABC):
 
 class TimeDistributedDataset(Dataset):
     def __init__(self, dataset, sequence_lenght, transform=None, target_transform=None):
+        self.target_transform = target_transform
+        
         self.X = [] 
         self.y = []
         
@@ -29,17 +31,26 @@ class TimeDistributedDataset(Dataset):
         self.X = torch.tensor( np.array(self.X) ).float()
         self.y = torch.tensor( np.array(self.y) ).long()
 
+        if transform is not None:
+            self.X = transform(self.X)
+
         self.classes = torch.unique( self.y )
-        self.n_classes = len( self.classes )
-        
-        #self.weights = compute_class_weight( "balanced", self.classes.numpy(), self.y.numpy() )
-        #self.weights = torch.tensor( self.weights )
+        self.n_classes = len( self.classes ) 
 
         self.L = sequence_lenght 
 
-        self.transform = transform
-        self.target_transform = target_transform
+    def fit_scaler(self, scaler = StandardScaler()):
+        shape = self.X.size()
+        self.X = torch.tensor(scaler.fit_transform( self.X.reshape( shape[0], -1 ) ).reshape( shape )).float()
 
+        return scaler
+    
+    def scale(self, scaler):
+        shape = self.X.size()
+        self.X = torch.tensor(scaler.transform( self.X.reshape( shape[0], -1 ) ).reshape( shape )).float()
+
+        return
+               
     def __len__(self):
         return len(self.X) - self.L
 
@@ -48,8 +59,6 @@ class TimeDistributedDataset(Dataset):
         item = self.X[ idx:idx+self.L ].clone()
         label = self.y[ idx:idx+self.L ].clone()
 
-        if self.transform:
-            item = self.transform(item)
         if self.target_transform:
             label = self.target_transform(label)
 
@@ -57,7 +66,7 @@ class TimeDistributedDataset(Dataset):
 
 
 class TimeDistributedModule(pl.LightningDataModule):
-    def __init__(self, dataset: PhysioExDataset, sequence_lenght : int, batch_size: int = 32, transform = None, target_transform = None):
+    def __init__(self, dataset: PhysioExDataset, sequence_lenght : int, batch_size: int = 32, scaler = StandardScaler(), transform = None, target_transform = None):
         super().__init__()
         self.dataset = dataset
         self.sequence_lenght = sequence_lenght
@@ -69,6 +78,10 @@ class TimeDistributedModule(pl.LightningDataModule):
         self.train = TimeDistributedDataset(self.train, self.sequence_lenght, self.transform, self.target_transform)
         self.valid = TimeDistributedDataset(self.valid, self.sequence_lenght, self.transform, self.target_transform)
         self.test = TimeDistributedDataset(self.test, self.sequence_lenght, self.transform, self.target_transform)
+
+        scaler = self.train.fit_scaler(scaler)
+        self.valid.scale( scaler )
+        self.test.scale( scaler )
 
         self.classes = self.train.classes
         self.n_classess = self.train.n_classes

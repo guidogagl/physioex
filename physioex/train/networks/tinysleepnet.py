@@ -189,18 +189,6 @@ class TinySleepNet( SeqtoSeq ):
         super(TinySleepNet, self).__init__(FeatureExtractor(config=module_config), Classifier(config=module_config), module_config)
 
     
-    def configure_optimizers(self):
-        # Definisci il tuo ottimizzatore
-        self.opt = optim.Adam(
-            self.nn.parameters(),
-            lr=module_config["learning_rate"],
-            betas=(
-                module_config["adam_beta_1"],
-                module_config["adam_beta_2"],
-            ),
-            eps=module_config["adam_epsilon"],
-        )
-        return self.opt
     
 class ContrTinySleepNet( ContrSeqtoSeq ):
     def __init__(self, module_config = module_config):
@@ -208,17 +196,3 @@ class ContrTinySleepNet( ContrSeqtoSeq ):
         decoder_config = module_config.copy()
         decoder_config["n_classes"] = decoder_config["latent_space_dim"]
         super(ContrTinySleepNet, self).__init__(FeatureExtractor(config=module_config), Classifier(config=decoder_config), module_config)
-
-    
-    def configure_optimizers(self):
-        # Definisci il tuo ottimizzatore
-        self.opt = optim.Adam(
-            self.nn.parameters(),
-            lr=module_config["learning_rate"],
-            betas=(
-                module_config["adam_beta_1"],
-                module_config["adam_beta_2"],
-            ),
-            eps=module_config["adam_epsilon"],
-        )
-        return self.opt

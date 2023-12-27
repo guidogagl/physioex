@@ -1,19 +1,27 @@
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint, RichProgressBar
 from lightning.pytorch import seed_everything
-
 from pathlib import Path
 
-from physioex.train.networks import models, module_config, input_transform, target_transform
+from physioex.train.networks import config 
 from physioex.data import datasets, TimeDistributedModule
 
 import uuid
 
-from concurrent.futures import ProcessPoolExecutor
+from joblib import Parallel, delayed
 import pandas as pd
 
+import copy
 
 folds = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+
+
+from ast import literal_eval
+from loguru import logger
+
+import torch
+torch.set_float32_matmul_precision('medium')
+
 
 class Trainer():
     def __init__(self, 
@@ -31,10 +39,13 @@ class Trainer():
 
         seed_everything(42, workers=True)
 
-        self.model_call = models[model_name]
         self.dataset_call = datasets[dataset_name]
-        self.input_transform = input_transform[model_name]
-        self.target_transform = target_transform[model_name]
+        
+        self.model_call = config[model_name]["module"]
+        self.input_transform = config[model_name]["input_transform"]
+        self.target_transform = config[model_name]["target_transform"]
+        self.module_config = config[model_name]["module_config"]
+        self.module_config["seq_len"] = sequence_lenght
 
         self.batch_size = batch_size
         self.max_epoch = max_epoch
@@ -43,21 +54,25 @@ class Trainer():
         self.use_cache = use_cache 
         self.n_jobs = n_jobs
 
-        self.module_config = dict( module_config )
-        self.module_config["seq_len"] = sequence_lenght
-
         if ckp_path is None:
             self.ckp_path = "models/" + str(uuid.uuid4()) + "/"
         else:
             self.ckp_path = ckp_path
              
         Path(self.ckp_path).mkdir(parents=True, exist_ok=True)
+        
+        logger.info("Loading dataset")
+        self.dataset = self.dataset_call( version=self.version, use_cache=self.use_cache)
+        logger.info("Dataset loaded")
 
     def train_evaluate(self, fold : int = 0):
 
         module = self.model_call( module_config = self.module_config )
-        dataset = self.dataset_call( version=self.version, use_cache=self.use_cache)
-        dataset.split( fold )
+
+        dataset = self.dataset
+
+        logger.info("JOB:%d-Splitting dataset into train, validation and test sets" % fold)
+        dataset.split(fold)
 
         datamodule = TimeDistributedModule(
             dataset = dataset, 
@@ -86,23 +101,33 @@ class Trainer():
             deterministic=True
         )
 
+        logger.info("JOB:%d-Training model" % fold)
         # Addestra il modello utilizzando il trainer e il DataModule
         trainer.fit(module, datamodule=datamodule)
+        
+        logger.info("JOB:%d-Evaluating model" % fold)
         val_results = trainer.test(ckpt_path="best", dataloaders=datamodule.val_dataloader())
         test_results = trainer.test(ckpt_path="best", datamodule=datamodule)
 
-        return val_results, test_results
+        return {'val_results': val_results, 'test_results': test_results} 
     
     def run(self):
-        with ProcessPoolExecutor(max_workers=self.n_jobs) as executor:
-            futures = [executor.submit(self.train_evaluate, fold) for fold in folds]
-            
-        # Raccogli i risultati da ogni future
-        results = [future.result() for future in futures]
+        logger.info("Jobs pool spawning")
+        
+        results = Parallel(n_jobs=self.n_jobs)(
+            delayed(self.train_evaluate)(fold) for fold in folds
+        )    
+        
+        logger.info("Results successfully collected from jobs pool")
 
-        # Salva i risultati di validazione e test in due file csv
-        val_results = pd.DataFrame([result['val_results'] for result in results])
-        test_results = pd.DataFrame([result['test_results'] for result in results])
+        try:
+            val_results = pd.DataFrame([result["val_results"][0]    for result in results]) 
+            test_results = pd.DataFrame([result["test_results"][0]  for result in results])
 
-        val_results.to_csv(self.ckp_path + 'val_results.csv', index=False)
-        test_results.to_csv(self.ckp_path + 'test_results.csv', index=False)
+            val_results.to_csv(self.ckp_path + 'val_results.csv', index=False)
+            test_results.to_csv(self.ckp_path + 'test_results.csv', index=False)
+        except Exception as e:
+            logger.error(f"Error while saving results: {e}")
+            raise e
+
+        logger.info("Results successfully saved in %s" % self.ckp_path)

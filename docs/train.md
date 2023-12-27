@@ -30,6 +30,7 @@ Currently, there are two experiments available in the repository:
 
 - `chambon2018`: This experiment uses the [Chambon2018](https://ieeexplore.ieee.org/document/8307462) model for sleep stage classification.
 - `tinysleepnet`: This experiment uses the [TinySleepNet](https://github.com/akaraspt/tinysleepnet) model for sleep stage classification.
+- `seqsleepnet`: This experiment uses the [SeqSleepNet](https://arxiv.org/pdf/1809.10932.pdf) model for sleep stage classification (time-frequency images as input).
 
 To run an experiment, use the `-e` or `--experiment` argument followed by the name of the experiment. For example:
 
@@ -37,12 +38,14 @@ To run an experiment, use the `-e` or `--experiment` argument followed by the na
 train --experiment chambon2018
 ```
 ### Dataset-experiment compatibility
-|               | SleepPhysioNet | Dreem |
-|---------------|:---------:|:-----:|
-| chambon2018   |     ✔️     |   ✔️   |
-| tinysleepnet  |     ✔️     |   ✔️   |
-| contr_chambon2018   |     ✔️     |   ✔️   |
-| contr_tinysleepnet  |     ✔️     |   ✔️   |
+|                     | SleepPhysioNet | Dreem |
+|---------------------|:--------------:|:-----:|
+| chambon2018         |       ✔        |   ✔️   |
+| tinysleepnet        |       ✔        |   ✔️   |
+| seqsleepnet         |       ✔        |   ✔️   |
+| contr_chambon2018   |       ✔        |   ✔️   |
+| contr_tinysleepnet  |       ✔        |   ✔️   |
+| contr_seqsleepnet   |       ✔        |   ✔️   |
 
 ## Train Command
 The train command is used to train models. Here are the available arguments:

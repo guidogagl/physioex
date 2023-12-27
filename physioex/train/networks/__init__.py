@@ -1,38 +1,60 @@
-from physioex.train.networks.tinysleepnet import TinySleepNet, ContrTinySleepNet,target_transforms as tiny_target, inpunt_transforms as tiny_input
-from physioex.train.networks.chambon2018 import Chambon2018Net, ContrChambon2018Net, target_transforms as chambon2018_target, inpunt_transforms as chambon2018_input
+import yaml
+import pkg_resources as pkg
+
+from physioex.train.networks.tinysleepnet import TinySleepNet, ContrTinySleepNet
+from physioex.train.networks.chambon2018 import Chambon2018Net, ContrChambon2018Net
+from physioex.train.networks.seqtoseqnet import SeqtoSeqSleepNet, ContrSeqtoSeqSleepNet
+
+import physioex.train.networks.input_transform as input_transform
+import physioex.train.networks.target_transform as target_transform
+
 
 import physioex as physioex
 
-module_config = {
-    "n_classes": 5,
-    "n_channels": 1,
-    "sfreq": 100,
-    "n_times": 3000,
-    "seq_len": 3,
-    "learning_rate": 1e-4,
-    "adam_beta_1": 0.9,
-    "adam_beta_2": 0.999,
-    "adam_epsilon": 1e-8,
-    "latent_space_dim": 32
-}
 
-models = {
-    "tinysleepnet": TinySleepNet,
-    "contr_tinysleepnet": ContrTinySleepNet,
-    "chambon2018": Chambon2018Net,
-    "contr_chambon2018": ContrChambon2018Net
-}
+def read_config(model_name : str):
+    config_file =  pkg.resource_filename(__name__, 'config/' + model_name + '.yaml')
+    
+    with open(config_file, 'r') as file:
+        config = yaml.safe_load(file)
 
-target_transform = {
-    "tinysleepnet": tiny_target,
-    "contr_tinysleepnet": tiny_target,
-    "chambon2018": chambon2018_target,
-    "contr_chambon2018": chambon2018_target
-}
+    return config
 
-input_transform = {
-    "tinysleepnet": tiny_input,
-    "contr_tinysleepnet": tiny_input,
-    "chambon2018": chambon2018_input,
-    "contr_chambon2018": chambon2018_input,
+config = {
+    "chambon2018": { 
+        "module_config" : read_config("chambon2018"),
+        "module" : Chambon2018Net,
+        "input_transform" : None,
+        "target_transform" : target_transform.get_mid_label,
+    },
+    "contr_chambon2018": { 
+        "module_config" : read_config("chambon2018"),
+        "module" : ContrChambon2018Net,
+        "input_transform" : None,
+        "target_transform" : target_transform.get_mid_label,
+    },
+    "seqtoseqsleepnet": { 
+        "module_config" : read_config("seqtoseqsleepnet"),
+        "module" : SeqtoSeqSleepNet,
+        "input_transform" : input_transform.xsleepnet_transform,
+        "target_transform" : None,
+    },
+    "contr_seqtoseqsleepnet": { 
+        "module_config" : read_config("seqtoseqsleepnet"),
+        "module" : ContrSeqtoSeqSleepNet,
+        "input_transform" : input_transform.xsleepnet_transform,
+        "target_transform" : None,
+    },
+    "tinysleepnet": { 
+        "module_config" : read_config("tinysleepnet"),
+        "module" : TinySleepNet,
+        "input_transform" : None,
+        "target_transform" : None,
+    },
+    "contr_tinysleepnet": { 
+        "module_config" : read_config("tinysleepnet"),
+        "module" : ContrTinySleepNet,
+        "input_transform" : None,
+        "target_transform" : None,
+    },
 }
