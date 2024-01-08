@@ -3,6 +3,7 @@ braindecode
 pyyaml
 loguru
 
+dirhash
 lightning
 rich
 pytorch_metric_learning

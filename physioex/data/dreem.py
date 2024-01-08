@@ -110,7 +110,12 @@ class Dreem(PhysioExDataset):
             
         logger.info("Fetching the dataset..")
         
-        if str(dirhash(BASE_DIRECTORY_H5, "md5", jobs= os.cpu_count())) != DATASET_HASH:
+        try :
+            found = (str(dirhash(BASE_DIRECTORY_H5, "md5", jobs= os.cpu_count())) == DATASET_HASH )
+        except:
+            found = False
+
+        if not found:
             logger.info("Data not found, download dataset...")    
             download_dreem_dataset()
         
