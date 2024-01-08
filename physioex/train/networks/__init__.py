@@ -1,12 +1,12 @@
 import yaml
 import pkg_resources as pkg
 
-from physioex.train.networks.tinysleepnet import TinySleepNet, ContrTinySleepNet
-from physioex.train.networks.chambon2018 import Chambon2018Net, ContrChambon2018Net
-from physioex.train.networks.seqtoseqnet import SeqtoSeqSleepNet, ContrSeqtoSeqSleepNet
+from physioex.train.networks.tinysleepnet import TinySleepNet
+from physioex.train.networks.chambon2018 import Chambon2018Net
+from physioex.train.networks.seqsleepnet import SeqSleepNet
 
-import physioex.train.networks.input_transform as input_transform
-import physioex.train.networks.target_transform as target_transform
+import physioex.train.networks.utils.input_transform as input_transform
+import physioex.train.networks.utils.target_transform as target_transform
 
 
 import physioex as physioex
@@ -27,33 +27,15 @@ config = {
         "input_transform" : None,
         "target_transform" : target_transform.get_mid_label,
     },
-    "contr_chambon2018": { 
-        "module_config" : read_config("chambon2018"),
-        "module" : ContrChambon2018Net,
-        "input_transform" : None,
-        "target_transform" : target_transform.get_mid_label,
-    },
-    "seqtoseqsleepnet": { 
-        "module_config" : read_config("seqtoseqsleepnet"),
-        "module" : SeqtoSeqSleepNet,
-        "input_transform" : input_transform.xsleepnet_transform,
-        "target_transform" : None,
-    },
-    "contr_seqtoseqsleepnet": { 
-        "module_config" : read_config("seqtoseqsleepnet"),
-        "module" : ContrSeqtoSeqSleepNet,
+    "seqsleepnet": { 
+        "module_config" : read_config("seqsleepnet"),
+        "module" : SeqSleepNet,
         "input_transform" : input_transform.xsleepnet_transform,
         "target_transform" : None,
     },
     "tinysleepnet": { 
         "module_config" : read_config("tinysleepnet"),
         "module" : TinySleepNet,
-        "input_transform" : None,
-        "target_transform" : None,
-    },
-    "contr_tinysleepnet": { 
-        "module_config" : read_config("tinysleepnet"),
-        "module" : ContrTinySleepNet,
         "input_transform" : None,
         "target_transform" : None,
     },

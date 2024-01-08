@@ -42,3 +42,6 @@ With PhysioEx you can simulate a state-of-the-art experiment just running the `t
 ```bash
     pip install -e .
 ```
+
+## TODO
+- adding a download_pretrained command to let users automatically download pretrained models on the supported datasets

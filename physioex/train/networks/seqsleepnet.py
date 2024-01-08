@@ -3,33 +3,14 @@ import torch
 import torch.nn as nn
 from collections import OrderedDict
 import torch.optim as optim
-from physioex.train.networks.base import SeqtoSeq, ContrSeqtoSeq
+from physioex.train.networks.base import SeqtoSeq
 
 
 module_config = dict()
 
-def get_spectograms():
-    return
-
-inpunt_transforms = get_spectograms
-target_transforms = None
-
-class SeqtoSeqSleepNet( SeqtoSeq ):
+class SeqSleepNet( SeqtoSeq ):
     def __init__(self, module_config = module_config):
-        super(SeqtoSeqSleepNet, self).__init__( None, None , module_config)
-
-        self.nn = SeqtoSeqModule( EpochEncoder(module_config), SequenceEncoder(module_config) )
-
-    
-class ContrSeqtoSeqSleepNet( ContrSeqtoSeq ):
-    def __init__(self, module_config = module_config):
-
-        decoder_config = module_config.copy()
-        decoder_config["n_classes"] = decoder_config["latent_space_dim"]
-        super(ContrSeqtoSeqSleepNet, self).__init__( None, None , module_config)
-
-        self.nn = ContrSeqtoSeqModule( EpochEncoder(module_config), SequenceEncoder(decoder_config), module_config["latent_space_dim"], module_config["n_classes"] )
-    
+        super(SeqSleepNet, self).__init__( EpochEncoder(module_config), SequenceEncoder(module_config) , module_config)
 
 class EpochEncoder(nn.Module):
     def __init__(self, module_config):
@@ -70,62 +51,21 @@ class SequenceEncoder(nn.Module):
                             bidirectional = True
                             )
 
+        self.proj = nn.Linear( module_config["seqnhidden2"] * 2, module_config["latent_space_dim"])
+        self.norm = nn.LayerNorm( module_config["latent_space_dim"] )
         self.lin = nn.Linear( module_config["seqnhidden2"] * 2, module_config["n_classes"])
 
     def forward(self, x):
-        x, _ = self.LSTM( x )
-        x = self.lin(x)        
+        x, _ = self.encode(x)
+        x = self.lin(x)
         return x
 
     def encode(self, x):
         x, _ = self.LSTM( x )
+        x = nn.ReLU()(self.proj(x))
+        x = self.norm(x)
         return x
 
-class SeqtoSeqModule( nn.Module ):
-    def __init__(self, encoder, decoder):
-        super(SeqtoSeqModule, self).__init__()
-        self.encoder = encoder 
-        self.decoder = decoder
-
-    def forward(self, x):
-        batch_size, sequence_lenght, n_chans, T, F = x.size()        
-
-        x = x.reshape(batch_size * sequence_lenght, n_chans, T, F)
-        x = self.encoder(x)
-
-        x = x.reshape( batch_size, sequence_lenght, -1)
-        
-        return self.decoder(x)
-
-    def encode(self, x):
-        batch_size, sequence_lenght, modalities, input_dim = x.size()        
-
-        x = x.reshape(batch_size * sequence_lenght, modalities, input_dim)
-        x = self.encoder(x)
-
-        x = x.reshape( batch_size, sequence_lenght, -1)
-        
-        return self.decoder.encode(x), self.decoder(x)
-
-class ContrSeqtoSeqModule( SeqtoSeqModule ):
-    def __init__(self, encoder, decoder, latent_space_dim, n_classes):
-        super(ContrSeqtoSeqModule, self).__init__(encoder, decoder)
-        self.ls_norm = nn.LayerNorm( latent_space_dim )
-        self.clf = nn.Linear(latent_space_dim, n_classes)
-
-    def forward(self, x):
-        embeddings = super().forward(x)
-        embeddings = nn.ReLU()( embeddings ) 
-        embeddings = self.ls_norm( embeddings )
-        
-        batch_size, seq_len, ls_dim = embeddings.size()
-        embeddings = embeddings.reshape(-1, ls_dim)
-
-        outputs = self.clf( embeddings )
-
-        embeddings = embeddings.reshape(batch_size, seq_len, ls_dim)
-        outputs = outputs.reshape(batch_size, seq_len, -1)
-        return embeddings, outputs
     
 class AttentionLayer(nn.Module):
     def __init__(self,  hidden_size,

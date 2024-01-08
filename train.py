@@ -7,7 +7,8 @@ def main():
     # experiment arguments
     parser.add_argument('-e', '--experiment', default='chambon2018', type = str, help='Specify the experiment to run. Expected type: str. Default: "chambon2018"')
     parser.add_argument('-ckpt', '--checkpoint', default=None, type = str, help='Specify where to save the checkpoint. Expected type: str. Default: None')
-    
+    parser.add_argument('-l', '--loss', default='cel', type = str, help='Specify the loss function to use. Expected type: str. Default: "cel" (Cross Entropy Loss)')
+     
     # dataset args
     parser.add_argument('-d', '--dataset', default='sleep_physionet', type = str, help='Specify the dataset to use. Expected type: str. Default: "SleepPhysionet"')
     parser.add_argument('-v', '--version', default='2018', type = str, help='Specify the version of the dataset. Expected type: str. Default: "2018"')
@@ -29,6 +30,7 @@ def main():
         model_name = args.experiment, 
         dataset_name = args.dataset, 
         ckp_path = args.checkpoint,
+        loss_name= args.loss,
         version = args.version, 
         use_cache = args.use_cache, 
         sequence_lenght  = args.sequence_lenght, 

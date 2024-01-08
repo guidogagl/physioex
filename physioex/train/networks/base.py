@@ -5,49 +5,58 @@ import torch.optim as optim
 import pytorch_lightning as pl
 import torchmetrics as tm
 
-from typing import Type, Dict
+from typing import Dict
 
 from pytorch_metric_learning import miners, losses
 from pytorch_metric_learning.distances import CosineSimilarity
 from pytorch_metric_learning.reducers import ThresholdReducer
 from pytorch_metric_learning.regularizers import LpRegularizer
 
+
+class SequenceEncoder(nn.Module):
+    def __init__(self, input_dim: int, n_classes: int, latent_dim: int):
+        super(SequenceEncoder, self).__init__()
+        self.drop = nn.Dropout(0.5)
+        self.clf = nn.Linear(input_dim, n_classes)
+
 class SeqtoSeqModule( nn.Module ):
-    def __init__(self, encoder, decoder):
+    def __init__(self, epoch_encoder, sequence_encoder):
         super(SeqtoSeqModule, self).__init__()
-        self.encoder = encoder 
-        self.decoder = decoder
+        self.epoch_encoder = epoch_encoder 
+        self.sequence_encoder = sequence_encoder
 
     def forward(self, x):
-        batch_size, sequence_lenght, modalities, input_dim = x.size()        
+        batch_size, sequence_lenght = x.size(0), x.size(1)        
 
-        x = x.reshape(batch_size * sequence_lenght, modalities, input_dim)
-        x = self.encoder(x)
+        x_shape = [ batch_size * sequence_lenght ] + list(x.size()[2:])
+
+        x = x.reshape(x_shape)
+        x = self.epoch_encoder(x)
 
         x = x.reshape( batch_size, sequence_lenght, -1)
         
-        return self.decoder(x)
+        return self.sequence_encoder(x)
 
     def encode(self, x):
-        batch_size, sequence_lenght, modalities, input_dim = x.size()        
-
-        x = x.reshape(batch_size * sequence_lenght, modalities, input_dim)
-        x = self.encoder(x)
+        batch_size, sequence_lenght = x.size(0), x.size(1)        
+        x_shape = [ batch_size * sequence_lenght ] + list(x.size()[2:])
+ 
+        x = x.reshape(x_shape)
+        x = self.epoch_encoder(x)
 
         x = x.reshape( batch_size, sequence_lenght, -1)
         
-        return self.decoder.encode(x), self.decoder(x)
-
+        return self.sequence_encoder.encode(x), self.sequence_encoder(x)
 
 class SeqtoSeq(pl.LightningModule):
     def __init__(
         self, 
-        encoder : nn.Module, 
-        decoder : nn.Module,
+        epoch_encoder : nn.Module, 
+        sequence_encoder : nn.Module,
         config : Dict
     ):
         super(SeqtoSeq, self).__init__()
-        self.nn = SeqtoSeqModule( encoder, decoder )
+        self.nn = SeqtoSeqModule( epoch_encoder, sequence_encoder )
 
         # metrics
         self.acc = tm.Accuracy(task="multiclass", num_classes=config["n_classes"], average="weighted")
@@ -57,7 +66,7 @@ class SeqtoSeq(pl.LightningModule):
         self.rc = tm.Recall(task="multiclass", num_classes=config["n_classes"], average="weighted")
 
         # loss
-        self.loss = nn.CrossEntropyLoss()
+        self.loss = config["loss_call"]( config["loss_params"] )
 
         self.module_config = config
 
@@ -81,15 +90,16 @@ class SeqtoSeq(pl.LightningModule):
         return self.nn.encode(x)
     
     def compute_loss(
-        self, outputs, targets, log: str = "train", log_metrics: bool = False
+        self, embeddings, outputs, targets, log: str = "train", log_metrics: bool = False
     ):
         # print(targets.size())
         batch_size, seq_len, n_class = outputs.size()
 
+        embeddings = embeddings.reshape(batch_size*seq_len, -1)
         outputs = outputs.reshape(-1, n_class)
         targets = targets.reshape(-1)
 
-        loss = self.loss(outputs, targets)
+        loss = self.loss(embeddings, outputs, targets)
 
         self.log(log + "_loss", loss, prog_bar=True)
         self.log(log + "_acc", self.acc(outputs, targets), prog_bar=True)
@@ -104,91 +114,24 @@ class SeqtoSeq(pl.LightningModule):
     def training_step(self, batch, batch_idx):
         # Logica di training
         inputs, targets = batch
-        outputs = self(inputs)
+        embeddings, outputs = self.encode(inputs)
 
-        return self.compute_loss(outputs, targets)
+        return self.compute_loss(embeddings, outputs, targets)
 
     def validation_step(self, batch, batch_idx):
         # Logica di validazione
         inputs, targets = batch
-        outputs = self(inputs)
-        return self.compute_loss(outputs, targets, "val")
+        embeddings, outputs = self.encode(inputs)
+
+        return self.compute_loss(embeddings, outputs, targets, "val")
 
     def test_step(self, batch, batch_idx):
         # Logica di training
         inputs, targets = batch
-        outputs = self(inputs)
-
-        return self.compute_loss(outputs, targets, "test", log_metrics=True)
-
-    def predict_step(self, batch, batch_idx):
-        # Logica di validazione
-        inputs, targets = batch
-        outputs = self(inputs)
-
-        self.compute_loss(outputs, targets, "predict", log_metrics=True)
-
-        return outputs
-
-
-class ContrSeqtoSeqModule( SeqtoSeqModule ):
-    def __init__(self, encoder, decoder, latent_space_dim, n_classes):
-        super(ContrSeqtoSeqModule, self).__init__(encoder, decoder)
-        self.ls_norm = nn.LayerNorm( latent_space_dim )
-        self.clf = nn.Linear(latent_space_dim, n_classes)
-
-    def forward(self, x):
-        embeddings = super().forward(x)
-        embeddings = nn.ReLU()( embeddings ) 
-        embeddings = self.ls_norm( embeddings )
         
-        batch_size, seq_len, ls_dim = embeddings.size()
-        embeddings = embeddings.reshape(-1, ls_dim)
+        embeddings, outputs = self.encode(inputs)
 
-        outputs = self.clf( embeddings )
-
-        embeddings = embeddings.reshape(batch_size, seq_len, ls_dim)
-        outputs = outputs.reshape(batch_size, seq_len, -1)
-        return embeddings, outputs
-
-
-class ContrSeqtoSeq( SeqtoSeq ):
-    def __init__(
-        self, 
-        encoder : nn.Module, 
-        decoder : nn.Module,
-        config : Dict
-    ):
-        super(ContrSeqtoSeq, self).__init__(None, None, config=config)
-        
-        self.miner = miners.MultiSimilarityMiner()
-        self.contr_loss = losses.TripletMarginLoss(
-                                    distance = CosineSimilarity(), 
-                                    reducer = ThresholdReducer(high=0.3), 
-                                    embedding_regularizer = LpRegularizer())
-        
-        self.nn = ContrSeqtoSeqModule(encoder, decoder, config["latent_space_dim"], config["n_classes"])
-    
-    def compute_loss(
-        self, outputs, targets, log: str = "train", log_metrics: bool = False
-    ):
-        
-        projections, predictions = outputs
-        loss = super().compute_loss(predictions, targets, log, log_metrics)
-
-        batch_size, seq_len, embedding_size = projections.size()
-
-        projections = projections.reshape( batch_size * seq_len, -1)
-        targets = targets.reshape(-1)
-
-        indx = torch.randperm(len(targets))[: batch_size]
-
-        projections, targets = projections[indx], targets[indx]
-
-        hard_pairs = self.miner( projections, targets )
-        contr_loss = self.contr_loss( projections, targets, hard_pairs)
-
-        return loss + contr_loss
+        return self.compute_loss(embeddings, outputs, targets, "test", log_metrics=True)
 
 
 

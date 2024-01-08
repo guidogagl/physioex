@@ -39,6 +39,15 @@ class TimeDistributedDataset(Dataset):
 
         self.L = sequence_lenght 
 
+    def class_weights(self):
+        
+        class_weights = torch.zeros( len(self.classes) )
+
+        for i in range( len(self.classes) ):
+            class_weights[i] = torch.sum( self.y == self.classes[i] )/len(self.y)
+
+        return class_weights.float()
+
     def fit_scaler(self, scaler = StandardScaler()):
         shape = self.X.size()
         self.X = torch.tensor(scaler.fit_transform( self.X.reshape( shape[0], -1 ) ).reshape( shape )).float()
@@ -88,6 +97,9 @@ class TimeDistributedModule(pl.LightningDataModule):
         
     def setup(self, stage: str):
         return
+
+    def class_weights(self):
+        return self.train.class_weights()
 
     def train_dataloader(self):
         return DataLoader(self.train, batch_size=self.batch_size, shuffle = True)

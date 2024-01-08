@@ -4,6 +4,8 @@ from lightning.pytorch import seed_everything
 from pathlib import Path
 
 from physioex.train.networks import config 
+from physioex.train.networks.utils.loss import config as loss_config
+
 from physioex.data import datasets, TimeDistributedModule
 
 import uuid
@@ -27,6 +29,7 @@ class Trainer():
     def __init__(self, 
             model_name : str = "chambon2018", 
             dataset_name : str = "sleep_physioex", 
+            loss_name : str = "cel",
             ckp_path : str = None,
             version : str = "2018", 
             use_cache : bool = True, 
@@ -65,9 +68,11 @@ class Trainer():
         self.dataset = self.dataset_call( version=self.version, use_cache=self.use_cache)
         logger.info("Dataset loaded")
 
+        self.module_config["loss_call"] = loss_config[loss_name]
+        self.module_config["loss_params"] = dict()
+
     def train_evaluate(self, fold : int = 0):
 
-        module = self.model_call( module_config = self.module_config )
 
         dataset = self.dataset
 
@@ -81,6 +86,10 @@ class Trainer():
             transform = self.input_transform, 
             target_transform = self.target_transform
         )
+
+        self.module_config["loss_params"]["class_weights"] = datamodule.class_weights()
+
+        module = self.model_call( module_config = self.module_config )
 
         # Definizione delle callback
         checkpoint_callback = ModelCheckpoint(

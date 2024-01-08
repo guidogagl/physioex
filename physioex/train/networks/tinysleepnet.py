@@ -3,39 +3,9 @@ import torch
 import torch.nn as nn
 from collections import OrderedDict
 import torch.optim as optim
-from physioex.train.networks.base import SeqtoSeq, ContrSeqtoSeq
+from physioex.train.networks.base import SeqtoSeq
 
-module_config = {
-    # Train
-    "n_epochs": 200,
-    "learning_rate": 1e-4,
-    "adam_beta_1": 0.9,
-    "adam_beta_2": 0.999,
-    "adam_epsilon": 1e-8,
-    "clip_grad_value": 5.0,
-    "evaluate_span": 50,
-    "checkpoint_span": 50,
-    # Early-stopping
-    "no_improve_epochs": 50,
-    # Model
-    "model": "model-mod-8",
-    "n_rnn_layers": 1,
-    "n_rnn_units": 128,
-    "sampling_rate": 100.0,
-    "input_size": 3000,
-    "n_classes": 5,
-    "l2_weight_decay": 1e-3,
-    # Data Augmentation
-    "augment_seq": True,
-    "augment_signal_full": True,
-    "weighted_cross_ent": True,
-    "seq_len": 3,
-    "n_channels": 1,
-    "latent_space_dim": 32
-}
-
-inpunt_transforms = None
-target_transforms = None
+module_config = dict()
 
 
 class FeatureExtractor( nn.Module ):
@@ -162,18 +132,19 @@ class Classifier(nn.Module):
             batch_first=True,
         )
         self.rnn_dropout = nn.Dropout(p=0.5)  # todo 是否需要这个dropout?
-        self.fc = nn.Linear(self.config["n_rnn_units"], config["n_classes"])
+
+        self.proj = nn.Linear( self.config["n_rnn_units"], self.config["latent_space_dim"])
+        self.norm = nn.LayerNorm( self.config["latent_space_dim"] )
+        self.clf = nn.Linear( self.config["latent_space_dim"], self.config["n_classes"] )
 
     def forward(self, x):
-        batch_size, seq_len, feature_size = x.size()
-        x, _ = self.rnn(x)
-        x = x.reshape(-1, self.config["n_rnn_units"])
+        x = self.encode(x)
+        
+        batch_size, seq_len, latent_dim = x.size()
+        x = x.reshape(batch_size * seq_len, latent_dim)
 
-        x = self.rnn_dropout(x)
-        x = self.fc(x)
-        x = x.reshape(batch_size, seq_len, -1)
-        # x = torch.permute(x, (0, 2, 1))
-        return x
+        x = self.clf(x)
+        return x.reshape(batch_size, seq_len, -1)
     
     def encode(self, x):
         batch_size, seq_len, feature_size = x.size()
@@ -181,18 +152,13 @@ class Classifier(nn.Module):
         x = x.reshape(-1, self.config["n_rnn_units"])
 
         x = self.rnn_dropout(x)
-        x = x.reshape(batch_size, seq_len, -1)
-        return x
+        x = nn.ReLU()(self.proj(x))
+        x = self.norm(x)
 
+        return x.reshape(batch_size, seq_len, -1)
+        
 class TinySleepNet( SeqtoSeq ):
     def __init__(self, module_config = module_config):
         super(TinySleepNet, self).__init__(FeatureExtractor(config=module_config), Classifier(config=module_config), module_config)
 
     
-    
-class ContrTinySleepNet( ContrSeqtoSeq ):
-    def __init__(self, module_config = module_config):
-
-        decoder_config = module_config.copy()
-        decoder_config["n_classes"] = decoder_config["latent_space_dim"]
-        super(ContrTinySleepNet, self).__init__(FeatureExtractor(config=module_config), Classifier(config=decoder_config), module_config)
