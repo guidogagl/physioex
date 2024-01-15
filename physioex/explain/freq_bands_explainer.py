@@ -6,7 +6,8 @@ from sklearn.cluster import KMeans
 from sklearn.metrics import adjusted_rand_score
 
 import matplotlib.pyplot as plt
-import scipy as sp
+import scipy
+from scipy import signal
 import numpy as np 
 import seaborn as sns
 import pandas as pd
@@ -178,11 +179,11 @@ class FreqBandsExplainer(PhysioExplainer):
     def explain(self, band, save_csv : bool = False, plot_pred : bool = False, plot_true : bool = False, n_jobs : int = 10):
         results = []
 
-        for fold in self.checkpoints.keys():
-            logger.debug(int(fold))
+        #for fold in self.checkpoints.keys():
+        #    logger.debug(int(fold))
 
-        logger.debug(self.checkpoints.keys())
-        logger.debug(self.checkpoints[0])
+        #logger.debug(self.checkpoints.keys())
+        #logger.debug(self.checkpoints[0])
         # Esegui compute_ari per ogni checkpoint in parallelo
         results = Parallel(n_jobs=n_jobs)(delayed(self.compute_band_importance)(band, int(fold), plot_pred, plot_true) for fold in self.checkpoints.keys())
 
