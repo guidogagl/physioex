@@ -105,6 +105,7 @@ class FreqBandsExplainer(PhysioExplainer):
         super().__init__(model_name, dataset_name, loss_name, ckp_path, version, use_cache, sequence_lenght, batch_size)
 
     def compute_band_importance(self, band, fold : int = 0, plot_pred : bool = False, plot_true : bool = False):
+        logger.debug(fold)
         logger.info("JOB:%d-Loading model %s from checkpoint %s" % (fold, str(self.model_call), self.checkpoints[fold]))
         model = self.model_call.load_from_checkpoint(self.checkpoints[fold], module_config = self.module_config).eval()
 
@@ -178,7 +179,7 @@ class FreqBandsExplainer(PhysioExplainer):
     def explain(self, band, save_csv : bool = False, plot_pred : bool = False, plot_true : bool = False, n_jobs : int = 10):
         results = []
 
-        logger.debug(self.checkpoints.keys())
+        logger.debug(self.checkpoints.keys(), "first position:", self.checkpoints[0])
         # Esegui compute_ari per ogni checkpoint in parallelo
         results = Parallel(n_jobs=n_jobs)(delayed(self.compute_band_importance)(int(fold), band, plot_pred, plot_true) for fold in self.checkpoints.keys())
 
