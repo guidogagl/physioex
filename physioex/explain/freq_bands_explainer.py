@@ -33,10 +33,10 @@ def compute_band_importance( freq_band, model, dataloader, model_device):
     importance = []
 
     for batch in dataloader:
-        inputs, y_true = batch
+        inputs, y_true_batch = batch
         
         # store the true label of the input element
-        y_true.append(y_true.numpy())
+        y_true.append(y_true_batch.numpy())
 
         # compute the prediction of the model
         pred_proba = model(inputs.to(model_device)).cpu().detach().numpy()
@@ -55,9 +55,12 @@ def compute_band_importance( freq_band, model, dataloader, model_device):
         # y_true size = batch_size, 1
         
         # reshape the input to consider only the input signal ( 30 seconds of data sampled at 100 Hz )
-        inputs = inputs.reshape(-1, inputs.size(-1))
+        inputs = inputs.reshape(-1, seq_len * n_samples)
 
-        # now inputs size is batch_size * seq_len * n_channels, n_samples
+        for index in range(batch_size):
+            pass
+
+        # now inputs size is batch_size * (seq_len * n_channels (1) * n_samples)
         # remove the frequency band from the input using scipy
         #
         # ..... your code here ....
