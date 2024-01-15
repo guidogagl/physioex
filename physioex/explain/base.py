@@ -58,7 +58,7 @@ class PhysioExplainer(ABC):
                 self.checkpoints[fold] = elem.path
 
         logger.info("Found %d checkpoints" % len(self.checkpoints))
-        logger.debug("fold = %d, %d", fold, int(fold))
+        logger.debug("fold = %d, %d", %fold, %int(fold))
 
         self.ckpt_path = ckp_path
 
