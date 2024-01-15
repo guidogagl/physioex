@@ -178,7 +178,7 @@ class FreqBandsExplainer(PhysioExplainer):
     def explain(self, band, save_csv : bool = False, plot_pred : bool = False, plot_true : bool = False, n_jobs : int = 10):
         results = []
 
-        logger.debug("fold che si sta cercando di usare come key: %d", int(fold))
+        logger.debug("fold che si sta cercando di usare come key: %d" % int(fold))
         # Esegui compute_ari per ogni checkpoint in parallelo
         results = Parallel(n_jobs=n_jobs)(delayed(self.compute_band_importance)(int(fold), band, plot_pred, plot_true) for fold in self.checkpoints.keys())
 
