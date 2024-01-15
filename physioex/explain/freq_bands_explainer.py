@@ -6,7 +6,7 @@ from sklearn.cluster import KMeans
 from sklearn.metrics import adjusted_rand_score
 
 import matplotlib.pyplot as plt
-
+import scipy as sp
 import numpy as np 
 import seaborn as sns
 import pandas as pd
@@ -57,14 +57,21 @@ def compute_band_importance( freq_band, model, dataloader, model_device):
         # reshape the input to consider only the input signal ( 30 seconds of data sampled at 100 Hz )
         inputs = inputs.reshape(-1, seq_len * n_samples)
 
-        for index in range(batch_size):
-            pass
-
         # now inputs size is batch_size * (seq_len * n_channels (1) * n_samples)
         # remove the frequency band from the input using scipy
-        #
-        # ..... your code here ....
-        #
+        sampling_rate = 100
+
+        for index in range(batch_size):
+            # filter bandstop - reject the frequencies specified in freq_band
+            lowcut = freq_band[0]
+            highcut = freq_band[1]
+            order = 4
+            nyq = 0.5 * sampling_rate
+            low = lowcut / nyq
+            high = highcut / nyq
+            sos = signal.butter(order, [low, high], btype='bandstop', output='sos')
+            inputs[index] = signal.sosfilt(sos, inputs[index])
+
         # reshape the input signal to the original size and port it to tensor
         inputs = inputs.reshape(batch_size, seq_len, n_channels, n_samples)
         inputs = torch.from_numpy(inputs)
