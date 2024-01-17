@@ -82,9 +82,9 @@ def compute_band_importance( freq_band, model, dataloader, model_device):
 
         # the importance is the difference between the prediction with the original input and the prediction with the filtered input
         batch_importance = pred_proba - batch_importance
-        print("stampa 1:" + batch_importance)
+        print("stampa 1:", batch_importance)
         importance.append(batch_importance)
-        print("stampa 2:" + importance)
+        print("stampa 2:", importance)
 
     # reshape the lists to ignore the batch_size dimension
 
@@ -92,7 +92,7 @@ def compute_band_importance( freq_band, model, dataloader, model_device):
     y_true = np.concatenate(y_true).reshape(-1)
     importance = np.concatenate(importance).reshape(-1, n_class)
 
-    print("stampa 3:" + importance)
+    print("stampa 3:", importance)
 
     return importance, y_pred, y_true
 
