@@ -131,20 +131,17 @@ class FreqBandsExplainer(PhysioExplainer):
             logger.info("JOB:%d-Plotting band importance for true label" % fold)
             true_importance = []
             
-            print(len(y_true))
-            print(len(importance))
-            print(importance[0][y_true[0]])
             for i in range(len(y_true)):
                 true_importance.append(importance[i][y_true[i]])
             
             true_importance = np.array(true_importance)
-            for i in range(5):
-                print(true_importance[i])
-
-            df = pd.DataFrame({
+            
+            d = {
                 'Band ' + str(band) + ' Importance': true_importance,
                 'Class': y_true
-            })
+                }
+
+            df = pd.DataFrame(data = d)
 
             # boxplot of the true importance of the band with seaborn
             plt.figure(figsize=(10, 10))
