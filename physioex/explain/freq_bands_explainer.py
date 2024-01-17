@@ -61,16 +61,16 @@ def compute_band_importance( freq_band, model, dataloader, model_device):
         # now inputs size is batch_size * (seq_len * n_channels (1) * n_samples)
         # remove the frequency band from the input using scipy
         sampling_rate = 100
+        # filter bandstop - reject the frequencies specified in freq_band
+        lowcut = freq_band[0]
+        highcut = freq_band[1]
+        order = 4
+        nyq = 0.5 * sampling_rate
+        low = lowcut / nyq
+        high = highcut / nyq
+        sos = signal.butter(order, [low, high], btype='bandstop', output='sos')
 
-        for index in range(batch_size):
-            # filter bandstop - reject the frequencies specified in freq_band
-            lowcut = freq_band[0]
-            highcut = freq_band[1]
-            order = 4
-            nyq = 0.5 * sampling_rate
-            low = lowcut / nyq
-            high = highcut / nyq
-            sos = signal.butter(order, [low, high], btype='bandstop', output='sos')
+        for index in range(batch_size):     
             inputs[index] = signal.sosfilt(sos, inputs[index])
 
         # reshape the input signal to the original size and port it to tensor
@@ -82,13 +82,17 @@ def compute_band_importance( freq_band, model, dataloader, model_device):
 
         # the importance is the difference between the prediction with the original input and the prediction with the filtered input
         batch_importance = pred_proba - batch_importance
+        print("stampa 1:" + batch_importance)
         importance.append(batch_importance)
+        print("stampa 2:" + importance)
 
     # reshape the lists to ignore the batch_size dimension
 
     y_pred = np.concatenate(y_pred).reshape(-1)
     y_true = np.concatenate(y_true).reshape(-1)
     importance = np.concatenate(importance).reshape(-1, n_class)
+
+    print("stampa 3:" + importance)
 
     return importance, y_pred, y_true
 
