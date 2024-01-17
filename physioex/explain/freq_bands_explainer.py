@@ -132,13 +132,14 @@ class FreqBandsExplainer(PhysioExplainer):
             true_importance = []
             
             print(len(y_true))
+            print(len(importance))
             print(importance[0][y_true[0]])
             for i in range(len(y_true)):
                 true_importance.append(importance[i][y_true[i]])
             
             true_importance = np.array(true_importance)
-
-            logger.debug("i arrived here ", true_importance)
+            for i in range(5):
+                print(true_importance[i])
 
             df = pd.DataFrame({
                 'Band ' + str(band) + ' Importance': true_importance,
