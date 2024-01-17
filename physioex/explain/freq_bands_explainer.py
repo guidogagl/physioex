@@ -136,6 +136,8 @@ class FreqBandsExplainer(PhysioExplainer):
             
             true_importance = np.array(true_importance)
 
+            logger.debug("i arrived here ", true_importance)
+
             df = pd.DataFrame({
                 'Band ' + str(band) + ' Importance': true_importance,
                 'Class': y_true
