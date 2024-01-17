@@ -143,7 +143,7 @@ class FreqBandsExplainer(PhysioExplainer):
 
             # boxplot of the true importance of the band with seaborn
             plt.figure(figsize=(10, 10))
-            sns.boxplot(x='Class', y='Importance', data=df.reset_index())
+            sns.boxplot(x='Class', y='Band ' + str(band) + ' Importance', data=df.reset_index())
             print("print 3")
             plt.title('Band Importance for True Label')
             plt.xlabel('Class')
