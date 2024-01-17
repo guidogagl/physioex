@@ -82,7 +82,7 @@ def compute_band_importance( freq_band, model, dataloader, model_device):
 
         # the importance is the difference between the prediction with the original input and the prediction with the filtered input
         batch_importance = pred_proba - batch_importance
-        print("stampa 1:", batch_importance)
+        print(batch_importance)
         importance.append(batch_importance)
         print("stampa 2:", importance)
 
