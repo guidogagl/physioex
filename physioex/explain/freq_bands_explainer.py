@@ -82,17 +82,13 @@ def compute_band_importance( freq_band, model, dataloader, model_device):
 
         # the importance is the difference between the prediction with the original input and the prediction with the filtered input
         batch_importance = pred_proba - batch_importance
-        print(batch_importance)
         importance.append(batch_importance)
-        print("stampa 2:", importance)
 
     # reshape the lists to ignore the batch_size dimension
 
     y_pred = np.concatenate(y_pred).reshape(-1)
     y_true = np.concatenate(y_true).reshape(-1)
     importance = np.concatenate(importance).reshape(-1, n_class)
-
-    print("stampa 3:", importance)
 
     return importance, y_pred, y_true
 
@@ -135,6 +131,8 @@ class FreqBandsExplainer(PhysioExplainer):
             logger.info("JOB:%d-Plotting band importance for true label" % fold)
             true_importance = []
             
+            print(len(y_true))
+            print(importance[0][y_true[0]])
             for i in range(len(y_true)):
                 true_importance.append(importance[i][y_true[i]])
             
