@@ -191,11 +191,11 @@ class FreqBandsExplainer(PhysioExplainer):
 
         #logger.debug(self.checkpoints.keys())
         #logger.debug(self.checkpoints[0])
-        # Esegui compute_ari per ogni checkpoint in parallelo
+        # Esegui compute_band_importance per ogni checkpoint in parallelo
         results = Parallel(n_jobs=n_jobs)(delayed(self.compute_band_importance)(band, int(fold), plot_pred, plot_true) for fold in self.checkpoints.keys())
 
         # Converte i risultati in una matrice numpy
-        results = np.array(results)
+        results = np.array(results).tolist()
         
         df = pd.DataFrame([])
 
