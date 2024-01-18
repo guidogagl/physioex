@@ -175,11 +175,12 @@ class FreqBandsExplainer(PhysioExplainer):
             plt.savefig(self.ckpt_path + ("fold=%d_pred_band=" + str(band) + "_importance.png") % fold)
             plt.close()
         
-        #cambiate parentesi da quadre a tonde (e.c.) (potenzialmente ancora errato)
+        #cambiato da concatenate a row stack (e.c.) (potenzialmente ancora errato)
         print(importance.shape)
         print(y_pred.shape)
         print(y_true.shape)
-        result = np.concatenate((importance, y_pred, y_true) , axis = 0 )
+        #result = np.concatenate((importance, y_pred, y_true) , axis = 0 )
+        result = np.row_stack([importance, y_pred, y_true])
         return result
     
     def explain(self, band, save_csv : bool = False, plot_pred : bool = False, plot_true : bool = False, n_jobs : int = 10):
