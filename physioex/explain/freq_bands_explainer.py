@@ -195,7 +195,9 @@ class FreqBandsExplainer(PhysioExplainer):
         results = Parallel(n_jobs=n_jobs)(delayed(self.compute_band_importance)(band, int(fold), plot_pred, plot_true) for fold in self.checkpoints.keys())
 
         # Converte i risultati in una matrice numpy
-        results = np.array(results).tolist()
+        results = np.array(results, dtype=object)
+
+        print(results.shape)
         
         df = pd.DataFrame([])
 
