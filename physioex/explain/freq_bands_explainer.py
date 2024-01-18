@@ -198,6 +198,8 @@ class FreqBandsExplainer(PhysioExplainer):
         results = np.array(results, dtype=object)
 
         print(results.shape)
+        for fold in self.checkpoints.keys():
+            print(results[fold].shape)
         
         df = pd.DataFrame([])
 
