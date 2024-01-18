@@ -175,8 +175,8 @@ class FreqBandsExplainer(PhysioExplainer):
             plt.savefig(self.ckpt_path + ("fold=%d_pred_band=" + str(band) + "_importance.png") % fold)
             plt.close()
         
-        #cambiato axis in 0 perche' -1 non era valore accettabile (e.c.) (potenzialmente ancora errato)
-        result = np.concatenate( [ importance, y_pred, y_true] , axis = 0 )
+        #cambiate parentesi da quadre a tonde (e.c.) (potenzialmente ancora errato)
+        result = np.concatenate((importance, y_pred, y_true) , axis = -1 )
         return result
     
     def explain(self, band, save_csv : bool = False, plot_pred : bool = False, plot_true : bool = False, n_jobs : int = 10):
