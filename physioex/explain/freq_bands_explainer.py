@@ -175,7 +175,7 @@ class FreqBandsExplainer(PhysioExplainer):
             plt.savefig(self.ckpt_path + ("fold=%d_pred_band=" + str(band) + "_importance.png") % fold)
             plt.close()
         
-        #cambiato da concatenate a column stack (e.c.) (potenzialmente ancora errato)
+        #cambiato da concatenate a column stack (e.c.)
         print(importance.shape)
         print(y_pred.shape)
         print(y_true.shape)
@@ -186,15 +186,18 @@ class FreqBandsExplainer(PhysioExplainer):
     def explain(self, band, save_csv : bool = False, plot_pred : bool = False, plot_true : bool = False, n_jobs : int = 10):
         results = []
 
-        #for fold in self.checkpoints.keys():
-        #    logger.debug(int(fold))
+        #attenzione, il parametro band qui non e', come ci aspetterebbe, Alpha, Beta... ma e' [8, 12], [12, 30]...
+        #questo comporta che quando andiamo a salvare i dati nelle varie cartelle di destinazione, queste non si chiameranno
+        #'models/cel/chambon2018/seqlen=3/dreem/dodh/fold=0_true_band=Alpha_importance.png', per esempio, ma si chiameranno
+        #'models/cel/chambon2018/seqlen=3/dreem/dodh/fold=0_true_band=[8, 12]_importance.png'
+        #per evitare di fare troppi cambiamenti qui, dove il codice e' un po' piu' innestato, ho cambiato direttamente il codice
+        #nel file freq_bands_importance, cosi' da richiamare la cartella giusta (e.c.)
 
-        #logger.debug(self.checkpoints.keys())
-        #logger.debug(self.checkpoints[0])
         # Esegui compute_band_importance per ogni checkpoint in parallelo
         results = Parallel(n_jobs=n_jobs)(delayed(self.compute_band_importance)(band, int(fold), plot_pred, plot_true) for fold in self.checkpoints.keys())
 
         # Converte i risultati in una matrice numpy
+        #aggiunto dtype=object per evitare l'apparizione di un warning (e.c)
         results = np.array(results, dtype=object)
 
         print(results.shape)
@@ -205,6 +208,7 @@ class FreqBandsExplainer(PhysioExplainer):
 
         for fold in self.checkpoints.keys():
             df = df.append(pd.DataFrame({
+                #aggiunto .tolist() alla fine per evitare l'errore che diceva che i dati devono essere monodimensionali
                 "Band Importance": results[fold][:, :-2].tolist(),
                 "Predicted Label": results[fold][:, -2],
                 "True Label": results[fold][:, -1],
