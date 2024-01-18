@@ -142,6 +142,7 @@ class FreqBandsExplainer(PhysioExplainer):
             })
 
             # boxplot of the true importance of the band with seaborn
+            #y prendeva in input 'Importance', che non era riconosciuto. Cambiato il valore in 'Band ' + str(band) + ' Importance' (e.c.)
             plt.figure(figsize=(10, 10))
             sns.boxplot(x='Class', y='Band ' + str(band) + ' Importance', data=df)
             plt.title('Band Importance for True Label')
@@ -165,6 +166,7 @@ class FreqBandsExplainer(PhysioExplainer):
             })
 
             # boxplot of the true importance of the band with seaborn
+            #y prendeva in input 'Importance', che non era riconosciuto. Cambiato il valore in 'Band ' + str(band) + ' Importance' (e.c.)
             plt.figure(figsize=(10, 10))
             sns.boxplot(x='Class', y='Band ' + str(band) + ' Importance', data=df)
             plt.title('Band Importance for Predicted Label')
@@ -173,7 +175,8 @@ class FreqBandsExplainer(PhysioExplainer):
             plt.savefig(self.ckpt_path + ("fold=%d_pred_band=" + str(band) + "_importance.png") % fold)
             plt.close()
         
-        result = np.concatenate( [ importance, y_pred, y_true] , axis = -1 )
+        #cambiato axis in 0 perche' -1 non era valore accettabile (e.c.) (potenzialmente ancora errato)
+        result = np.concatenate( [ importance, y_pred, y_true] , axis = 0 )
         return result
     
     def explain(self, band, save_csv : bool = False, plot_pred : bool = False, plot_true : bool = False, n_jobs : int = 10):
