@@ -144,7 +144,6 @@ class FreqBandsExplainer(PhysioExplainer):
             # boxplot of the true importance of the band with seaborn
             plt.figure(figsize=(10, 10))
             sns.boxplot(x='Class', y='Band ' + str(band) + ' Importance', data=df)
-            print("print 3")
             plt.title('Band Importance for True Label')
             plt.xlabel('Class')
             plt.ylabel('Importance')
@@ -167,7 +166,7 @@ class FreqBandsExplainer(PhysioExplainer):
 
             # boxplot of the true importance of the band with seaborn
             plt.figure(figsize=(10, 10))
-            sns.boxplot(x='Class', y='Importance', data=df)
+            sns.boxplot(x='Class', y='Band ' + str(band) + ' Importance', data=df)
             plt.title('Band Importance for Predicted Label')
             plt.xlabel('Class')
             plt.ylabel('Importance')
