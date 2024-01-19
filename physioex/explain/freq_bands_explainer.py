@@ -105,7 +105,7 @@ class FreqBandsExplainer(PhysioExplainer):
         ):
         super().__init__(model_name, dataset_name, loss_name, ckp_path, version, use_cache, sequence_lenght, batch_size)
 
-    def compute_band_importance(self, band, fold : int = 0, plot_pred : bool = False, plot_true : bool = False):
+    def compute_band_importance(self, band, band_name, fold : int = 0, plot_pred : bool = False, plot_true : bool = False):
         logger.info("JOB:%d-Loading model %s from checkpoint %s" % (fold, str(self.model_call), self.checkpoints[fold]))
         model = self.model_call.load_from_checkpoint(self.checkpoints[fold], module_config = self.module_config).eval()
 
@@ -125,6 +125,8 @@ class FreqBandsExplainer(PhysioExplainer):
         self.module_config["loss_params"]["class_weights"] = datamodule.class_weights()
 
         importance, y_pred, y_true = compute_band_importance(band, model, datamodule.train_dataloader(), model_device)
+
+        class_name = ['Wake', 'NREM1', 'NREM2', 'DeepSleep', 'REM']
         
         if plot_true:
             # boxplot of the band importance of the true label
@@ -137,18 +139,18 @@ class FreqBandsExplainer(PhysioExplainer):
             true_importance = np.array(true_importance)
 
             df = pd.DataFrame({
-                'Band ' + str(band) + ' Importance': true_importance,
-                'Class': y_true
+                'Band ' + band_name + ' Importance': true_importance,
+                'Class': class_name[y_true]
             })
 
             # boxplot of the true importance of the band with seaborn
-            #y prendeva in input 'Importance', che non era riconosciuto. Cambiato il valore in 'Band ' + str(band) + ' Importance' (e.c.)
+            #y prendeva in input 'Importance', che non era riconosciuto. Cambiato il valore in 'Band ' + band_name + ' Importance' (e.c.)
             plt.figure(figsize=(10, 10))
-            sns.boxplot(x='Class', y='Band ' + str(band) + ' Importance', data=df)
-            plt.title('Band ' + str(band) + ' Importance for True Label')
+            sns.boxplot(x='Class', y='Band ' + band_name + ' Importance', data=df)
+            plt.title('Band ' + band_name + ' Importance for True Label (freq. ' + str(band) +')')
             plt.xlabel('Class')
             plt.ylabel('Importance')
-            plt.savefig(self.ckpt_path + ("fold=%d_true_band=" + str(band) + "_importance.png") % fold)
+            plt.savefig(self.ckpt_path + ("fold=%d_true_band=" + band_name + "_importance.png") % fold)
             plt.close()
 
         if plot_pred:
@@ -161,18 +163,18 @@ class FreqBandsExplainer(PhysioExplainer):
             pred_importance = np.array(pred_importance)
 
             df = pd.DataFrame({
-                'Band ' + str(band) + ' Importance': pred_importance,
-                'Class': y_true
+                'Band ' + band_name + ' Importance': pred_importance,
+                'Class': class_name[y_true]
             })
 
             # boxplot of the true importance of the band with seaborn
-            #y prendeva in input 'Importance', che non era riconosciuto. Cambiato il valore in 'Band ' + str(band) + ' Importance' (e.c.)
+            #y prendeva in input 'Importance', che non era riconosciuto. Cambiato il valore in 'Band ' + band_name + ' Importance' (e.c.)
             plt.figure(figsize=(10, 10))
-            sns.boxplot(x='Class', y='Band ' + str(band) + ' Importance', data=df)
-            plt.title('Band ' + str(band) + ' Importance for Predicted Label')
+            sns.boxplot(x='Class', y='Band ' + band_name + ' Importance', data=df)
+            plt.title('Band ' + band_name + ' Importance for Predicted Label (freq. ' + str(band) +')')
             plt.xlabel('Class')
             plt.ylabel('Importance')
-            plt.savefig(self.ckpt_path + ("fold=%d_pred_band=" + str(band) + "_importance.png") % fold)
+            plt.savefig(self.ckpt_path + ("fold=%d_pred_band=" + band_name + "_importance.png") % fold)
             plt.close()
         
         #cambiato da concatenate a column stack (e.c.)
@@ -180,7 +182,7 @@ class FreqBandsExplainer(PhysioExplainer):
         result = np.column_stack([importance, y_pred, y_true])
         return result
     
-    def explain(self, band, save_csv : bool = False, plot_pred : bool = False, plot_true : bool = False, n_jobs : int = 10):
+    def explain(self, band, band_name, save_csv : bool = False, plot_pred : bool = False, plot_true : bool = False, n_jobs : int = 10):
         results = []
 
         #attenzione, il parametro band qui non e', come ci aspetterebbe, Alpha, Beta... ma e' [8, 12], [12, 30]...
@@ -191,7 +193,7 @@ class FreqBandsExplainer(PhysioExplainer):
         #nel file freq_bands_importance, cosi' da richiamare la cartella giusta (e.c.)
 
         # Esegui compute_band_importance per ogni checkpoint in parallelo
-        results = Parallel(n_jobs=n_jobs)(delayed(self.compute_band_importance)(band, int(fold), plot_pred, plot_true) for fold in self.checkpoints.keys())
+        results = Parallel(n_jobs=n_jobs)(delayed(self.compute_band_importance)(band, band_name, int(fold), plot_pred, plot_true) for fold in self.checkpoints.keys())
 
         # Converte i risultati in una matrice numpy
         #aggiunto dtype=object per evitare l'apparizione di un warning (e.c)
