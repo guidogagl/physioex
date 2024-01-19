@@ -146,7 +146,7 @@ class FreqBandsExplainer(PhysioExplainer):
             # boxplot of the true importance of the band with seaborn
             #y prendeva in input 'Importance', che non era riconosciuto. Cambiato il valore in 'Band ' + band_name + ' Importance' (e.c.)
             plt.figure(figsize=(10, 10))
-            sns.boxplot(x='Class', y='Band ' + band_name + ' Importance', data=df, order=class_name)
+            sns.boxplot(x='Class', y='Band ' + band_name + ' Importance', data=df)
             plt.title('Band ' + band_name + ' Importance for True Label (freq. ' + str(band) +')')
             plt.xlabel('Class')
             plt.ylabel('Importance')
