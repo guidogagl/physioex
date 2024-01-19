@@ -40,7 +40,7 @@ def compute_band_importance( freq_band, model, dataloader, model_device, samplin
         y_true.append(y_true_batch.numpy())
 
         # compute the prediction of the model
-        pred_proba = torch.nn.functional.softmax(model(inputs.to(model_device), 1).cpu()).detach().numpy()       
+        pred_proba = torch.nn.functional.softmax(model(inputs.to(model_device)).cpu()).detach().numpy()       
         y_pred.append( np.argmax( pred_proba, axis = -1) )
         n_class = pred_proba.shape[-1]
 
@@ -78,7 +78,7 @@ def compute_band_importance( freq_band, model, dataloader, model_device, samplin
         inputs = torch.from_numpy(inputs)
 
         # compute the prediction of the model with the filtered input, the prediction is a tensor of size batch_size * seq_len, n_classes
-        batch_importance = torch.nn.functional.softmax(model(inputs.to(model_device), 1).cpu()).detach().numpy()
+        batch_importance = torch.nn.functional.softmax(model(inputs.to(model_device)).cpu()).detach().numpy()
 
         # the importance is the difference between the prediction with the original input and the prediction with the filtered input
         batch_importance = pred_proba - batch_importance
