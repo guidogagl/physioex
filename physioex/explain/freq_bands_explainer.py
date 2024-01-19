@@ -140,7 +140,7 @@ class FreqBandsExplainer(PhysioExplainer):
 
             df = pd.DataFrame({
                 'Band ' + band_name + ' Importance': true_importance,
-                'Class': class_name[y_true]
+                'Class': class_name[int(y_true)]
             })
 
             # boxplot of the true importance of the band with seaborn
@@ -164,7 +164,7 @@ class FreqBandsExplainer(PhysioExplainer):
 
             df = pd.DataFrame({
                 'Band ' + band_name + ' Importance': pred_importance,
-                'Class': class_name[y_true]
+                'Class': class_name[int(y_true)]
             })
 
             # boxplot of the true importance of the band with seaborn
