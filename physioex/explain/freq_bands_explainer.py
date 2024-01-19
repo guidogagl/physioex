@@ -176,9 +176,6 @@ class FreqBandsExplainer(PhysioExplainer):
             plt.close()
         
         #cambiato da concatenate a column stack (e.c.)
-        print(importance.shape)
-        print(y_pred.shape)
-        print(y_true.shape)
         #result = np.concatenate((importance, y_pred, y_true) , axis = 0 )
         result = np.column_stack([importance, y_pred, y_true])
         return result
@@ -199,10 +196,6 @@ class FreqBandsExplainer(PhysioExplainer):
         # Converte i risultati in una matrice numpy
         #aggiunto dtype=object per evitare l'apparizione di un warning (e.c)
         results = np.array(results, dtype=object)
-
-        print(results.shape)
-        for fold in self.checkpoints.keys():
-            print(results[fold].shape)
         
         df = pd.DataFrame([])
 
