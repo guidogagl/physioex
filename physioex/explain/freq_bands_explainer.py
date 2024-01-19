@@ -28,7 +28,7 @@ from tqdm import tqdm
 import torch
 torch.set_float32_matmul_precision('medium')
 
-def compute_band_importance( freq_band, model, dataloader, model_device):
+def compute_band_importance( freq_band, model, dataloader, model_device, sampling_rate: int = 100):
     y_pred = []
     y_true = []
     importance = []
@@ -60,7 +60,7 @@ def compute_band_importance( freq_band, model, dataloader, model_device):
 
         # now inputs size is batch_size * (seq_len * n_channels (1) * n_samples)
         # remove the frequency band from the input using scipy
-        sampling_rate = 100
+        
         # filter bandstop - reject the frequencies specified in freq_band
         lowcut = freq_band[0]
         highcut = freq_band[1]
@@ -145,7 +145,7 @@ class FreqBandsExplainer(PhysioExplainer):
             #y prendeva in input 'Importance', che non era riconosciuto. Cambiato il valore in 'Band ' + str(band) + ' Importance' (e.c.)
             plt.figure(figsize=(10, 10))
             sns.boxplot(x='Class', y='Band ' + str(band) + ' Importance', data=df)
-            plt.title('Band Importance for True Label')
+            plt.title('Band ' + str(band) + ' Importance for True Label')
             plt.xlabel('Class')
             plt.ylabel('Importance')
             plt.savefig(self.ckpt_path + ("fold=%d_true_band=" + str(band) + "_importance.png") % fold)
@@ -169,7 +169,7 @@ class FreqBandsExplainer(PhysioExplainer):
             #y prendeva in input 'Importance', che non era riconosciuto. Cambiato il valore in 'Band ' + str(band) + ' Importance' (e.c.)
             plt.figure(figsize=(10, 10))
             sns.boxplot(x='Class', y='Band ' + str(band) + ' Importance', data=df)
-            plt.title('Band Importance for Predicted Label')
+            plt.title('Band ' + str(band) + ' Importance for Predicted Label')
             plt.xlabel('Class')
             plt.ylabel('Importance')
             plt.savefig(self.ckpt_path + ("fold=%d_pred_band=" + str(band) + "_importance.png") % fold)
