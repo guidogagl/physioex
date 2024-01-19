@@ -146,7 +146,8 @@ class FreqBandsExplainer(PhysioExplainer):
             # boxplot of the true importance of the band with seaborn
             #y prendeva in input 'Importance', che non era riconosciuto. Cambiato il valore in 'Band ' + band_name + ' Importance' (e.c.)
             plt.figure(figsize=(10, 10))
-            sns.boxplot(x='Class', y='Band ' + band_name + ' Importance', data=df)
+            ax = sns.boxplot(x='Class', y='Band ' + band_name + ' Importance', data=df)
+            ax.set_xticklabels(class_name)
             plt.title('Band ' + band_name + ' Importance for True Label (freq. ' + str(band) +')')
             plt.xlabel('Class')
             plt.ylabel('Importance')
@@ -170,7 +171,8 @@ class FreqBandsExplainer(PhysioExplainer):
             # boxplot of the true importance of the band with seaborn
             #y prendeva in input 'Importance', che non era riconosciuto. Cambiato il valore in 'Band ' + band_name + ' Importance' (e.c.)
             plt.figure(figsize=(10, 10))
-            sns.boxplot(x='Class', y='Band ' + band_name + ' Importance', data=df, order=class_name)
+            ax = sns.boxplot(x='Class', y='Band ' + band_name + ' Importance', data=df)
+            ax.set_xticklabels(class_name)
             plt.title('Band ' + band_name + ' Importance for Predicted Label (freq. ' + str(band) +')')
             plt.xlabel('Class')
             plt.ylabel('Importance')
