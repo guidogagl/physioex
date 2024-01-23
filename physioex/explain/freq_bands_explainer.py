@@ -30,7 +30,7 @@ from tqdm import tqdm
 from torch.nn import functional as F
 torch.set_float32_matmul_precision('medium')
 
-def compute_band_importance(bands : list, band_names : list, current_band : int, model : object, dataloader : object, model_device : torch.device, sampling_rate: int = 100):
+def compute_band_importance(bands : list[list[float]], band_names : list[str], model, dataloader : torch.nn.Module, model_device : torch.device, sampling_rate: int = 100):
     y_pred = []
     y_true = []
     importance = []
@@ -115,7 +115,7 @@ class FreqBandsExplainer(PhysioExplainer):
         combination = list(it.combinations(band_names))
         print(combination)
 
-    def compute_band_importance(self, bands : list, band_names : list, current_band : int, fold : int = 0, plot_pred : bool = False, plot_true : bool = False):
+    def compute_band_importance(self, bands : list[list[float]], band_names : list[str], fold : int = 0, plot_pred : bool = False, plot_true : bool = False):
         logger.info("JOB:%d-Loading model %s from checkpoint %s" % (fold, str(self.model_call), self.checkpoints[fold]))
         model = self.model_call.load_from_checkpoint(self.checkpoints[fold], module_config = self.module_config).eval()
 
@@ -134,7 +134,7 @@ class FreqBandsExplainer(PhysioExplainer):
 
         self.module_config["loss_params"]["class_weights"] = datamodule.class_weights()
 
-        importance, y_pred, y_true = compute_band_importance(bands, band_names, current_band, model, datamodule.train_dataloader(), model_device, self.sampling_rate)
+        importance, y_pred, y_true = compute_band_importance(bands, band_names, model, datamodule.train_dataloader(), model_device, self.sampling_rate)
         
         if plot_true:
             # boxplot of the band importance of the true label
@@ -188,26 +188,30 @@ class FreqBandsExplainer(PhysioExplainer):
         result = np.column_stack([importance, y_pred, y_true])
         return result
     
-    def explain(self, bands : list, band_names : list, current_band : int, save_csv : bool = False, plot_pred : bool = False, plot_true : bool = False, n_jobs : int = 10):
+    def explain(self, bands : list[list[float]], band_names : list[str], save_csv : bool = False, plot_pred : bool = False, plot_true : bool = False, n_jobs : int = 10):
         results = []
 
         # Esegui compute_band_importance per ogni checkpoint in parallelo
-        results = Parallel(n_jobs=n_jobs)(delayed(self.compute_band_importance)(bands, band_names, current_band, int(fold), plot_pred, plot_true) for fold in self.checkpoints.keys())
+        results = Parallel(n_jobs=n_jobs)(delayed(self.compute_band_importance)(bands, band_names, int(fold), plot_pred, plot_true) for fold in self.checkpoints.keys())
 
         # Converte i risultati in una matrice numpy
         results = np.array(results, dtype=object)
         
         df = pd.DataFrame([])
 
-        for fold in self.checkpoints.keys():
-            df = df.append(pd.DataFrame({
-                "Band Importance": results[fold][:, :-2].tolist(),
-                "Predicted Label": results[fold][:, -2],
-                "True Label": results[fold][:, -1],
-                "Fold": int(fold)
-            }))
-        
-        if save_csv:
-            df.to_csv(self.ckpt_path + "band=" + band_names[current_band] + "_importance.csv", index=False)
+        #questo codice andava bene finche' la explain descriveva una sola banda e veniva chiamata in un ciclo. ora non va piu' bene, per lo meno non piu' qui.
+        #valutare se spostare questa sezione all'interno della compute band importance per poter continuare a generare i file con i risultati
+
+        #for fold in self.checkpoints.keys():
+        #    df = df.append(pd.DataFrame({
+        #        "Band Importance": results[fold][:, :-2].tolist(),
+        #        "Predicted Label": results[fold][:, -2],
+        #        "True Label": results[fold][:, -1],
+        #        "Fold": int(fold)
+        #    }))
+
+        #valutare se aggiungere questa riga all'interno di compute band importance passandogli anche come parametro il save_csv
+        #if save_csv:
+        #    df.to_csv(self.ckpt_path + "band=" + band_names[current_band] + "_importance.csv", index=False)
             
         return df
