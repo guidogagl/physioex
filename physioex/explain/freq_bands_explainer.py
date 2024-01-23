@@ -25,10 +25,10 @@ from physioex.data import datasets, TimeDistributedModule
 from loguru import logger
 from tqdm import tqdm
 
-import torch
+from torch.nn import functional as F
 torch.set_float32_matmul_precision('medium')
 
-def compute_band_importance( freq_band, model, dataloader, model_device, sampling_rate: int = 100):
+def compute_band_importance(freq_band : list, model, dataloader, model_device, sampling_rate: int = 100):
     y_pred = []
     y_true = []
     importance = []
@@ -40,7 +40,7 @@ def compute_band_importance( freq_band, model, dataloader, model_device, samplin
         y_true.append(y_true_batch.numpy())
 
         # compute the prediction of the model
-        pred_proba = torch.nn.functional.softmax(model(inputs.to(model_device)).cpu()).detach().numpy()       
+        pred_proba = F.softmax(model(inputs.to(model_device)).cpu()).detach().numpy()       
         y_pred.append( np.argmax( pred_proba, axis = -1) )
         n_class = pred_proba.shape[-1]
 
@@ -78,7 +78,7 @@ def compute_band_importance( freq_band, model, dataloader, model_device, samplin
         inputs = torch.from_numpy(inputs)
 
         # compute the prediction of the model with the filtered input, the prediction is a tensor of size batch_size * seq_len, n_classes
-        batch_importance = torch.nn.functional.softmax(model(inputs.to(model_device)).cpu()).detach().numpy()
+        batch_importance = F.softmax(model(inputs.to(model_device)).cpu()).detach().numpy()
 
         # the importance is the difference between the prediction with the original input and the prediction with the filtered input
         batch_importance = pred_proba - batch_importance
@@ -101,11 +101,15 @@ class FreqBandsExplainer(PhysioExplainer):
             version : str = "2018", 
             use_cache : bool = True, 
             sequence_lenght : int = 3, 
-            batch_size : int = 32
+            batch_size : int = 32,
+            sampling_rate : int = 100,
+            class_name : list = ['Wake', 'NREM1', 'NREM2', 'DeepSleep', 'REM']
         ):
         super().__init__(model_name, dataset_name, loss_name, ckp_path, version, use_cache, sequence_lenght, batch_size)
+        self.sampling_rate = sampling_rate
+        self.class_name = class_name
 
-    def compute_band_importance(self, band, band_name, fold : int = 0, plot_pred : bool = False, plot_true : bool = False):
+    def compute_band_importance(self, band : list, band_name : str, fold : int = 0, plot_pred : bool = False, plot_true : bool = False):
         logger.info("JOB:%d-Loading model %s from checkpoint %s" % (fold, str(self.model_call), self.checkpoints[fold]))
         model = self.model_call.load_from_checkpoint(self.checkpoints[fold], module_config = self.module_config).eval()
 
@@ -124,9 +128,11 @@ class FreqBandsExplainer(PhysioExplainer):
 
         self.module_config["loss_params"]["class_weights"] = datamodule.class_weights()
 
-        importance, y_pred, y_true = compute_band_importance(band, model, datamodule.train_dataloader(), model_device)
+        print(type(model))
+        print(type(datamodule.train_dataloader()))
+        print(type(model_device))
 
-        class_name = ['Wake', 'NREM1', 'NREM2', 'DeepSleep', 'REM']
+        importance, y_pred, y_true = compute_band_importance(band, model, datamodule.train_dataloader(), model_device, self.sampling_rate)
         
         if plot_true:
             # boxplot of the band importance of the true label
@@ -144,10 +150,9 @@ class FreqBandsExplainer(PhysioExplainer):
             })
 
             # boxplot of the true importance of the band with seaborn
-            #y prendeva in input 'Importance', che non era riconosciuto. Cambiato il valore in 'Band ' + band_name + ' Importance' (e.c.)
             plt.figure(figsize=(10, 10))
             ax = sns.boxplot(x='Class', y='Band ' + band_name + ' Importance', data=df)
-            ax.set_xticklabels(class_name)
+            ax.set_xticklabels(self.class_name)
             plt.title('Band ' + band_name + ' Importance for True Label (freq. ' + str(band) +')')
             plt.xlabel('Class')
             plt.ylabel('Importance')
@@ -169,7 +174,6 @@ class FreqBandsExplainer(PhysioExplainer):
             })
 
             # boxplot of the true importance of the band with seaborn
-            #y prendeva in input 'Importance', che non era riconosciuto. Cambiato il valore in 'Band ' + band_name + ' Importance' (e.c.)
             plt.figure(figsize=(10, 10))
             ax = sns.boxplot(x='Class', y='Band ' + band_name + ' Importance', data=df)
             ax.set_xticklabels(class_name)
@@ -179,33 +183,22 @@ class FreqBandsExplainer(PhysioExplainer):
             plt.savefig(self.ckpt_path + ("fold=%d_pred_band=" + band_name + "_importance.png") % fold)
             plt.close()
         
-        #cambiato da concatenate a column stack (e.c.)
-        #result = np.concatenate((importance, y_pred, y_true) , axis = 0 )
         result = np.column_stack([importance, y_pred, y_true])
         return result
     
-    def explain(self, band, band_name, save_csv : bool = False, plot_pred : bool = False, plot_true : bool = False, n_jobs : int = 10):
+    def explain(self, band : list, band_name : str, save_csv : bool = False, plot_pred : bool = False, plot_true : bool = False, n_jobs : int = 10):
         results = []
-
-        #attenzione, il parametro band qui non e', come ci aspetterebbe, Alpha, Beta... ma e' [8, 12], [12, 30]...
-        #questo comporta che quando andiamo a salvare i dati nelle varie cartelle di destinazione, queste non si chiameranno
-        #'models/cel/chambon2018/seqlen=3/dreem/dodh/fold=0_true_band=Alpha_importance.png', per esempio, ma si chiameranno
-        #'models/cel/chambon2018/seqlen=3/dreem/dodh/fold=0_true_band=[8, 12]_importance.png'
-        #per evitare di fare troppi cambiamenti qui, dove il codice e' un po' piu' innestato, ho cambiato direttamente il codice
-        #nel file freq_bands_importance, cosi' da richiamare la cartella giusta (e.c.)
 
         # Esegui compute_band_importance per ogni checkpoint in parallelo
         results = Parallel(n_jobs=n_jobs)(delayed(self.compute_band_importance)(band, band_name, int(fold), plot_pred, plot_true) for fold in self.checkpoints.keys())
 
         # Converte i risultati in una matrice numpy
-        #aggiunto dtype=object per evitare l'apparizione di un warning (e.c)
         results = np.array(results, dtype=object)
         
         df = pd.DataFrame([])
 
         for fold in self.checkpoints.keys():
             df = df.append(pd.DataFrame({
-                #aggiunto .tolist() alla fine per evitare l'errore che diceva che i dati devono essere monodimensionali
                 "Band Importance": results[fold][:, :-2].tolist(),
                 "Predicted Label": results[fold][:, -2],
                 "True Label": results[fold][:, -1],
