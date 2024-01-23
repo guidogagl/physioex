@@ -30,7 +30,7 @@ from tqdm import tqdm
 from torch.nn import functional as F
 torch.set_float32_matmul_precision('medium')
 
-def compute_band_importance(freq_band : list, model : object, dataloader : object, model_device : torch.device, sampling_rate: int = 100):
+def compute_band_importance(bands : list, band_names : list, current_band : int, model : object, dataloader : object, model_device : torch.device, sampling_rate: int = 100):
     y_pred = []
     y_true = []
     importance = []
@@ -64,8 +64,8 @@ def compute_band_importance(freq_band : list, model : object, dataloader : objec
         # remove the frequency band from the input using scipy
         
         # filter bandstop - reject the frequencies specified in freq_band
-        lowcut = freq_band[0]
-        highcut = freq_band[1]
+        lowcut = bands[current_band][0]
+        highcut = bands[current_band][1]
         order = 4
         nyq = 0.5 * sampling_rate
         low = lowcut / nyq
@@ -115,7 +115,7 @@ class FreqBandsExplainer(PhysioExplainer):
         combination = list(it.combinations(band_names))
         print(combination)
 
-    def compute_band_importance(self, band : list, band_name : str, fold : int = 0, plot_pred : bool = False, plot_true : bool = False):
+    def compute_band_importance(self, bands : list, band_names : list, current_band : int, fold : int = 0, plot_pred : bool = False, plot_true : bool = False):
         logger.info("JOB:%d-Loading model %s from checkpoint %s" % (fold, str(self.model_call), self.checkpoints[fold]))
         model = self.model_call.load_from_checkpoint(self.checkpoints[fold], module_config = self.module_config).eval()
 
@@ -134,7 +134,7 @@ class FreqBandsExplainer(PhysioExplainer):
 
         self.module_config["loss_params"]["class_weights"] = datamodule.class_weights()
 
-        importance, y_pred, y_true = compute_band_importance(band, model, datamodule.train_dataloader(), model_device, self.sampling_rate)
+        importance, y_pred, y_true = compute_band_importance(bands, band_names, current_band, model, datamodule.train_dataloader(), model_device, self.sampling_rate)
         
         if plot_true:
             # boxplot of the band importance of the true label
@@ -147,18 +147,18 @@ class FreqBandsExplainer(PhysioExplainer):
             true_importance = np.array(true_importance)
 
             df = pd.DataFrame({
-                'Band ' + band_name + ' Importance': true_importance,
+                'Band ' + band_names[current_band] + ' Importance': true_importance,
                 'Class': y_true
             })
 
             # boxplot of the true importance of the band with seaborn
             plt.figure(figsize=(10, 10))
-            ax = sns.boxplot(x='Class', y='Band ' + band_name + ' Importance', data=df)
+            ax = sns.boxplot(x='Class', y='Band ' + band_names[current_band] + ' Importance', data=df)
             ax.set_xticklabels(self.class_name)
-            plt.title('Band ' + band_name + ' Importance for True Label (freq. ' + str(band) +')')
+            plt.title('Band ' + band_names[current_band] + ' Importance for True Label (freq. ' + str(bands[current_band]) +')')
             plt.xlabel('Class')
             plt.ylabel('Importance')
-            plt.savefig(self.ckpt_path + ("fold=%d_true_band=" + band_name + "_importance.png") % fold)
+            plt.savefig(self.ckpt_path + ("fold=%d_true_band=" + band_names[current_band] + "_importance.png") % fold)
             plt.close()
 
         if plot_pred:
@@ -171,28 +171,28 @@ class FreqBandsExplainer(PhysioExplainer):
             pred_importance = np.array(pred_importance)
 
             df = pd.DataFrame({
-                'Band ' + band_name + ' Importance': pred_importance,
+                'Band ' + band_names[current_band] + ' Importance': pred_importance,
                 'Class': y_true
             })
 
             # boxplot of the true importance of the band with seaborn
             plt.figure(figsize=(10, 10))
-            ax = sns.boxplot(x='Class', y='Band ' + band_name + ' Importance', data=df)
+            ax = sns.boxplot(x='Class', y='Band ' + band_names[current_band] + ' Importance', data=df)
             ax.set_xticklabels(self.class_name)
-            plt.title('Band ' + band_name + ' Importance for Predicted Label (freq. ' + str(band) +')')
+            plt.title('Band ' + band_names[current_band] + ' Importance for Predicted Label (freq. ' + str(bands[current_band]) +')')
             plt.xlabel('Class')
             plt.ylabel('Importance')
-            plt.savefig(self.ckpt_path + ("fold=%d_pred_band=" + band_name + "_importance.png") % fold)
+            plt.savefig(self.ckpt_path + ("fold=%d_pred_band=" + band_names[current_band] + "_importance.png") % fold)
             plt.close()
         
         result = np.column_stack([importance, y_pred, y_true])
         return result
     
-    def explain(self, band : list, band_name : str, save_csv : bool = False, plot_pred : bool = False, plot_true : bool = False, n_jobs : int = 10):
+    def explain(self, bands : list, band_names : list, current_band : int, save_csv : bool = False, plot_pred : bool = False, plot_true : bool = False, n_jobs : int = 10):
         results = []
 
         # Esegui compute_band_importance per ogni checkpoint in parallelo
-        results = Parallel(n_jobs=n_jobs)(delayed(self.compute_band_importance)(band, band_name, int(fold), plot_pred, plot_true) for fold in self.checkpoints.keys())
+        results = Parallel(n_jobs=n_jobs)(delayed(self.compute_band_importance)(bands, band_names, current_band, int(fold), plot_pred, plot_true) for fold in self.checkpoints.keys())
 
         # Converte i risultati in una matrice numpy
         results = np.array(results, dtype=object)
