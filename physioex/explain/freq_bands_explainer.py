@@ -128,10 +128,6 @@ class FreqBandsExplainer(PhysioExplainer):
 
         self.module_config["loss_params"]["class_weights"] = datamodule.class_weights()
 
-        print(type(model))
-        print(type(datamodule.train_dataloader()))
-        print(type(model_device))
-
         importance, y_pred, y_true = compute_band_importance(band, model, datamodule.train_dataloader(), model_device, self.sampling_rate)
         
         if plot_true:
