@@ -111,7 +111,7 @@ class FreqBandsExplainer(PhysioExplainer):
         self.sampling_rate = sampling_rate
         self.class_name = class_name
 
-    def print_combination(band_names : list):
+    def print_combination(self, band_names : list):
         combination = list(it.combinations(band_names))
         print(combination)
 
