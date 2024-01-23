@@ -28,7 +28,7 @@ from tqdm import tqdm
 from torch.nn import functional as F
 torch.set_float32_matmul_precision('medium')
 
-def compute_band_importance(freq_band : list, model, dataloader, model_device, sampling_rate: int = 100):
+def compute_band_importance(freq_band : list, model : object, dataloader : object, model_device : torch.device, sampling_rate: int = 100):
     y_pred = []
     y_true = []
     importance = []
@@ -176,7 +176,7 @@ class FreqBandsExplainer(PhysioExplainer):
             # boxplot of the true importance of the band with seaborn
             plt.figure(figsize=(10, 10))
             ax = sns.boxplot(x='Class', y='Band ' + band_name + ' Importance', data=df)
-            ax.set_xticklabels(class_name)
+            ax.set_xticklabels(self.class_name)
             plt.title('Band ' + band_name + ' Importance for Predicted Label (freq. ' + str(band) +')')
             plt.xlabel('Class')
             plt.ylabel('Importance')
