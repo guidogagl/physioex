@@ -14,6 +14,8 @@ import pandas as pd
 import re
 import os
 
+import itertools as it
+
 from joblib import Parallel, delayed
 
 from physioex.explain.base import PhysioExplainer
@@ -108,6 +110,10 @@ class FreqBandsExplainer(PhysioExplainer):
         super().__init__(model_name, dataset_name, loss_name, ckp_path, version, use_cache, sequence_lenght, batch_size)
         self.sampling_rate = sampling_rate
         self.class_name = class_name
+
+    def print_combination(band_names : list):
+        combination = list(it.combinations(band_names))
+        print(combination)
 
     def compute_band_importance(self, band : list, band_name : str, fold : int = 0, plot_pred : bool = False, plot_true : bool = False):
         logger.info("JOB:%d-Loading model %s from checkpoint %s" % (fold, str(self.model_call), self.checkpoints[fold]))
