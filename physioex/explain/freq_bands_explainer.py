@@ -208,6 +208,6 @@ class FreqBandsExplainer(PhysioExplainer):
             }))
         
         if save_csv:
-            df.to_csv(self.ckpt_path + "band=" + band_name + "_importance.csv", index=False)
+            df.to_csv(self.ckpt_path + "band=" + band_names[current_band] + "_importance.csv", index=False)
             
         return df
