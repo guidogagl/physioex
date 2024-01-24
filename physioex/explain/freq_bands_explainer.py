@@ -66,8 +66,8 @@ def compute_band_importance(bands : list[list[float]], model : torch.nn.Module, 
         
         for band in bands:
             # filter bandstop - reject the frequencies specified in freq_band
-            lowcut = bands[band][0]
-            highcut = bands[band][1]
+            lowcut = band[0]
+            highcut = band[1]
             order = 4
             nyq = 0.5 * sampling_rate
             low = lowcut / nyq
