@@ -112,7 +112,7 @@ def get_normalized_weights(lenght : int):
 def get_band_importance(band : str, band_dict : dict):
     shape = 0
     counter = 0
-    for key, value in band_dict:
+    for key, value in band_dict.items():
         if shape == 0:
             importance = np.zeros(value.shape)
             shape = 1
