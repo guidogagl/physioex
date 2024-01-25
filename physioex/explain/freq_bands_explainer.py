@@ -266,9 +266,9 @@ class FreqBandsExplainer(PhysioExplainer):
 
             for fold in self.checkpoints.keys():
                 df = df.append(pd.DataFrame({
-                   "Band Importance": results[i][fold][:, :-2].tolist(),
-                    "Predicted Label": results[i][fold][:, -2],
-                    "True Label": results[i][fold][:, -1],
+                   "Band Importance": results[fold][i][:, :-2].tolist(),
+                    "Predicted Label": results[fold][i][:, -2],
+                    "True Label": results[fold][i][:, -1],
                     "Fold": int(fold)
                 }))
 
