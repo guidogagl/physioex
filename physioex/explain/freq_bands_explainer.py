@@ -386,7 +386,7 @@ class FreqBandsExplainer(PhysioExplainer):
                 #result prima era una matrice che aveva, per ogni riga, l'importanza di una banda per ogni classe, affiancata da y_pred e y_true
                 #adesso lo rendiamo un array di matrici, ogni posizione dell'array corrisponde a una banda
                 #l'array viene inizializzato prima del for, come vuoto
-                simple_result.append(np.column_stack([importance, y_pred, y_true]))
+                simple_result.append(np.column_stack([simple_importance, y_pred, y_true]))
                 weighted_result.append(np.column_stack([weighted_importance, y_pred, y_true]))
                 normalized_result.append(np.column_stack([normalized_importance, y_pred, y_true]))
 
