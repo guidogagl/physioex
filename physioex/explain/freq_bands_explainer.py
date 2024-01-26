@@ -124,7 +124,7 @@ def get_band_importance(band : str, band_dict : dict, num_bands : int = 1, type 
                 key_length = key.split(', ', -1)
                 importance += value * 1/(len(key_length))
                 
-            counter =+ 1
+            counter += 1
 
     sum_weights = 0
     for i in range(num_bands):
