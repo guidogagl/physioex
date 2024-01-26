@@ -202,7 +202,7 @@ class FreqBandsExplainer(PhysioExplainer):
                 band_importance[str(list(band_names_combinations[i][j]))] = importance
                 
                 data = {
-                    "Band " + str(list(band_names_combinations[i][j])) + " Importance": importance,
+                    "Band " + str(list(band_names_combinations[i][j])) + " Importance": importance.tolist(),
                     "Predicted Label": y_pred,
                     "True Label": y_true,
                 }
