@@ -13,6 +13,7 @@ import seaborn as sns
 import pandas as pd
 import re
 import os
+from os.path import exists
 
 import itertools as it
 
@@ -109,7 +110,7 @@ def get_normalized_weights(lenght : int):
 
     return weights
 
-def get_band_importance(band : str, band_dict : dict):
+def get_band_importance(band : str, band_dict : dict, num_bands : int = 1, type : int = 0):
     shape = 0
     counter = 0
     for key, value in band_dict.items():
@@ -117,10 +118,23 @@ def get_band_importance(band : str, band_dict : dict):
             importance = np.zeros(value.shape)
             shape = 1
         if band in key:
-            importance += value
-            counter += 1
+            if type == 0:
+                importance += value
+            else: 
+                key_length = key.split(', ', -1)
+                importance += value * 1/(len(key_length))
+                
+            counter =+ 1
+
+    sum_weights = 0
+    for i in range(num_bands):
+        sum_weights += 1/(i+1)
     
-    importance = importance / counter
+    if type == 0 or type == 1:
+        importance = importance / counter
+    elif type == 2:
+        importance = importance / sum_weights
+
 
     return importance
 
@@ -145,7 +159,7 @@ class FreqBandsExplainer(PhysioExplainer):
         combination = list(it.combinations(band_names))
         print(combination)
 
-    def compute_band_importance(self, bands : list[list[float]], band_names : list[str], fold : int = 0, plot_pred : bool = False, plot_true : bool = False):
+    def compute_band_importance(self, bands : list[list[float]], band_names : list[str], fold : int = 0, plot_pred : bool = False, plot_true : bool = False, save_csv : bool = False):
         logger.info("JOB:%d-Loading model %s from checkpoint %s" % (fold, str(self.model_call), self.checkpoints[fold]))
         model = self.model_call.load_from_checkpoint(self.checkpoints[fold], module_config = self.module_config).eval()
 
@@ -186,93 +200,241 @@ class FreqBandsExplainer(PhysioExplainer):
                 importance, y_pred, y_true = compute_band_importance(bands_set, model, datamodule.train_dataloader(), model_device, self.sampling_rate)
                 #da moltiplicare per weights[i] per media pesata
                 band_importance[str(list(band_names_combinations[i][j]))] = importance
+                
+                data = {
+                    "Band " + str(list(band_names_combinations[i][j])) + " Importance": importance,
+                    "Predicted Label": y_pred,
+                    "True Label": y_true,
+                }
+
+                df = pd.DataFrame(data)
+
+                if save_csv:
+                    if exists(self.ckpt_path + "band_combinations_importance_fold=" + fold + ".csv"):
+                        df.to_csv(self.ckpt_path + "band_combinations_importance_fold=" + fold + ".csv", mode = 'a', index=False)
+                    else:
+                        df.to_csv(self.ckpt_path + "band_combinations_importance_fold=" + fold + ".csv", index=False)
 
         #ora band_importance e' un dizionario come descritto piu' su                
         
-        result = []
+        simple_result = []
+        weighted_result = []
+        normalized_result = []
         for band in band_names:
 
             #in base alla banda, ora dovro' prendermi l'importanza di quella banda per poterla plottare. per farlo, devo prendere, dal mio dizionario,
             #tutte le importanze in cui la mia banda compare, e poi farne la media
-            importance = get_band_importance(str(band), band_importance)
+            simple_importance = get_band_importance(str(band), band_importance, 6, 0)
+            weighted_importance = get_band_importance(str(band), band_importance, 6, 1)
+            normalized_importance = get_band_importance(str(band), band_importance, 6, 2)
 
             if plot_true:
-                # boxplot of the band importance of the true label
-                logger.info("JOB:%d-Plotting band %s importance for true label" % (fold, band))
+                ########## plot of simple importance ###########
+
+                # boxplot of the band simple importance of the true label
+                logger.info("JOB:%d-Plotting band %s simple importance for true label" % (fold, band))
                 true_importance = []
                 
                 for i in range(len(y_true)):
-                    true_importance.append(importance[i][y_true[i]])
+                    true_importance.append(simple_importance[i][y_true[i]])
                 
                 true_importance = np.array(true_importance)
 
                 df = pd.DataFrame({
-                    'Band ' + band + ' Importance': true_importance,
+                    'Band ' + band + ' Simple Importance': true_importance,
                     'Class': y_true
                 })
 
                 # boxplot of the true importance of the band with seaborn
                 plt.figure(figsize=(10, 10))
-                ax = sns.boxplot(x='Class', y='Band ' + band + ' Importance', data=df)
+                ax = sns.boxplot(x='Class', y='Band ' + band + ' Simple Importance', data=df)
                 ax.set_xticklabels(self.class_name)
-                plt.title('Band ' + band + ' Importance for True Label')
+                plt.title('Band ' + band + ' Simple Importance for True Label')
                 plt.xlabel('Class')
                 plt.ylabel('Importance')
-                plt.savefig(self.ckpt_path + ("fold=%d_true_band=" + band + "_importance.png") % fold)
+                plt.savefig(self.ckpt_path + ("fold=%d_true_band=" + band + "_simple_importance.png") % fold)
+                plt.close()
+
+                ########## plot of weighted importance ###########
+
+                # boxplot of the band weighted importance of the true label
+                logger.info("JOB:%d-Plotting band %s weighted importance for true label" % (fold, band))
+                true_importance = []
+                
+                for i in range(len(y_true)):
+                    true_importance.append(weighted_importance[i][y_true[i]])
+                
+                true_importance = np.array(true_importance)
+
+                df = pd.DataFrame({
+                    'Band ' + band + ' Weighted Importance': true_importance,
+                    'Class': y_true
+                })
+
+                # boxplot of the true importance of the band with seaborn
+                plt.figure(figsize=(10, 10))
+                ax = sns.boxplot(x='Class', y='Band ' + band + ' Weighted Importance', data=df)
+                ax.set_xticklabels(self.class_name)
+                plt.title('Band ' + band + ' Weighted Importance for True Label')
+                plt.xlabel('Class')
+                plt.ylabel('Importance')
+                plt.savefig(self.ckpt_path + ("fold=%d_true_band=" + band + "_weighted_importance.png") % fold)
+                plt.close()
+
+                ########## plot of normalized importance ###########
+
+                # boxplot of the band weighted importance of the true label
+                logger.info("JOB:%d-Plotting band %s normalized importance for true label" % (fold, band))
+                true_importance = []
+                
+                for i in range(len(y_true)):
+                    true_importance.append(normalized_importance[i][y_true[i]])
+                
+                true_importance = np.array(true_importance)
+
+                df = pd.DataFrame({
+                    'Band ' + band + ' Normalized Importance': true_importance,
+                    'Class': y_true
+                })
+
+                # boxplot of the true importance of the band with seaborn
+                plt.figure(figsize=(10, 10))
+                ax = sns.boxplot(x='Class', y='Band ' + band + ' Normalized Importance', data=df)
+                ax.set_xticklabels(self.class_name)
+                plt.title('Band ' + band + ' Normalized Importance for True Label')
+                plt.xlabel('Class')
+                plt.ylabel('Importance')
+                plt.savefig(self.ckpt_path + ("fold=%d_true_band=" + band + "_normalized_importance.png") % fold)
                 plt.close()
 
             if plot_pred:
-                logger.info("JOB:%d-Plotting band %s importance for predicted label" % (fold, band))
+                ########## plot of simple importance ###########
+
+                logger.info("JOB:%d-Plotting band %s simple importance for predicted label" % (fold, band))
                 pred_importance = []
                 
                 for i in range(len(y_true)):
-                    pred_importance.append(importance[i][y_pred[i]])
+                    pred_importance.append(simple_importance[i][y_pred[i]])
                 
                 pred_importance = np.array(pred_importance)
 
                 df = pd.DataFrame({
-                    'Band ' + band + ' Importance': pred_importance,
+                    'Band ' + band + ' Simple Importance': pred_importance,
                     'Class': y_true
                 })
 
                 # boxplot of the true importance of the band with seaborn
                 plt.figure(figsize=(10, 10))
-                ax = sns.boxplot(x='Class', y='Band ' + band + ' Importance', data=df)
+                ax = sns.boxplot(x='Class', y='Band ' + band + ' Simple Importance', data=df)
                 ax.set_xticklabels(self.class_name)
-                plt.title('Band ' + band + ' Importance for Predicted Label')
+                plt.title('Band ' + band + ' Simple Importance for Predicted Label')
                 plt.xlabel('Class')
                 plt.ylabel('Importance')
-                plt.savefig(self.ckpt_path + ("fold=%d_pred_band=" + band + "_importance.png") % fold)
+                plt.savefig(self.ckpt_path + ("fold=%d_pred_band=" + band + "_simple_importance.png") % fold)
+                plt.close()
+
+                ########## plot of weighted importance ###########
+
+                logger.info("JOB:%d-Plotting band %s weighted importance for predicted label" % (fold, band))
+                pred_importance = []
+                
+                for i in range(len(y_true)):
+                    pred_importance.append(weighted_importance[i][y_pred[i]])
+                
+                pred_importance = np.array(pred_importance)
+
+                df = pd.DataFrame({
+                    'Band ' + band + ' Weighted Importance': pred_importance,
+                    'Class': y_true
+                })
+
+                # boxplot of the true importance of the band with seaborn
+                plt.figure(figsize=(10, 10))
+                ax = sns.boxplot(x='Class', y='Band ' + band + ' Weighted Importance', data=df)
+                ax.set_xticklabels(self.class_name)
+                plt.title('Band ' + band + ' Weighted Importance for Predicted Label')
+                plt.xlabel('Class')
+                plt.ylabel('Importance')
+                plt.savefig(self.ckpt_path + ("fold=%d_pred_band=" + band + "_weighted_importance.png") % fold)
+                plt.close()
+
+                ########## plot of normalized importance ###########
+
+                logger.info("JOB:%d-Plotting band %s normalized importance for predicted label" % (fold, band))
+                pred_importance = []
+                
+                for i in range(len(y_true)):
+                    pred_importance.append(normalized_importance[i][y_pred[i]])
+                
+                pred_importance = np.array(pred_importance)
+
+                df = pd.DataFrame({
+                    'Band ' + band + ' Normalized Importance': pred_importance,
+                    'Class': y_true
+                })
+
+                # boxplot of the true importance of the band with seaborn
+                plt.figure(figsize=(10, 10))
+                ax = sns.boxplot(x='Class', y='Band ' + band + ' Normalized Importance', data=df)
+                ax.set_xticklabels(self.class_name)
+                plt.title('Band ' + band + ' Normalized Importance for Predicted Label')
+                plt.xlabel('Class')
+                plt.ylabel('Importance')
+                plt.savefig(self.ckpt_path + ("fold=%d_pred_band=" + band + "_normalized_importance.png") % fold)
                 plt.close()
 
                 #result prima era una matrice che aveva, per ogni riga, l'importanza di una banda per ogni classe, affiancata da y_pred e y_true
                 #adesso lo rendiamo un array di matrici, ogni posizione dell'array corrisponde a una banda
                 #l'array viene inizializzato prima del for, come vuoto
-                result.append(np.column_stack([importance, y_pred, y_true]))
+                simple_result.append(np.column_stack([importance, y_pred, y_true]))
+                weighted_result.append(np.column_stack([weighted_importance, y_pred, y_true]))
+                normalized_result.append(np.column_stack([normalized_importance, y_pred, y_true]))
 
-        return result
+        return simple_result, weighted_result, normalized_result
     
     def explain(self, bands : list[list[float]], band_names : list[str], save_csv : bool = False, plot_pred : bool = False, plot_true : bool = False, n_jobs : int = 10):
-        results = []
+        simple_result = []
+        weighted_result = []
+        normalized_result = []
 
         # Esegui compute_band_importance per ogni checkpoint in parallelo
-        results = Parallel(n_jobs=n_jobs)(delayed(self.compute_band_importance)(bands, band_names, int(fold), plot_pred, plot_true) for fold in self.checkpoints.keys())
+        simple_result, weighted_result, normalized_result = Parallel(n_jobs=n_jobs)(delayed(self.compute_band_importance)(bands, band_names, int(fold), plot_pred, plot_true, save_csv) for fold in self.checkpoints.keys())
 
         # Converte i risultati in una matrice numpy
-        results = np.array(results, dtype=object)
+        simple_result = np.array(simple_result, dtype=object)
+        weighted_result = np.array(weighted_result, dtype=object)
+        normalized_result = np.array(normalized_result, dtype=object)
 
         for i in range(len(band_names)):
-            df = pd.DataFrame([])
+            df_simple = pd.DataFrame([])
+            df_weighted = pd.DataFrame([])
+            df_normalized = pd.DataFrame([])
 
             for fold in self.checkpoints.keys():
-                df = df.append(pd.DataFrame({
-                   "Band Importance": results[fold][i][:, :-2].tolist(),
-                    "Predicted Label": results[fold][i][:, -2],
-                    "True Label": results[fold][i][:, -1],
+                df_simple = df_simple.append(pd.DataFrame({
+                   "Band Importance": simple_result[fold][i][:, :-2].tolist(),
+                    "Predicted Label": simple_result[fold][i][:, -2],
+                    "True Label": simple_result[fold][i][:, -1],
+                    "Fold": int(fold)
+                }))
+
+                df_weighted = df_weighted.append(pd.DataFrame({
+                   "Band Importance": weighted_result[fold][i][:, :-2].tolist(),
+                    "Predicted Label": weighted_result[fold][i][:, -2],
+                    "True Label": weighted_result[fold][i][:, -1],
+                    "Fold": int(fold)
+                }))
+
+                df_normalized = df_normalized.append(pd.DataFrame({
+                   "Band Importance": normalized_result[fold][i][:, :-2].tolist(),
+                    "Predicted Label": normalized_result[fold][i][:, -2],
+                    "True Label": normalized_result[fold][i][:, -1],
                     "Fold": int(fold)
                 }))
 
             if save_csv:
-                df.to_csv(self.ckpt_path + "band=" + band_names[i] + "_importance.csv", index=False)
+                df_simple.to_csv(self.ckpt_path + "band=" + band_names[i] + "_simple_importance.csv", index=False)
+                df_weighted.to_csv(self.ckpt_path + "band=" + band_names[i] + "_weighted_importance.csv", index=False)
+                df_normalized.to_csv(self.ckpt_path + "band=" + band_names[i] + "_normalized_importance.csv", index=False)        
                
-        return df
+        return df_simple, df_weighted, df_normalized
