@@ -209,11 +209,9 @@ class FreqBandsExplainer(PhysioExplainer):
 
                 df = pd.DataFrame(data)
 
-                if save_csv:
-                    if exists(self.ckpt_path + "band_combinations_importance_fold=" + str(fold) + ".csv"):
-                        df.to_csv(self.ckpt_path + "band_combinations_importance_fold=" + str(fold) + ".csv", mode = 'a', index=False)
-                    else:
-                        df.to_csv(self.ckpt_path + "band_combinations_importance_fold=" + str(fold) + ".csv", index=False)
+                if save_csv:   
+                    df.to_csv(self.ckpt_path + "band_combinations_importance_fold=" + str(fold) + ".csv", mode = 'a', index=False)
+                    
 
         #ora band_importance e' un dizionario come descritto piu' su                
         
