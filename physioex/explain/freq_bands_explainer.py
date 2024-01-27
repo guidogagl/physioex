@@ -135,7 +135,6 @@ def get_band_importance(band : str, band_dict : dict, num_bands : int = 1, type 
     elif type == 2:
         importance = importance / sum_weights
 
-
     return importance
 
 class FreqBandsExplainer(PhysioExplainer):
@@ -200,6 +199,7 @@ class FreqBandsExplainer(PhysioExplainer):
                 importance, y_pred, y_true = compute_band_importance(bands_set, model, datamodule.train_dataloader(), model_device, self.sampling_rate)
                 #da moltiplicare per weights[i] per media pesata
                 band_importance[str(list(band_names_combinations[i][j]))] = importance
+                print(str(list(band_names_combinations[i][j])))
                 
                 data = {
                     "Band " + str(list(band_names_combinations[i][j])) + " Importance": importance.tolist(),
@@ -383,58 +383,90 @@ class FreqBandsExplainer(PhysioExplainer):
                 plt.savefig(self.ckpt_path + ("fold=%d_pred_band=" + band + "_normalized_importance.png") % fold)
                 plt.close()
 
-                #result prima era una matrice che aveva, per ogni riga, l'importanza di una banda per ogni classe, affiancata da y_pred e y_true
-                #adesso lo rendiamo un array di matrici, ogni posizione dell'array corrisponde a una banda
-                #l'array viene inizializzato prima del for, come vuoto
-                simple_result.append(np.column_stack([simple_importance, y_pred, y_true]))
-                weighted_result.append(np.column_stack([weighted_importance, y_pred, y_true]))
-                normalized_result.append(np.column_stack([normalized_importance, y_pred, y_true]))
-
-        return simple_result, weighted_result, normalized_result
-    
-    def explain(self, bands : list[list[float]], band_names : list[str], save_csv : bool = False, plot_pred : bool = False, plot_true : bool = False, n_jobs : int = 10):
-        simple_result = []
-        weighted_result = []
-        normalized_result = []
-
-        # Esegui compute_band_importance per ogni checkpoint in parallelo
-        simple_result, weighted_result, normalized_result = Parallel(n_jobs=n_jobs)(delayed(self.compute_band_importance)(bands, band_names, int(fold), plot_pred, plot_true, save_csv) for fold in self.checkpoints.keys())
-
-        # Converte i risultati in una matrice numpy
-        simple_result = np.array(simple_result, dtype=object)
-        weighted_result = np.array(weighted_result, dtype=object)
-        normalized_result = np.array(normalized_result, dtype=object)
+            #result prima era una matrice che aveva, per ogni riga, l'importanza di una banda per ogni classe, affiancata da y_pred e y_true
+            #adesso lo rendiamo un array di matrici, ogni posizione dell'array corrisponde a una banda
+            #l'array viene inizializzato prima del for, come vuoto
+            simple_result.append(np.column_stack([simple_importance, y_pred, y_true]))
+            weighted_result.append(np.column_stack([weighted_importance, y_pred, y_true]))
+            normalized_result.append(np.column_stack([normalized_importance, y_pred, y_true]))
 
         for i in range(len(band_names)):
             df_simple = pd.DataFrame([])
             df_weighted = pd.DataFrame([])
             df_normalized = pd.DataFrame([])
 
-            for fold in self.checkpoints.keys():
-                df_simple = df_simple.append(pd.DataFrame({
-                   "Band Importance": simple_result[fold][i][:, :-2].tolist(),
-                    "Predicted Label": simple_result[fold][i][:, -2],
-                    "True Label": simple_result[fold][i][:, -1],
-                    "Fold": int(fold)
-                }))
+            df_simple = df_simple.append(pd.DataFrame({
+                "Band Importance": simple_result[i][:, :-2].tolist(),
+                "Predicted Label": simple_result[i][:, -2],
+                "True Label": simple_result[i][:, -1],
+                "Fold": fold
+            }))
 
-                df_weighted = df_weighted.append(pd.DataFrame({
-                   "Band Importance": weighted_result[fold][i][:, :-2].tolist(),
-                    "Predicted Label": weighted_result[fold][i][:, -2],
-                    "True Label": weighted_result[fold][i][:, -1],
-                    "Fold": int(fold)
-                }))
+            df_weighted = df_weighted.append(pd.DataFrame({
+                "Band Importance": weighted_result[i][:, :-2].tolist(),
+                "Predicted Label": weighted_result[i][:, -2],
+                "True Label": weighted_result[i][:, -1],
+                "Fold": fold
+            }))
 
-                df_normalized = df_normalized.append(pd.DataFrame({
-                   "Band Importance": normalized_result[fold][i][:, :-2].tolist(),
-                    "Predicted Label": normalized_result[fold][i][:, -2],
-                    "True Label": normalized_result[fold][i][:, -1],
-                    "Fold": int(fold)
-                }))
+            df_normalized = df_normalized.append(pd.DataFrame({
+                "Band Importance": normalized_result[i][:, :-2].tolist(),
+                "Predicted Label": normalized_result[i][:, -2],
+                "True Label": normalized_result[i][:, -1],
+                "Fold": fold
+            }))
 
             if save_csv:
-                df_simple.to_csv(self.ckpt_path + "band=" + band_names[i] + "_simple_importance.csv", index=False)
-                df_weighted.to_csv(self.ckpt_path + "band=" + band_names[i] + "_weighted_importance.csv", index=False)
-                df_normalized.to_csv(self.ckpt_path + "band=" + band_names[i] + "_normalized_importance.csv", index=False)        
+                df_simple.to_csv(self.ckpt_path + "band=" + band_names[i] + "_simple_importance.csv", mode = 'a', index=False)
+                df_weighted.to_csv(self.ckpt_path + "band=" + band_names[i] + "_weighted_importance.csv", mode = 'a', index=False)
+                df_normalized.to_csv(self.ckpt_path + "band=" + band_names[i] + "_normalized_importance.csv", mode = 'a', index=False)     
+
+        return simple_result
+    
+    def explain(self, bands : list[list[float]], band_names : list[str], save_csv : bool = False, plot_pred : bool = False, plot_true : bool = False, n_jobs : int = 10):
+
+#        simple_result = []
+#        weighted_result = []
+#        normalized_result = []
+
+        # Esegui compute_band_importance per ogni checkpoint in parallelo
+        result = Parallel(n_jobs=n_jobs)(delayed(self.compute_band_importance)(bands, band_names, int(fold), plot_pred, plot_true, save_csv) for fold in self.checkpoints.keys())
+
+        # Converte i risultati in una matrice numpy
+#        simple_result = np.array(simple_result, dtype=object)
+#        weighted_result = np.array(weighted_result, dtype=object)
+#        normalized_result = np.array(normalized_result, dtype=object)
+
+#       for i in range(len(band_names)):
+#           df_simple = pd.DataFrame([])
+#           df_weighted = pd.DataFrame([])
+#           df_normalized = pd.DataFrame([])
+
+#            for fold in self.checkpoints.keys():
+#                df_simple = df_simple.append(pd.DataFrame({
+#                   "Band Importance": simple_result[fold][i][:, :-2].tolist(),
+#                    "Predicted Label": simple_result[fold][i][:, -2],
+#                    "True Label": simple_result[fold][i][:, -1],
+#                    "Fold": int(fold)
+#                }))
+
+#                df_weighted = df_weighted.append(pd.DataFrame({
+#                   "Band Importance": weighted_result[fold][i][:, :-2].tolist(),
+#                    "Predicted Label": weighted_result[fold][i][:, -2],
+#                    "True Label": weighted_result[fold][i][:, -1],
+#                    "Fold": int(fold)
+#                }))
+
+#                df_normalized = df_normalized.append(pd.DataFrame({
+#                   "Band Importance": normalized_result[fold][i][:, :-2].tolist(),
+#                    "Predicted Label": normalized_result[fold][i][:, -2],
+#                    "True Label": normalized_result[fold][i][:, -1],
+#                    "Fold": int(fold)
+#                }))
+
+#            if save_csv:
+#                df_simple.to_csv(self.ckpt_path + "band=" + band_names[i] + "_simple_importance.csv", index=False)
+#                df_weighted.to_csv(self.ckpt_path + "band=" + band_names[i] + "_weighted_importance.csv", index=False)
+#                df_normalized.to_csv(self.ckpt_path + "band=" + band_names[i] + "_normalized_importance.csv", index=False)        
                
-        return df_simple, df_weighted, df_normalized
+        return result
