@@ -120,6 +120,9 @@ def compute_band_importance(bands : list[list[float]], band_names: List[str],  m
         for i, band in enumerate( bands ):
             if band in cross_band:
                 permuted_bands [i] = 1
+        
+        print(cross_band)
+        print(permuted_bands)
         importance, y_pred, y_true = _compute_cross_band_importance(cross_band, model, dataloader, model_device, sampling_rate)
 
         print(importance.shape)
