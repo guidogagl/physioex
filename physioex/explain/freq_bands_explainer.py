@@ -34,12 +34,7 @@ torch.set_float32_matmul_precision('medium')
 
 from typing import List
 
-def _compute_cross_band_importance(bands : list[list[float]], model : torch.nn.Module, dataloader : D.DataLoader, model_device : torch.device, sampling_rate: int = 100):
-    print(type(bands))
-    print(type(model))
-    print(type(dataloader))
-    print(type(model_device))
-    print(type(sampling_rate))    
+def _compute_cross_band_importance(bands : list[list[float]], model : torch.nn.Module, dataloader : D.DataLoader, model_device : torch.device, sampling_rate: int = 100):    
 
     for i in range(len(bands)):
         assert len(bands[i]) == 2
@@ -222,13 +217,8 @@ class FreqBandsExplainer(PhysioExplainer):
 
         #la band_importance e' un dict che ha come chiavi le combinazioni delle bande, e come valori l'importanza per quella combinazione
         band_importance = {}
-        print(type(bands))
-        print(type(model))
-        print(type(datamodule.train_dataloader()))
-        print(type(model_device))
-        print(type(self.sampling_rate))
 
-        importances_df = compute_band_importance(bands, model, datamodule.train_dataloader(), model_device, self.sampling_rate)
+        importances_df = compute_band_importance(bands, band_names, model, datamodule.train_dataloader(), model_device, self.sampling_rate)
 
         importances_df = pd.DataFrame(importances_df)
 
