@@ -32,7 +32,13 @@ from torch.utils import data as D
 from torch.nn import functional as F
 torch.set_float32_matmul_precision('medium')
 
-def compute_band_importance(bands : list[list[float]], model : torch.nn.Module, dataloader : D.DataLoader , model_device : torch.device, sampling_rate: int = 100):
+from Typing import List
+
+def _compute_cross_band_importance(bands : list[list[float]], model : torch.nn.Module, dataloader : D.DataLoader , model_device : torch.device, sampling_rate: int = 100):
+    
+    # TODO: controllare che la dimensione della lista sia giusta
+    # valutare se non è meglio usare una matrice di array numpy np.ndarray 
+    
     y_pred = []
     y_true = []
     importance = []
@@ -97,6 +103,36 @@ def compute_band_importance(bands : list[list[float]], model : torch.nn.Module, 
 
     return importance, y_pred, y_true
 
+def compute_band_importance(bands : list[list[float]], bands_name: List[str],  model : torch.nn.Module, dataloader : D.DataLoader , model_device : torch.device, sampling_rate: int = 100)
+    # compute the cross bands combinations
+
+    cross_bands = ...
+
+    importances_df = []
+    
+    for cross_band in cross_bands:
+        permuted_bands = np.zeros( len( bands ) )
+
+        for i, band in enumerate( bands ):
+            if band in cross_band:
+                permuted_bands [i] = 1
+            
+        importance, y_pred, y_true = _compute_cross_band_importance(cross_bands, model, dataloader, model_device, sampling_rate)
+
+        importance_df = pd.DataFrame( np.transpose( importance ) )
+
+        importance_df["y_pred"] = y_pred
+        importance_df["y_true"] = y_true
+        
+        for i, band in enumerate(bands):
+            importance_df[band] = permuted_bands[i] * np.ones( len(y_pred) )
+
+        importances_df.append( importance_df )
+
+    importances_df = pd.concat( importances_df) 
+
+    return importances_df
+    
 def get_normalized_weights(lenght : int):
     weights = []
     sum = 0
