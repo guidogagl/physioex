@@ -222,6 +222,11 @@ class FreqBandsExplainer(PhysioExplainer):
 
         #la band_importance e' un dict che ha come chiavi le combinazioni delle bande, e come valori l'importanza per quella combinazione
         band_importance = {}
+        print(type(bands))
+        print(type(model))
+        print(type(datamodule.train_dataloader()))
+        print(type(model_device))
+        print(type(self.sampling_rate))
 
         importances_df = compute_band_importance(bands, model, datamodule.train_dataloader(), model_device, self.sampling_rate)
 
