@@ -32,7 +32,13 @@ from torch.utils import data as D
 from torch.nn import functional as F
 torch.set_float32_matmul_precision('medium')
 
-def compute_band_importance(bands : list[list[float]], model : torch.nn.Module, dataloader : D.DataLoader , model_device : torch.device, sampling_rate: int = 100):
+from typing import List
+
+def _compute_cross_band_importance(bands : list[list[float]], model : torch.nn.Module, dataloader : D.DataLoader , model_device : torch.device, sampling_rate: int = 100):
+
+    for i in range(len(bands)):
+        assert len(bands[i]) == 2
+
     y_pred = []
     y_true = []
     importance = []
@@ -97,18 +103,41 @@ def compute_band_importance(bands : list[list[float]], model : torch.nn.Module, 
 
     return importance, y_pred, y_true
 
-def get_normalized_weights(lenght : int):
-    weights = []
-    sum = 0
+def compute_band_importance(bands : list[list[float]], band_names: List[str],  model : torch.nn.Module, dataloader : D.DataLoader , model_device : torch.device, sampling_rate: int = 100):
+    # compute the cross bands combinations
 
-    for i in range(lenght):
-        weights.append(1/(i+1))
-        sum += 1/(i+1)
+    #combinations e' la lista in cui finiranno le varie combinazioni. in particolare e' una lista di liste. ogni elemento della lista e' una
+    #lista di combinazioni di bande. il primo elemento e' la lista di combinazioni di 1 banda, il secondo elemento e' la lista di combinazioni di 2 bande, e cosi' via
+    band_freq_combinations = []
 
-    weights = np.array(weights)
-    weights = weights / sum
+    for i in range(len(bands)):
+        band_freq_combinations.append(list(it.combinations(bands, i+1)))
+ 
+    importances_df = []
+    for cross_band in band_freq_combinations:
+        permuted_bands = np.zeros( len( bands ) )
+ 
+        for i, band in enumerate( bands ):
+            if band in cross_band:
+                permuted_bands [i] = 1
+        importance, y_pred, y_true = _compute_cross_band_importance(cross_band, model, dataloader, model_device, sampling_rate)
 
-    return weights
+        print(importance.shape)
+        print(np.transpose(importance).shape)
+        print(y_true.shape)
+
+        importance_df = pd.DataFrame( np.transpose( importance ) )
+ 
+        importance_df["y_pred"] = y_pred
+        importance_df["y_true"] = y_true
+        for i, band in enumerate(band_names):
+            importance_df[band] = permuted_bands[i] * np.ones( len(y_pred) )
+ 
+        importances_df.append( importance_df )
+ 
+    importances_df = pd.concat( importances_df )
+ 
+    return importances_df
 
 def get_band_importance(band : str, band_dict : dict, num_bands : int = 1, type : int = 0):
     shape = 0
@@ -158,7 +187,7 @@ class FreqBandsExplainer(PhysioExplainer):
         combination = list(it.combinations(band_names))
         print(combination)
 
-    def compute_band_importance(self, bands : list[list[float]], band_names : list[str], fold : int = 0, plot_pred : bool = False, plot_true : bool = False, save_csv : bool = False):
+    def compute_band_importance(self, bands : list[list[float]], band_names : List[str], fold : int = 0, plot_pred : bool = False, plot_true : bool = False, save_csv : bool = False):
         logger.info("JOB:%d-Loading model %s from checkpoint %s" % (fold, str(self.model_call), self.checkpoints[fold]))
         model = self.model_call.load_from_checkpoint(self.checkpoints[fold], module_config = self.module_config).eval()
 
@@ -180,40 +209,14 @@ class FreqBandsExplainer(PhysioExplainer):
         #la band_importance e' un dict che ha come chiavi le combinazioni delle bande, e come valori l'importanza per quella combinazione
         band_importance = {}
 
-        #combinations e' la lista in cui finiranno le varie combinazioni. in particolare e' una lista di liste. ogni elemento della lista e' una
-        #lista di combinazioni di bande. il primo elemento e' la lista di combinazioni di 1 banda, il secondo elemento e' la lista di combinazioni di 2 bande, e cosi' via
-        band_names_combinations = []
-        band_freq_combinations = []
+        importances_df = compute_band_importance(bands, model, datamodule.train_dataloader(), model_device, self.sampling_rate)
 
-        #pesi normalizzati in base al numero di bande da filtrare
-        #weights = get_normalized_weights(len(bands))
+        importances_df = pd.DataFrame(importances_df)
 
-        for i in range(len(bands)):
-            band_names_combinations.append(list(it.combinations(band_names, i+1)))
-            band_freq_combinations.append(list(it.combinations(bands, i+1)))
+        print("arriva qui")
 
-        #ora, per ogni combinazione possibile di bande, mi calcolo l'importanza e la metto in band_importance, associata alla relativa chiave
-        for i in range(len(band_freq_combinations)):
-            for j in range(len(band_freq_combinations[i])):
-                bands_set = list(band_freq_combinations[i][j])
-                importance, y_pred, y_true = compute_band_importance(bands_set, model, datamodule.train_dataloader(), model_device, self.sampling_rate)
-                #da moltiplicare per weights[i] per media pesata
-                band_importance[str(list(band_names_combinations[i][j]))] = importance
-                print(str(list(band_names_combinations[i][j])))
-                
-                data = {
-                    "Band " + str(list(band_names_combinations[i][j])) + " Importance": importance.tolist(),
-                    "Predicted Label": y_pred,
-                    "True Label": y_true,
-                }
-
-                df = pd.DataFrame(data)
-
-                if save_csv:   
-                    df.to_csv(self.ckpt_path + "band_combinations_importance_fold=" + str(fold) + ".csv", mode = 'a', index=False)
-                    
-
-        #ora band_importance e' un dizionario come descritto piu' su                
+        if save_csv:   
+            df.to_csv(self.ckpt_path + "band_combinations_importance_fold=" + str(fold) + ".csv", mode = 'a', index=False)            
         
         simple_result = []
         weighted_result = []
