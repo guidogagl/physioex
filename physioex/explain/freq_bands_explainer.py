@@ -131,11 +131,7 @@ def compute_band_importance(bands : list[list[float]], band_names: List[str],  m
         print(permuted_bands)
         importance, y_pred, y_true = _compute_cross_band_importance(cross_band, model, dataloader, model_device, sampling_rate)
 
-        print(importance.shape)
-        print(np.transpose(importance).shape)
-        print(y_true.shape)
-
-        importance_df = pd.DataFrame( np.transpose( importance ) )
+        importance_df = pd.DataFrame( importance ) )
  
         importance_df["y_pred"] = y_pred
         importance_df["y_true"] = y_true
