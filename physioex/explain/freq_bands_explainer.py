@@ -123,6 +123,8 @@ def compute_band_importance(bands : list[list[float]], band_names: List[str],  m
         permuted_bands = np.zeros( len( bands ) )
  
         for i, band in enumerate( bands ):
+            print(i)
+            print(band)
             if band in cross_band:
                 permuted_bands [i] = 1
         
