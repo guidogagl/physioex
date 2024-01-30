@@ -34,9 +34,12 @@ torch.set_float32_matmul_precision('medium')
 
 from typing import List
 
-def _compute_cross_band_importance(bands, model : torch.nn.Module, dataloader : D.DataLoader, model_device : torch.device, sampling_rate: int = 100):
+def _compute_cross_band_importance(bands : list[list[float]], model : torch.nn.Module, dataloader : D.DataLoader, model_device : torch.device, sampling_rate: int = 100):
     print(type(bands))
-    print(bands)
+    print(type(model))
+    print(type(dataloader))
+    print(type(model_device))
+    print(type(sampling_rate))    
 
     for i in range(len(bands)):
         assert len(bands[i]) == 2
