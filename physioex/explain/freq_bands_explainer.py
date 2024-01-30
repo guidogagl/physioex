@@ -111,7 +111,10 @@ def compute_band_importance(bands : list[list[float]], band_names: List[str],  m
     band_freq_combinations = []
 
     for i in range(len(bands)):
-        band_freq_combinations.append(list(it.combinations(bands, i+1)))
+        combination_list = it.combinations(bands, i+1)
+        for elem in combination_list:
+            for x in elem:
+                band_freq_combinations.append(x)
 
     print(band_freq_combinations)
  
