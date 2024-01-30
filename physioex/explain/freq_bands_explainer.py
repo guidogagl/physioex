@@ -112,6 +112,8 @@ def compute_band_importance(bands : list[list[float]], band_names: List[str],  m
 
     for i in range(len(bands)):
         band_freq_combinations.append(list(it.combinations(bands, i+1)))
+
+    print(band_freq_combinations)
  
     importances_df = []
     for cross_band in band_freq_combinations:
