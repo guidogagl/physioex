@@ -34,6 +34,8 @@ torch.set_float32_matmul_precision('medium')
 
 from typing import List
 
+import csv
+
 def _compute_cross_band_importance(bands : list[list[float]], model : torch.nn.Module, dataloader : D.DataLoader, model_device : torch.device, sampling_rate: int = 100):    
 
     for i in range(len(bands)):
@@ -103,7 +105,7 @@ def _compute_cross_band_importance(bands : list[list[float]], model : torch.nn.M
 
     return importance, y_pred, y_true
 
-def compute_band_importance(bands : list[list[float]], band_names: List[str],  model : torch.nn.Module, dataloader : D.DataLoader , model_device : torch.device, sampling_rate: int = 100):
+def compute_band_importance(bands : list[list[float]], band_names: List[str],  model : torch.nn.Module, dataloader : D.DataLoader , model_device : torch.device, sampling_rate: int = 100, class_names : list[str] = ["Wake", "N1", "N2", "DS", "REM"]):
     # compute the cross bands combinations
 
     #combinations e' la lista in cui finiranno le varie combinazioni. in particolare e' una lista di liste. ogni elemento della lista e' una
@@ -114,25 +116,21 @@ def compute_band_importance(bands : list[list[float]], band_names: List[str],  m
         combination_list = it.combinations(bands, i+1)
         for elem in combination_list:
             band_freq_combinations.append(elem)
-
-    print(band_freq_combinations)
  
     importances_df = []
     for cross_band in band_freq_combinations:
         permuted_bands = np.zeros( len( bands ) )
  
         for i, band in enumerate( bands ):
-            print(i)
-            print(band)
             if band in cross_band:
                 permuted_bands [i] = 1
         
-        print(cross_band)
         print(permuted_bands)
         importance, y_pred, y_true = _compute_cross_band_importance(cross_band, model, dataloader, model_device, sampling_rate)
 
-        importance_df = pd.DataFrame( importance )
- 
+        importance_df = pd.DataFrame( importance, columns = class_names )
+
+        importance_df.insert(0, "Sample", range(0, 0 + len(importance_df)))
         importance_df["y_pred"] = y_pred
         importance_df["y_true"] = y_true
         for i, band in enumerate(band_names):
@@ -192,6 +190,9 @@ class FreqBandsExplainer(PhysioExplainer):
         combination = list(it.combinations(band_names))
         print(combination)
 
+    def test_importance(self, importances_df : pd.DataFrame, band : int = 0):
+        pass
+
     def compute_band_importance(self, bands : list[list[float]], band_names : List[str], fold : int = 0, plot_pred : bool = False, plot_true : bool = False, save_csv : bool = False):
         logger.info("JOB:%d-Loading model %s from checkpoint %s" % (fold, str(self.model_call), self.checkpoints[fold]))
         model = self.model_call.load_from_checkpoint(self.checkpoints[fold], module_config = self.module_config).eval()
@@ -214,27 +215,22 @@ class FreqBandsExplainer(PhysioExplainer):
         #la band_importance e' un dict che ha come chiavi le combinazioni delle bande, e come valori l'importanza per quella combinazione
         band_importance = {}
 
-        importances_df = compute_band_importance(bands, band_names, model, datamodule.train_dataloader(), model_device, self.sampling_rate)
+        importances_df = compute_band_importance(bands, band_names, model, datamodule.train_dataloader(), model_device, self.sampling_rate, self.class_name)
 
         importances_df = pd.DataFrame(importances_df)
 
-        print("arriva qui")
-
-        ###SALVA SU FILE E GUARDA COM'è FATTO
-
         if save_csv:   
-            importances_df.to_csv(self.ckpt_path + "band_combinations_importance_fold=" + str(fold) + ".csv", index=False) 
-
-        print("file salvato")           
+            importances_df.to_csv(self.ckpt_path + "band_combinations_importance_fold=" + str(fold) + ".csv", index=False)           
         
         simple_result = []
         weighted_result = []
         normalized_result = []
-        for band in band_names:
+        for i, band in enumerate(band_names):
 
             #in base alla banda, ora dovro' prendermi l'importanza di quella banda per poterla plottare. per farlo, devo prendere, dal mio dizionario,
             #tutte le importanze in cui la mia banda compare, e poi farne la media
-            simple_importance = get_band_importance(str(band), band_importance, 6, 0)
+            #simple_importance = get_band_importance(str(band), band_importance, 6, 0)
+            simple_importance = test_importance(importances_df, i)
             weighted_importance = get_band_importance(str(band), band_importance, 6, 1)
             normalized_importance = get_band_importance(str(band), band_importance, 6, 2)
 
