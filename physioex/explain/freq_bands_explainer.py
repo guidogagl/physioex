@@ -220,8 +220,12 @@ class FreqBandsExplainer(PhysioExplainer):
 
         print("arriva qui")
 
+        ###SALVA SU FILE E GUARDA COM'è FATTO
+
         if save_csv:   
-            df.to_csv(self.ckpt_path + "band_combinations_importance_fold=" + str(fold) + ".csv", mode = 'a', index=False)            
+            importances_df.to_csv(self.ckpt_path + "band_combinations_importance_fold=" + str(fold) + ".csv", index=False) 
+
+        print("file salvato")           
         
         simple_result = []
         weighted_result = []
