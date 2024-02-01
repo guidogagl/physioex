@@ -110,7 +110,7 @@ def compute_band_importance(bands : List[List[float]], band_names: List[str],  m
     for i in range(len(bands)):
         assert len(bands[i]) == 2
     assert len(band_names) == 6
-    assert len(class_names) == 6
+    assert len(class_names) == 5
     assert average_type == 0 or average_type == 1 or average_type == 2
 
     # compute the cross bands combinations
