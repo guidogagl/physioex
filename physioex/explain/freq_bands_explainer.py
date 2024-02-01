@@ -141,6 +141,9 @@ def compute_band_importance(path, fold, bands : List[List[float]], band_names: L
     #CANCELLARE QUESTO PEZZO DOPO
     if os.path.exists(path + "band_combinations_importance_fold=" + fold + ".csv"):
         importances_df = pd.read_csv(path + "band_combinations_importance_fold=" + fold + ".csv")
+        condizione = (importances_df.iloc[:, -6:] == [1, 0, 0, 0, 0, 0]).all(axis=1)
+        y_pred = importances_df.loc(condizione, "y_pred").values
+        y_true = importances_df.loc(condizione, "y_true").values
     else:
     
         for cross_band in band_freq_combinations:
