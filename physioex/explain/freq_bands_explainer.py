@@ -105,7 +105,8 @@ def _compute_cross_band_importance(bands : List[List[float]], model : torch.nn.M
 
     return importance, y_pred, y_true
 
-def compute_band_importance(bands : List[List[float]], band_names: List[str],  model : torch.nn.Module, dataloader : D.DataLoader , model_device : torch.device, sampling_rate: int = 100, class_names : list[str] = ["Wake", "N1", "N2", "DS", "REM"], average_type : int = 0, path, fold):
+#RICORDA DI LEVARE I PRIMI DUE PARAMETRI
+def compute_band_importance(path, fold, bands : List[List[float]], band_names: List[str],  model : torch.nn.Module, dataloader : D.DataLoader , model_device : torch.device, sampling_rate: int = 100, class_names : list[str] = ["Wake", "N1", "N2", "DS", "REM"], average_type : int = 0):
     
     for i in range(len(bands)):
         assert len(bands[i]) == 2
@@ -295,8 +296,8 @@ class FreqBandsExplainer(PhysioExplainer):
 
         salvato = False
         for i in range(3):
-            # RICORDA DI LEVARE GLI ULTIMI DUE PARAMETRI 
-            matrixes_importance, y_pred, y_true, importances_df = compute_band_importance(bands, band_names, model, datamodule.train_dataloader(), model_device, self.sampling_rate, self.class_name, i, self.ckpt_path, str(fold))
+            # RICORDA DI LEVARE I PRIMI DUE PARAMETRI 
+            matrixes_importance, y_pred, y_true, importances_df = compute_band_importance(self.ckpt_path, str(fold), bands, band_names, model, datamodule.train_dataloader(), model_device, self.sampling_rate, self.class_name, i)
 
             importances_df = pd.DataFrame(importances_df)
 
