@@ -105,7 +105,7 @@ def _compute_cross_band_importance(bands : List[List[float]], model : torch.nn.M
 
     return importance, y_pred, y_true
 
-def compute_band_importance(bands : List[List[float]], band_names: List[str],  model : torch.nn.Module, dataloader : D.DataLoader , model_device : torch.device, sampling_rate: int = 100, class_names : list[str] = ["Wake", "N1", "N2", "DS", "REM"], average_type : int = 0):
+def compute_band_importance(bands : List[List[float]], band_names: List[str],  model : torch.nn.Module, dataloader : D.DataLoader , model_device : torch.device, sampling_rate: int = 100, class_names : list[str] = ["Wake", "N1", "N2", "DS", "REM"], average_type : int = 0, path, fold):
     
     for i in range(len(bands)):
         assert len(bands[i]) == 2
@@ -137,27 +137,32 @@ def compute_band_importance(bands : List[List[float]], band_names: List[str],  m
             band_freq_combinations.append(elem)
  
     importances_df = []
-    for cross_band in band_freq_combinations:
-        permuted_bands = np.zeros( len( bands ) )
- 
-        for i, band in enumerate( bands ):
-            if band in cross_band:
-                permuted_bands [i] = 1
-        
-        print(permuted_bands)
-        importance, y_pred, y_true = _compute_cross_band_importance(cross_band, model, dataloader, model_device, sampling_rate)
+    #CANCELLARE QUESTO PEZZO DOPO
+    if os.path.exists(path + "band_combinations_importance_fold=" + fold + ".csv"):
+        importances_df = pd.read_csv(path + "band_combinations_importance_fold=" + fold + ".csv")
+    else:
+    
+        for cross_band in band_freq_combinations:
+            permuted_bands = np.zeros( len( bands ) )
+    
+            for i, band in enumerate( bands ):
+                if band in cross_band:
+                    permuted_bands [i] = 1
+            
+            print(permuted_bands)
+            importance, y_pred, y_true = _compute_cross_band_importance(cross_band, model, dataloader, model_device, sampling_rate)
 
-        importance_df = pd.DataFrame( importance, columns = class_names )
+            importance_df = pd.DataFrame( importance, columns = class_names )
 
-        importance_df.insert(0, "Sample", range(0, 0 + len(importance_df)))
-        importance_df["y_pred"] = y_pred
-        importance_df["y_true"] = y_true
-        for i, band in enumerate(band_names):
-            importance_df[band] = permuted_bands[i] * np.ones( len(y_pred) )
- 
-        importances_df.append( importance_df )
- 
-    importances_df = pd.concat( importances_df )
+            importance_df.insert(0, "Sample", range(0, 0 + len(importance_df)))
+            importance_df["y_pred"] = y_pred
+            importance_df["y_true"] = y_true
+            for i, band in enumerate(band_names):
+                importance_df[band] = permuted_bands[i] * np.ones( len(y_pred) )
+    
+            importances_df.append( importance_df )
+    
+        importances_df = pd.concat( importances_df )
 
     permutated_bands_importance = []
 
@@ -169,10 +174,10 @@ def compute_band_importance(bands : List[List[float]], band_names: List[str],  m
     permutations_array = np.array(filtered_permutations)
 
     for i in range(len(permutations_array)):
-            colonne = permutations_array[i]
-            filtered_df = importances_df[importances_df.iloc[:, -6:].eq(colonne).all(axis=1)]
-            array_numpy = filtered_df.iloc[:, 1:6].values
-            permutated_bands_importance.append(array_numpy)
+        colonne = permutations_array[i]
+        filtered_df = importances_df[importances_df.iloc[:, -6:].eq(colonne).all(axis=1)]
+        array_numpy = filtered_df.iloc[:, 1:6].values
+        permutated_bands_importance.append(array_numpy)
 
     importances_matrix = []
 
@@ -245,44 +250,31 @@ class FreqBandsExplainer(PhysioExplainer):
         self.sampling_rate = sampling_rate
         self.class_name = class_name
     
-    def get_normalized_importance(self, band_importance, permutations_array, band : int = 0):
-        importance = np.zeros(band_importance[0].shape)
-        weights_sum = 0
+#    def get_geometric_importance(self, band_importance, permutations_array, band : int = 0):
+#        importance = np.ones(band_importance[0].shape)
+#        counter = 0
+#
+#        for i in range(len(permutations_array)):
+#            if permutations_array[i][band] == 1:
+#                importance *= band_importance[i]
+#                counter += 1
+#
+#        importance = np.power(importance, 1/counter)
+#        return importance
+#   
+#    def get_armonic_importance(self, band_importance, permutations_array, band : int = 0):
+#        importance = np.zeros(band_importance[0].shape)
+#        counter = 0
+#
+#        for i in range(len(permutations_array)):
+#            if permutations_array[i][band] == 1:
+#                importance += 1/band_importance[i]
+#                counter += 1
+#
+#        importance = counter / importance
+#        return importance
 
-        for i in range(len(permutations_array)):
-            if permutations_array[i][band] == 1:
-                weight = 1/(np.sum(permutations_array[i] == 1))
-                importance += (band_importance[i] * weight)
-                weights_sum += weight
-
-        importance = importance / weights_sum
-        return importance
-    
-    def get_geometric_importance(self, band_importance, permutations_array, band : int = 0):
-        importance = np.ones(band_importance[0].shape)
-        counter = 0
-
-        for i in range(len(permutations_array)):
-            if permutations_array[i][band] == 1:
-                importance *= band_importance[i]
-                counter += 1
-
-        importance = np.power(importance, 1/counter)
-        return importance
-    
-    def get_armonic_importance(self, band_importance, permutations_array, band : int = 0):
-        importance = np.zeros(band_importance[0].shape)
-        counter = 0
-
-        for i in range(len(permutations_array)):
-            if permutations_array[i][band] == 1:
-                importance += 1/band_importance[i]
-                counter += 1
-
-        importance = counter / importance
-        return importance
-
-    def compute_band_importance(self, bands : list[list[float]], band_names : List[str], fold : int = 0, plot_pred : bool = False, plot_true : bool = False, save_csv : bool = False):
+    def compute_band_importance(self, bands : List[List[float]], band_names : List[str], fold : int = 0, plot_pred : bool = False, plot_true : bool = False, save_csv : bool = False):
         logger.info("JOB:%d-Loading model %s from checkpoint %s" % (fold, str(self.model_call), self.checkpoints[fold]))
         model = self.model_call.load_from_checkpoint(self.checkpoints[fold], module_config = self.module_config).eval()
 
@@ -301,12 +293,13 @@ class FreqBandsExplainer(PhysioExplainer):
 
         self.module_config["loss_params"]["class_weights"] = datamodule.class_weights()
 
+        salvato = False
         for i in range(3):
-            matrixes_importance, y_pred, y_true, importances_df = compute_band_importance(bands, band_names, model, datamodule.train_dataloader(), model_device, self.sampling_rate, self.class_name, i)
+            # RICORDA DI LEVARE GLI ULTIMI DUE PARAMETRI 
+            matrixes_importance, y_pred, y_true, importances_df = compute_band_importance(bands, band_names, model, datamodule.train_dataloader(), model_device, self.sampling_rate, self.class_name, i, self.ckpt_path, str(fold))
 
             importances_df = pd.DataFrame(importances_df)
 
-            salvato = False
             if save_csv and not salvato:   
                 importances_df.to_csv(self.ckpt_path + "band_combinations_importance_fold=" + str(fold) + ".csv", index=False)
                 salvato = True 
@@ -353,7 +346,7 @@ class FreqBandsExplainer(PhysioExplainer):
                     logger.info("JOB:%d-Plotting band %s %s importance for predicted label" % (fold, band, word))
                     pred_importance = []
                     
-                    for i in range(len(y_true)):
+                    for k in range(len(y_true)):
                         pred_importance.append(matrixes_importance[j][k][y_pred[k]])
                     
                     pred_importance = np.array(pred_importance)
