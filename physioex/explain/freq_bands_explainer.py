@@ -352,7 +352,7 @@ class FreqBandsExplainer(PhysioExplainer):
 
             plt.subplot(2, 1, 1)           
             plt.plot(x, y)
-            plt.title("Band " + band_names[target_band] + " time " + word + " importance for the samples of the sequence " + str(i+1) + " of the first batch")
+            plt.title("Band " + band_names[target_band] + " time " + word + " importance for the samples of the sequence " + str(i+1) + " of the first batch for predicted class " + class_names[y_pred[0]])
 
             plt.ylabel('Time Importance')
 
@@ -390,7 +390,7 @@ class FreqBandsExplainer(PhysioExplainer):
 
         self.module_config["loss_params"]["class_weights"] = datamodule.class_weights()
 
-        target_band_time_importance = self.compute_band_time_importance(self, bands, band_names, model, datamodule.train_dataloader(), model_device, self.sampling_rate, 3, 0, self.class_name)
+        target_band_time_importance = self.compute_band_time_importance(bands, band_names, model, datamodule.train_dataloader(), model_device, self.sampling_rate, 3, 0, self.class_name)
 
         for i in range(2):
             # RICORDA DI LEVARE I PRIMI DUE PARAMETRI 
