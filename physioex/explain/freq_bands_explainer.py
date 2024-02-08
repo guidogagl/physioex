@@ -92,6 +92,7 @@ def _compute_cross_band_importance(bands : List[List[float]], model : torch.nn.M
         # reshape the input signal to the original size and port it to tensor
         filtered_inputs = filtered_inputs.reshape(batch_size, seq_len, n_channels, n_samples)
         filtered_inputs = torch.from_numpy(filtered_inputs)
+        inputs = torch.from_numpy(inputs)
 
         # compute the prediction of the model with the filtered input, the prediction is a tensor of size batch_size * seq_len, n_classes
         batch_importance = F.softmax(model(filtered_inputs.to(model_device)).cpu()).detach().numpy()
