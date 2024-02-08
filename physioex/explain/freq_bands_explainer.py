@@ -107,11 +107,12 @@ def _compute_cross_band_importance(bands : List[List[float]], model : torch.nn.M
         for c in range(n_class):
             partial_time_importance.append(ig.attribute(inputs.to(model_device), filtered_inputs.to(model_device), target=c).cpu().numpy())
             
-#        partial_time_importance = np.array(partial_time_importance)
-#        print("shape of partial time importance")
-#        print(partial_time_importance.shape)
-        time_importance.append(partial_time_importance.numpy())
-
+        partial_time_importance = np.array(partial_time_importance)
+        print("shape of partial time importance")
+        print(partial_time_importance.shape)
+        if partial_time_importance.shape == [n_class, batch_size, seq_len, n_channels, n_samples]:
+            time_importance.append(partial_time_importance)
+        
     time_importance = np.array(time_importance)
     print("shape of time importance")
     print(time_importance.shape)
@@ -126,7 +127,7 @@ def _compute_cross_band_importance(bands : List[List[float]], model : torch.nn.M
     #time_importance è una matrice numpy di dimensione batch, n_class, batch_size (32), seq_len (3), n_channels (1), n_samples (3000)
     #faccio un reshape per ottenere una dimensione più comoda da maneggiare
 
-    time_importance = time_importance.reshape((len(dataloader) * batch_size), seq_len, n_samples, n_class)
+    time_importance = time_importance.reshape(((len(dataloader)-1) * batch_size), seq_len, n_samples, n_class)
 
     return time_importance, band_importance, y_pred, y_true
 
