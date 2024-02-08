@@ -107,10 +107,10 @@ def _compute_cross_band_importance(bands : List[List[float]], model : torch.nn.M
         for c in range(n_class):
             partial_time_importance.append(ig.attribute(inputs.to(model_device), filtered_inputs.to(model_device), target=c).cpu().numpy())
 
-        partial_time_importance = np.array(partial_time_importance)
         time_importance.append(partial_time_importance)
-
-#    time_importance = np.array(time_importance)
+        partial_time_importance = np.array(partial_time_importance)
+        
+    time_importance = np.array(time_importance)
 
     # reshape the lists to ignore the batch_size dimension
     y_pred = np.concatenate(y_pred).reshape(-1)
