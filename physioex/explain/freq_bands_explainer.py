@@ -106,12 +106,9 @@ def _compute_cross_band_importance(bands : List[List[float]], model : torch.nn.M
         partial_time_importance = []
         for c in range(n_class):
             partial_time_importance.append(ig.attribute(inputs.to(model_device), filtered_inputs.to(model_device), target=c).cpu().numpy())
-            print("in for loop " + str(c))
-            print(partial_time_importance.shape)
-        print("outside for")
-        print(partial_time_importance.shape)
+            
         partial_time_importance = np.array(partial_time_importance)
-        print("after numpy")
+        print("shape of partial time importance")
         print(partial_time_importance)
         time_importance.append(partial_time_importance)
         print("shape of time importance")
