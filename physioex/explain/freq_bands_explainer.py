@@ -28,7 +28,7 @@ from physioex.data import datasets, TimeDistributedModule
 from loguru import logger
 from tqdm import tqdm
 
-from torch.utils import data as D
+from torch.utils.data import DataLoader, SubsetRandomSampler
 from torch.nn import functional as F
 torch.set_float32_matmul_precision('medium')
 
@@ -38,7 +38,7 @@ import csv
 
 from captum.attr import IntegratedGradients
 
-def _compute_cross_band_importance(bands : List[List[float]], model : torch.nn.Module, dataloader : D.DataLoader, model_device : torch.device, sampling_rate: int = 100):    
+def _compute_cross_band_importance(bands : List[List[float]], model : torch.nn.Module, dataloader : DataLoader, model_device : torch.device, sampling_rate: int = 100):    
 
     for i in range(len(bands)):
         assert len(bands[i]) == 2
@@ -133,7 +133,7 @@ def _compute_cross_band_importance(bands : List[List[float]], model : torch.nn.M
     return time_importance, band_importance, y_pred, y_true
 
 #RICORDA DI LEVARE I PRIMI DUE PARAMETRI
-def compute_band_importance(path, fold, bands : List[List[float]], band_names: List[str],  model : torch.nn.Module, dataloader : D.DataLoader , model_device : torch.device, sampling_rate: int = 100, class_names : list[str] = ["Wake", "N1", "N2", "DS", "REM"], average_type : int = 0):
+def compute_band_importance(path, fold, bands : List[List[float]], band_names: List[str],  model : torch.nn.Module, dataloader : DataLoader , model_device : torch.device, sampling_rate: int = 100, class_names : list[str] = ["Wake", "N1", "N2", "DS", "REM"], average_type : int = 0):
     
     for i in range(len(bands)):
         assert len(bands[i]) == 2
@@ -143,7 +143,7 @@ def compute_band_importance(path, fold, bands : List[List[float]], band_names: L
 
     # compute the cross bands combinations
 
-    dataloader = torch.utils.data.DataLoader(
+    dataloader = DataLoader(
         dataloader.dataset,
         batch_size=dataloader.batch_size,
         shuffle=False,
@@ -153,6 +153,24 @@ def compute_band_importance(path, fold, bands : List[List[float]], band_names: L
         drop_last=dataloader.drop_last,
         timeout=dataloader.timeout,
         worker_init_fn=dataloader.worker_init_fn,
+    )
+
+    #per alleggerire il carico di dati, mi creo un nuovo dataloader che abbia solo il primo batch come dati
+    #prendo il primo batch
+    first_batch_indices = next(iter(dataloader.batch_sampler))
+    subset_sampler = SubsetRandomSampler(first_batch_indices)
+    #creo un nuovo DataLoader con il primo batch
+    new_dataloader = DataLoader(
+        dataloader.dataset,
+        batch_size=dataloader.batch_size,
+        sampler=subset_sampler,
+        shuffle=False,
+        num_workers=dataloader.num_workers,
+        collate_fn=dataloader.collate_fn,
+        pin_memory=dataloader.pin_memory,
+        drop_last=dataloader.drop_last,
+        timeout=dataloader.timeout,
+        worker_init_fn=dataloader.worker_init_fn
     )
 
     #combinations e' la lista in cui finiranno le varie combinazioni. in particolare e' una lista di liste. ogni elemento della lista e' una
@@ -182,7 +200,7 @@ def compute_band_importance(path, fold, bands : List[List[float]], band_names: L
                 permuted_bands [i] = 1
         
         print(permuted_bands)
-        _, band_importance, y_pred, y_true = _compute_cross_band_importance(cross_band, model, dataloader, model_device, sampling_rate)
+        _, band_importance, y_pred, y_true = _compute_cross_band_importance(cross_band, model, new_dataloader, model_device, sampling_rate)
 
         band_combinations_dict[str(permuted_bands)] = band_importance
             #al posto di un dataframe qui mi popolo un dict con le combinazioni delle bande
@@ -280,7 +298,7 @@ class FreqBandsExplainer(PhysioExplainer):
         self.sampling_rate = sampling_rate
         self.class_name = class_name
 
-    def compute_band_time_importance(self, bands : List[List[float]], band_names : List[List[str]], model : torch.nn.Module, dataloader : D.DataLoader, model_device : torch.device, sampling_rate: int = 100, target_band : int = 0, average_type : int = 0, class_names : list[str] = ["Wake", "N1", "N2", "DS", "REM"]):
+    def compute_band_time_importance(self, bands : List[List[float]], band_names : List[List[str]], model : torch.nn.Module, dataloader : DataLoader, model_device : torch.device, sampling_rate: int = 100, target_band : int = 0, average_type : int = 0, class_names : list[str] = ["Wake", "N1", "N2", "DS", "REM"]):
         
         dataloader = torch.utils.data.DataLoader(
             dataloader.dataset,
