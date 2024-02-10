@@ -71,7 +71,8 @@ def _compute_cross_band_importance(bands : List[List[float]], model : torch.nn.M
         # y_true size = batch_size, 1
         
         # reshape the input to consider only the input signal ( 30 seconds of data sampled at 100 Hz )
-        filtered_inputs = inputs.reshape(-1, seq_len * n_samples)
+        filtered_inputs = inputs.copy()
+        filtered_inputs = filtered_inputs.reshape(-1, seq_len * n_samples)
 
         # now inputs size is batch_size * (seq_len * n_channels (1) * n_samples)
         # remove the frequency band from the input using scipy
