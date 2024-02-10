@@ -323,14 +323,9 @@ class FreqBandsExplainer(PhysioExplainer):
         for i in range(len(bands)):
             combination_list = it.combinations(bands, i+1)
             for elem in combination_list:
-                band_freq_combinations.append(elem)  
-
-        print(band_freq_combinations)  
+                band_freq_combinations.append(elem)    
 
         for cross_band in band_freq_combinations:
-            print("dentro cross band")
-            print(cross_band)
-            print(bands[target_band])
             if bands[target_band] not in cross_band:
                 continue
 
@@ -343,12 +338,20 @@ class FreqBandsExplainer(PhysioExplainer):
             filtered_permutations.append(permuted_bands)
 
             time_importance, _, y_pred, y_true = _compute_cross_band_importance(cross_band, model, new_dataloader, model_device, sampling_rate)
-        
-#            time_combinations_dict[str(permuted_bands)] = time_importance
+
+            time_importance = np.array(time_importance)
+            print(time_importance.shape)
+    
             target_band_time_cross_importance.append(time_importance)
 
         permutations_array = np.array(filtered_permutations)
         target_band_time_cross_importance = np.array(target_band_time_cross_importance)
+        print("shape di target_band_time_cross_importance")
+        print(target_band_time_cross_importance.shape)
+        print("shape di permutations_array")
+        print(permutations_array.shape)
+        print("contenuto di permutations array")
+        print(permutations_array)
 
         if average_type == 0:
             target_band_time_importance = get_simple_importance(target_band_time_cross_importance, permutations_array, target_band)
