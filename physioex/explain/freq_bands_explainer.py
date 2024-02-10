@@ -155,24 +155,6 @@ def compute_band_importance(path, fold, bands : List[List[float]], band_names: L
         worker_init_fn=dataloader.worker_init_fn,
     )
 
-    #per alleggerire il carico di dati, mi creo un nuovo dataloader che abbia solo il primo batch come dati
-    #prendo il primo batch
-    first_batch_indices = next(iter(dataloader.batch_sampler))
-    subset_sampler = SubsetRandomSampler(first_batch_indices)
-    #creo un nuovo DataLoader con il primo batch
-    new_dataloader = DataLoader(
-        dataloader.dataset,
-        batch_size=dataloader.batch_size,
-        sampler=subset_sampler,
-        shuffle=False,
-        num_workers=dataloader.num_workers,
-        collate_fn=dataloader.collate_fn,
-        pin_memory=dataloader.pin_memory,
-        drop_last=dataloader.drop_last,
-        timeout=dataloader.timeout,
-        worker_init_fn=dataloader.worker_init_fn
-    )
-
     #combinations e' la lista in cui finiranno le varie combinazioni. in particolare e' una lista di liste. ogni elemento della lista e' una
     #lista di combinazioni di bande. il primo elemento e' la lista di combinazioni di 1 banda, il secondo elemento e' la lista di combinazioni di 2 bande, e cosi' via
     band_freq_combinations = []
@@ -200,7 +182,7 @@ def compute_band_importance(path, fold, bands : List[List[float]], band_names: L
                 permuted_bands [i] = 1
         
         print(permuted_bands)
-        _, band_importance, y_pred, y_true = _compute_cross_band_importance(cross_band, model, new_dataloader, model_device, sampling_rate)
+        _, band_importance, y_pred, y_true = _compute_cross_band_importance(cross_band, model, dataloader, model_device, sampling_rate)
 
         band_combinations_dict[str(permuted_bands)] = band_importance
             #al posto di un dataframe qui mi popolo un dict con le combinazioni delle bande
@@ -312,6 +294,24 @@ class FreqBandsExplainer(PhysioExplainer):
             worker_init_fn=dataloader.worker_init_fn,
         )
 
+        #per alleggerire il carico di dati, mi creo un nuovo dataloader che abbia solo il primo batch come dati
+        #prendo il primo batch
+        first_batch_indices = next(iter(dataloader.batch_sampler))
+        subset_sampler = SubsetRandomSampler(first_batch_indices)
+        #creo un nuovo DataLoader con il primo batch
+        new_dataloader = DataLoader(
+            dataloader.dataset,
+            batch_size=dataloader.batch_size,
+            sampler=subset_sampler,
+            shuffle=False,
+            num_workers=dataloader.num_workers,
+            collate_fn=dataloader.collate_fn,
+            pin_memory=dataloader.pin_memory,
+            drop_last=dataloader.drop_last,
+            timeout=dataloader.timeout,
+            worker_init_fn=dataloader.worker_init_fn
+        )
+
         data_iter = iter(dataloader)
         first_batch = next(data_iter)
 
@@ -337,7 +337,7 @@ class FreqBandsExplainer(PhysioExplainer):
 
             filtered_permutations.append(permuted_bands)
 
-            time_importance, _, y_pred, y_true = _compute_cross_band_importance(cross_band, model, dataloader, model_device, sampling_rate)
+            time_importance, _, y_pred, y_true = _compute_cross_band_importance(cross_band, model, new_dataloader, model_device, sampling_rate)
         
 #            time_combinations_dict[str(permuted_bands)] = time_importance
             target_band_time_cross_importance.append(time_importance)
