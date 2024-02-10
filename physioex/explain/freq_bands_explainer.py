@@ -103,9 +103,12 @@ def _compute_cross_band_importance(bands : List[List[float]], model : torch.nn.M
 
         ig = IntegratedGradients(model)
 
+        print(inputs.shape)
+        print(filtered_inputs.shape)
+
         partial_time_importance = []
         for c in range(n_class):
-            partial_time_importance.append(ig.attribute(inputs.to(model_device), filtered_inputs.to(model_device), target=c).cpu().numpy())
+            partial_time_importance.append(ig.attribute(inputs.to(model_device), filtered_inputs.to(model_device), target=c).cpu().detach().numpy())
             
         partial_time_importance = np.array(partial_time_importance)
         print("shape of partial time importance")
