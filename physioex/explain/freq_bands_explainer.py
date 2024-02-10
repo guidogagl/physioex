@@ -323,9 +323,14 @@ class FreqBandsExplainer(PhysioExplainer):
         for i in range(len(bands)):
             combination_list = it.combinations(bands, i+1)
             for elem in combination_list:
-                band_freq_combinations.append(elem)     
+                band_freq_combinations.append(elem)  
+
+        print(band_freq_combinations)  
 
         for cross_band in band_freq_combinations:
+            print("dentro cross band")
+            print(cross_band)
+            print(bands[target_band])
             if bands[target_band] not in cross_band:
                 continue
 
