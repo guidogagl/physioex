@@ -113,6 +113,7 @@ def _compute_cross_band_importance(bands : List[List[float]], model : torch.nn.M
         if partial_time_importance.shape == (5, 32, 3, 1, 3000):
             print("sono qui")
             time_importance.append(partial_time_importance)
+            print(partial_time_importance[0][0][0][0])
         
     time_importance = np.array(time_importance)
     print("shape of time importance")
