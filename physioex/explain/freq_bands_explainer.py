@@ -316,16 +316,13 @@ class FreqBandsExplainer(PhysioExplainer):
             # port the input to numpy
             inputs = inputs.cpu().detach().numpy()
             batch_size, seq_len, n_channels, n_samples = inputs.shape
-
-            print(inputs.shape)
-            for i in range(batch_size):
-                print(inputs[i].shape)
     
             for i in range(batch_size):           
                 if y_true[i] != target_class:
                     continue
                 found = True
                 index = i
+                print(inputs[i].shape)
                 inputs = inputs[i].reshape(seq_len, n_samples)
                 #creo un nuovo DataLoader con il primo batch che contenga la classe target
                 new_dataloader = DataLoader(
