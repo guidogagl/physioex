@@ -323,8 +323,12 @@ class FreqBandsExplainer(PhysioExplainer):
                 index = i
                 inputs = inputs[i].reshape(seq_len, n_samples)
                 #creo un nuovo DataLoader con il primo batch che contenga la classe target
+                nd_inputs = inputs.copy()
+                nd_y_true = y_true.copy()
+                nd_inputs = torch.from_numpy(nd_inputs)
+                nd_y_true = torch.from_numpy(nd_y_true)
                 new_dataloader = DataLoader(
-                    TensorDataset(batch),
+                    TensorDataset(nd_inputs, nd_y_true),
                     batch_size=dataloader.batch_size,
                     shuffle=False,
                     num_workers=dataloader.num_workers,
