@@ -28,7 +28,7 @@ from physioex.data import datasets, TimeDistributedModule
 from loguru import logger
 from tqdm import tqdm
 
-from torch.utils.data import DataLoader, SubsetRandomSampler
+from torch.utils.data import DataLoader, TensorDataset
 from torch.nn import functional as F
 torch.set_float32_matmul_precision('medium')
 
@@ -305,31 +305,42 @@ class FreqBandsExplainer(PhysioExplainer):
             worker_init_fn=dataloader.worker_init_fn,
         )
 
-        #per alleggerire il carico di dati, mi creo un nuovo dataloader che abbia solo il primo batch come dati
-        #prendo il primo batch
-        first_batch_indices = next(iter(dataloader.batch_sampler))
-        subset_sampler = SubsetRandomSampler(first_batch_indices)
-        #creo un nuovo DataLoader con il primo batch
-        new_dataloader = DataLoader(
-            dataloader.dataset,
-            batch_size=dataloader.batch_size,
-            sampler=subset_sampler,
-            shuffle=False,
-            num_workers=dataloader.num_workers,
-            collate_fn=dataloader.collate_fn,
-            pin_memory=dataloader.pin_memory,
-            drop_last=dataloader.drop_last,
-            timeout=dataloader.timeout,
-            worker_init_fn=dataloader.worker_init_fn
-        )
+        y_true = []
+        found = False
+        for batch in dataloader:
 
-        data_iter = iter(dataloader)
+            inputs, y_true_batch = batch
+            y_true.append(y_true_batch.numpy())
 
+            # port the input to numpy
+            inputs = inputs.cpu().detach().numpy()
+            batch_size, seq_len, n_channels, n_samples = inputs.shape
+
+            for i in range(batch_size):           
+                if y_true[i] != target_class:
+                    continue
+                found = True
+                index = i
+                inputs = inputs[i].reshape(seq_len, n_samples)
+                #creo un nuovo DataLoader con il primo batch che contenga la classe target
+                new_dataloader = DataLoader(
+                    TensorDataset(batch),
+                    batch_size=dataloader.batch_size,
+                    shuffle=False,
+                    num_workers=dataloader.num_workers,
+                    collate_fn=dataloader.collate_fn,
+                    pin_memory=dataloader.pin_memory,
+                    drop_last=dataloader.drop_last,
+                    timeout=dataloader.timeout,
+                    worker_init_fn=dataloader.worker_init_fn
+                )
+
+            if found == True:
+                break
+                
         band_freq_combinations = []
         target_band_time_cross_importance = []
-#        time_combinations_dict = {}
         filtered_permutations = []
-        y_true = []
 
         for i in range(len(bands)):
             combination_list = it.combinations(bands, i+1)
@@ -373,22 +384,8 @@ class FreqBandsExplainer(PhysioExplainer):
 
         #la dimensione di target_band_time_importance è (len(dataloader) * batch_size), seq_len, n_samples, n_class
         #per plottare, provo a plottare solamente la prima matrice di shape seq_len, n_samples, n_class
-            
-        found = False
-        while found == False:
-            inputs, y_true_batch = next(data_iter)
 
-            # port the input to numpy
-            inputs = inputs.cpu().detach().numpy()
-            batch_size, seq_len, n_channels, n_samples = inputs.shape
-            y_true.append(y_true_batch.numpy())
-
-            for i in range(batch_size):           
-                if y_true[i] != target_class:
-                    continue
-                found = True
-                inputs = inputs[i].reshape(seq_len, n_samples)
-                plot_matrix = target_band_time_importance[i]
+        plot_matrix = target_band_time_importance[index]
             
         #num_batch, seq_len, n_samples, n_class = target_band_time_importance.shape
                    
