@@ -104,30 +104,13 @@ def _compute_cross_band_importance(bands : List[List[float]], model : torch.nn.M
 
         ig = IntegratedGradients(model)
 
-        print(inputs.shape)
-        print(filtered_inputs.shape)
-
-        print("prima riga input")
-        print(inputs[0][0][0])
-        print("prima riga filtered inputs")
-        print(filtered_inputs[0][0][0])
-        print()
-
         partial_time_importance = []
         for c in range(n_class):
             partial_time_importance.append(ig.attribute(inputs.to(model_device), filtered_inputs.to(model_device), target=c).cpu().numpy())
             
         partial_time_importance = np.array(partial_time_importance)
-        print("shape of partial time importance")
-        print(partial_time_importance.shape)
-#        if partial_time_importance.shape == (5, 32, 3, 1, 3000):
-        print("sono qui")
-        time_importance.append(partial_time_importance)
-        print(partial_time_importance[0][0][0][0])
         
     time_importance = np.array(time_importance)
-    print("shape of time importance")
-    print(time_importance.shape)
 
 #    time_importance = np.array(time_importance)
 
@@ -427,6 +410,8 @@ class FreqBandsExplainer(PhysioExplainer):
             plt.savefig(self.ckpt_path + "num_seq=" + str(i) + "_target_band=" + band_names[target_band] + "_target_class=" + class_names[target_class] + "_" + word + "_time_importance.png")
             plt.close()
 
+        logger.info("Done plotting")
+
         return target_band_time_importance
 
     def compute_band_importance(self, bands : List[List[float]], band_names : List[str], fold : int = 0, plot_pred : bool = False, plot_true : bool = False, save_csv : bool = False):
@@ -448,7 +433,7 @@ class FreqBandsExplainer(PhysioExplainer):
 
         self.module_config["loss_params"]["class_weights"] = datamodule.class_weights()
 
-        target_band_time_importance = self.compute_band_time_importance(bands, band_names, model, datamodule.train_dataloader(), model_device, self.sampling_rate, self.class_name, 0, 1, 0)
+        target_band_time_importance = self.compute_band_time_importance(bands, band_names, model, datamodule.train_dataloader(), model_device, self.sampling_rate, self.class_name, 0, 1, 2)
 
         for i in range(2):
             # RICORDA DI LEVARE I PRIMI DUE PARAMETRI 
