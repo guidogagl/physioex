@@ -324,7 +324,6 @@ class FreqBandsExplainer(PhysioExplainer):
         )
 
         data_iter = iter(dataloader)
-        first_batch = next(data_iter)
 
         band_freq_combinations = []
         target_band_time_cross_importance = []
@@ -349,7 +348,7 @@ class FreqBandsExplainer(PhysioExplainer):
 
             filtered_permutations.append(permuted_bands)
 
-            time_importance, _, y_pred, y_true = _compute_cross_band_importance(cross_band, model, new_dataloader, model_device, sampling_rate)
+            time_importance, _, y_pred, _ = _compute_cross_band_importance(cross_band, model, new_dataloader, model_device, sampling_rate)
 
             time_importance = np.array(time_importance)
             print(time_importance.shape)
@@ -375,24 +374,21 @@ class FreqBandsExplainer(PhysioExplainer):
         #la dimensione di target_band_time_importance è (len(dataloader) * batch_size), seq_len, n_samples, n_class
         #per plottare, provo a plottare solamente la prima matrice di shape seq_len, n_samples, n_class
             
-        inputs, y_true_batch = first_batch
-
-        # port the input to numpy
-        inputs = inputs.cpu().detach().numpy()
-        batch_size, seq_len, n_channels, n_samples = inputs.shape
-
         found = False
-        for i in range(batch_size):
-            if y_true[i] != target_class:
-                continue
-            found = True
-            inputs = inputs[i].reshape(seq_len, n_samples)
-            plot_matrix = target_band_time_importance[i]
+        while found == False:
+            inputs, y_true_batch = next(data_iter)
 
-        if found == False:
-            logger.info("Target class non found, taking the first possible input")
-            inputs = inputs[0].reshape(seq_len, n_samples)
-            target_class = y_pred[0]
+            # port the input to numpy
+            inputs = inputs.cpu().detach().numpy()
+            batch_size, seq_len, n_channels, n_samples = inputs.shape
+            y_true.append(y_true_batch.numpy())
+
+            for i in range(batch_size):           
+                if y_true[i] != target_class:
+                    continue
+                found = True
+                inputs = inputs[i].reshape(seq_len, n_samples)
+                plot_matrix = target_band_time_importance[i]
             
         #num_batch, seq_len, n_samples, n_class = target_band_time_importance.shape
                    
@@ -410,7 +406,7 @@ class FreqBandsExplainer(PhysioExplainer):
 
             plt.subplot(2, 1, 1)           
             plt.plot(x, y)
-            plt.title("Band " + band_names[target_band] + " time " + word + " importance for the samples of the sequence " + str(i+1) + " of the first batch for target class " + class_names[target_class])
+            plt.title("Band " + band_names[target_band] + " time " + word + " importance for the samples of the sequence " + str(i+1) + " of the first instance of target class " + class_names[target_class])
 
             plt.ylabel('Time Importance')
 
