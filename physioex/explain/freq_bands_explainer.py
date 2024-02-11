@@ -448,7 +448,7 @@ class FreqBandsExplainer(PhysioExplainer):
 
         self.module_config["loss_params"]["class_weights"] = datamodule.class_weights()
 
-        target_band_time_importance = self.compute_band_time_importance(bands, band_names, model, datamodule.train_dataloader(), model_device, self.sampling_rate, self.class_name, 0, 3, 0)
+        target_band_time_importance = self.compute_band_time_importance(bands, band_names, model, datamodule.train_dataloader(), model_device, self.sampling_rate, self.class_name, 0, 1, 0)
 
         for i in range(2):
             # RICORDA DI LEVARE I PRIMI DUE PARAMETRI 
