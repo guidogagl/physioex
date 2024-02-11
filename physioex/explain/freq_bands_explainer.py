@@ -377,8 +377,6 @@ class FreqBandsExplainer(PhysioExplainer):
             
         inputs, y_true_batch = first_batch
 
-        y_true.append(y_true_batch.numpy())
-
         # port the input to numpy
         inputs = inputs.cpu().detach().numpy()
         batch_size, seq_len, n_channels, n_samples = inputs.shape
