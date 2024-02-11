@@ -389,7 +389,7 @@ class FreqBandsExplainer(PhysioExplainer):
         for i in range(seq_len):
             y = []
             for j in range(n_samples):
-                y.append(plot_matrix[i][j][y_pred[0]])
+                y.append(plot_matrix[i][j][3])
 
             x = np.arange(n_samples)
 
@@ -398,7 +398,7 @@ class FreqBandsExplainer(PhysioExplainer):
 
             plt.subplot(2, 1, 1)           
             plt.plot(x, y)
-            plt.title("Band " + band_names[target_band] + " time " + word + " importance for the samples of the sequence " + str(i+1) + " of the first batch for predicted class " + class_names[y_pred[0]])
+            plt.title("Band " + band_names[target_band] + " time " + word + " importance for the samples of the sequence " + str(i+1) + " of the first batch for target class " + class_names[3])
 
             plt.ylabel('Time Importance')
 
@@ -412,7 +412,7 @@ class FreqBandsExplainer(PhysioExplainer):
             plt.ylabel("Wave value")
             plt.xlabel("Samples")
 
-            plt.savefig(self.ckpt_path + "target_band=" + band_names[target_band] + "_" + word + "_time_importance.png")
+            plt.savefig(self.ckpt_path + "num_seq=" + str(i) + "target_band=" + band_names[target_band] + "_" + word + "_time_importance.png")
             plt.close()
 
         return target_band_time_importance
