@@ -304,7 +304,7 @@ class FreqBandsExplainer(PhysioExplainer):
 #            timeout=dataloader.timeout,
 #            worker_init_fn=dataloader.worker_init_fn,
 #        )
-        logger.info("Plotting time importance of target band %s for target class %s" % (band_names(target_band), class_names(target_class)))
+        logger.info("Plotting time importance of target band %s for target class %s" % (band_names[target_band], class_names[target_class]))
 
         found = False
         for batch in dataloader:
