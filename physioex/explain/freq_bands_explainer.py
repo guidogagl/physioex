@@ -337,6 +337,7 @@ class FreqBandsExplainer(PhysioExplainer):
                 )
 
                 if found == True:
+                    logger.debug("found a true")
                     break
                 
         band_freq_combinations = []
