@@ -305,10 +305,9 @@ class FreqBandsExplainer(PhysioExplainer):
             worker_init_fn=dataloader.worker_init_fn,
         )
 
-        y_true = []
         found = False
         for batch in dataloader:
-
+            y_true = []
             inputs, y_true_batch = batch
             y_true.append(y_true_batch.numpy())
 
