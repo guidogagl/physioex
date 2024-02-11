@@ -337,8 +337,10 @@ class FreqBandsExplainer(PhysioExplainer):
                 )
 
                 if found == True:
-                    logger.debug("found a true")
                     break
+            
+            if found == True:
+                break
                 
         band_freq_combinations = []
         target_band_time_cross_importance = []
