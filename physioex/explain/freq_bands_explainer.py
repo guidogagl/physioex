@@ -391,6 +391,8 @@ class FreqBandsExplainer(PhysioExplainer):
         #num_batch, seq_len, n_samples, n_class = target_band_time_importance.shape
                    
 #        plot_matrix = target_band_time_importance[0]
+        print("shape of input")
+        print(inputs.shape)
 
         for i in range(seq_len):
             y = []
