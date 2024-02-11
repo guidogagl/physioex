@@ -315,6 +315,11 @@ class FreqBandsExplainer(PhysioExplainer):
             inputs = inputs.cpu().detach().numpy()
             batch_size, seq_len, n_channels, n_samples = inputs.shape
 
+            print("shape of y_true")
+            print(len(y_true))
+            print(y_true[0])
+            print(y_true[1])
+
             for i in range(batch_size):           
                 if y_true[i] != target_class:
                     continue
