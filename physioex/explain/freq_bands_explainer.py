@@ -291,7 +291,7 @@ class FreqBandsExplainer(PhysioExplainer):
         self.sampling_rate = sampling_rate
         self.class_name = class_name
 
-    def compute_band_time_importance(self, bands : List[List[float]], band_names : List[List[str]], model : torch.nn.Module, dataloader : DataLoader, model_device : torch.device, sampling_rate: int = 100, target_band : int = 0, average_type : int = 0, class_names : list[str] = ["Wake", "N1", "N2", "DS", "REM"], target_class : int = 0):
+    def compute_band_time_importance(self, bands : List[List[float]], band_names : List[List[str]], model : torch.nn.Module, dataloader : DataLoader, model_device : torch.device, sampling_rate: int = 100, class_names : list[str] = ["Wake", "N1", "N2", "DS", "REM"], average_type : int = 0, target_band : int = 0, target_class : int = 0):
         
 #        dataloader = torch.utils.data.DataLoader(
 #            dataloader.dataset,
@@ -447,7 +447,7 @@ class FreqBandsExplainer(PhysioExplainer):
 
         self.module_config["loss_params"]["class_weights"] = datamodule.class_weights()
 
-        target_band_time_importance = self.compute_band_time_importance(bands, band_names, model, datamodule.train_dataloader(), model_device, self.sampling_rate, 3, 0, self.class_name)
+        target_band_time_importance = self.compute_band_time_importance(bands, band_names, model, datamodule.train_dataloader(), model_device, self.sampling_rate, self.class_name, 0, 5, 3)
 
         for i in range(2):
             # RICORDA DI LEVARE I PRIMI DUE PARAMETRI 
