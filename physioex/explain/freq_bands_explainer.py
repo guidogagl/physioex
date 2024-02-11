@@ -139,7 +139,7 @@ def _compute_cross_band_importance(bands : List[List[float]], model : torch.nn.M
     #time_importance è una matrice numpy di dimensione batch, n_class, batch_size (32), seq_len (3), n_channels (1), n_samples (3000)
     #faccio un reshape per ottenere una dimensione più comoda da maneggiare
 
-    time_importance = time_importance.reshape(batch_size, seq_len, n_samples, n_class)
+    time_importance = time_importance.reshape(n_class, batch_size, seq_len, n_samples)
 
     return time_importance, band_importance, y_pred, y_true
 
@@ -386,21 +386,21 @@ class FreqBandsExplainer(PhysioExplainer):
             target_band_time_importance = get_weighted_importance(target_band_time_cross_importance, permutations_array, target_band)
             word = "weighted"
 
-        #la dimensione di target_band_time_importance è (len(dataloader) * batch_size), seq_len, n_samples, n_class
-        #per plottare, provo a plottare solamente la prima matrice di shape seq_len, n_samples, n_class
+        #la dimensione di target_band_time_importance è batch_size, seq_len, n_samples, n_class
+        #per plottare, provo a plottare solamente la matrice di shape seq_len, n_samples, n_class
 
-        plot_matrix = target_band_time_importance[index]
+        #plot_matrix = target_band_time_importance[index]
+            
+        plot_matrix = target_band_time_importance[target_class][index]
             
         #num_batch, seq_len, n_samples, n_class = target_band_time_importance.shape
                    
 #        plot_matrix = target_band_time_importance[0]
-        print("shape of input")
-        print(inputs.shape)
 
         for i in range(seq_len):
             y = []
             for j in range(n_samples):
-                y.append(plot_matrix[i][j][target_class])
+                y.append(plot_matrix[i][j])
 
             x = np.arange(n_samples)
 
