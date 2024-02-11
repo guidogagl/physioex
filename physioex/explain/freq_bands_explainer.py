@@ -293,32 +293,28 @@ class FreqBandsExplainer(PhysioExplainer):
 
     def compute_band_time_importance(self, bands : List[List[float]], band_names : List[List[str]], model : torch.nn.Module, dataloader : DataLoader, model_device : torch.device, sampling_rate: int = 100, target_band : int = 0, average_type : int = 0, class_names : list[str] = ["Wake", "N1", "N2", "DS", "REM"], target_class : int = 3):
         
-        dataloader = torch.utils.data.DataLoader(
-            dataloader.dataset,
-            batch_size=dataloader.batch_size,
-            shuffle=False,
-            num_workers=dataloader.num_workers,
-            collate_fn=dataloader.collate_fn,
-            pin_memory=dataloader.pin_memory,
-            drop_last=dataloader.drop_last,
-            timeout=dataloader.timeout,
-            worker_init_fn=dataloader.worker_init_fn,
-        )
+#        dataloader = torch.utils.data.DataLoader(
+#            dataloader.dataset,
+#            batch_size=dataloader.batch_size,
+#            shuffle=False,
+#            num_workers=dataloader.num_workers,
+#            collate_fn=dataloader.collate_fn,
+#            pin_memory=dataloader.pin_memory,
+#            drop_last=dataloader.drop_last,
+#            timeout=dataloader.timeout,
+#            worker_init_fn=dataloader.worker_init_fn,
+#        )
 
         found = False
         for batch in dataloader:
             y_true = []
             inputs, y_true_batch = batch
             y_true.append(y_true_batch.numpy())
+            y_true = np.concatenate(y_true).reshape(-1)
 
             # port the input to numpy
             inputs = inputs.cpu().detach().numpy()
             batch_size, seq_len, n_channels, n_samples = inputs.shape
-
-            print("shape of y_true")
-            print(len(y_true))
-            print(y_true[0])
-            print(y_true[1])
 
             for i in range(batch_size):           
                 if y_true[i] != target_class:
