@@ -291,7 +291,7 @@ class FreqBandsExplainer(PhysioExplainer):
         self.sampling_rate = sampling_rate
         self.class_name = class_name
 
-    def compute_band_time_importance(self, bands : List[List[float]], band_names : List[List[str]], model : torch.nn.Module, dataloader : DataLoader, model_device : torch.device, sampling_rate: int = 100, target_band : int = 0, average_type : int = 0, class_names : list[str] = ["Wake", "N1", "N2", "DS", "REM"]):
+    def compute_band_time_importance(self, bands : List[List[float]], band_names : List[List[str]], model : torch.nn.Module, dataloader : DataLoader, model_device : torch.device, sampling_rate: int = 100, target_band : int = 0, average_type : int = 0, class_names : list[str] = ["Wake", "N1", "N2", "DS", "REM"], target_class : int = 3):
         
         dataloader = torch.utils.data.DataLoader(
             dataloader.dataset,
@@ -330,6 +330,7 @@ class FreqBandsExplainer(PhysioExplainer):
         target_band_time_cross_importance = []
 #        time_combinations_dict = {}
         filtered_permutations = []
+        y_true = []
 
         for i in range(len(bands)):
             combination_list = it.combinations(bands, i+1)
@@ -376,20 +377,33 @@ class FreqBandsExplainer(PhysioExplainer):
             
         inputs, y_true_batch = first_batch
 
+        y_true.append(y_true_batch.numpy())
+
         # port the input to numpy
         inputs = inputs.cpu().detach().numpy()
         batch_size, seq_len, n_channels, n_samples = inputs.shape
 
-        inputs = inputs[0].reshape(seq_len, n_samples)
+        found = False
+        for i in range(batch_size):
+            if y_true[i] != target_class:
+                continue
+            found = True
+            inputs = inputs[i].reshape(seq_len, n_samples)
+            plot_matrix = target_band_time_importance[i]
+
+        if found == False:
+            logger.info("Target class non found, taking the first possible input")
+            inputs = inputs[0].reshape(seq_len, n_samples)
+            target_class = y_pred[0]
             
         #num_batch, seq_len, n_samples, n_class = target_band_time_importance.shape
                    
-        plot_matrix = target_band_time_importance[0]
+#        plot_matrix = target_band_time_importance[0]
 
         for i in range(seq_len):
             y = []
             for j in range(n_samples):
-                y.append(plot_matrix[i][j][3])
+                y.append(plot_matrix[i][j][target_class])
 
             x = np.arange(n_samples)
 
@@ -398,7 +412,7 @@ class FreqBandsExplainer(PhysioExplainer):
 
             plt.subplot(2, 1, 1)           
             plt.plot(x, y)
-            plt.title("Band " + band_names[target_band] + " time " + word + " importance for the samples of the sequence " + str(i+1) + " of the first batch for target class " + class_names[3])
+            plt.title("Band " + band_names[target_band] + " time " + word + " importance for the samples of the sequence " + str(i+1) + " of the first batch for target class " + class_names[target_class])
 
             plt.ylabel('Time Importance')
 
