@@ -309,8 +309,7 @@ class FreqBandsExplainer(PhysioExplainer):
         for batch in dataloader:
             y_true = []
             inputs, y_true_batch = batch
-            nd_inputs = inputs.clone()
-            nd_y_true_batch = y_true_batch.clone()
+            nd_inputs, nd_y_true_batch = batch
             y_true.append(y_true_batch.numpy())
             y_true = np.concatenate(y_true).reshape(-1)
 
