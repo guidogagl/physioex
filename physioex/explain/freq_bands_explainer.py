@@ -423,7 +423,7 @@ class FreqBandsExplainer(PhysioExplainer):
             plt.ylabel("Wave value")
             plt.xlabel("Samples")
 
-            plt.savefig(self.ckpt_path + "num_seq=" + str(i) + "target_band=" + band_names[target_band] + "_" + word + "_time_importance.png")
+            plt.savefig(self.ckpt_path + "num_seq=" + str(i) + "_target_band=" + band_names[target_band] + "_target_class=" + class_names[target_class] + "_" + word + "_time_importance.png")
             plt.close()
 
         return target_band_time_importance
