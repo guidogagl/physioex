@@ -318,6 +318,8 @@ class FreqBandsExplainer(PhysioExplainer):
             batch_size, seq_len, n_channels, n_samples = inputs.shape
 
             print(inputs.shape)
+            print(inputs[0].shape)
+            print(inputs[1].shape)
 
             for i in range(batch_size):           
                 if y_true[i] != target_class:
