@@ -304,6 +304,7 @@ class FreqBandsExplainer(PhysioExplainer):
 #            timeout=dataloader.timeout,
 #            worker_init_fn=dataloader.worker_init_fn,
 #        )
+        logger.info("Plotting time importance of target band %s for target class %s" % (band_names(target_band), class_names(target_class)))
 
         found = False
         for batch in dataloader:
@@ -366,18 +367,18 @@ class FreqBandsExplainer(PhysioExplainer):
             time_importance, _, y_pred, _ = _compute_cross_band_importance(cross_band, model, new_dataloader, model_device, sampling_rate)
 
             time_importance = np.array(time_importance)
-            print(time_importance.shape)
+#            print(time_importance.shape)
     
             target_band_time_cross_importance.append(time_importance)
 
         permutations_array = np.array(filtered_permutations)
         target_band_time_cross_importance = np.array(target_band_time_cross_importance)
-        print("shape di target_band_time_cross_importance")
-        print(target_band_time_cross_importance.shape)
-        print("shape di permutations_array")
-        print(permutations_array.shape)
-        print("contenuto di permutations array")
-        print(permutations_array)
+#        print("shape di target_band_time_cross_importance")
+#        print(target_band_time_cross_importance.shape)
+#        print("shape di permutations_array")
+#        print(permutations_array.shape)
+#        print("contenuto di permutations array")
+#        print(permutations_array)
 
         if average_type == 0:
             target_band_time_importance = get_simple_importance(target_band_time_cross_importance, permutations_array, target_band)
