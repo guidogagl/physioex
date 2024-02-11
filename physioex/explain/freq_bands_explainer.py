@@ -323,6 +323,8 @@ class FreqBandsExplainer(PhysioExplainer):
                 found = True
                 index = i
                 print(inputs[i].shape)
+                print(seq_len)
+                print(n_samples)
                 inputs = inputs[i].reshape(seq_len, n_samples)
                 #creo un nuovo DataLoader con il primo batch che contenga la classe target
                 new_dataloader = DataLoader(
