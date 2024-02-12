@@ -302,6 +302,7 @@ class FreqBandsExplainer(PhysioExplainer):
         new_dataloader = DataLoader(
             selected_batches,
             batch_size=dataloader.batch_size,
+            shuffle=False,
             num_workers=dataloader.num_workers,
             collate_fn=dataloader.collate_fn,
             pin_memory=dataloader.pin_memory,
