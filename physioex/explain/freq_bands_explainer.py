@@ -144,10 +144,30 @@ def compute_band_importance(bands : List[List[float]], band_names: List[str],  m
 
     # compute the cross bands combinations
 
-
-
     dataloader = DataLoader(
         dataloader.dataset,
+        batch_size=dataloader.batch_size,
+        shuffle=False,
+        num_workers=dataloader.num_workers,
+        collate_fn=dataloader.collate_fn,
+        pin_memory=dataloader.pin_memory,
+        drop_last=dataloader.drop_last,
+        timeout=dataloader.timeout,
+        worker_init_fn=dataloader.worker_init_fn,
+    )
+
+    # Seleziona solo i primi tre batch
+    num_batches_to_select = 3
+    selected_batches = []
+
+    # Itera manualmente sul DataLoader originale
+    for i, batch in enumerate(dataloader):
+        selected_batches.append(batch)
+        if i + 1 >= num_batches_to_select:
+            break
+
+    new_dataloader = DataLoader(
+        selected_batches,
         batch_size=dataloader.batch_size,
         shuffle=False,
         num_workers=dataloader.num_workers,
@@ -186,7 +206,7 @@ def compute_band_importance(bands : List[List[float]], band_names: List[str],  m
                 permuted_bands [i] = 1
         
         print(permuted_bands)
-        time_importance, band_importance, y_pred, y_true = _compute_cross_band_importance(cross_band, model, dataloader, model_device, sampling_rate)
+        time_importance, band_importance, y_pred, y_true = _compute_cross_band_importance(cross_band, model, new_dataloader, model_device, sampling_rate)
 
         band_combinations_dict[str(permuted_bands)] = band_importance
         band_time_combinations_dict[str(permuted_bands)] = time_importance
