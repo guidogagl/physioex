@@ -74,7 +74,7 @@ def _compute_cross_band_importance(bands : List[List[float]], model : torch.nn.M
         # in our experiments batch_size is always 32 ( the batch size is the number of samples used to compute the gradient )
         # in our experiments the number of classes (y_true) is always 5 ( wake, N1, N2, N3, REM ) each element of y_true is an integer in [0, 4]
         # y_true size = batch_size, 1
-        inputs = inputs.reshape(batch_size, seq_len, n_samples)
+
         # reshape the input to consider only the input signal ( 30 seconds of data sampled at 100 Hz )
         filtered_inputs = inputs.copy()
         filtered_inputs = filtered_inputs.reshape(-1, seq_len * n_samples)
@@ -114,7 +114,7 @@ def _compute_cross_band_importance(bands : List[List[float]], model : torch.nn.M
             partial_time_importance.append(ig.attribute(inputs.to(model_device), filtered_inputs.to(model_device), target=c).cpu().numpy())
             
         partial_time_importance = np.array(partial_time_importance)
-        if partial_time_importance.shape == (n_class, standard_batch_size, seq_len, n_samples):
+        if partial_time_importance.shape == (n_class, standard_batch_size, seq_len, n_channels, n_samples):
             print("sono qui")
             time_importance.append(partial_time_importance)
         
