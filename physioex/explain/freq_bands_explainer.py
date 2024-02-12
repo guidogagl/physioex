@@ -144,10 +144,10 @@ def compute_band_importance(bands : List[List[float]], band_names: List[str],  m
 
     # compute the cross bands combinations
 
-    selected_batches = list(it.islice(dataloader, 3))
+
 
     dataloader = DataLoader(
-        selected_batches,
+        dataloader.dataset,
         batch_size=dataloader.batch_size,
         shuffle=False,
         num_workers=dataloader.num_workers,
