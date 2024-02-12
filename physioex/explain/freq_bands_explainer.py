@@ -47,6 +47,7 @@ def _compute_cross_band_importance(bands : List[List[float]], model : torch.nn.M
     y_true = []
     band_importance = []
     time_importance = []
+    standard_batch_size_saved = False
 
     for batch in dataloader:
         inputs, y_true_batch = batch
@@ -62,6 +63,10 @@ def _compute_cross_band_importance(bands : List[List[float]], model : torch.nn.M
         # port the input to numpy
         inputs = inputs.cpu().detach().numpy()
         batch_size, seq_len, n_channels, n_samples = inputs.shape
+
+        if standard_batch_size_saved == False:
+            standard_batch_size_saved == True
+            standard_batch_size = batch_size
 
         # in our experiments n_channels is always 1
         # in our experiments n_samples is always 3000 ( 30 seconds of data sampled at 100 Hz )
@@ -109,7 +114,9 @@ def _compute_cross_band_importance(bands : List[List[float]], model : torch.nn.M
             partial_time_importance.append(ig.attribute(inputs.to(model_device), filtered_inputs.to(model_device), target=c).cpu().numpy())
             
         partial_time_importance = np.array(partial_time_importance)
-        time_importance.append(partial_time_importance)
+        if partial_time_importance.shape == (n_class, standard_batch_size, seq_len, n_samples):
+            print("sono qui")
+            time_importance.append(partial_time_importance)
         
     time_importance = np.array(time_importance)
 
@@ -123,7 +130,7 @@ def _compute_cross_band_importance(bands : List[List[float]], model : torch.nn.M
     #time_importance è una matrice numpy di dimensione batch, n_class, batch_size (32), seq_len (3), n_channels (1), n_samples (3000)
     #faccio un reshape per ottenere una dimensione più comoda da maneggiare
 
-    time_importance = time_importance.reshape(n_class, batch_size, seq_len, n_samples)
+    time_importance = time_importance.reshape(n_class, standard_batch_size, seq_len, n_samples)
 
     return time_importance, band_importance, y_pred, y_true
 
