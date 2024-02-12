@@ -115,7 +115,6 @@ def _compute_cross_band_importance(bands : List[List[float]], model : torch.nn.M
             
         partial_time_importance = np.array(partial_time_importance)
         if partial_time_importance.shape == (n_class, standard_batch_size, seq_len, n_channels, n_samples):
-            print("sono qui")
             time_importance.append(partial_time_importance)
         
     time_importance = np.array(time_importance)
@@ -298,11 +297,24 @@ class FreqBandsExplainer(PhysioExplainer):
 
         dataloader = datamodule.train_dataloader()
 
+        selected_batches = list(it.islice(dataloader, 3))
+
+        new_dataloader = DataLoader(
+            selected_batches,
+            batch_size=dataloader.batch_size,
+            num_workers=dataloader.num_workers,
+            collate_fn=dataloader.collate_fn,
+            pin_memory=dataloader.pin_memory,
+            drop_last=dataloader.drop_last,
+            timeout=dataloader.timeout,
+            worker_init_fn=dataloader.worker_init_fn,
+        )
+
 #        target_band_time_importance = self.compute_band_time_importance(bands, band_names, model, datamodule.train_dataloader(), model_device, self.sampling_rate, self.class_name, 0, -1)
 
         for i in range(2):
             # RICORDA DI LEVARE I PRIMI DUE PARAMETRI 
-            time_importances_matrix, importances_matrix, y_pred, y_true = compute_band_importance(bands, band_names, model, dataloader, model_device, self.sampling_rate, self.class_name, i)
+            time_importances_matrix, importances_matrix, y_pred, y_true = compute_band_importance(bands, band_names, model, new_dataloader, model_device, self.sampling_rate, self.class_name, i)
 
             if i == 0:
                 word = "simple"
