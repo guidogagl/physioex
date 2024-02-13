@@ -412,6 +412,7 @@ class FreqBandsExplainer(PhysioExplainer):
 
                     fig, axs = plt.subplots(2, 3, figsize=(30, 5))
 
+                    print(seq_len)
 
                     for a in range(seq_len):
                         y = []
