@@ -184,7 +184,7 @@ def compute_band_importance(bands : List[List[float]], band_names: List[str],  m
                 permuted_bands [i] = 1
         
         print(permuted_bands)
-        time_importance, band_importance, y_pred, y_true = _compute_cross_band_importance(cross_band, model, new_dataloader, model_device, sampling_rate)
+        time_importance, band_importance, y_pred, y_true = _compute_cross_band_importance(cross_band, model, dataloader, model_device, sampling_rate)
 
         band_combinations_dict[str(permuted_bands)] = band_importance
         band_time_combinations_dict[str(permuted_bands)] = time_importance
