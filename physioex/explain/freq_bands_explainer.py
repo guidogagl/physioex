@@ -112,10 +112,8 @@ def _compute_cross_band_importance(bands : List[List[float]], model : torch.nn.M
         partial_time_importance = []
         for c in range(n_class):
             partial_time_importance.append(ig.attribute(inputs.to(model_device), filtered_inputs.to(model_device), target=c).cpu().numpy())
-            
-        partial_time_importance = np.array(partial_time_importance)
-        if partial_time_importance.shape == (n_class, standard_batch_size, seq_len, n_channels, n_samples):
-            time_importance.append(partial_time_importance)
+        
+        time_importance.append(partial_time_importance)
         
     #time_importance = np.array(time_importance)
 
@@ -127,7 +125,6 @@ def _compute_cross_band_importance(bands : List[List[float]], model : torch.nn.M
     band_importance = np.concatenate(band_importance).reshape(-1, n_class)
 
     #time_importance è una matrice numpy di dimensione batch, n_class, batch_size (32), seq_len (3), n_channels (1), n_samples (3000)
-    #faccio un reshape per ottenere una dimensione più comoda da maneggiare
 
     #time_importance = time_importance.reshape(n_class, standard_batch_size, seq_len, n_samples)
 
@@ -223,6 +220,8 @@ def compute_band_importance(bands : List[List[float]], band_names: List[str],  m
 
         importances_matrix.append(band_importance)
         time_importances_matrix.append(band_time_importance)
+
+    #time_importances_matrix è una matrice di dimensione num_bande, batch, n_class, batch_size (32), seq_len (3), n_channels (1), n_samples (3000)
 
     return time_importances_matrix, importances_matrix, y_pred, y_true
 
@@ -382,6 +381,7 @@ class FreqBandsExplainer(PhysioExplainer):
                     plt.savefig(self.ckpt_path + ("fold=%d_pred_band=" + band + "_" + word + "_importance.png") % fold)
                     plt.close()
 
+            #time_importances_matrix è una matrice di dimensione num_bande, batch, n_class, batch_size (32), seq_len (3), n_channels (1), n_samples (3000)
             for k, class_name in enumerate(self.class_name):
                 
                 for l in range(len(y_true)):
@@ -408,7 +408,7 @@ class FreqBandsExplainer(PhysioExplainer):
 
                 for j, band in enumerate(band_names):     
                     logger.info("JOB:%d-Plotting time importance of target band %s for target class %s" % (fold, band, class_name))                
-                    plot_matrix = time_importances_matrix[j][k][internal_index]
+                    plot_matrix = time_importances_matrix[j][batch_index][k][internal_index]
 
                     fig, axs = plt.subplots(2, 3, figsize=(30, 5))
 
