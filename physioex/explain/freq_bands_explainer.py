@@ -185,7 +185,7 @@ def compute_band_importance(bands : List[List[float]], band_names: List[str],  m
                 permuted_bands [i] = 1
         
         print(permuted_bands)
-        permutations_array.append(str(permuted_bands))
+        permutations_array.append(permuted_bands)
         time_importance, band_importance, y_pred, y_true = _compute_cross_band_importance(cross_band, model, dataloader, model_device, sampling_rate)
 
         band_combinations_dict[str(permuted_bands)] = band_importance
@@ -203,8 +203,8 @@ def compute_band_importance(bands : List[List[float]], band_names: List[str],  m
 
     for i in range(len(permutations_array)):
         key = permutations_array[i]
-        permuted_bands_importance.append(band_combinations_dict[key])
-        permuted_bands_time_importance.append(band_time_combinations_dict[key])
+        permuted_bands_importance.append(band_combinations_dict[str(key)])
+        permuted_bands_time_importance.append(band_time_combinations_dict[str(key)])
 
     importances_matrix = []
     time_importances_matrix = []
@@ -427,7 +427,7 @@ class FreqBandsExplainer(PhysioExplainer):
                         x = np.arange(n_samples)
                         y = inputs[a]
 
-                        plt.subplot(2, 1, a + 4)
+                        plt.subplot(2, 3, a + 4)
                         plt.plot(x, y)
                         plt.title("Original corresponding input wave")
 
