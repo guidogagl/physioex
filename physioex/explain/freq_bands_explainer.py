@@ -156,28 +156,6 @@ def compute_band_importance(bands : List[List[float]], band_names: List[str],  m
         worker_init_fn=dataloader.worker_init_fn,
     )
 
-    # Seleziona solo i primi tre batch
-    num_batches_to_select = 3
-    selected_batches = []
-
-    # Itera manualmente sul DataLoader originale
-    for i, batch in enumerate(dataloader):
-        selected_batches.append(batch)
-        if i + 1 >= num_batches_to_select:
-            break
-
-    new_dataloader = DataLoader(
-        selected_batches,
-        batch_size=dataloader.batch_size,
-        shuffle=False,
-        num_workers=dataloader.num_workers,
-        collate_fn=dataloader.collate_fn,
-        pin_memory=dataloader.pin_memory,
-        drop_last=dataloader.drop_last,
-        timeout=dataloader.timeout,
-        worker_init_fn=dataloader.worker_init_fn,
-    )
-
     #combinations e' la lista in cui finiranno le varie combinazioni. in particolare e' una lista di liste. ogni elemento della lista e' una
     #lista di combinazioni di bande. il primo elemento e' la lista di combinazioni di 1 banda, il secondo elemento e' la lista di combinazioni di 2 bande, e cosi' via
     band_freq_combinations = []
