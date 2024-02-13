@@ -226,7 +226,8 @@ def compute_band_importance(bands : List[List[float]], band_names: List[str],  m
 
     return time_importances_matrix, importances_matrix, y_pred, y_true
 
-def get_simple_importance(permuted_bands_importance : List[np.ndarray], permutations_array : List[List[int]], band : int = 0):
+def get_simple_importance(permuted_bands_importance : List[List], permutations_array : List[List[int]], band : int = 0):
+        permuted_bands_importance = np.array(permuted_bands_importance)
         importance = np.zeros(permuted_bands_importance[0].shape)
         counter = 0
 
@@ -248,7 +249,8 @@ def get_simple_importance(permuted_bands_importance : List[np.ndarray], permutat
 
 #        return importance
 
-def get_weighted_importance(permuted_bands_importance : List[np.ndarray], permutations_array : List[List[int]], band : int = 0):
+def get_weighted_importance(permuted_bands_importance : List[List], permutations_array : List[List[int]], band : int = 0):
+        permuted_bands_importance = np.array(permuted_bands_importance)
         importance = np.zeros(permuted_bands_importance[0].shape)
         weights_sum = 0
 
