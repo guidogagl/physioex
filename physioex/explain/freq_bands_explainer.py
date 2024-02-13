@@ -381,8 +381,7 @@ class FreqBandsExplainer(PhysioExplainer):
                     plt.close()
 
             for k, class_name in enumerate(self.class_name):
-                logger.info("JOB:%d-Plotting time importance of target band %s for target class %s" % (fold, band, class_name))
-
+                
                 for l in range(len(y_true)):
                     if pred_or_true == 0 and y_pred[l] == k:           
                         index = l
@@ -405,10 +404,11 @@ class FreqBandsExplainer(PhysioExplainer):
                 batch_size, seq_len, n_channels, n_samples = inputs.shape
                 inputs = inputs[internal_index].reshape(seq_len, n_samples)
 
-                for j, band in enumerate(band_names):                     
+                for j, band in enumerate(band_names):     
+                    logger.info("JOB:%d-Plotting time importance of target band %s for target class %s" % (fold, band, class_name))                
                     plot_matrix = time_importances_matrix[j][k][internal_index]
 
-                    fig, axs = plt.subplots(2, 3, figsize=(15, 5))
+                    fig, axs = plt.subplots(2, 3, figsize=(30, 5))
 
 
                     for a in range(seq_len):
@@ -436,8 +436,8 @@ class FreqBandsExplainer(PhysioExplainer):
                         plt.ylabel("Wave value")
                         plt.xlabel("Samples")
 
-                    axs[0, 0].set_title("Band " + band + ": predicted " + self.class_name[y_pred[index]] + ", true " + self.class_name[y_true[index]] + ", importance for " + target)
-                    axs[1, 0].set_title("Original corresponding input wave")
+                    axs[0, 1].set_title("Band " + band + ": predicted " + self.class_name[y_pred[index]] + ", true " + self.class_name[y_true[index]] + ", importance for " + target)
+                    axs[1, 1].set_title("Original corresponding input wave")
                     plt.savefig(self.ckpt_path + "band=" + band + "_class=" + class_name + ".png")
                     plt.close(fig)
 
