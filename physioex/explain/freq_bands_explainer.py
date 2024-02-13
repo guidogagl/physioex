@@ -161,6 +161,7 @@ def compute_band_importance(bands : List[List[float]], band_names: List[str],  m
     band_freq_combinations = []
     band_combinations_dict = {}
     band_time_combinations_dict = {}
+    permutations_array = []
 
     for i in range(len(bands)):
         combination_list = it.combinations(bands, i+1)
@@ -184,6 +185,7 @@ def compute_band_importance(bands : List[List[float]], band_names: List[str],  m
                 permuted_bands [i] = 1
         
         print(permuted_bands)
+        permutations_array.append(str(permuted_bands))
         time_importance, band_importance, y_pred, y_true = _compute_cross_band_importance(cross_band, model, dataloader, model_device, sampling_rate)
 
         band_combinations_dict[str(permuted_bands)] = band_importance
@@ -193,16 +195,16 @@ def compute_band_importance(bands : List[List[float]], band_names: List[str],  m
     permuted_bands_time_importance = []
 
     # Genera tutte le possibili permutazioni di 0 e 1 lungo 6
-    permutations = list(it.product([0, 1], repeat=len(bands)))
+    #permutations = list(it.product([0, 1], repeat=len(bands)))
     # Filtra le permutazioni escludendo quelle con tutti 0
-    filtered_permutations = [p for p in permutations if any(x == 1 for x in p)]
+    #filtered_permutations = [p for p in permutations if any(x == 1 for x in p)]
     # Converte la lista di tuple in un array NumPy
-    permutations_array = np.array(filtered_permutations)
+    #permutations_array = np.array(filtered_permutations)
 
     for i in range(len(permutations_array)):
         key = permutations_array[i]
-        permuted_bands_importance.append(band_combinations_dict[str(key)])
-        permuted_bands_time_importance.append(band_time_combinations_dict[str(key)])
+        permuted_bands_importance.append(band_combinations_dict[key])
+        permuted_bands_time_importance.append(band_time_combinations_dict[key])
 
     importances_matrix = []
     time_importances_matrix = []
