@@ -408,7 +408,8 @@ class FreqBandsExplainer(PhysioExplainer):
                 for j, band in enumerate(band_names):                     
                     plot_matrix = time_importances_matrix[j][k][internal_index]
 
-                    fig, axs = plt.figure(figsize=(15, 5))
+                    fig, axs = plt.subplots(2, 3, figsize=(15, 5))
+
 
                     for a in range(seq_len):
                         y = []
