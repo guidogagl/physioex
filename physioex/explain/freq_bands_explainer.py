@@ -156,6 +156,28 @@ def compute_band_importance(bands : List[List[float]], band_names: List[str],  m
         worker_init_fn=dataloader.worker_init_fn,
     )
 
+    # Seleziona solo i primi tre batch
+    num_batches_to_select = 3
+    selected_batches = []
+
+    # Itera manualmente sul DataLoader originale
+    for i, batch in enumerate(dataloader):
+        selected_batches.append(batch)
+        if i + 1 >= num_batches_to_select:
+            break
+
+    new_dataloader = DataLoader(
+        selected_batches,
+        batch_size=dataloader.batch_size,
+        shuffle=False,
+        num_workers=dataloader.num_workers,
+        collate_fn=dataloader.collate_fn,
+        pin_memory=dataloader.pin_memory,
+        drop_last=dataloader.drop_last,
+        timeout=dataloader.timeout,
+        worker_init_fn=dataloader.worker_init_fn,
+    )
+
     #combinations e' la lista in cui finiranno le varie combinazioni. in particolare e' una lista di liste. ogni elemento della lista e' una
     #lista di combinazioni di bande. il primo elemento e' la lista di combinazioni di 1 banda, il secondo elemento e' la lista di combinazioni di 2 bande, e cosi' via
     band_freq_combinations = []
@@ -184,7 +206,7 @@ def compute_band_importance(bands : List[List[float]], band_names: List[str],  m
                 permuted_bands [i] = 1
         
         print(permuted_bands)
-        time_importance, band_importance, y_pred, y_true = _compute_cross_band_importance(cross_band, model, dataloader, model_device, sampling_rate)
+        time_importance, band_importance, y_pred, y_true = _compute_cross_band_importance(cross_band, model, new_dataloader, model_device, sampling_rate)
 
         band_combinations_dict[str(permuted_bands)] = band_importance
         band_time_combinations_dict[str(permuted_bands)] = time_importance
@@ -285,17 +307,8 @@ class FreqBandsExplainer(PhysioExplainer):
         logger.info("JOB:%d-Splitting dataset into train, validation and test sets" % fold)
         self.dataset.split(fold)
 
-        # Estrai i primi 3 batch dal dataset originale
-        num_batches_to_select = 3
-        selected_batches = []
-
-        for i, (input_data, target) in enumerate(self.dataset):
-            selected_batches.append((input_data, target))
-            if i + 1 >= num_batches_to_select:
-                break
-
         datamodule = TimeDistributedModule(
-            dataset = selected_batches, 
+            dataset = self.dataset, 
             sequence_lenght = self.module_config["seq_len"], 
             batch_size = self.batch_size, 
             transform = self.input_transform, 
@@ -306,11 +319,26 @@ class FreqBandsExplainer(PhysioExplainer):
 
         dataloader = datamodule.train_dataloader()
 
+        d_iter = iter(dataloader)
+        first_input, first_target = next(d_iter)
+
+        new_dataloader = DataLoader(
+            TensorDataset(first_input, first_target),
+            batch_size=dataloader.batch_size,
+            shuffle=False,
+            num_workers=dataloader.num_workers,
+            collate_fn=dataloader.collate_fn,
+            pin_memory=dataloader.pin_memory,
+            drop_last=dataloader.drop_last,
+            timeout=dataloader.timeout,
+            worker_init_fn=dataloader.worker_init_fn
+        )
+
 #        target_band_time_importance = self.compute_band_time_importance(bands, band_names, model, datamodule.train_dataloader(), model_device, self.sampling_rate, self.class_name, 0, -1)
 
         for i in range(2):
             # RICORDA DI LEVARE I PRIMI DUE PARAMETRI 
-            time_importances_matrix, importances_matrix, y_pred, y_true = compute_band_importance(bands, band_names, model, dataloader, model_device, self.sampling_rate, self.class_name, i)
+            time_importances_matrix, importances_matrix, y_pred, y_true = compute_band_importance(bands, band_names, model, new_dataloader, model_device, self.sampling_rate, self.class_name, i)
 
             if i == 0:
                 word = "simple"
