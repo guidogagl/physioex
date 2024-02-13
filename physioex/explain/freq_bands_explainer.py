@@ -409,7 +409,8 @@ class FreqBandsExplainer(PhysioExplainer):
                 for j, band in enumerate(band_names):     
                     logger.info("JOB:%d-Plotting time importance of target band %s for target class %s" % (fold, band, class_name))                
                     plot_matrix = time_importances_matrix[j][batch_index][k][internal_index]
-                    print(plot_matrix)
+                    print(len(plot_matrix))
+                    print(len(plot_matrix[0]))
 
                     fig, axs = plt.subplots(2, 3, figsize=(30, 5))
 
