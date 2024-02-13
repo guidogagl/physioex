@@ -225,17 +225,43 @@ def compute_band_importance(bands : List[List[float]], band_names: List[str],  m
 
     return time_importances_matrix, importances_matrix, y_pred, y_true
 
+def somma_liste_innestate(lista1, lista2):
+    # Se le liste sono elementi atomici (non sono liste innestate), sommale
+    if not isinstance(lista1[0], list):
+        return [a + b for a, b in zip(lista1, lista2)]
+    
+    # Altrimenti, ricorsivamente somma le sottoliste
+    return [somma_liste_innestate(sublist1, sublist2) for sublist1, sublist2 in zip(lista1, lista2)]
+
+def dividi_lista_innestata(lista, fattore):
+    # Se l'elemento è atomico, diviso per il fattore
+    if not isinstance(lista[0], list):
+        return [elemento / fattore for elemento in lista]
+    
+    # Altrimenti, applica ricorsivamente la divisione alle sottoliste
+    return [dividi_lista_innestata(sublista, fattore) for sublista in lista]
+
+def moltiplica_lista_innestata(lista, fattore):
+    # Se l'elemento è atomico, moltiplicalo per il fattore
+    if not isinstance(lista[0], list):
+        return [elemento * fattore for elemento in lista]
+    
+    # Altrimenti, applica ricorsivamente la moltiplicazione alle sottoliste
+    return [moltiplica_lista_innestata(sublista, fattore) for sublista in lista]
+
 def get_simple_importance(permuted_bands_importance : List[List], permutations_array : List[List[int]], band : int = 0):
-        permuted_bands_importance = np.array(permuted_bands_importance)
-        importance = np.zeros(permuted_bands_importance[0].shape)
+        importance = []
         counter = 0
 
         for i in range(len(permutations_array)):
             if permutations_array[i][band] == 1:
-                importance += permuted_bands_importance[i]
+                if importance == []:
+                    importance = importance + permuted_bands_importance[i]
+                else:
+                    importance = somma_liste_innestate[importance, permuted_bands_importance[i]]
                 counter += 1
 
-        importance = importance / counter
+        importance = dividi_lista_innestata(importance, counter)
         return importance
 
 #def get_weighted_importance(permuted_bands_importance : List[np.ndarray], permutations_array : List[List[int]], band : int = 0):
@@ -249,17 +275,23 @@ def get_simple_importance(permuted_bands_importance : List[List], permutations_a
 #        return importance
 
 def get_weighted_importance(permuted_bands_importance : List[List], permutations_array : List[List[int]], band : int = 0):
-        permuted_bands_importance = np.array(permuted_bands_importance)
-        importance = np.zeros(permuted_bands_importance[0].shape)
+        importance = []
         weights_sum = 0
 
         for i in range(len(permutations_array)):
             if permutations_array[i][band] == 1:
                 weight = 1/(np.sum(permutations_array[i] == 1))
-                importance += (permuted_bands_importance[i] * weight)
+                arr = moltiplica_lista_innestata(permuted_bands_importance[i], weight)
+
+                if importance == []:                   
+                    importance = importance + arr
+                else:               
+                    importance = somma_liste_innestate(importance, arr)
+
                 weights_sum += weight
 
-        importance = importance / weights_sum
+        importance = dividi_lista_innestata(importance, weights_sum)
+        
         return importance
 
 class FreqBandsExplainer(PhysioExplainer):
