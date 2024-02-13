@@ -408,6 +408,8 @@ class FreqBandsExplainer(PhysioExplainer):
                 for j, band in enumerate(band_names):                     
                     plot_matrix = time_importances_matrix[j][k][internal_index]
 
+                    fig, axs = plt.figure(figsize=(15, 5))
+
                     for a in range(seq_len):
                         y = []
                         for b in range(n_samples):
@@ -415,12 +417,11 @@ class FreqBandsExplainer(PhysioExplainer):
 
                         x = np.arange(n_samples)
 
-                        plt.figure(figsize=(15, 5))
                         plt.subplots_adjust(hspace=0.5)
 
                         plt.subplot(2, 3, a + 1)           
                         plt.plot(x, y)
-                        plt.title("Band " + band + " sequence number " + str(a+1) + ": predicted " + self.class_name[y_pred[index]] + ", true " + self.class_name[y_true[index]] + ", importance for " + target)
+                        #plt.title("Band " + band + " sequence number " + str(a+1) + ": predicted " + self.class_name[y_pred[index]] + ", true " + self.class_name[y_true[index]] + ", importance for " + target)
 
                         plt.ylabel('Time Importance')
 
@@ -429,13 +430,15 @@ class FreqBandsExplainer(PhysioExplainer):
 
                         plt.subplot(2, 3, a + 4)
                         plt.plot(x, y)
-                        plt.title("Original corresponding input wave")
+                        #plt.title("Original corresponding input wave")
 
                         plt.ylabel("Wave value")
                         plt.xlabel("Samples")
 
+                    axs[0, 0].set_title("Band " + band + ": predicted " + self.class_name[y_pred[index]] + ", true " + self.class_name[y_true[index]] + ", importance for " + target)
+                    axs[1, 0].set_title("Original corresponding input wave")
                     plt.savefig(self.ckpt_path + "band=" + band + "_class=" + class_name + ".png")
-                    plt.close()
+                    plt.close(fig)
 
                 df_current_average = pd.DataFrame(importances_matrix[j], columns = self.class_name)
                 df_current_average["Predicted Label"] = y_pred
