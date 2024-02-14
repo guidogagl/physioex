@@ -433,18 +433,20 @@ class FreqBandsExplainer(PhysioExplainer):
                 batch_size, seq_len, n_channels, n_samples = inputs.shape
                 inputs = inputs[internal_index].reshape(seq_len, n_samples)
 
+                heatmap_rows = []
+
                 for j, band in enumerate(band_names):     
                     logger.info("JOB:%d-Plotting time importance of target band %s for target class %s" % (fold, band, class_name))                
                     plot_matrix = time_importances_matrix[j][batch_index][k][internal_index]
+                    heatmap_rows.append([])
 
                     fig, axs = plt.subplots(2, 3, figsize=(30, 5))
-
-                    print(seq_len)
 
                     for a in range(seq_len):
                         y = []
                         for b in range(n_samples):
                             y.append(plot_matrix[a][0][b])
+                            heatmap_rows[j].append(plot_matrix[a][0][b])
 
                         x = np.arange(n_samples)
 
@@ -470,6 +472,11 @@ class FreqBandsExplainer(PhysioExplainer):
                     axs[1, 1].set_title("Original corresponding input wave")
                     plt.savefig(self.ckpt_path + "band=" + band + "_class=" + class_name + ".png")
                     plt.close(fig)
+
+                heatmap_dataframe = pd.DataFrame(heatmap_rows)
+                heatmap = sns.heatmap(heatmap_dataframe, yticklabels=band_names)
+                plt.savefig(self.ckpt_path + "bands_heatmap_for_class=" + class_name + "_(predicted_" + self.class_name[y_pred[index]] + "_true_" + self.class_name[y_true[index]] + ").png")
+                plt.close(heatmap)
 
                 df_current_average = pd.DataFrame(importances_matrix[j], columns = self.class_name)
                 df_current_average["Predicted Label"] = y_pred
