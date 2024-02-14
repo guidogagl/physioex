@@ -474,7 +474,7 @@ class FreqBandsExplainer(PhysioExplainer):
                     plt.close(fig)
 
                 heatmap_dataframe = pd.DataFrame(heatmap_rows)
-                plt.figure(figsize=(3000, 8))
+                plt.figure(figsize=(655, 8))
                 heatmap = sns.heatmap(heatmap_dataframe, yticklabels=band_names)
                 heatmap.figure.savefig(self.ckpt_path + "bands_heatmap_for_class=" + class_name + "_(predicted_" + self.class_name[y_pred[index]] + "_true_" + self.class_name[y_true[index]] + ")_" + word + ".png")
 
