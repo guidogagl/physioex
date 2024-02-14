@@ -468,15 +468,15 @@ class FreqBandsExplainer(PhysioExplainer):
                         plt.ylabel("Wave value")
                         plt.xlabel("Samples")
 
-                    axs[0, 1].set_title("Band " + band + ": predicted " + self.class_name[y_pred[index]] + ", true " + self.class_name[y_true[index]] + ", importance for " + target)
+                    axs[0, 1].set_title("Band " + band + ": predicted " + self.class_name[y_pred[index]] + ", true " + self.class_name[y_true[index]] + ", " + word + " importance for " + target)
                     axs[1, 1].set_title("Original corresponding input wave")
-                    plt.savefig(self.ckpt_path + "band=" + band + "_class=" + class_name + ".png")
+                    plt.savefig(self.ckpt_path + "band=" + band + "_class=" + class_name + "_" + word + ".png")
                     plt.close(fig)
 
                 heatmap_dataframe = pd.DataFrame(heatmap_rows)
-                plt.figure(figsize=(50, 20))
+                plt.figure(figsize=(3000, 8))
                 heatmap = sns.heatmap(heatmap_dataframe, yticklabels=band_names)
-                heatmap.figure.savefig(self.ckpt_path + "bands_heatmap_for_class=" + class_name + "_(predicted_" + self.class_name[y_pred[index]] + "_true_" + self.class_name[y_true[index]] + ").png")
+                heatmap.figure.savefig(self.ckpt_path + "bands_heatmap_for_class=" + class_name + "_(predicted_" + self.class_name[y_pred[index]] + "_true_" + self.class_name[y_true[index]] + ")_" + word + ".png")
 
                 df_current_average = pd.DataFrame(importances_matrix[j], columns = self.class_name)
                 df_current_average["Predicted Label"] = y_pred
