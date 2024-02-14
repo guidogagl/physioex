@@ -475,8 +475,8 @@ class FreqBandsExplainer(PhysioExplainer):
 
                 heatmap_dataframe = pd.DataFrame(heatmap_rows)
                 plt.figure(figsize=(30, 5))
-                sns.heatmap(heatmap_dataframe, yticklabels=band_names)
-                sns.plot.figure.savefig(self.ckpt_path + "bands_heatmap_for_class=" + class_name + "_(predicted_" + self.class_name[y_pred[index]] + "_true_" + self.class_name[y_true[index]] + ").png")
+                heatmap = sns.heatmap(heatmap_dataframe, yticklabels=band_names)
+                heatmap.savefig(self.ckpt_path + "bands_heatmap_for_class=" + class_name + "_(predicted_" + self.class_name[y_pred[index]] + "_true_" + self.class_name[y_true[index]] + ").png")
 
                 df_current_average = pd.DataFrame(importances_matrix[j], columns = self.class_name)
                 df_current_average["Predicted Label"] = y_pred
