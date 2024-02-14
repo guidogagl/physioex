@@ -251,7 +251,7 @@ def get_simple_importance(permuted_bands_importance : List[List], permutations_a
         for i in range(len(permutations_array)):
             if permutations_array[i][band] == 1:
                 if importance == []:
-                    importance = importance + permuted_bands_importance[i]
+                    importance = permuted_bands_importance[i].copy()
                 else:
                     importance = somma_liste_innestate[importance, permuted_bands_importance[i]]
                 counter += 1
@@ -279,7 +279,7 @@ def get_weighted_importance(permuted_bands_importance : List[List], permutations
                 arr = moltiplica_lista_innestata(permuted_bands_importance[i], weight)
 
                 if importance == []:                   
-                    importance = importance + arr
+                    importance = arr.copy()
                 else:               
                     importance = somma_liste_innestate(importance, arr)
 
