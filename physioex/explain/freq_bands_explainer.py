@@ -327,26 +327,26 @@ class FreqBandsExplainer(PhysioExplainer):
 
         dataloader = datamodule.train_dataloader()
 
-        #d_iter = iter(dataloader)
-        #first_input, first_target = next(d_iter)
+        d_iter = iter(dataloader)
+        first_input, first_target = next(d_iter)
 
-        #new_dataloader = DataLoader(
-        #    TensorDataset(first_input, first_target),
-        #    batch_size=dataloader.batch_size,
-        #    shuffle=False,
-        #    num_workers=dataloader.num_workers,
-        #    collate_fn=dataloader.collate_fn,
-        #    pin_memory=dataloader.pin_memory,
-        #    drop_last=dataloader.drop_last,
-        #    timeout=dataloader.timeout,
-        #    worker_init_fn=dataloader.worker_init_fn
-        #)
+        new_dataloader = DataLoader(
+            TensorDataset(first_input, first_target),
+            batch_size=dataloader.batch_size,
+            shuffle=False,
+            num_workers=dataloader.num_workers,
+            collate_fn=dataloader.collate_fn,
+            pin_memory=dataloader.pin_memory,
+            drop_last=dataloader.drop_last,
+            timeout=dataloader.timeout,
+            worker_init_fn=dataloader.worker_init_fn
+        )
 
 #        target_band_time_importance = self.compute_band_time_importance(bands, band_names, model, datamodule.train_dataloader(), model_device, self.sampling_rate, self.class_name, 0, -1)
 
         for i in range(2):
             # RICORDA DI LEVARE I PRIMI DUE PARAMETRI 
-            time_importances_matrix, importances_matrix, y_pred, y_true = compute_band_importance(bands, band_names, model, dataloader, model_device, self.sampling_rate, self.class_name, i)
+            time_importances_matrix, importances_matrix, y_pred, y_true = compute_band_importance(bands, band_names, model, new_dataloader, model_device, self.sampling_rate, self.class_name, i)
 
             if i == 0:
                 word = "simple"
