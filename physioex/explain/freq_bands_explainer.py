@@ -557,7 +557,7 @@ class FreqBandsExplainer(PhysioExplainer):
                     
             axs[0, 1].set_title("Title")
             plt.tight_layout()
-            plt.savefig(self.ckpt_path + "bands_heatmap_for_class=" + class_name + ".png")
+            plt.savefig(self.ckpt_path + "bands_heatmap_for_class=" + class_name + "_norm1.png")
             plt.close(fig)
 
             heatmap_dataframe_abs = np.abs(heatmap_dataframe)
@@ -580,7 +580,7 @@ class FreqBandsExplainer(PhysioExplainer):
                     
             axs[0, 1].set_title("Title")
             plt.tight_layout()
-            plt.savefig(self.ckpt_path + "bands_heatmap_for_class=" + class_name + ".png")
+            plt.savefig(self.ckpt_path + "bands_heatmap_for_class=" + class_name + "_norm2.png")
             plt.close(fig)
 
     
