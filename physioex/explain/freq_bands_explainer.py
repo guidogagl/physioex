@@ -8,6 +8,7 @@ from sklearn.metrics import adjusted_rand_score
 import matplotlib.pyplot as plt
 import scipy
 from scipy import signal
+from scipy.stats import zscore
 import numpy as np 
 import seaborn as sns
 import pandas as pd
@@ -477,6 +478,10 @@ class FreqBandsExplainer(PhysioExplainer):
                     plt.savefig(self.ckpt_path + "band=" + band + "_class=" + class_name + "_" + word + ".png")
                     plt.close(fig)
 
+                heatmap_rows = np.array(heatmap_rows)
+                heatmap_rows = zscore(heatmap_rows)
+                heatmap_rows = 2 * (heatmap_rows - min(heatmap_rows)) / (max(heatmap_rows) - min(heatmap_rows)) - 1
+
                 df_heatmap_input = []
                 heatmap_dataframe = []
 
@@ -490,7 +495,7 @@ class FreqBandsExplainer(PhysioExplainer):
                         seq_row.append(heatmap_rows[o][p])
                     heatmap_dataframe.append(pd.DataFrame(seq_row))
                     heatmap_dataframe[p].to_csv(self.ckpt_path + "heatmap_dataframe_class_" + class_name + "_sequence=" + str(p) + ".csv", index=False)
-                    sns.heatmap(heatmap_dataframe[p], yticklabels=band_names, ax = axs[0, p], cmap=personalized_colors, vmin=-0.05, vmax=0.05, cbar=False)
+                    sns.heatmap(heatmap_dataframe[p], yticklabels=band_names, ax = axs[0, p], cmap=personalized_colors, vmin=-1, vmax=1, cbar=False)
                     x = np.arange(n_samples)
                     y = heatmap_input[p]
                     plt.subplot(2, 3, p + 4)
@@ -514,6 +519,70 @@ class FreqBandsExplainer(PhysioExplainer):
                     df_current_average.to_csv(self.ckpt_path + "band=" + band + "_" + word + "_importance.csv", mode = 'a', index=False)
                 
         return importances_matrix
+    
+    def plot(self, band_names : List[str]):
+        
+
+        for k, class_name in enumerate(self.class_name):
+            
+            heatmap_input = []
+            heatmap_dataframe = []
+
+            for p in range(3):
+
+                if len(heatmap_input) < 3:
+                    df_heatmap_input = pd.read_csv(self.ckpt_path + "heatmap_input_dataframe_class_" + class_name + "_sequence=" + str(p) + ".csv")
+                    heatmap_input.append(df_heatmap_input['input'].tolist()) 
+
+                df_heatmap_rows = pd.read_csv(self.ckpt_path + "heatmap_dataframe_class_" + class_name + "_sequence=" + str(p) + ".csv")
+                heatmap_dataframe.append(df_heatmap_rows.values.tolist())
+            
+            heatmap_dataframe = np.array(heatmap_dataframe)
+            heatmap_zscore1 = zscore(heatmap_dataframe)
+            heatmap_zscore1 = 2 * (heatmap_zscore1 - min(heatmap_zscore1)) / (max(heatmap_zscore1) - min(heatmap_zscore1)) - 1
+
+            fig, axs = plt.subplots(2, 3, figsize=(30, 6))
+            personalized_colors = sns.color_palette("coolwarm", as_cmap=True)
+
+            for p in range(3):
+                sns.heatmap(heatmap_zscore1[p], xticklabels=False, yticklabels=band_names, ax = axs[0, p], cmap=personalized_colors, vmin=-1, vmax=1, cbar=False)
+                x = np.arange(3000)
+                y = heatmap_input[p]
+                plt.subplot(2, 3, p + 4)
+                plt.plot(x, y)
+                plt.xlim([0, max(x)])
+                plt.ylabel("Wave value")
+                plt.xlabel("Samples")
+                #axs[1, p].plot(x, y)
+                    
+            axs[0, 1].set_title("Title")
+            plt.tight_layout()
+            plt.savefig(self.ckpt_path + "bands_heatmap_for_class=" + class_name + ".png")
+            plt.close(fig)
+
+            heatmap_dataframe_abs = np.abs(heatmap_dataframe)
+            heatmap_zscore2 = zscore(heatmap_dataframe_abs)
+            heatmap_zscore2 = (heatmap_zscore2 - min(heatmap_zscore2)) / (max(heatmap_zscore2) - min(heatmap_zscore2))
+
+            fig, axs = plt.subplots(2, 3, figsize=(30, 6))
+            personalized_colors = sns.color_palette("red", as_cmap=True)
+
+            for p in range(3):
+                sns.heatmap(heatmap_zscore2[p], xticklabels=False, yticklabels=band_names, ax = axs[0, p], cmap=personalized_colors, vmin=0, vmax=1, cbar=False)
+                x = np.arange(3000)
+                y = heatmap_input[p]
+                plt.subplot(2, 3, p + 4)
+                plt.plot(x, y)
+                plt.xlim([0, max(x)])
+                plt.ylabel("Wave value")
+                plt.xlabel("Samples")
+                #axs[1, p].plot(x, y)
+                    
+            axs[0, 1].set_title("Title")
+            plt.tight_layout()
+            plt.savefig(self.ckpt_path + "bands_heatmap_for_class=" + class_name + ".png")
+            plt.close(fig)
+
     
     def explain(self, bands : list[list[float]], band_names : list[str], save_csv : bool = False, plot_pred : bool = False, plot_true : bool = False, n_jobs : int = 10):
 
