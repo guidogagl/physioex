@@ -461,8 +461,9 @@ class FreqBandsExplainer(PhysioExplainer):
 
                         x = np.arange(n_samples)
                         y = inputs[a]
-                        for b in range(n_samples):
-                            heatmap_input.append(inputs[a][b])
+                        if len(heatmap_input) < 9000:
+                            for b in range(n_samples):
+                                heatmap_input.append(inputs[a][b])
 
                         plt.subplot(2, 3, a + 4)
                         plt.plot(x, y)
