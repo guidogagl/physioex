@@ -434,6 +434,7 @@ class FreqBandsExplainer(PhysioExplainer):
                 inputs = inputs[internal_index].reshape(seq_len, n_samples)
 
                 heatmap_rows = []
+                heatmap_input = []
 
                 for j, band in enumerate(band_names):     
                     logger.info("JOB:%d-Plotting time importance of target band %s for target class %s" % (fold, band, class_name))                
@@ -460,6 +461,8 @@ class FreqBandsExplainer(PhysioExplainer):
 
                         x = np.arange(n_samples)
                         y = inputs[a]
+                        for b in range(n_samples):
+                            heatmap_input.append(inputs[a][b])
 
                         plt.subplot(2, 3, a + 4)
                         plt.plot(x, y)
@@ -473,9 +476,16 @@ class FreqBandsExplainer(PhysioExplainer):
                     plt.savefig(self.ckpt_path + "band=" + band + "_class=" + class_name + "_" + word + ".png")
                     plt.close(fig)
 
+                df_heatmap_input = pd.DataFrame({"input" : heatmap_input})
+                df_heatmap_input.to_csv(self.ckpt_path + "heatmap_input_dataframe_class_" + class_name + ".csv", index=False)
                 heatmap_dataframe = pd.DataFrame(heatmap_rows)
-                plt.figure(figsize=(30, 5))
-                heatmap = sns.heatmap(heatmap_dataframe, yticklabels=band_names)
+                heatmap_dataframe.to_csv(self.ckpt_path + "heatmap_dataframe_class_" + class_name + ".csv", index=False)
+                fig, axs = plt.subplots(2, 1, figsize=(30, 5))
+                heatmap = sns.heatmap(heatmap_dataframe, yticklabels=band_names, ax = axs[0])
+                axs[1].plot(heatmap_input)
+                plt.ylabel("Wave value")
+                plt.xlabel("Samples")
+                axs[0].set_title("Time Importance: predicted " + self.class_name[y_pred[index]] + ", true " + self.class_name[y_true[index]] + ", " + word + " importance for " + target)
                 heatmap.figure.savefig(self.ckpt_path + "bands_heatmap_for_class=" + class_name + "_(predicted_" + self.class_name[y_pred[index]] + "_true_" + self.class_name[y_true[index]] + ")_" + word + ".png")
 
                 df_current_average = pd.DataFrame(importances_matrix[j], columns = self.class_name)
