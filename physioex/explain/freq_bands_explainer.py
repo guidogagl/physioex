@@ -539,7 +539,7 @@ class FreqBandsExplainer(PhysioExplainer):
             
             heatmap_dataframe = np.array(heatmap_dataframe)
             heatmap_zscore1 = zscore(heatmap_dataframe, axis=None)
-            heatmap_zscore1_normalized = 2 * (heatmap_zscore1 - min(heatmap_zscore1)) / (max(heatmap_zscore1) - min(heatmap_zscore1)) - 1
+            heatmap_zscore1_normalized = 2 * (heatmap_zscore1 - np.min(heatmap_zscore1)) / (np.max(heatmap_zscore1) - np.min(heatmap_zscore1)) - 1
 
             fig, axs = plt.subplots(2, 3, figsize=(30, 6))
             personalized_colors = sns.color_palette("coolwarm", as_cmap=True)
@@ -562,7 +562,7 @@ class FreqBandsExplainer(PhysioExplainer):
 
             heatmap_dataframe_abs = np.abs(heatmap_dataframe)
             heatmap_zscore2 = zscore(heatmap_dataframe_abs, axis=None)
-            heatmap_zscore2 = (heatmap_zscore2 - min(heatmap_zscore2)) / (max(heatmap_zscore2) - min(heatmap_zscore2))
+            heatmap_zscore2 = (heatmap_zscore2 - np.min(heatmap_zscore2)) / (np.max(heatmap_zscore2) - np.min(heatmap_zscore2))
 
             fig, axs = plt.subplots(2, 3, figsize=(30, 6))
             personalized_colors = sns.color_palette("red", as_cmap=True)
