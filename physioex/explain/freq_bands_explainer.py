@@ -492,10 +492,10 @@ class FreqBandsExplainer(PhysioExplainer):
                     heatmap_dataframe[p].to_csv(self.ckpt_path + "heatmap_dataframe_class_" + class_name + "_sequence=" + str(p) + ".csv", index=False)
                     sns.heatmap(heatmap_dataframe[p], yticklabels=band_names, ax = axs[0, p], cmap=personalized_colors, vmin=-0.05, vmax=0.05, cbar=False)
                     x = np.arange(n_samples)
-                    axs[1, p].plot(x, heatmap_input[p])
                     plt.xlim([0, max(x)])
                     plt.ylabel("Wave value")
                     plt.xlabel("Samples")
+                    axs[1, p].plot(x, heatmap_input[p])
                         
                 axs[0, 1].set_title("Time Importance: predicted " + self.class_name[y_pred[index]] + ", true " + self.class_name[y_true[index]] + ", " + word + " importance for " + target)
                 plt.tight_layout()
