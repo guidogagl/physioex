@@ -565,7 +565,7 @@ class FreqBandsExplainer(PhysioExplainer):
             heatmap_zscore2 = (heatmap_zscore2 - np.min(heatmap_zscore2)) / (np.max(heatmap_zscore2) - np.min(heatmap_zscore2))
 
             fig, axs = plt.subplots(2, 3, figsize=(30, 6))
-            personalized_colors = sns.color_palette("red", as_cmap=True)
+            personalized_colors = sns.light_palette("red", as_cmap=True)
 
             for p in range(3):
                 sns.heatmap(heatmap_zscore2[p], xticklabels=False, yticklabels=band_names, ax = axs[0, p], cmap=personalized_colors, vmin=0, vmax=1, cbar=False)
