@@ -447,7 +447,8 @@ class FreqBandsExplainer(PhysioExplainer):
                         y = []
                         for b in range(n_samples):
                             y.append(plot_matrix[a][0][b])
-                            heatmap_rows[j].append(plot_matrix[a][0][b])
+                        
+                        heatmap_rows[j].append(plot_matrix[a][0])
 
                         x = np.arange(n_samples)
 
@@ -461,9 +462,8 @@ class FreqBandsExplainer(PhysioExplainer):
 
                         x = np.arange(n_samples)
                         y = inputs[a]
-                        if len(heatmap_input) < 9000:
-                            for b in range(n_samples):
-                                heatmap_input.append(inputs[a][b])
+                        if len(heatmap_input) < seq_len:
+                            heatmap_input.append(y)
 
                         plt.subplot(2, 3, a + 4)
                         plt.plot(x, y)
@@ -477,18 +477,27 @@ class FreqBandsExplainer(PhysioExplainer):
                     plt.savefig(self.ckpt_path + "band=" + band + "_class=" + class_name + "_" + word + ".png")
                     plt.close(fig)
 
-                df_heatmap_input = pd.DataFrame({"input" : heatmap_input})
-                df_heatmap_input.to_csv(self.ckpt_path + "heatmap_input_dataframe_class_" + class_name + ".csv", index=False)
-                heatmap_dataframe = pd.DataFrame(heatmap_rows)
-                heatmap_dataframe.to_csv(self.ckpt_path + "heatmap_dataframe_class_" + class_name + ".csv", index=False)
-                fig, axs = plt.subplots(2, 1, figsize=(30, 6))
+                df_heatmap_input = []
+                heatmap_dataframe = []
+
+                fig, axs = plt.subplots(2, 3, figsize=(30, 6))
                 personalized_colors = sns.color_palette("coolwarm", as_cmap=True)
-                heatmap = sns.heatmap(heatmap_dataframe, yticklabels=band_names, ax = axs[0], cmap=personalized_colors, vmin=-0.05, vmax=0.05)
-                x = np.arange(n_samples * seq_len)
-                axs[1].plot(x, heatmap_input)
-                plt.ylabel("Wave value")
-                plt.xlabel("Samples")
-                axs[0].set_title("Time Importance: predicted " + self.class_name[y_pred[index]] + ", true " + self.class_name[y_true[index]] + ", " + word + " importance for " + target)
+                for p in range(seq_len):
+                    df_heatmap_input.append(pd.DataFrame({"input" : heatmap_input[p]}))
+                    df_heatmap_input[p].to_csv(self.ckpt_path + "heatmap_input_dataframe_class_" + class_name + "_sequence=" + str(p) + ".csv", index=False)
+                    seq_row = []
+                    for o in range(len(bands)):
+                        seq_row.append(heatmap_rows[o][p])
+                    heatmap_dataframe.append(pd.DataFrame(seq_row))
+                    heatmap_dataframe[p].to_csv(self.ckpt_path + "heatmap_dataframe_class_" + class_name + "_sequence=" + str(p) + ".csv", index=False)
+                    sns.heatmap(heatmap_dataframe[p], yticklabels=band_names, ax = axs[0, p], cmap=personalized_colors, vmin=-0.05, vmax=0.05, cbar=False)
+                    x = np.arange(n_samples)
+                    axs[1, p].plot(x, heatmap_input[p])
+                    plt.xlim([0, max(x)])
+                    plt.ylabel("Wave value")
+                    plt.xlabel("Samples")
+                        
+                axs[0, 1].set_title("Time Importance: predicted " + self.class_name[y_pred[index]] + ", true " + self.class_name[y_true[index]] + ", " + word + " importance for " + target)
                 plt.tight_layout()
                 plt.savefig(self.ckpt_path + "bands_heatmap_for_class=" + class_name + "_(predicted_" + self.class_name[y_pred[index]] + "_true_" + self.class_name[y_true[index]] + ")_" + word + ".png")
                 plt.close(fig)
