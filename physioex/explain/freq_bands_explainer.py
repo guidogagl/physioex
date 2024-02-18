@@ -478,9 +478,9 @@ class FreqBandsExplainer(PhysioExplainer):
                     plt.savefig(self.ckpt_path + "band=" + band + "_class=" + class_name + "_" + word + ".png")
                     plt.close(fig)
 
-                heatmap_rows = np.array(heatmap_rows)
-                heatmap_rows = zscore(heatmap_rows)
-                heatmap_rows = 2 * (heatmap_rows - min(heatmap_rows)) / (max(heatmap_rows) - min(heatmap_rows)) - 1
+                heatmap_rows1 = np.array(heatmap_rows).copy()
+                heatmap_rows1 = zscore(heatmap_rows1)
+                heatmap_rows1 = 2 * (heatmap_rows1 - np.min(heatmap_rows1)) / (np.max(heatmap_rows1) - np.min(heatmap_rows1)) - 1
 
                 df_heatmap_input = []
                 heatmap_dataframe = []
@@ -492,7 +492,7 @@ class FreqBandsExplainer(PhysioExplainer):
                     df_heatmap_input[p].to_csv(self.ckpt_path + "heatmap_input_dataframe_class_" + class_name + "_sequence=" + str(p) + ".csv", index=False)
                     seq_row = []
                     for o in range(len(bands)):
-                        seq_row.append(heatmap_rows[o][p])
+                        seq_row.append(heatmap_rows1[o][p])
                     heatmap_dataframe.append(pd.DataFrame(seq_row))
                     heatmap_dataframe[p].to_csv(self.ckpt_path + "heatmap_dataframe_class_" + class_name + "_sequence=" + str(p) + ".csv", index=False)
                     sns.heatmap(heatmap_dataframe[p], yticklabels=band_names, ax = axs[0, p], cmap=personalized_colors, vmin=-1, vmax=1, cbar=False)
@@ -505,9 +505,38 @@ class FreqBandsExplainer(PhysioExplainer):
                     plt.xlabel("Samples")
                     #axs[1, p].plot(x, y)
                         
-                axs[0, 1].set_title("Time Importance: predicted " + self.class_name[y_pred[index]] + ", true " + self.class_name[y_true[index]] + ", " + word + " importance for " + target)
+                axs[0, 1].set_title("Time Importance: predicted " + self.class_name[y_pred[index]] + ", true " + self.class_name[y_true[index]] + ", " + word + " importance for " + target + "(normalized between -1 and 1)")
                 plt.tight_layout()
-                plt.savefig(self.ckpt_path + "bands_heatmap_for_class=" + class_name + "_(predicted_" + self.class_name[y_pred[index]] + "_true_" + self.class_name[y_true[index]] + ")_" + word + ".png")
+                plt.savefig(self.ckpt_path + "bands_heatmap_for_class=" + class_name + "_(predicted_" + self.class_name[y_pred[index]] + "_true_" + self.class_name[y_true[index]] + ")_" + word + "_norm1.png")
+                plt.close(fig)
+
+                heatmap_rows2 = np.array(heatmap_rows).copy()
+                heatmap_rows2 = zscore(heatmap_rows1)
+                heatmap_rows2 = (heatmap_rows2 - np.min(heatmap_rows2)) / (np.max(heatmap_rows2) - np.min(heatmap_rows2))
+
+                df_heatmap_input = []
+                heatmap_dataframe = []
+
+                fig, axs = plt.subplots(2, 3, figsize=(30, 6))
+                personalized_colors = sns.light_palette("red", as_cmap=True)
+                for p in range(seq_len):
+                    seq_row = []
+                    for o in range(len(bands)):
+                        seq_row.append(heatmap_rows2[o][p])
+                    heatmap_dataframe.append(pd.DataFrame(seq_row))
+                    sns.heatmap(heatmap_dataframe[p], xticklabels=False, yticklabels=band_names, ax = axs[0, p], cmap=personalized_colors, vmin=0, vmax=1, cbar=False)
+                    x = np.arange(n_samples)
+                    y = heatmap_input[p]
+                    plt.subplot(2, 3, p + 4)
+                    plt.plot(x, y)
+                    plt.xlim([0, max(x)])
+                    plt.ylabel("Wave value")
+                    plt.xlabel("Samples")
+                    #axs[1, p].plot(x, y)
+                        
+                axs[0, 1].set_title("Time Importance: predicted " + self.class_name[y_pred[index]] + ", true " + self.class_name[y_true[index]] + ", " + word + " importance for " + target + "(normalized between 0 and 1)")
+                plt.tight_layout()
+                plt.savefig(self.ckpt_path + "bands_heatmap_for_class=" + class_name + "_(predicted_" + self.class_name[y_pred[index]] + "_true_" + self.class_name[y_true[index]] + ")_" + word + "_norm2.png")
                 plt.close(fig)
 
                 df_current_average = pd.DataFrame(importances_matrix[j], columns = self.class_name)
