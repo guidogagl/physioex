@@ -511,7 +511,8 @@ class FreqBandsExplainer(PhysioExplainer):
                 plt.close(fig)
 
                 heatmap_rows2 = np.array(heatmap_rows).copy()
-                heatmap_rows2 = zscore(heatmap_rows1, axis=None)
+                heatmap_rows2 = np.abs(heatmap_rows2)
+                heatmap_rows2 = zscore(heatmap_rows2, axis=None)
                 heatmap_rows2 = (heatmap_rows2 - np.min(heatmap_rows2)) / (np.max(heatmap_rows2) - np.min(heatmap_rows2))
 
                 df_heatmap_input = []
