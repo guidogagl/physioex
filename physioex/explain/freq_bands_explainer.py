@@ -495,7 +495,7 @@ class FreqBandsExplainer(PhysioExplainer):
                         seq_row.append(heatmap_rows1[o][p])
                     heatmap_dataframe.append(pd.DataFrame(seq_row))
                     heatmap_dataframe[p].to_csv(self.ckpt_path + "heatmap_dataframe_class_" + class_name + "_sequence=" + str(p) + ".csv", index=False)
-                    sns.heatmap(heatmap_dataframe[p], yticklabels=band_names, ax = axs[0, p], cmap=personalized_colors, vmin=-1, vmax=1, cbar=False)
+                    sns.heatmap(heatmap_dataframe[p], xticklabels=False, yticklabels=band_names, ax = axs[0, p], cmap=personalized_colors, vmin=-1, vmax=1, cbar=False)
                     x = np.arange(n_samples)
                     y = heatmap_input[p]
                     plt.subplot(2, 3, p + 4)
