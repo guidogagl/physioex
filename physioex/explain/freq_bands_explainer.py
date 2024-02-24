@@ -64,20 +64,12 @@ def _compute_cross_band_importance(bands : List[List[float]], model : torch.nn.M
         inputs = inputs.cpu().detach().numpy()
         batch_size, seq_len, n_channels, n_samples = inputs.shape
 
-        # in our experiments n_channels is always 1
-        # in our experiments n_samples is always 3000 ( 30 seconds of data sampled at 100 Hz )
-        # in our experiments seq_len is always 3 ( 3 consecutive 30 seconds windows )
-        # in our experiments batch_size is always 32 ( the batch size is the number of samples used to compute the gradient )
-        # in our experiments the number of classes (y_true) is always 5 ( wake, N1, N2, N3, REM ) each element of y_true is an integer in [0, 4]
-        # y_true size = batch_size, 1
-
-        # reshape the input to consider only the input signal ( 30 seconds of data sampled at 100 Hz )
+        # reshape the input to consider only the input signal
         filtered_inputs = inputs.copy()
         filtered_inputs = filtered_inputs.reshape(-1, seq_len * n_samples)
 
-        # now inputs size is batch_size * (seq_len * n_channels (1) * n_samples)
-        # remove the frequency band from the input using scipy
-        
+
+        # remove the frequency band from the input using scipy       
         for band in bands:
             # filter bandstop - reject the frequencies specified in freq_band
             lowcut = band[0]
@@ -110,19 +102,11 @@ def _compute_cross_band_importance(bands : List[List[float]], model : torch.nn.M
             partial_time_importance.append(ig.attribute(inputs.to(model_device), filtered_inputs.to(model_device), target=c).cpu().numpy())
         
         time_importance.append(partial_time_importance)
-        
-    #time_importance = np.array(time_importance)
-
-#    time_importance = np.array(time_importance)
 
     # reshape the lists to ignore the batch_size dimension
     y_pred = np.concatenate(y_pred).reshape(-1)
     y_true = np.concatenate(y_true).reshape(-1)
     band_importance = np.concatenate(band_importance).reshape(-1, n_class)
-
-    #time_importance è una matrice numpy di dimensione batch, n_class, batch_size (32), seq_len (3), n_channels (1), n_samples (3000)
-
-    #time_importance = time_importance.reshape(n_class, standard_batch_size, seq_len, n_samples)
 
     return time_importance, band_importance, y_pred, y_true
 
@@ -135,7 +119,8 @@ def compute_band_importance(bands : List[List[float]], band_names: List[str],  m
     assert len(class_names) == 5
     assert average_type == 0 or average_type == 1
 
-    # compute the cross bands combinations
+    # the dataloader is recreated here with the parameter shuffle = False in order to have consistency with the order of data
+    # this allows us to be precise in calculating different importances referring to the same samples
 
     dataloader = DataLoader(
         dataloader.dataset,
@@ -149,8 +134,6 @@ def compute_band_importance(bands : List[List[float]], band_names: List[str],  m
         worker_init_fn=dataloader.worker_init_fn,
     )
 
-    #combinations e' la lista in cui finiranno le varie combinazioni. in particolare e' una lista di liste. ogni elemento della lista e' una
-    #lista di combinazioni di bande. il primo elemento e' la lista di combinazioni di 1 banda, il secondo elemento e' la lista di combinazioni di 2 bande, e cosi' via
     band_freq_combinations = []
     band_combinations_dict = {}
     band_time_combinations_dict = {}
@@ -160,15 +143,6 @@ def compute_band_importance(bands : List[List[float]], band_names: List[str],  m
         combination_list = it.combinations(bands, i+1)
         for elem in combination_list:
             band_freq_combinations.append(elem)
- 
-#    importances_df = []
-    #CANCELLARE QUESTO PEZZO DOPO
-#    if os.path.exists(path + "band_combinations_importance_fold=" + fold + ".csv"):
-#        importances_df = pd.read_csv(path + "band_combinations_importance_fold=" + fold + ".csv")
-#        condizione = (importances_df.iloc[:, -6:] == [1, 0, 0, 0, 0, 0]).all(axis=1)
-#        y_pred = importances_df.loc[condizione, "y_pred"].values
-#        y_true = importances_df.loc[condizione, "y_true"].values
-#    else:
     
     for cross_band in band_freq_combinations:
         permuted_bands = np.zeros( len( bands ) )
@@ -187,13 +161,6 @@ def compute_band_importance(bands : List[List[float]], band_names: List[str],  m
     permuted_bands_importance = []
     permuted_bands_time_importance = []
 
-    # Genera tutte le possibili permutazioni di 0 e 1 lungo 6
-    #permutations = list(it.product([0, 1], repeat=len(bands)))
-    # Filtra le permutazioni escludendo quelle con tutti 0
-    #filtered_permutations = [p for p in permutations if any(x == 1 for x in p)]
-    # Converte la lista di tuple in un array NumPy
-    #permutations_array = np.array(filtered_permutations)
-
     for i in range(len(permutations_array)):
         key = permutations_array[i]
         permuted_bands_importance.append(band_combinations_dict[str(key)])
@@ -203,7 +170,6 @@ def compute_band_importance(bands : List[List[float]], band_names: List[str],  m
     time_importances_matrix = []
 
     for i in range(len(bands)):
-        #calcolare importanza della banda band per ogni sample
 
         #simple_average
         if average_type == 0:
@@ -217,33 +183,25 @@ def compute_band_importance(bands : List[List[float]], band_names: List[str],  m
         importances_matrix.append(band_importance)
         time_importances_matrix.append(band_time_importance)
 
-    #time_importances_matrix è una matrice di dimensione num_bande, batch, n_class, batch_size (32), seq_len (3), n_channels (1), n_samples (3000)
-
     return time_importances_matrix, importances_matrix, y_pred, y_true
 
-def somma_liste_innestate(lista1, lista2):
-    # Se le liste sono elementi atomici (non sono liste innestate), sommale
-    if not isinstance(lista1[0], list):
-        return [a + b for a, b in zip(lista1, lista2)]
+def sum_nested_lists(list1, list2):
+    if not isinstance(list1[0], list):
+        return [a + b for a, b in zip(list1, list2)]
     
-    # Altrimenti, ricorsivamente somma le sottoliste
-    return [somma_liste_innestate(sublist1, sublist2) for sublist1, sublist2 in zip(lista1, lista2)]
+    return [sum_nested_lists(sublist1, sublist2) for sublist1, sublist2 in zip(list1, list2)]
 
-def dividi_lista_innestata(lista, fattore):
-    # Se l'elemento è atomico, diviso per il fattore
-    if not isinstance(lista[0], list):
-        return [elemento / fattore for elemento in lista]
+def divide_nested_list(list, factor):
+    if not isinstance(list[0], list):
+        return [element / factor for element in list]
     
-    # Altrimenti, applica ricorsivamente la divisione alle sottoliste
-    return [dividi_lista_innestata(sublista, fattore) for sublista in lista]
+    return [divide_nested_list(sublist, factor) for sublist in list]
 
-def moltiplica_lista_innestata(lista, fattore):
-    # Se l'elemento è atomico, moltiplicalo per il fattore
-    if not isinstance(lista[0], list):
-        return [elemento * fattore for elemento in lista]
+def multiply_nested_list(list, factor):
+    if not isinstance(list[0], list):
+        return [element * factor for element in list]
     
-    # Altrimenti, applica ricorsivamente la moltiplicazione alle sottoliste
-    return [moltiplica_lista_innestata(sublista, fattore) for sublista in lista]
+    return [multiply_nested_list(sublist, factor) for sublist in list]
 
 def get_simple_importance(permuted_bands_importance : List[List], permutations_array : List[List[int]], band : int = 0):
         importance = []
@@ -254,21 +212,11 @@ def get_simple_importance(permuted_bands_importance : List[List], permutations_a
                 if len(importance) == 0:
                     importance = permuted_bands_importance[i].copy()
                 else:
-                    importance = somma_liste_innestate(importance, permuted_bands_importance[i])
+                    importance = sum_nested_lists(importance, permuted_bands_importance[i])
                 counter += 1
 
-        importance = dividi_lista_innestata(importance, counter)
+        importance = divide_nested_list(importance, counter)
         return importance
-
-#def get_weighted_importance(permuted_bands_importance : List[np.ndarray], permutations_array : List[List[int]], band : int = 0):
-#        importance = np.zeros(permuted_bands_importance[0].shape)
-
-#        for i in range(len(permutations_array)):
-#            if permutations_array[i][band] == 1:
-#                weight = 1/(np.sum(permutations_array[i] == 1))
-#                importance += (permuted_bands_importance[i] * weight)
-
-#        return importance
 
 def get_weighted_importance(permuted_bands_importance : List[List], permutations_array : List[List[int]], band : int = 0):
         importance = []
@@ -277,16 +225,16 @@ def get_weighted_importance(permuted_bands_importance : List[List], permutations
         for i in range(len(permutations_array)):
             if permutations_array[i][band] == 1:
                 weight = 1/(np.sum(permutations_array[i] == 1))
-                arr = moltiplica_lista_innestata(permuted_bands_importance[i], weight)
+                arr = multiply_nested_list(permuted_bands_importance[i], weight)
 
                 if len(importance) == 0:                   
                     importance = arr.copy()
                 else:               
-                    importance = somma_liste_innestate(importance, arr)
+                    importance = sum_nested_lists(importance, arr)
 
                 weights_sum += weight
 
-        importance = dividi_lista_innestata(importance, weights_sum)
+        importance = divide_nested_list(importance, weights_sum)
 
         return importance
 
@@ -328,6 +276,16 @@ class FreqBandsExplainer(PhysioExplainer):
 
         dataloader = datamodule.train_dataloader()
 
+        ##############################################################################################
+        # In order to elaborate our bands' time importance, we cut the dataset and only retrieve the #
+        # first batch. This choice has been made for limitations with computing power, resulting in  #
+        # a very large use of RAM, which prevented the function to elaborate everything until its    #
+        # conclusion. If you think you have enough computing power and you want to use the original  #
+        # dataset, please remove or comment the following line, and remember to swap "new_dataloader"#
+        # with "dataloader" in the function parameters.                                              #
+        ##############################################################################################
+        
+        # Comment should begin here
         d_iter = iter(dataloader)
         first_input, first_target = next(d_iter)
 
@@ -342,11 +300,10 @@ class FreqBandsExplainer(PhysioExplainer):
             timeout=dataloader.timeout,
             worker_init_fn=dataloader.worker_init_fn
         )
-
-#        target_band_time_importance = self.compute_band_time_importance(bands, band_names, model, datamodule.train_dataloader(), model_device, self.sampling_rate, self.class_name, 0, -1)
+        # Comment should end here
 
         for i in range(2):
-            # RICORDA DI LEVARE I PRIMI DUE PARAMETRI 
+            # Swap the parameter here
             time_importances_matrix, importances_matrix, y_pred, y_true = compute_band_importance(bands, band_names, model, new_dataloader, model_device, self.sampling_rate, self.class_name, i)
 
             if i == 0:
@@ -409,7 +366,6 @@ class FreqBandsExplainer(PhysioExplainer):
                     plt.savefig(self.ckpt_path + ("fold=%d_pred_band=" + band + "_" + word + "_importance.png") % fold)
                     plt.close()
 
-            #time_importances_matrix è una matrice di dimensione num_bande, batch, n_class, batch_size (32), seq_len (3), n_channels (1), n_samples (3000)
             for k, class_name in enumerate(self.class_name):
                 
                 for l in range(len(y_true)):
@@ -457,8 +413,7 @@ class FreqBandsExplainer(PhysioExplainer):
 
                         plt.subplot(2, 3, a + 1)           
                         plt.plot(x, y)
-                        #plt.title("Band " + band + " sequence number " + str(a+1) + ": predicted " + self.class_name[y_pred[index]] + ", true " + self.class_name[y_true[index]] + ", importance for " + target)
-
+                       
                         plt.ylabel('Time Importance')
 
                         x = np.arange(n_samples)
@@ -468,7 +423,6 @@ class FreqBandsExplainer(PhysioExplainer):
 
                         plt.subplot(2, 3, a + 4)
                         plt.plot(x, y)
-                        #plt.title("Original corresponding input wave")
 
                         plt.ylabel("Wave value")
                         plt.xlabel("Samples")
@@ -503,7 +457,6 @@ class FreqBandsExplainer(PhysioExplainer):
                     plt.xlim([0, max(x)])
                     plt.ylabel("Wave value")
                     plt.xlabel("Samples")
-                    #axs[1, p].plot(x, y)
                         
                 axs[0, 1].set_title("Time Importance: predicted " + self.class_name[y_pred[index]] + ", true " + self.class_name[y_true[index]] + ", " + word + " importance for " + target + "(normalized between -1 and 1)")
                 plt.tight_layout()
@@ -533,7 +486,6 @@ class FreqBandsExplainer(PhysioExplainer):
                     plt.xlim([0, max(x)])
                     plt.ylabel("Wave value")
                     plt.xlabel("Samples")
-                    #axs[1, p].plot(x, y)
                         
                 axs[0, 1].set_title("Time Importance: predicted " + self.class_name[y_pred[index]] + ", true " + self.class_name[y_true[index]] + ", " + word + " importance for " + target + "(normalized between 0 and 1)")
                 plt.tight_layout()
@@ -583,7 +535,6 @@ class FreqBandsExplainer(PhysioExplainer):
                 plt.xlim([0, max(x)])
                 plt.ylabel("Wave value")
                 plt.xlabel("Samples")
-                #axs[1, p].plot(x, y)
                     
             axs[0, 1].set_title("Title")
             plt.tight_layout()
@@ -606,7 +557,6 @@ class FreqBandsExplainer(PhysioExplainer):
                 plt.xlim([0, max(x)])
                 plt.ylabel("Wave value")
                 plt.xlabel("Samples")
-                #axs[1, p].plot(x, y)
                     
             axs[0, 1].set_title("Title")
             plt.tight_layout()
@@ -616,51 +566,12 @@ class FreqBandsExplainer(PhysioExplainer):
     
     def explain(self, bands : list[list[float]], band_names : list[str], save_csv : bool = False, plot_pred : bool = False, plot_true : bool = False, n_jobs : int = 10):
 
-#        simple_result = []
-#        weighted_result = []
-#        normalized_result = []
-
-        # Esegui compute_band_importance per ogni checkpoint in parallelo
         
+        # Only execute compute_band_importance for the fold 0
         result = self.compute_band_importance(bands, band_names, 0, plot_pred, plot_true, save_csv)
         return result
-        #result = Parallel(n_jobs=n_jobs)(delayed(self.compute_band_importance)(bands, band_names, int(fold), plot_pred, plot_true, save_csv) for fold in self.checkpoints.keys())
-        
-        # Converte i risultati in una matrice numpy
-#        simple_result = np.array(simple_result, dtype=object)
-#        weighted_result = np.array(weighted_result, dtype=object)
-#        normalized_result = np.array(normalized_result, dtype=object)
 
-#       for i in range(len(band_names)):
-#           df_simple = pd.DataFrame([])
-#           df_weighted = pd.DataFrame([])
-#           df_normalized = pd.DataFrame([])
-
-#            for fold in self.checkpoints.keys():
-#                df_simple = df_simple.append(pd.DataFrame({
-#                   "Band Importance": simple_result[fold][i][:, :-2].tolist(),
-#                    "Predicted Label": simple_result[fold][i][:, -2],
-#                    "True Label": simple_result[fold][i][:, -1],
-#                    "Fold": int(fold)
-#                }))
-
-#                df_weighted = df_weighted.append(pd.DataFrame({
-#                   "Band Importance": weighted_result[fold][i][:, :-2].tolist(),
-#                    "Predicted Label": weighted_result[fold][i][:, -2],
-#                    "True Label": weighted_result[fold][i][:, -1],
-#                    "Fold": int(fold)
-#                }))
-
-#                df_normalized = df_normalized.append(pd.DataFrame({
-#                   "Band Importance": normalized_result[fold][i][:, :-2].tolist(),
-#                    "Predicted Label": normalized_result[fold][i][:, -2],
-#                    "True Label": normalized_result[fold][i][:, -1],
-#                    "Fold": int(fold)
-#                }))
-
-#            if save_csv:
-#                df_simple.to_csv(self.ckpt_path + "band=" + band_names[i] + "_simple_importance.csv", index=False)
-#                df_weighted.to_csv(self.ckpt_path + "band=" + band_names[i] + "_weighted_importance.csv", index=False)
-#                df_normalized.to_csv(self.ckpt_path + "band=" + band_names[i] + "_normalized_importance.csv", index=False)        
+        # Execute compute_band_importance in parallel for every checkpoint
+        #result = Parallel(n_jobs=n_jobs)(delayed(self.compute_band_importance)(bands, band_names, int(fold), plot_pred, plot_true, save_csv) for fold in self.checkpoints.keys())      
                
         return result
