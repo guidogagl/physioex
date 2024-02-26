@@ -31,7 +31,6 @@ from tqdm import tqdm
 
 from torch.utils.data import DataLoader, TensorDataset
 from torch.nn import functional as F
-torch.set_float32_matmul_precision('medium')
 
 from typing import List
 

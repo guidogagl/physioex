@@ -14,7 +14,6 @@ from physioex.data import datasets, TimeDistributedModule
 from loguru import logger
 
 import torch
-torch.set_float32_matmul_precision('medium')
 
 class PhysioExplainer(ABC):
     def __init__(self,
