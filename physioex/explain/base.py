@@ -58,6 +58,7 @@ class PhysioExplainer(ABC):
                 self.checkpoints[fold] = elem.path
 
         logger.info("Found %d checkpoints" % len(self.checkpoints))
+
         self.ckpt_path = ckp_path
 
         logger.info("Loading dataset")
