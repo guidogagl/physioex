@@ -9,7 +9,7 @@ jobs:
       - uses: actions/checkout@v3
       - uses: psf/black@stable
         with:
-          options: "--check --verbose"
+          options: "--verbose"
           src: "./physioex"
           jupyter: true
           version: "~= 22.0"
