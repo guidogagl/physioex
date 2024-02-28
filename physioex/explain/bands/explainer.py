@@ -10,9 +10,8 @@ from joblib import Parallel, delayed
 from loguru import logger
 
 from physioex.data import TimeDistributedModule
-from physioex.explain.bands.importance import \
-    band_importance as compute_band_importance
-from physioex.explain.bands.importance import eXpDataset 
+from physioex.explain.bands.importance import band_importance as compute_band_importance
+from physioex.explain.bands.importance import eXpDataset
 from physioex.explain.base import PhysioExplainer
 
 
@@ -20,9 +19,11 @@ def plot_class_importance(exp, band_names, class_names, filename):
     num_classes = len(class_names)
     num_cols = 2
     num_rows = math.ceil(num_classes / num_cols)
-    
-    fig, axs = plt.subplots(num_rows, num_cols, figsize=(8.27, 11.69))  # Dimensioni A4 in pollici
-    axs = axs.flatten()  
+
+    fig, axs = plt.subplots(
+        num_rows, num_cols, figsize=(8.27, 11.69)
+    )  # Dimensioni A4 in pollici
+    axs = axs.flatten()
 
     # Creazione dei boxplot per ogni classe
     for i, class_name in enumerate(class_names):
@@ -35,8 +36,8 @@ def plot_class_importance(exp, band_names, class_names, filename):
             continue
 
         # Creazione di un boxplot con un box per ogni banda
-        melted_df = class_df.melt(var_name='Band', value_name='Importance')
-        ax = sns.boxplot(x='Band', y='Importance', data=melted_df, ax=axs[i])
+        melted_df = class_df.melt(var_name="Band", value_name="Importance")
+        ax = sns.boxplot(x="Band", y="Importance", data=melted_df, ax=axs[i])
         ax.set_title(f"Class Importance for {class_name}")
 
     for i in range(num_classes, num_rows * num_cols):
@@ -46,13 +47,16 @@ def plot_class_importance(exp, band_names, class_names, filename):
     plt.savefig(filename)
     plt.close()
 
+
 def plot_band_importance(exp, band_names, class_names, filename):
     num_classes = len(band_names)
     num_cols = 2
     num_rows = math.ceil(num_classes / num_cols)
-    
-    fig, axs = plt.subplots(num_rows, num_cols, figsize=(8.27, 11.69))  # Dimensioni A4 in pollici
-    axs = axs.flatten()  
+
+    fig, axs = plt.subplots(
+        num_rows, num_cols, figsize=(8.27, 11.69)
+    )  # Dimensioni A4 in pollici
+    axs = axs.flatten()
 
     # Creazione dei boxplot per ogni classe
     for i, band_name in enumerate(band_names):
@@ -60,8 +64,8 @@ def plot_band_importance(exp, band_names, class_names, filename):
         band_df = pd.DataFrame(importance, columns=class_names)
 
         # Creazione di un boxplot con un box per ogni banda
-        melted_df = band_df.melt(var_name='Class', value_name='Importance')
-        ax = sns.boxplot(x='Class', y='Importance', data=melted_df, ax=axs[i])
+        melted_df = band_df.melt(var_name="Class", value_name="Importance")
+        ax = sns.boxplot(x="Class", y="Importance", data=melted_df, ax=axs[i])
         ax.set_title(f"Band Importance for {band_name}")
 
     for i in range(num_classes, num_rows * num_cols):
@@ -139,18 +143,18 @@ class FreqBandsExplainer(PhysioExplainer):
 
         logger.info("JOB:%d-Computing bands importance" % fold)
         filename = self.ckpt_path + "explanations_fold_" + str(fold) + ".pt"
-        
+
         explanations = compute_band_importance(
             bands, model, dataloader, self.sampling_rate, compute_time
         )
 
         logger.info("JOB:%d-Saving explanations" % fold)
-        
+
         with open(filename, "wb") as f:
             torch.save(explanations, f)
 
         logger.info("JOB:%d-Explanations saved" % fold)
-        
+
         if plot_class:
             plot_class_importance(
                 explanations,

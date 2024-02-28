@@ -86,7 +86,7 @@ def band_importance(
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     combinations = calculate_combinations(list(range(len(bands))))
 
-    #combinations = combinations[:len(bands), :]
+    # combinations = combinations[:len(bands), :]
 
     exp = eXpDataset()
 
@@ -109,9 +109,9 @@ def band_importance(
                 sampling_rate,
                 compute_time,
             )
-            
+
             band_importance = probas - band_score
-            
+
             mean.update(combination, band_importance, time_importance)
 
         bands_importance, time_importance = mean.get()
@@ -124,7 +124,7 @@ def band_importance(
             bands_importance.astype(float),
             time_importance.astype(float),
         )
-        
+
         if _ >= 2:
             break
 
@@ -187,12 +187,13 @@ class MeanImportance:
             (batch_size, seq_len, n_channels, n_samples, n_bands, n_class)
         )
 
-        self.W = np.sum([ 1/i for i in range(1, n_bands + 1)])
-        #self.W = 1
+        self.W = np.sum([1 / i for i in range(1, n_bands + 1)])
+        # self.W = 1
+
     def update(self, bands, band_importance, time_importance):
         # compute the incremental mean of the band and time importance
         selected_bands = np.where(bands == 1)[0]
-        
+
         weight = (1 / len(selected_bands)) / self.W
 
         for band in selected_bands:
