@@ -33,8 +33,6 @@ def filtered_band_importance(
     sampling_rate: int = 100,
     compute_time: bool = True,
 ):
-
-    inputs = inputs.cpu().detach().numpy()
     batch_size, seq_len, n_channels, n_samples = inputs.shape
 
     inputs = inputs.reshape(-1, seq_len * n_samples)
@@ -88,6 +86,8 @@ def band_importance(
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     combinations = calculate_combinations(list(range(len(bands))))
 
+    #combinations = combinations[:len(bands), :]
+
     exp = eXpDataset()
 
     for _, batch in enumerate(tqdm(dataloader)):
@@ -96,7 +96,7 @@ def band_importance(
         # compute the probas of the input data from the model
 
         probas = F.softmax(model(inputs.to(device)).cpu()).detach().numpy()
-
+        inputs = inputs.cpu().detach().numpy()
         batch_size, n_class = probas.shape
 
         mean = MeanImportance(n_class, len(bands), inputs.shape)
@@ -109,19 +109,24 @@ def band_importance(
                 sampling_rate,
                 compute_time,
             )
-
-            mean.update(combination, band_score, time_importance)
+            
+            band_importance = probas - band_score
+            
+            mean.update(combination, band_importance, time_importance)
 
         bands_importance, time_importance = mean.get()
 
         exp.add(
-            inputs,
-            y_true,
-            probas,
-            np.argmax(probas, axis=1),
-            bands_importance,
-            time_importance,
+            inputs.astype(float),
+            y_true.numpy().astype(int),
+            probas.astype(float),
+            np.argmax(probas, axis=1).astype(int),
+            bands_importance.astype(float),
+            time_importance.astype(float),
         )
+        
+        if _ >= 2:
+            break
 
     return exp
 
@@ -156,21 +161,21 @@ class eXpDataset(Dataset):
             self.time[index],
         )
 
-    def get_true_importance(self):
-        ret = np.zeros(len(self.inputs), len(self.bands[0]))
+    def get_class_importance(self, c):
+        ret = np.zeros((len(self.inputs), len(self.bands[0])))
 
         for index in range(len(self.inputs)):
-            ret[index] = self.bands[index, :, self.targets[index]]
+            ret[index] = self.bands[index][:, c]
 
-        return ret, self.targets
+        return ret
 
-    def get_pred_importance(self):
-        ret = np.zeros(len(self.inputs), len(self.bands[0]))
+    def get_bands_importance(self, b):
+        ret = np.zeros((len(self.inputs), len(self.probas[0])))
 
         for index in range(len(self.inputs)):
-            ret[index] = self.bands[index, :, self.preds[index]]
+            ret[index] = self.bands[index][b, :]
 
-        return ret, self.preds
+        return ret
 
 
 class MeanImportance:
@@ -182,21 +187,21 @@ class MeanImportance:
             (batch_size, seq_len, n_channels, n_samples, n_bands, n_class)
         )
 
-        self.counter = np.zeros(n_bands)
-
+        self.W = np.sum([ 1/i for i in range(1, n_bands + 1)])
+        #self.W = 1
     def update(self, bands, band_importance, time_importance):
         # compute the incremental mean of the band and time importance
         selected_bands = np.where(bands == 1)[0]
+        
+        weight = (1 / len(selected_bands)) / self.W
 
         for band in selected_bands:
-            self.counter[band] += 1
-
             self.band_importance[:, band, :] += (
                 band_importance - self.band_importance[:, band, :]
-            ) / self.counter[band]
+            ) * weight
             self.time_importance[:, :, :, :, band, :] += (
                 time_importance - self.time_importance[:, :, :, :, band, :]
-            ) / self.counter[band]
+            ) * weight
 
     def get(self):
         return self.band_importance, self.time_importance
