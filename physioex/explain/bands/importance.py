@@ -1,153 +1,202 @@
-import torch
-
-from torch.utils.data import DataLoader, TensorDataset
-from torch.nn import functional as F
-
+from itertools import combinations
 from typing import List
 
-def _compute_cross_band_importance(bands : List[List[float]], model : torch.nn.Module, dataloader : DataLoader, model_device : torch.device, sampling_rate: int = 100):    
-
-    for i in range(len(bands)):
-        assert len(bands[i]) == 2
-
-    y_pred = []
-    y_true = []
-    band_importance = []
-    time_importance = []
-
-    for batch in dataloader:
-        inputs, y_true_batch = batch
-        
-        # store the true label of the input element
-        y_true.append(y_true_batch.numpy())
-
-        # compute the prediction of the model
-        pred_proba = F.softmax(model(inputs.to(model_device)).cpu()).detach().numpy()       
-        y_pred.append( np.argmax( pred_proba, axis = -1) )
-        n_class = pred_proba.shape[-1]
-
-        # port the input to numpy
-        inputs = inputs.cpu().detach().numpy()
-        batch_size, seq_len, n_channels, n_samples = inputs.shape
-
-        # reshape the input to consider only the input signal
-        filtered_inputs = inputs.copy()
-        filtered_inputs = filtered_inputs.reshape(-1, seq_len * n_samples)
+import numpy as np
+import torch
+from captum.attr import IntegratedGradients
+from scipy import signal
+from torch.nn import functional as F
+from torch.utils.data import DataLoader, Dataset, TensorDataset
+from tqdm import tqdm
 
 
-        # remove the frequency band from the input using scipy       
-        for band in bands:
-            # filter bandstop - reject the frequencies specified in freq_band
-            lowcut = band[0]
-            highcut = band[1]
-            order = 4
-            nyq = 0.5 * sampling_rate
-            low = lowcut / nyq
-            high = highcut / nyq
-            sos = signal.butter(order, [low, high], btype='bandstop', output='sos')
+def calculate_combinations(elements):
+    all_combinations = []
 
-            for index in range(batch_size):     
-                filtered_inputs[index] = signal.sosfilt(sos, filtered_inputs[index])
+    for r in range(1, len(elements) + 1):
+        for combination in combinations(elements, r):
+            matrix = np.zeros(len(elements), dtype=int)
 
-        # reshape the input signal to the original size and port it to tensor
-        filtered_inputs = filtered_inputs.reshape(batch_size, seq_len, n_channels, n_samples)
-        filtered_inputs = torch.from_numpy(filtered_inputs)
-        inputs = torch.from_numpy(inputs)
+            for element in combination:
+                index = elements.index(element)
+                matrix[index] = 1
 
-        # compute the prediction of the model with the filtered input, the prediction is a tensor of size batch_size * seq_len, n_classes
-        batch_importance = F.softmax(model(filtered_inputs.to(model_device)).cpu()).detach().numpy()
+            all_combinations.append(matrix)
 
-        # the importance is the difference between the prediction with the original input and the prediction with the filtered input
-        batch_importance = pred_proba - batch_importance
-        band_importance.append(batch_importance)
+    return np.array(all_combinations, dtype=int)
 
+
+def filtered_band_importance(
+    bands: List[List[float]],
+    model: torch.nn.Module,
+    inputs: torch.Tensor,
+    sampling_rate: int = 100,
+    compute_time: bool = True,
+):
+
+    inputs = inputs.cpu().detach().numpy()
+    batch_size, seq_len, n_channels, n_samples = inputs.shape
+
+    inputs = inputs.reshape(-1, seq_len * n_samples)
+
+    for band in bands:
+        # filter bandstop - reject the frequencies specified in freq_band
+        lowcut = band[0]
+        highcut = band[1]
+        order = 4
+        nyq = 0.5 * sampling_rate
+        low = lowcut / nyq
+        high = highcut / nyq
+        sos = signal.butter(order, [low, high], btype="bandstop", output="sos")
+
+        for index in range(batch_size):
+            inputs[index] = signal.sosfilt(sos, inputs[index])
+
+    inputs = inputs.reshape(batch_size, seq_len, n_channels, n_samples)
+
+    inputs = torch.from_numpy(inputs)
+
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+    band_score = F.softmax(model(inputs.to(device)).cpu()).detach().numpy()
+
+    batch_size, n_class = band_score.shape
+
+    time_importance = np.zeros((batch_size, seq_len, n_channels, n_samples, n_class))
+
+    if compute_time:
         ig = IntegratedGradients(model)
 
-        partial_time_importance = []
         for c in range(n_class):
-            partial_time_importance.append(ig.attribute(inputs.to(model_device), filtered_inputs.to(model_device), target=c).cpu().numpy())
-        
-        time_importance.append(partial_time_importance)
+            time_importance[:, :, :, :, c] = (
+                ig.attribute(inputs.to(device), inputs.to(device), target=c)
+                .cpu()
+                .numpy()
+            )
 
-    # reshape the lists to ignore the batch_size dimension
-    y_pred = np.concatenate(y_pred).reshape(-1)
-    y_true = np.concatenate(y_true).reshape(-1)
-    band_importance = np.concatenate(band_importance).reshape(-1, n_class)
+    return band_score, time_importance
 
-    return time_importance, band_importance, y_pred, y_true
 
-#RICORDA DI LEVARE I PRIMI DUE PARAMETRI
-def compute_band_importance(bands : List[List[float]],  
-                            model : torch.nn.Module, dataloader : DataLoader , model_device : torch.device, sampling_rate: int = 100, class_names : List[str] = ["Wake", "N1", "N2", "DS", "REM"], average_type : int = 0):
-    
-    for i in range(len(bands)):
-        assert len(bands[i]) == 2
-    assert len(band_names) == 6
-    assert len(class_names) == 5
-    assert average_type == 0 or average_type == 1
+def band_importance(
+    bands: List[List[float]],
+    model: torch.nn.Module,
+    dataloader: DataLoader,
+    sampling_rate: int = 100,
+    compute_time: bool = True,
+):
 
-    # the dataloader is recreated here with the parameter shuffle = False in order to have consistency with the order of data
-    # this allows us to be precise in calculating different importances referring to the same samples
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    combinations = calculate_combinations(list(range(len(bands))))
 
-    dataloader = DataLoader(
-        dataloader.dataset,
-        batch_size=dataloader.batch_size,
-        shuffle=False,
-        num_workers=dataloader.num_workers,
-        collate_fn=dataloader.collate_fn,
-        pin_memory=dataloader.pin_memory,
-        drop_last=dataloader.drop_last,
-        timeout=dataloader.timeout,
-        worker_init_fn=dataloader.worker_init_fn,
-    )
+    exp = eXpDataset()
 
-    band_freq_combinations = []
-    band_combinations_dict = {}
-    band_time_combinations_dict = {}
-    permutations_array = []
+    for _, batch in enumerate(tqdm(dataloader)):
+        inputs, y_true = batch
 
-    for i in range(len(bands)):
-        combination_list = it.combinations(bands, i+1)
-        for elem in combination_list:
-            band_freq_combinations.append(elem)
-    
-    for cross_band in band_freq_combinations:
-        permuted_bands = np.zeros( len( bands ) )
+        # compute the probas of the input data from the model
 
-        for i, band in enumerate( bands ):
-            if band in cross_band:
-                permuted_bands [i] = 1
-        
-        print(permuted_bands)
-        permutations_array.append(permuted_bands)
-        time_importance, band_importance, y_pred, y_true = _compute_cross_band_importance(cross_band, model, dataloader, model_device, sampling_rate)
+        probas = F.softmax(model(inputs.to(device)).cpu()).detach().numpy()
 
-        band_combinations_dict[str(permuted_bands)] = band_importance
-        band_time_combinations_dict[str(permuted_bands)] = time_importance
+        batch_size, n_class = probas.shape
 
-    permuted_bands_importance = []
-    permuted_bands_time_importance = []
+        mean = MeanImportance(n_class, len(bands), inputs.shape)
 
-    for i in range(len(permutations_array)):
-        key = permutations_array[i]
-        permuted_bands_importance.append(band_combinations_dict[str(key)])
-        permuted_bands_time_importance.append(band_time_combinations_dict[str(key)])
+        for combination in combinations:
+            band_score, time_importance = filtered_band_importance(
+                [bands[i] for i in range(len(bands)) if combination[i] == 1],
+                model,
+                inputs,
+                sampling_rate,
+                compute_time,
+            )
 
-    importances_matrix = []
-    time_importances_matrix = []
+            mean.update(combination, band_score, time_importance)
 
-    for i in range(len(bands)):
+        bands_importance, time_importance = mean.get()
 
-        #simple_average
-        if average_type == 0:
-            band_importance = get_simple_importance(permuted_bands_importance, permutations_array, i)
-            band_time_importance = get_simple_importance(permuted_bands_time_importance, permutations_array, i)
-        #weighted_average
-        elif average_type == 1:
-            band_importance = get_weighted_importance(permuted_bands_importance, permutations_array, i)
-            band_time_importance = get_weighted_importance(permuted_bands_time_importance, permutations_array, i)
+        exp.add(
+            inputs,
+            y_true,
+            probas,
+            np.argmax(probas, axis=1),
+            bands_importance,
+            time_importance,
+        )
 
-        importances_matrix.append(band_importance)
-        time_importances_matrix.append(band_time_importance)
+    return exp
 
-    return time_importances_matrix, importances_matrix, y_pred, y_true
+
+class eXpDataset(Dataset):
+    def __init__(self):
+        self.inputs = []
+        self.targets = []
+        self.probas = []
+        self.preds = []
+        self.bands = []
+        self.time = []
+
+    def add(self, inputs, targets, probas, preds, bands, time):
+        self.inputs.extend(inputs)
+        self.targets.extend(targets)
+        self.probas.extend(probas)
+        self.preds.extend(preds)
+        self.bands.extend(bands)
+        self.time.extend(time)
+
+    def __len__(self):
+        return len(self.inputs)
+
+    def __getitem__(self, index):
+        return (
+            self.inputs[index],
+            self.targets[index],
+            self.probas[index],
+            self.preds[index],
+            self.bands[index],
+            self.time[index],
+        )
+
+    def get_true_importance(self):
+        ret = np.zeros(len(self.inputs), len(self.bands[0]))
+
+        for index in range(len(self.inputs)):
+            ret[index] = self.bands[index, :, self.targets[index]]
+
+        return ret, self.targets
+
+    def get_pred_importance(self):
+        ret = np.zeros(len(self.inputs), len(self.bands[0]))
+
+        for index in range(len(self.inputs)):
+            ret[index] = self.bands[index, :, self.preds[index]]
+
+        return ret, self.preds
+
+
+class MeanImportance:
+    def __init__(self, n_class, n_bands, input_shape):
+        batch_size, seq_len, n_channels, n_samples = input_shape
+
+        self.band_importance = np.zeros((batch_size, n_bands, n_class))
+        self.time_importance = np.zeros(
+            (batch_size, seq_len, n_channels, n_samples, n_bands, n_class)
+        )
+
+        self.counter = np.zeros(n_bands)
+
+    def update(self, bands, band_importance, time_importance):
+        # compute the incremental mean of the band and time importance
+        selected_bands = np.where(bands == 1)[0]
+
+        for band in selected_bands:
+            self.counter[band] += 1
+
+            self.band_importance[:, band, :] += (
+                band_importance - self.band_importance[:, band, :]
+            ) / self.counter[band]
+            self.time_importance[:, :, :, :, band, :] += (
+                time_importance - self.time_importance[:, :, :, :, band, :]
+            ) / self.counter[band]
+
+    def get(self):
+        return self.band_importance, self.time_importance

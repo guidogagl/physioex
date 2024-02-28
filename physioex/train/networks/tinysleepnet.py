@@ -1,15 +1,17 @@
-from pytorch_lightning.utilities.types import OptimizerLRScheduler
+from collections import OrderedDict
+
 import torch
 import torch.nn as nn
-from collections import OrderedDict
 import torch.optim as optim
+from pytorch_lightning.utilities.types import OptimizerLRScheduler
+
 from physioex.train.networks.base import SeqtoSeq
 
 module_config = dict()
 
 
-class FeatureExtractor( nn.Module ):
-    def __init__(self, config = module_config):
+class FeatureExtractor(nn.Module):
+    def __init__(self, config=module_config):
         super(FeatureExtractor, self).__init__()
         self.config = config
         self.padding_edf = {  # same padding in tensorflow
@@ -32,7 +34,7 @@ class FeatureExtractor( nn.Module ):
                         (
                             "conv1",
                             nn.Conv1d(
-                                in_channels= self.config["n_channels"],
+                                in_channels=self.config["n_channels"],
                                 out_channels=128,
                                 kernel_size=first_filter_size,
                                 stride=first_filter_stride,
@@ -121,8 +123,9 @@ class FeatureExtractor( nn.Module ):
     def forward(self, x):
         return self.cnn(x)
 
+
 class Classifier(nn.Module):
-    def __init__(self, config = module_config):
+    def __init__(self, config=module_config):
         super(Classifier, self).__init__()
         self.config = config
         self.rnn = nn.LSTM(
@@ -133,19 +136,21 @@ class Classifier(nn.Module):
         )
         self.rnn_dropout = nn.Dropout(p=0.5)  # todo 是否需要这个dropout?
 
-        self.proj = nn.Linear( self.config["n_rnn_units"], self.config["latent_space_dim"])
-        self.norm = nn.LayerNorm( self.config["latent_space_dim"] )
-        self.clf = nn.Linear( self.config["latent_space_dim"], self.config["n_classes"] )
+        self.proj = nn.Linear(
+            self.config["n_rnn_units"], self.config["latent_space_dim"]
+        )
+        self.norm = nn.LayerNorm(self.config["latent_space_dim"])
+        self.clf = nn.Linear(self.config["latent_space_dim"], self.config["n_classes"])
 
     def forward(self, x):
         x = self.encode(x)
-        
+
         batch_size, seq_len, latent_dim = x.size()
         x = x.reshape(batch_size * seq_len, latent_dim)
 
         x = self.clf(x)
         return x.reshape(batch_size, seq_len, -1)
-    
+
     def encode(self, x):
         batch_size, seq_len, feature_size = x.size()
         x, _ = self.rnn(x)
@@ -156,9 +161,12 @@ class Classifier(nn.Module):
         x = self.norm(x)
 
         return x.reshape(batch_size, seq_len, -1)
-        
-class TinySleepNet( SeqtoSeq ):
-    def __init__(self, module_config = module_config):
-        super(TinySleepNet, self).__init__(FeatureExtractor(config=module_config), Classifier(config=module_config), module_config)
 
-    
+
+class TinySleepNet(SeqtoSeq):
+    def __init__(self, module_config=module_config):
+        super(TinySleepNet, self).__init__(
+            FeatureExtractor(config=module_config),
+            Classifier(config=module_config),
+            module_config,
+        )

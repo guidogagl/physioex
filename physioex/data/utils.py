@@ -1,7 +1,8 @@
-import pickle
-from loguru import logger
-from typing import List
 import os
+import pickle
+from typing import List
+
+from loguru import logger
 
 
 @logger.catch
@@ -12,11 +13,12 @@ def read_cache(data_path: str):
             cache = pickle.load(file)
     except FileNotFoundError:
         return {}
-    
+
     return cache
 
+
 @logger.catch
-def write_cache(data_path: str, cache ):
+def write_cache(data_path: str, cache):
     try:
         with open(data_path, "wb") as file:
             logger.info("Caching dataset into %s" % (data_path))
@@ -27,4 +29,4 @@ def write_cache(data_path: str, cache ):
             )
     except:
         logger.exception("Exception rised while writing cache file")
-    return 
+    return
