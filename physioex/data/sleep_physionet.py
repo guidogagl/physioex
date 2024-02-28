@@ -8,11 +8,8 @@ import pandas as pd
 import pkg_resources as pkg
 import yaml
 from braindecode.datasets import SleepPhysionet as SP
-from braindecode.preprocessing import (
-    Preprocessor,
-    create_windows_from_events,
-    preprocess,
-)
+from braindecode.preprocessing import (Preprocessor,
+                                       create_windows_from_events, preprocess)
 from braindecode.samplers import SequenceSampler
 from loguru import logger
 from sklearn.preprocessing import scale as standard_scale
