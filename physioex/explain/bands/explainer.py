@@ -112,6 +112,7 @@ class FreqBandsExplainer(PhysioExplainer):
         plot_class: bool = False,
         plot_band: bool = False,
         compute_time: bool = True,
+        save : bool = False
     ):
         logger.info(
             "JOB:%d-Loading model %s from checkpoint %s"
@@ -148,11 +149,14 @@ class FreqBandsExplainer(PhysioExplainer):
         explanations = compute_band_importance(
             bands, model, dataloader, self.sampling_rate, compute_time
         )
+        
+        model = model.cpu()
 
         logger.info("JOB:%d-Saving explanations" % fold)
 
-        with open(filename, "wb") as f:
-            torch.save(explanations, f)
+        if save:
+            with open(filename, "wb") as f:
+                torch.save(explanations, f)
 
         logger.info("JOB:%d-Explanations saved" % fold)
 
@@ -162,15 +166,6 @@ class FreqBandsExplainer(PhysioExplainer):
                 band_names,
                 self.class_name,
                 (self.ckpt_path + "fold=%d_class_importance.png") % fold,
-            )
-
-        if plot_band:
-
-            plot_band_importance(
-                explanations,
-                band_names,
-                self.class_name,
-                (self.ckpt_path + "fold=%d_band_importance.png") % fold,
             )
 
         return
@@ -183,11 +178,12 @@ class FreqBandsExplainer(PhysioExplainer):
         plot_pred: bool = False,
         plot_true: bool = False,
         n_jobs: int = 10,
+        save : bool = False
     ):
 
         for fold in self.checkpoints.keys():
             self.compute_band_importance(
-                bands, band_names, int(fold), plot_pred, plot_true, compute_time
+                bands, band_names, int(fold), plot_pred, plot_true, compute_time, save
             )
         return
 
