@@ -1,13 +1,10 @@
 
 # Byte-compiled / optimized / DLL files
-__pycache__/
+**/__pycache__/
+
 *.py[cod]
 *$py.class
 
-physioex/__pycache__/
-physioex/data/__pycache__/
-physioex/train/__pycache__/
-physioex/train/networks/__pycache__/
 physioex/train/old/
 
 models
