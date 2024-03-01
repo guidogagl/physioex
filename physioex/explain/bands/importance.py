@@ -34,6 +34,7 @@ def filtered_band_importance(
     compute_time: bool = True,
 ):
     batch_size, seq_len, n_channels, n_samples = inputs.shape
+    baseline = torch.from_numpy(inputs.copy())
 
     inputs = inputs.reshape(batch_size, seq_len * n_samples)
 
@@ -56,7 +57,7 @@ def filtered_band_importance(
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    band_score = F.softmax(model(inputs.to(device)), dim = 1).cpu().detach().numpy()
+    band_score = model(inputs.to(device)).cpu().detach().numpy()
 
     batch_size, n_class = band_score.shape
 
@@ -67,7 +68,7 @@ def filtered_band_importance(
 
         for c in range(n_class):
             time_importance[:, :, :, :, c] = (
-                ig.attribute(inputs.to(device), inputs.to(device), target=c)
+                ig.attribute(inputs.to(device), baseline.to(device), target=c)
                 .cpu()
                 .numpy()
             )
@@ -82,11 +83,11 @@ def band_importance(
     sampling_rate: int = 100,
     compute_time: bool = True,
 ):
-
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    combinations = calculate_combinations(list(range(len(bands))))
 
-    combinations = combinations[:len(bands), :]
+    model = SoftModel(model).to(device)
+
+    combinations = calculate_combinations(list(range(len(bands))))
 
     exp = eXpDataset()
 
@@ -95,7 +96,7 @@ def band_importance(
 
         # compute the probas of the input data from the model
 
-        probas = F.softmax(model(inputs.to(device)), dim = 1).cpu().detach().numpy()
+        probas = model(inputs.to(device)).cpu().detach().numpy()
         inputs = inputs.cpu().detach().numpy()
         batch_size, n_class = probas.shape
 
@@ -110,20 +111,18 @@ def band_importance(
                 compute_time,
             )
 
-            #band_importance = probas - band_score
-            #mean.update(combination, band_importance, time_importance)
+            # band_importance = probas - band_score
+            # mean.update(combination, band_importance, time_importance)
 
             mean.update(combination, band_score, time_importance)
 
         mean_band_score, times_importance = mean.get()
-        
-        # mean_band_score = mean_band_score - band_score
-        
+
         bands_importance = mean_band_score
-        
-        for band in range( len(bands) ):
-            bands_importance[:, band, :] = probas - bands_importance[:, band, :] 
-        
+
+        for band in range(len(bands)):
+            bands_importance[:, band, :] = probas - bands_importance[:, band, :]
+
         exp.add(
             inputs.astype(float),
             y_true.numpy().astype(int),
@@ -133,7 +132,18 @@ def band_importance(
             times_importance.astype(float),
         )
 
+        if _ >= 2:
+            break
     return exp
+
+
+class SoftModel(torch.nn.Module):
+    def __init__(self, model):
+        super(SoftModel, self).__init__()
+        self.model = model.eval()
+
+    def forward(self, x):
+        return F.softmax(self.model(x), dim=1)
 
 
 class eXpDataset(Dataset):
@@ -168,7 +178,7 @@ class eXpDataset(Dataset):
 
     def get_class_importance(self, c):
         c_indx = np.where(np.array(self.preds) == c)[0]
-        
+
         ret = np.zeros((len(c_indx), len(self.bands[0])))
 
         for i, index in enumerate(c_indx):
@@ -195,7 +205,6 @@ class MeanImportance:
         )
 
         self.W = np.sum([1 / i for i in range(1, n_bands + 1)])
-        self.W = 1
 
     def update(self, bands, band_importance, time_importance):
         # compute the incremental mean of the band and time importance

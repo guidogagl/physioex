@@ -10,8 +10,7 @@ from joblib import Parallel, delayed
 from loguru import logger
 
 from physioex.data import TimeDistributedModule
-from physioex.explain.bands.importance import \
-    band_importance as compute_band_importance
+from physioex.explain.bands.importance import band_importance as compute_band_importance
 from physioex.explain.bands.importance import eXpDataset
 from physioex.explain.base import PhysioExplainer
 
@@ -112,7 +111,7 @@ class FreqBandsExplainer(PhysioExplainer):
         plot_class: bool = False,
         plot_band: bool = False,
         compute_time: bool = True,
-        save : bool = False
+        save: bool = False,
     ):
         logger.info(
             "JOB:%d-Loading model %s from checkpoint %s"
@@ -149,7 +148,7 @@ class FreqBandsExplainer(PhysioExplainer):
         explanations = compute_band_importance(
             bands, model, dataloader, self.sampling_rate, compute_time
         )
-        
+
         model = model.cpu()
 
         logger.info("JOB:%d-Saving explanations" % fold)
@@ -178,7 +177,7 @@ class FreqBandsExplainer(PhysioExplainer):
         plot_pred: bool = False,
         plot_true: bool = False,
         n_jobs: int = 10,
-        save : bool = False
+        save: bool = False,
     ):
 
         for fold in self.checkpoints.keys():
