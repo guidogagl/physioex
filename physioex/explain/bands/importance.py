@@ -35,8 +35,7 @@ def filtered_band_importance(
 ):
     batch_size, seq_len, n_channels, n_samples = inputs.shape
     baseline = torch.from_numpy(inputs.copy())
-
-    inputs = inputs.reshape(batch_size, seq_len * n_samples)
+    inputs = torch.squeeze(inputs).reshape(batch_size, seq_len * n_samples)
 
     for band in bands:
         # filter bandstop - reject the frequencies specified in freq_band
