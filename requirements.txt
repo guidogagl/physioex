@@ -1,14 +1,27 @@
-moabb
 braindecode
 pyyaml
 loguru
 
 dirhash
 lightning
+pytorch_lightning
+torchaudio
 rich
 pytorch_metric_learning
+captum
 
 boto3
 h5py
 
 mkdocs-material
+black
+black[jupyter]
+isort
+
+ipywidgets
+ipykernel
+
+seaborn
+pandas
+
+npy-append-array

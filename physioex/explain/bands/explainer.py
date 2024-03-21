@@ -38,6 +38,7 @@ def plot_class_importance(exp, band_names, class_names, filename):
         # Creazione di un boxplot con un box per ogni banda
         melted_df = class_df.melt(var_name="Band", value_name="Importance")
         ax = sns.boxplot(x="Band", y="Importance", data=melted_df, ax=axs[i])
+        # ax.set_ylim(0, 1)
         ax.set_title(f"Class Importance for {class_name}")
 
     for i in range(num_classes, num_rows * num_cols):
@@ -109,8 +110,6 @@ class FreqBandsExplainer(PhysioExplainer):
         band_names: List[str],
         fold: int = 0,
         plot_class: bool = False,
-        plot_band: bool = False,
-        compute_time: bool = True,
         save: bool = False,
     ):
         logger.info(
@@ -146,7 +145,10 @@ class FreqBandsExplainer(PhysioExplainer):
         filename = self.ckpt_path + "explanations_fold_" + str(fold) + ".pt"
 
         explanations = compute_band_importance(
-            bands, model, dataloader, self.sampling_rate, compute_time
+            bands,
+            model,
+            dataloader,
+            self.sampling_rate,
         )
 
         model = model.cpu()
@@ -173,17 +175,13 @@ class FreqBandsExplainer(PhysioExplainer):
         self,
         bands: List[List[float]],
         band_names: List[str],
-        compute_time: bool = True,
-        plot_pred: bool = False,
-        plot_true: bool = False,
+        plot_class: bool = False,
         n_jobs: int = 10,
         save: bool = False,
     ):
 
         for fold in self.checkpoints.keys():
-            self.compute_band_importance(
-                bands, band_names, int(fold), plot_pred, plot_true, compute_time, save
-            )
+            self.compute_band_importance(bands, band_names, int(fold), plot_class, save)
         return
 
 

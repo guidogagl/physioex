@@ -3,9 +3,10 @@ from abc import ABC, abstractmethod
 import numpy as np
 import pytorch_lightning as pl
 import torch
-from sklearn.preprocessing import StandardScaler
 from sklearn.utils import compute_class_weight
 from torch.utils.data import DataLoader, Dataset
+
+from physioex.data.utils import StandardScaler
 
 
 class PhysioExDataset(ABC):
@@ -21,6 +22,7 @@ class PhysioExDataset(ABC):
 class TimeDistributedDataset(Dataset):
     def __init__(self, dataset, sequence_lenght, transform=None, target_transform=None):
         self.target_transform = target_transform
+        self.input_transform = transform
 
         self.X = []
         self.y = []
@@ -32,11 +34,10 @@ class TimeDistributedDataset(Dataset):
         self.X = torch.tensor(np.array(self.X)).float()
         self.y = torch.tensor(np.array(self.y)).long()
 
-        if transform is not None:
-            self.X = transform(self.X)
-
         self.classes = torch.unique(self.y)
         self.n_classes = len(self.classes)
+
+        self.scaler = None
 
         self.L = sequence_lenght
 
@@ -49,20 +50,18 @@ class TimeDistributedDataset(Dataset):
 
         return class_weights.float()
 
-    def fit_scaler(self, scaler=StandardScaler()):
-        shape = self.X.size()
-        self.X = torch.tensor(
-            scaler.fit_transform(self.X.reshape(shape[0], -1)).reshape(shape)
-        ).float()
+    def fit_scaler(self):
 
-        return scaler
+        if self.input_transform is not None:
+            tmp_X = self.input_transform(self.X)
+        else:
+            tmp_X = self.X
 
-    def scale(self, scaler):
-        shape = self.X.size()
-        self.X = torch.tensor(
-            scaler.transform(self.X.reshape(shape[0], -1)).reshape(shape)
-        ).float()
+        self.scaler = StandardScaler().fit(tmp_X)
+        return self.scaler
 
+    def set_scaler(self, scaler):
+        self.scaler = scaler
         return
 
     def __len__(self):
@@ -71,6 +70,12 @@ class TimeDistributedDataset(Dataset):
     def __getitem__(self, idx):
 
         item = self.X[idx : idx + self.L].clone()
+
+        if self.input_transform:
+            item = self.input_transform(item)
+
+        item = self.scaler.transform(item)
+
         label = self.y[idx : idx + self.L].clone()
 
         if self.target_transform:
@@ -85,7 +90,6 @@ class TimeDistributedModule(pl.LightningDataModule):
         dataset: PhysioExDataset,
         sequence_lenght: int,
         batch_size: int = 32,
-        scaler=StandardScaler(),
         transform=None,
         target_transform=None,
     ):
@@ -107,12 +111,12 @@ class TimeDistributedModule(pl.LightningDataModule):
             self.test, self.sequence_lenght, self.transform, self.target_transform
         )
 
-        scaler = self.train.fit_scaler(scaler)
-        self.valid.scale(scaler)
-        self.test.scale(scaler)
+        scaler = self.train.fit_scaler()
+        self.valid.set_scaler(scaler)
+        self.test.set_scaler(scaler)
 
         self.classes = self.train.classes
-        self.n_classess = self.train.n_classes
+        self.n_classes = self.train.n_classes
 
     def setup(self, stage: str):
         return

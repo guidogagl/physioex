@@ -2,24 +2,27 @@ import numpy as np
 import torch
 from scipy import signal as signal
 
+from torchaudio.transforms import Spectrogram
 
-def xsleepnet_transform(x, fs=100, win_size=2, overlap=1, nfft=256):
-    x_transf = torch.zeros(x.shape[0], x.shape[1], 29, 129).float()
 
-    # loop into the channels
-    for i in range(x.shape[1]):
-        # loop into the samples
-        for j in range(x.shape[0]):
-            f, t, Sxx = signal.spectrogram(
-                x[j, i].numpy(),
-                fs=fs,
-                window="hamming",
-                nperseg=win_size * fs,
-                noverlap=overlap * fs,
-                nfft=nfft,
-            )
-            Sxx = 20 * np.log10(Sxx + np.finfo(float).eps)
+######### time frequency image transform from X SleepNet Article ##########
+x_fs = 100
+x_win_size = 2
+x_overlap = 1
+x_nfft = 256
+x_spectogram = Spectrogram(
+    n_fft=x_nfft,
+    win_length=x_win_size * x_fs,
+    hop_length=x_overlap * x_fs,
+    window_fn= torch.hamming_window,
+)
 
-            x_transf[j, i] = torch.tensor(np.transpose(Sxx)).float()
-
-    return x_transf
+def xsleepnet_transform(x, x_spectogram = x_spectogram):
+    x = x_spectogram(x)
+    
+    x = 20 * torch.log10(x + torch.finfo(torch.float32).eps)
+    
+    #x = x.permute(0, 1, 3, 2)
+    return x
+ 
+ ###########################################################################

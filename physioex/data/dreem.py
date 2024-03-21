@@ -202,9 +202,9 @@ class Dreem(PhysioExDataset):
         X_test = np.concatenate(X_test, axis=0)
         y_test = np.concatenate(y_test, axis=0)
 
-        logger.info("Train shape X " + str(X_train.shape) + ", y " + str(y_train.shape))
-        logger.info("Valid shape X " + str(X_valid.shape) + ", y " + str(y_valid.shape))
-        logger.info("Test shape X " + str(X_test.shape) + ", y " + str(y_test.shape))
+        logger.info(f"Train shape X {str(X_train.shape)}, y {str(y_train.shape)}")
+        logger.info(f"Valid shape X {str(X_valid.shape)}, y {str(y_valid.shape)}")
+        logger.info(f"Test shape X {str(X_test.shape)}, y {str(y_test.shape)}")
 
         train_set, valid_set, test_set = [], [], []
 
