@@ -1,2 +1,1 @@
-from physioex.explain.bands import FreqBandsExplainer
-from physioex.explain.bands import band_importance
+from physioex.explain.bands import FreqBandsExplainer, band_importance

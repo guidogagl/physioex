@@ -1,8 +1,7 @@
-from typing import Callable, Tuple, List
+from typing import Callable, List, Tuple
 
 import torch
 from captum.attr import IntegratedGradients
-
 from scipy import signal
 
 sleep_bands = [[0.5, 4], [4, 8], [8, 11.5], [11.5, 15.5], [15.5, 30], [30, 49.5]]

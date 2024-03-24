@@ -2,9 +2,8 @@ import os
 import pickle
 from typing import List
 
-from loguru import logger
-
 import torch
+from loguru import logger
 
 
 class StandardScaler:

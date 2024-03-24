@@ -1,16 +1,17 @@
 import itertools
-import matplotlib.pyplot as plt
+
 import matplotlib.image as mpimg
+import matplotlib.pyplot as plt
+from loguru import logger
 
 from physioex.explain import FreqBandsExplainer
-from loguru import logger
 
 sleep_bands = [[0.5, 4], [4, 8], [8, 11.5], [11.5, 15.5], [15.5, 30], [30, 49.5]]
 sleep_bands_names = ["Delta", "Theta", "Alpha", "Sigma", "Beta", "Gamma"]
 
 models = ["chambon2018"]
 datasets = [
-    #{"name": "dreem", "version": "dodh"},
+    # {"name": "dreem", "version": "dodh"},
     {"name": "sleep_physionet", "version": "2018"},
 ]
 seqlen = 21

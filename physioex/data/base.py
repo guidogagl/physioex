@@ -46,7 +46,10 @@ class TimeDistributedDataset(Dataset):
         class_weights = torch.zeros(len(self.classes))
 
         for i in range(len(self.classes)):
-            class_weights[i] = torch.sum(self.y == self.classes[i]) / len(self.y)
+            class_weights[i] = torch.sum(self.y == self.classes[i])
+            class_weights[i] = 1 / class_weights[i]
+
+        class_weights = class_weights / class_weights.sum()
 
         return class_weights.float()
 

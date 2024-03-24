@@ -1,16 +1,13 @@
 import os
+import re
 import subprocess
 
+import torch
 from loguru import logger
 
 from physioex.data import TimeDistributedModule, datasets
 from physioex.train.networks import config
 from physioex.train.networks.utils.loss import config as loss_config
-
-import torch
-
-import os
-import re
 
 
 class PhysioLoader:

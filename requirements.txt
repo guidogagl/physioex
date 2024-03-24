@@ -3,6 +3,7 @@ wfdb
 pyyaml
 loguru
 
+typing
 dirhash
 lightning
 pytorch_lightning
