@@ -181,8 +181,12 @@ class MITBIH(PhysioExDataset):
         )
 
         groups = np.concatenate(
-            [np.ones(window_dataset[0][subjects.index(indx)].shape[0]) * subjects.index(indx) for indx in config["train"]],
-            axis = 0
+            [
+                np.ones(window_dataset[0][subjects.index(indx)].shape[0])
+                * subjects.index(indx)
+                for indx in config["train"]
+            ],
+            axis=0,
         )
 
         X_test = np.concatenate(
@@ -194,13 +198,17 @@ class MITBIH(PhysioExDataset):
 
         # check the labels == -1 and remove those samples
         train_indx = np.where(y_train != -1)[0]
-        X_train, y_train, groups = X_train[train_indx], y_train[train_indx], groups[train_indx]
+        X_train, y_train, groups = (
+            X_train[train_indx],
+            y_train[train_indx],
+            groups[train_indx],
+        )
         test_indx = np.where(y_test != -1)[0]
         X_test, y_test = X_test[test_indx], y_test[test_indx]
 
         # split the train set into train and valid stratifying on the labels
         X_train, X_valid, y_train, y_valid = train_test_split(
-            X_train, y_train, test_size=0.33, random_state=42*fold, stratify=y_train
+            X_train, y_train, test_size=0.33, random_state=42 * fold, stratify=y_train
         )
 
         logger.info(f"Train shape X {str(X_train.shape)}, y {str(y_train.shape)}")

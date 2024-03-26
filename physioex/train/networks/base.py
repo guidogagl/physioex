@@ -114,12 +114,12 @@ class SeqtoSeq(pl.LightningModule):
         self.log(f"{log}_loss", loss, prog_bar=True)
         self.log(f"{log}_acc", self.acc(outputs, targets), prog_bar=True)
         self.log(f"{log}_f1", self.f1(outputs, targets), prog_bar=True)
-        
+
         if log_metrics:
             self.log(f"{log}_ck", self.ck(outputs, targets))
             self.log(f"{log}_pr", self.pr(outputs, targets))
             self.log(f"{log}_rc", self.rc(outputs, targets))
-        
+
         return loss
 
     def training_step(self, batch, batch_idx):

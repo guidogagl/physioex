@@ -62,13 +62,7 @@ class PhysioLoader:
         logger.info("Dataset loaded")
 
     def get_fold(self, fold: int = 0):
-        model = self.model_call.load_from_checkpoint(
-            self.checkpoints[fold], module_config=self.module_config
-        ).eval()
-
-        model_device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
-        model = model.to(model_device)
+        
 
         logger.info(
             "JOB:%d-Splitting dataset into train, validation and test sets" % fold
@@ -84,7 +78,14 @@ class PhysioLoader:
         )
 
         self.module_config["loss_params"]["class_weights"] = datamodule.class_weights()
+        
+        model = self.model_call.load_from_checkpoint(
+            self.checkpoints[fold], module_config=self.module_config
+        ).eval()
 
+        model_device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+        model = model.to(model_device)
         train = datamodule.train_dataloader()
         test = datamodule.test_dataloader()
         valid = datamodule.val_dataloader()

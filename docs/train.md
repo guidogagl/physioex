@@ -58,7 +58,7 @@ The train command is used to train models. Here are the available arguments:
 - `-vci`, `--val_check_interval`: Specify the validation check interval during training. Expected `type: int`. `Default: 300`.
 - `-bs`, `--batch_size`: Specify the batch size for training. Expected `type: int`. `Default: 32`.
 - `-nj`, `--n_jobs`: Specify the number of jobs for parallelization. Expected `type: int`. `Default: 10`
-- `-imb`, `--imbalance`: ="Specify rather or not to use f1 score instead of accuracy to save the checkpoints. Expected `type: bool`. `Default: False`
+- `-imb`, `--imbalance`:  -me "Specify rather or not to use f1 score instead of accuracy to save the checkpoints. Expected `type: bool`. `Default: False`
 
 ## Experimental Results
 ### Sequence Lenght: 3

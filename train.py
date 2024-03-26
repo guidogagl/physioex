@@ -99,7 +99,7 @@ def main():
         type=bool,
         help="Specify rather or not to use f1 score instead of accuracy to save the checkpoints. Expected type: bool. Default: False",
     )
-    
+
     args = parser.parse_args()
 
     Trainer(
@@ -114,7 +114,7 @@ def main():
         val_check_interval=args.val_check_interval,
         batch_size=args.batch_size,
         n_jobs=args.n_jobs,
-        imbalance = args.imbalance
+        imbalance=args.imbalance,
     ).run()
 
 

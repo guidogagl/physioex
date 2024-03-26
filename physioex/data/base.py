@@ -56,15 +56,19 @@ class TimeDistributedDataset(Dataset):
     def fit_scaler(self):
 
         if self.input_transform is not None:
-            tmp_X = self.input_transform(self.X)
-        else:
-            tmp_X = self.X
-
-        self.scaler = StandardScaler().fit(tmp_X)
+            self.X = self.input_transform(self.X)
+        
+        self.scaler = StandardScaler().fit( self.X )
+        self.X = self.scaler.transform(self.X)
         return self.scaler
 
     def set_scaler(self, scaler):
         self.scaler = scaler
+        
+        if self.input_transform is not None:
+            self.X = self.input_transform(self.X)
+            
+        self.X = self.scaler.transform(self.X)
         return
 
     def __len__(self):
@@ -73,11 +77,6 @@ class TimeDistributedDataset(Dataset):
     def __getitem__(self, idx):
 
         item = self.X[idx : idx + self.L].clone()
-
-        if self.input_transform:
-            item = self.input_transform(item)
-
-        item = self.scaler.transform(item)
 
         label = self.y[idx : idx + self.L].clone()
 

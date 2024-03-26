@@ -37,7 +37,7 @@ class Trainer:
         val_check_interval: int = 300,
         batch_size: int = 32,
         n_jobs: int = 10,
-        imbalance : bool = False,
+        imbalance: bool = False,
     ):
 
         seed_everything(42, workers=True)
@@ -58,7 +58,7 @@ class Trainer:
         self.n_jobs = n_jobs
 
         self.imbalance = imbalance
-        
+
         if ckp_path is None:
             self.ckp_path = "models/" + str(uuid.uuid4()) + "/"
         else:
