@@ -45,6 +45,7 @@ class SeqtoSeqModule(nn.Module):
 
         x = x.reshape(batch_size, sequence_lenght, -1)
 
+        # TODO: avoid double computation on forward and encode
         return self.sequence_encoder.encode(x), self.sequence_encoder(x)
 
 

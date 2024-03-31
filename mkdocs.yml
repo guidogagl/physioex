@@ -43,6 +43,7 @@ repo_url: https://github.com/guidogagl/physioex
 plugins:
   - search
   - social
+  - mkdocstrings
 
 extra:
   social:

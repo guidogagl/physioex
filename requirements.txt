@@ -11,6 +11,7 @@ torchaudio
 rich
 pytorch_metric_learning
 captum
+mkdocstrings
 
 boto3
 h5py
