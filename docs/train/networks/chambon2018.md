@@ -4,7 +4,7 @@ This page details the implementation of the `chambon2018` model published [here]
 
 To train the model one could use the `train -experiment chambon2018` command.
 
-::: physioex.train.networks.Chambon2018Net
+::: physioex.train.networks.chambon2018.Chambon2018Net
     handler: python
     options:
       members:
@@ -13,7 +13,7 @@ To train the model one could use the `train -experiment chambon2018` command.
       show_root_heading: true
       show_source: true
 
-::: physioex.train.networks.SequenceEncoder
+::: physioex.train.networks.chambon2018.SequenceEncoder
     handler: python
     options:
       members:
