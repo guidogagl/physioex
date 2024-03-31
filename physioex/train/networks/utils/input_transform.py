@@ -3,6 +3,7 @@ import torch
 
 ######### time frequency image transform from X SleepNet Article ##########
 
+
 def xsleepnet_transform(x):
     fs = 100
     win_size = 2
@@ -21,7 +22,9 @@ def xsleepnet_transform(x):
         hop_length=hop_length,
         win_length=int(fs * win_size),
         return_complex=False,
-    )[..., 0] # only the real part
+    )[
+        ..., 0
+    ]  # only the real part
     x = x[:, :129, :29]
     x = x.permute(0, 2, 1)
     x = x.reshape(*x_shape[:-1], 29, 129)

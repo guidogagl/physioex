@@ -57,17 +57,17 @@ class TimeDistributedDataset(Dataset):
 
         if self.input_transform is not None:
             self.X = self.input_transform(self.X)
-        
-        self.scaler = StandardScaler().fit( self.X )
+
+        self.scaler = StandardScaler().fit(self.X)
         self.X = self.scaler.transform(self.X)
         return self.scaler
 
     def set_scaler(self, scaler):
         self.scaler = scaler
-        
+
         if self.input_transform is not None:
             self.X = self.input_transform(self.X)
-            
+
         self.X = self.scaler.transform(self.X)
         return
 

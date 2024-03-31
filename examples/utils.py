@@ -62,7 +62,6 @@ class PhysioLoader:
         logger.info("Dataset loaded")
 
     def get_fold(self, fold: int = 0):
-        
 
         logger.info(
             "JOB:%d-Splitting dataset into train, validation and test sets" % fold
@@ -78,7 +77,7 @@ class PhysioLoader:
         )
 
         self.module_config["loss_params"]["class_weights"] = datamodule.class_weights()
-        
+
         model = self.model_call.load_from_checkpoint(
             self.checkpoints[fold], module_config=self.module_config
         ).eval()

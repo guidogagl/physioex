@@ -46,3 +46,4 @@ With PhysioEx you can simulate a state-of-the-art experiment just running the `t
 
 ## TODO
 - adding a download_pretrained command to let users automatically download pretrained models on the supported datasets
+- adding support for https://github.com/mkdocstrings/mkdocstrings?tab=readme-ov-file 

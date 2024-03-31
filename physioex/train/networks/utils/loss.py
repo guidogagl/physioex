@@ -40,10 +40,7 @@ class CrossEntropyLoss(nn.Module, PhysioExLoss):
         super(CrossEntropyLoss, self).__init__()
 
         # check if class weights are provided in params
-        if params is not None:
-            weights = params.get("class_weights", None)
-        else:
-            weights = None
+        weights = params.get("class_weights") if params is not None else None
         self.ce_loss = nn.CrossEntropyLoss(weight=weights)
 
     def forward(self, emb, preds, targets):
