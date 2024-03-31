@@ -12,3 +12,13 @@ To train the model one could use the `train -experiment chambon2018` command.
         - compute_loss
       show_root_heading: true
       show_source: true
+
+::: physioex.train.networks.SequenceEncoder
+    handler: python
+    options:
+      members:
+        - __init__
+        - forward
+        - encode
+      show_root_heading: true
+      show_source: true

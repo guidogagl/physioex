@@ -9,6 +9,19 @@ module_config = dict()
 
 
 class SequenceEncoder(nn.Module):
+    """
+    The sequence encoder neural network module used in Chambon 2018.
+
+    This module encodes the input sequences by concatenating them and using a linear layer to perform classification.
+
+    Args:
+        input_dim (int): The dimension of the input.
+        n_classes (int): The number of classes for classification.
+        latent_dim (int): The dimension of the latent space i.e. intermediate layer between encodings and classification.
+
+    Returns:
+        torch.Tensor: The output tensor after classification.
+    """
     def __init__(self, input_dim: int, n_classes: int, latent_dim: int):
         super(SequenceEncoder, self).__init__()
         self.drop = nn.Dropout(0.5)
@@ -17,11 +30,29 @@ class SequenceEncoder(nn.Module):
         self.clf = nn.Linear(latent_dim, n_classes)
 
     def forward(self, x):
+        """
+        Forward pass of the sequence encoder.
+
+        Args:
+            x: torch.Tensor - The input tensor.
+
+        Returns:
+            torch.Tensor: The output tensor after classification.
+        """
         x = self.encode(x)
         x = self.clf(x)
         return x
 
     def encode(self, x):
+        """
+        Encodes the input tensor.
+
+        Args:
+            x: torch.Tensor - The input tensor.
+
+        Returns:
+            torch.Tensor: The encoded tensor.
+        """
         batch_size, sequence_lenght, input_dim = x.size()
         x = x.reshape(batch_size, sequence_lenght * input_dim)
         x = self.drop(x)
