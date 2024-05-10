@@ -44,6 +44,27 @@ class SleepEDF(PhysioExDataset):
             sequence_length,
             target_transform,
         )
+        
+        scaling_file = np.load( str(Path.home()) + self.config[ self.preprocessing + "_path"] + "scaling_" + self.version + ".npz" )
+        
+        EEG_mean, EOG_mean, EMG_mean = scaling_file["mean"]
+        EEG_std, EOG_std, EMG_std = scaling_file["std"]
+        
+        self.mean = []
+        self.std = []
+
+        if "Fpz-Cz" in self.picks:
+            self.mean.append(EEG_mean)
+            self.std.append(EEG_std)
+        if "EOG" in self.picks:
+            self.mean.append(EOG_mean)
+            self.std.append(EOG_std)
+        if "EMG" in self.picks:
+            self.mean.append(EMG_mean)
+            self.std.append(EMG_std)
+            
+        self.mean = torch.tensor( np.array(self.mean) ).float()
+        self.std = torch.tensor( np.array(self.std) ).float()
 
     def get_num_folds(self):
         split_matrix = loadmat(self.split_path)["test_sub"]
@@ -68,26 +89,7 @@ class SleepEDF(PhysioExDataset):
 
         self.table["split"] = split
 
-        scaling_file = np.load( str(Path.home()) + self.config[ self.preprocessing + "_path"] + "scaling_" + str(fold) + "_" + self.version + ".npz" )
         
-        EEG_mean, EOG_mean, EMG_mean = scaling_file["mean"]
-        EEG_std, EOG_std, EMG_std = scaling_file["std"]
-        
-        self.mean = []
-        self.std = []
-
-        if "Fpz-Cz" in self.picks:
-            self.mean.append(EEG_mean)
-            self.std.append(EEG_std)
-        if "EOG" in self.picks:
-            self.mean.append(EOG_mean)
-            self.std.append(EOG_std)
-        if "EMG" in self.picks:
-            self.mean.append(EMG_mean)
-            self.std.append(EMG_std)
-            
-        self.mean = torch.tensor( np.array(self.mean) ).float()
-        self.std = torch.tensor( np.array(self.std) ).float()
         
     def __getitem__(self, idx):
         x, y =  super().__getitem__(idx)

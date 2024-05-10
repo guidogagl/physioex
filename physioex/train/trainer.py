@@ -60,12 +60,10 @@ class Trainer:
 
         Path(self.ckp_path).mkdir(parents=True, exist_ok=True)
 
-        logger.info("Loading dataset")
         picks = picks.split( " " )
-        print(picks)
+        self.module_config["in_channels"] = len(picks)
 
-        self.module_config["n_channels"] = len(picks)
-
+        logger.info("Loading dataset")
         self.dataset = self.dataset_call(
             version = self.version, 
             picks = picks, 
@@ -95,7 +93,7 @@ class Trainer:
             batch_size=self.batch_size,
             fold = fold,
         )
-
+        
         module = self.model_call(module_config=self.module_config)
 
         # Definizione delle callback

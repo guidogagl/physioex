@@ -108,7 +108,7 @@ class PhysioExDataset(torch.utils.data.Dataset):
             
             fp = np.memmap( path, dtype='float32', mode='r', shape=( subject_num_samples, *self.input_shape) )[ relative_id : relative_id + self.L ]
             
-            np.expand_dims(fp, axis=0)
+            fp = np.expand_dims(fp, axis=0)
             input.append( fp )
 
         input = np.concatenate(input, axis=0)

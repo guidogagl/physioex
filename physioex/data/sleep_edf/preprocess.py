@@ -197,7 +197,7 @@ for key in tqdm(windows_dataset.keys()):
     del fp
 
 # -------------- create the table for the dataset -------------- #
-
+"""
 
 logger.info("Creating the table for the dataset")
 # download the xls file
@@ -246,32 +246,29 @@ data = loadmat(data_folder + "../sleep-edf-split-2013.mat")
 
 # ------------- use the downloaded splits to save the standardization parameters for the datasets ------------ #
 
-# edf-78
-logger.info("Creating the splits for the dataset version 2018")
-split_matrix = loadmat( data_folder + "../sleep-edf-split.mat" )
+for version in ["2018", "2013"]:
 
-for fold in tqdm(range( len( split_matrix["test_sub"] ) )):
+    logger.info("Creating the splits for the dataset version " + version)
 
-    test_subjects = split_matrix["test_sub"][fold][0][0] 
-    valid_subjects =split_matrix["eval_sub"][fold][0][0] 
-
-    train_subjects = (set( list(config["subjects_v2018"])) - set(test_subjects) - set(valid_subjects) )
+    split_matrix = loadmat( data_folder + "../sleep-edf-split.mat" )
+    subjects = list(config["subjects_v" + version])
     
-    # read the data from each subject and compute their mean and std 
-    
+
     EEG = []
     EOG = []
     EMG = []
-    
+
     EEG_tf = []
     EOG_tf = []
     EMG_tf = []
 
-    for subject in tqdm(train_subjects):
+    for subject in tqdm(subjects):
+        y = np.memmap( f'{raw_folder}/y_{subject}.dat', dtype='int16', mode='r')
+        num_samples = y.shape[0] 
         
-        EEG.extend( np.memmap( f'{raw_folder}/Fpz-Cz_{subject}.dat', dtype='float32', mode='r') )
-        EOG.extend( np.memmap( f'{raw_folder}/EOG_{subject}.dat', dtype='float32', mode='r') )
-        EMG.extend( np.memmap( f'{raw_folder}/EMG_{subject}.dat', dtype='float32', mode='r') )
+        EEG.extend( np.memmap( f'{raw_folder}/Fpz-Cz_{subject}.dat', shape = (num_samples, 3000), dtype='float32', mode='r')[:] )
+        EOG.extend( np.memmap( f'{raw_folder}/EOG_{subject}.dat',  shape = (num_samples, 3000), dtype='float32', mode='r')[:] )
+        EMG.extend( np.memmap( f'{raw_folder}/EMG_{subject}.dat',  shape = (num_samples, 3000), dtype='float32', mode='r')[:] )
         
                 
     EEG, EOG, EMG = np.array(EEG).astype(np.float32), np.array(EOG).astype(np.float32), np.array(EMG).astype(np.float32)
@@ -279,72 +276,29 @@ for fold in tqdm(range( len( split_matrix["test_sub"] ) )):
     EEG_mean, EEG_std = np.mean(EEG, axis = 0), np.std(EEG, axis = 0)
     EOG_mean, EOG_std = np.mean(EOG, axis = 0), np.std(EOG, axis = 0)
     EMG_mean, EMG_std = np.mean(EMG, axis = 0), np.std(EMG, axis = 0)
+
+    np.savez( f'{raw_folder}/scaling_{version}.npz', mean = [EEG_mean, EOG_mean, EMG_mean], std = [EEG_std, EOG_std, EMG_std] )
 
     del EEG, EOG, EMG
-    
-    np.savez( f'{raw_folder}/scaling_{fold}_2018.npz', mean = [EEG_mean, EOG_mean, EMG_mean], std = [EEG_std, EOG_std, EMG_std] )
 
-    for subject in tqdm(train_subjects):
-        EEG_tf.extend( np.memmap( f'{xsleepnet_folder}/Fpz-Cz_{subject}.dat', dtype='float32', mode='r') )
-        EOG_tf.extend( np.memmap( f'{xsleepnet_folder}/EOG_{subject}.dat', dtype='float32', mode='r') )
-        EMG_tf.extend( np.memmap( f'{xsleepnet_folder}/EMG_{subject}.dat', dtype='float32', mode='r') )
+    for subject in tqdm(subjects):
+        y = np.memmap( f'{xsleepnet_folder}/y_{subject}.dat', dtype='int16', mode='r')
+        num_samples = y.shape[0] 
+
+        EEG_tf.extend( np.memmap( f'{xsleepnet_folder}/Fpz-Cz_{subject}.dat', shape = (num_samples, 29, 129),  dtype='float32', mode='r')[:] )
+        EOG_tf.extend( np.memmap( f'{xsleepnet_folder}/EOG_{subject}.dat', shape = (num_samples, 29, 129), dtype='float32', mode='r')[:] )
+        EMG_tf.extend( np.memmap( f'{xsleepnet_folder}/EMG_{subject}.dat', shape = (num_samples, 29, 129), dtype='float32', mode='r')[:] )
 
     EEG_tf, EOG_tf, EMG_tf = np.array(EEG_tf).astype(np.float32), np.array(EOG_tf).astype(np.float32), np.array(EMG_tf).astype(np.float32)
-    
+
     EEG_tf_mean, EEG_tf_std = np.mean(EEG_tf, axis = 0), np.std(EEG_tf, axis = 0)
     EOG_tf_mean, EOG_tf_std = np.mean(EOG_tf, axis = 0), np.std(EOG_tf, axis = 0)
     EMG_tf_mean, EMG_tf_std = np.mean(EMG_tf, axis = 0), np.std(EMG_tf, axis = 0)
-    
+
+    # save the mean and std for each signal    
+    np.savez( f'{xsleepnet_folder}/scaling_{version}.npz', mean = [EEG_tf_mean, EOG_tf_mean, EMG_tf_mean], std = [EEG_tf_std, EOG_tf_std, EMG_tf_std] )
+
     del EEG_tf, EOG_tf, EMG_tf
-    # save the mean and std for each signal    
-    np.savez( f'{xsleepnet_folder}/scaling_{fold}_2018.npz', mean = [EEG_tf_mean, EOG_tf_mean, EMG_tf_mean], std = [EEG_tf_std, EOG_tf_std, EMG_tf_std] )
 
-"""
-# edf-20
 
-logger.info("Creating the splits for the dataset version 2013")
 
-split_matrix = loadmat( data_folder + "../sleep-edf-split-2013.mat" )
-
-for fold in tqdm(range( len( split_matrix["test_sub"] ) )):
-
-    test_subjects = split_matrix["test_sub"][fold][0][0] 
-    valid_subjects =split_matrix["eval_sub"][fold][0][0] 
-
-    train_subjects = (set( list(config["subjects_v2013"])) - set(test_subjects) - set(valid_subjects) )
-    
-    # read the data from each subject and compute their mean and std 
-    
-    EEG = []
-    EOG = []
-    EMG = []
-    
-    EEG_tf = []
-    EOG_tf = []
-    EMG_tf = []
-
-    for subject in train_subjects:
-        
-        EEG.extend( np.memmap( f'{raw_folder}/Fpz-Cz_{subject}.dat', dtype='float32', mode='r').copy() )
-        EOG.extend( np.memmap( f'{raw_folder}/EOG_{subject}.dat', dtype='float32', mode='r').copy() )
-        EMG.extend( np.memmap( f'{raw_folder}/EMG_{subject}.dat', dtype='float32', mode='r').copy() )
-        
-        EEG_tf.extend( np.memmap( f'{xsleepnet_folder}/Fpz-Cz_{subject}.dat', dtype='float32', mode='r').copy() )
-        EOG_tf.extend( np.memmap( f'{xsleepnet_folder}/EOG_{subject}.dat', dtype='float32', mode='r').copy() )
-        EMG_tf.extend( np.memmap( f'{xsleepnet_folder}/EMG_{subject}.dat', dtype='float32', mode='r').copy() )
-        
-                
-    EEG, EOG, EMG = np.array(EEG).astype(np.float32), np.array(EOG).astype(np.float32), np.array(EMG).astype(np.float32)
-    EEG_tf, EOG_tf, EMG_tf = np.array(EEG_tf).astype(np.float32), np.array(EOG_tf).astype(np.float32), np.array(EMG_tf).astype(np.float32)
-    
-    EEG_mean, EEG_std = np.mean(EEG, axis = 0), np.std(EEG, axis = 0)
-    EOG_mean, EOG_std = np.mean(EOG, axis = 0), np.std(EOG, axis = 0)
-    EMG_mean, EMG_std = np.mean(EMG, axis = 0), np.std(EMG, axis = 0)
-    
-    EEG_tf_mean, EEG_tf_std = np.mean(EEG_tf, axis = 0), np.std(EEG_tf, axis = 0)
-    EOG_tf_mean, EOG_tf_std = np.mean(EOG_tf, axis = 0), np.std(EOG_tf, axis = 0)
-    EMG_tf_mean, EMG_tf_std = np.mean(EMG_tf, axis = 0), np.std(EMG_tf, axis = 0)
-    
-    # save the mean and std for each signal    
-    np.savez( f'{raw_folder}/scaling_{fold}_2013.npz', mean = [EEG_mean, EOG_mean, EMG_mean], std = [EEG_std, EOG_std, EMG_std] )
-    np.savez( f'{xsleepnet_folder}/scaling_{fold}_2013.npz', mean = [EEG_tf_mean, EOG_tf_mean, EMG_tf_mean], std = [EEG_tf_std, EOG_tf_std, EMG_tf_std] )

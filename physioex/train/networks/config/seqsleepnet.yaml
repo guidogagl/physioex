@@ -1,7 +1,7 @@
 n_classes: 5
-latent_space_dim: 32
 batch_size: 32
-in_chan: 1
+dropOutProb: 0.2,
+in_channels: 1
 seq_len: 3
 T: 29
 F: 129

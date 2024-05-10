@@ -25,7 +25,8 @@ for p in processed_path:
         # check if the path exists and in case create it
         Path( p + "/" + v + "/").mkdir(parents=True, exist_ok=True)
 
-
+data_paths = [ utl.DODO_SETTINGS["h5_directory"], utl.DODH_SETTINGS["h5_directory"] ]
+"""
 logger.info("Fetching the dataset..")
 
 try:
@@ -37,9 +38,6 @@ if not found:
     logger.info("Data not found, download dataset...")
     utl.download_dreem_dataset()
 
-data_paths = [ utl.DODO_SETTINGS["h5_directory"], utl.DODH_SETTINGS["h5_directory"] ]
-
-"""
 for data_path, version in zip(data_paths, versions):
     
     files = [f for f in os.listdir(data_path)]
@@ -153,7 +151,7 @@ for data_path, version in zip(data_paths, versions):
         subject_id = subject_id + 1
         
 # ----- create the tables for each dataset version ----
-"""
+
 logger.info("Creating the tables..")
 
 for vers_indx , v in enumerate(versions):
@@ -180,57 +178,66 @@ for vers_indx , v in enumerate(versions):
     table["num_samples" ] = np.array( num_samples ).astype(int)
     
     table.to_csv( str(Path.home()) + "/dreem/table_" + str(v) + ".csv" )
-    
+
+""" 
 # ------ compute the splitting parameters for each version ----
 
 logger.info("Computing the splitting parameters" )
 
 config = read_config( "config/dreem.yaml" )
 
-for v in versions:
+for vers_indx, v in enumerate(versions):
     
-    for i in range( 10 ): # 10 fold cross validation
+    logger.info(f"Processing {v} dataset")
+    
+    files = [f for f in os.listdir(data_paths[vers_indx])]
+    num_subjects = 0
+    for file in files:
+        if file[-2:] == "h5":
+            num_subjects += 1
+    
+    # get the subject list
+    subjects = np.arange( num_subjects ).astype(int)
         
-        train_subjects = config[v][f'fold_{i}']['train']
+    C3 = []
+    EOG = []
+    EMG = []
+    
+    for subject in tqdm( subjects ):
+        y = np.memmap( f'{processed_path[0]}/{v}/y_{subject}.dat', dtype='int16', mode='r')
+    
+        num_samples = y.shape[0] 
         
-        C3 = []
-        EOG = []
-        EMG = []
+        C3.extend( np.memmap( f'{processed_path[0]}/{v}/C3-M2_{subject}.dat', shape = (num_samples, 3000), dtype='float32', mode='r')[:] )
+        EOG.extend( np.memmap( f'{processed_path[0]}/{v}/EOG_{subject}.dat',  shape = (num_samples, 3000), dtype='float32', mode='r')[:] )
+        EMG.extend( np.memmap( f'{processed_path[0]}/{v}/EMG_{subject}.dat',  shape = (num_samples, 3000), dtype='float32', mode='r')[:] )
+                
+    C3, EOG, EMG = np.array(C3).astype(np.float32), np.array(EOG).astype(np.float32), np.array(EMG).astype(np.float32)
+    
+    C3_mean, C3_std = np.mean(C3, axis = 0), np.std(C3, axis = 0)
+    EOG_mean, EOG_std = np.mean(EOG, axis = 0), np.std(EOG, axis = 0)
+    EMG_mean, EMG_std = np.mean(EMG, axis = 0), np.std(EMG, axis = 0)
+
+    np.savez( f'{processed_path[0]}/{v}/scaling.npz', mean = [C3_mean,  EOG_mean, EMG_mean], std = [C3_std, EOG_std, EMG_std] )
+
+    C3 = []
+    EOG = []
+    EMG = []
         
 
-        for subject in tqdm(train_subjects):
-            C3.extend( np.memmap( f'{processed_path[0]}/{v}/C3-M2_{subject}.dat', dtype='float32', mode='r') )
-            EOG.extend( np.memmap( f'{processed_path[0]}/{v}/EOG_{subject}.dat', dtype='float32', mode='r') )
-            EMG.extend( np.memmap( f'{processed_path[0]}/{v}/EMG_{subject}.dat', dtype='float32', mode='r') )
-            
+    for subject in tqdm(subjects):
+        y = np.memmap( f'{processed_path[0]}/{v}/y_{subject}.dat', dtype='int16', mode='r')
+    
+        num_samples = y.shape[0] 
+        C3.extend( np.memmap( f'{processed_path[1]}/{v}/C3-M2_{subject}.dat', shape = (num_samples, 29, 129), dtype='float32', mode='r')[:] )
+        EOG.extend( np.memmap( f'{processed_path[1]}/{v}/EOG_{subject}.dat', shape = (num_samples, 29, 129), dtype='float32', mode='r')[:] )
+        EMG.extend( np.memmap( f'{processed_path[1]}/{v}/EMG_{subject}.dat', shape = (num_samples, 29, 129), dtype='float32', mode='r'){:} )
+        
                     
-        C3, EOG, EMG = np.array(C3).astype(np.float32), np.array(EOG).astype(np.float32), np.array(EMG).astype(np.float32)
-
-        C3_mean, C3_std = np.mean(C3, axis = 0), np.std(C3, axis = 0)
-        EOG_mean, EOG_std = np.mean(EOG, axis = 0), np.std(EOG, axis = 0)
-        EMG_mean, EMG_std = np.mean(EMG, axis = 0), np.std(EMG, axis = 0)
-
-        del C3, EOG, EMG
+    C3, EOG, EMG = np.array(C3).astype(np.float32), np.array(EOG).astype(np.float32), np.array(EMG).astype(np.float32)
+    
+    C3_mean, C3_std = np.mean(C3, axis = 0), np.std(C3, axis = 0)
+    EOG_mean, EOG_std = np.mean(EOG, axis = 0), np.std(EOG, axis = 0)
+    EMG_mean, EMG_std = np.mean(EMG, axis = 0), np.std(EMG, axis = 0)
         
-        np.savez( f'{processed_path[0]}/{v}/scaling_{i}.npz', mean = [C3_mean,  EOG_mean, EMG_mean], std = [C3_std, EOG_std, EMG_std] )
-
-        C3 = []
-        EOG = []
-        EMG = []
-        
-
-        for subject in tqdm(train_subjects):
-            C3.extend( np.memmap( f'{processed_path[1]}/{v}/C3-M2_{subject}.dat', dtype='float32', mode='r') )
-            EOG.extend( np.memmap( f'{processed_path[1]}/{v}/EOG_{subject}.dat', dtype='float32', mode='r') )
-            EMG.extend( np.memmap( f'{processed_path[1]}/{v}/EMG_{subject}.dat', dtype='float32', mode='r') )
-            
-                    
-        C3, EOG, EMG = np.array(C3).astype(np.float32), np.array(EOG).astype(np.float32), np.array(EMG).astype(np.float32)
-        
-        C3_mean, C3_std = np.mean(C3, axis = 0), np.std(C3, axis = 0)
-        EOG_mean, EOG_std = np.mean(EOG, axis = 0), np.std(EOG, axis = 0)
-        EMG_mean, EMG_std = np.mean(EMG, axis = 0), np.std(EMG, axis = 0)
-        
-        del C3, EOG, EMG
-        
-        np.savez( f'{processed_path[1]}/{v}/scaling_{i}.npz', mean = [C3_mean,  EOG_mean, EMG_mean], std = [C3_std, EOG_std, EMG_std] )
+    np.savez( f'{processed_path[1]}/{v}/scaling.npz', mean = [C3_mean,  EOG_mean, EMG_mean], std = [C3_std, EOG_std, EMG_std] )

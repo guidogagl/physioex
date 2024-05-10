@@ -44,7 +44,7 @@ class Dreem(PhysioExDataset):
         
         self.subject_start_indices, self.subject_end_indices = create_subject_index_map(self.table, sequence_length)   
         
-        self.split_path = str(Path.home()) + f"/dreem/{preprocessing}/{version}/scaling_"
+        self.split_path = str(Path.home()) + f"/dreem/{preprocessing}/{version}/scaling.npz"
         self.data_path =  str(Path.home()) + f"/dreem/{preprocessing}/{version}/"
 
         self.picks = picks
@@ -58,29 +58,12 @@ class Dreem(PhysioExDataset):
         self.target_transform = target_transform
 
         self.input_shape = self.config[ "shape_" + preprocessing ]
-    def get_num_folds(self):
-        return 10
-
-    def split(self, fold: int = 0):
-
-
-        test_subjects = self.config[ self.version][f"fold_{fold}"][ "test"] 
-        valid_subjects = self.config[ self.version][f"fold_{fold}"][ "valid"] 
         
-
-        # add a column to the table with 0 if the subject is in train, 1 if in valid, 2 if in test
-
-        split = np.zeros(len(self.table))
-        split[self.table["subject_id"].isin(test_subjects)] = 2
-        split[self.table["subject_id"].isin(valid_subjects)] = 1
-
-        self.table["split"] = split
-
-        scaling_file = np.load( self.split_path + f"{fold}.npz" )
+        scaling_file = np.load( self.split_path )
         
         EEG_mean, EOG_mean, EMG_mean = scaling_file["mean"]
         EEG_std, EOG_std, EMG_std = scaling_file["std"]
-        
+               
         self.mean = []
         self.std = []
 
@@ -97,9 +80,32 @@ class Dreem(PhysioExDataset):
         self.mean = torch.tensor( np.array(self.mean) ).float()
         self.std = torch.tensor( np.array(self.std) ).float()
         
+        
+    def get_num_folds(self):
+        return 10
+
+    def split(self, fold: int = 0):
+
+        test_subjects = self.config[ self.version][f"fold_{fold}"][ "test"] 
+        valid_subjects = self.config[ self.version][f"fold_{fold}"][ "valid"] 
+        
+
+        # add a column to the table with 0 if the subject is in train, 1 if in valid, 2 if in test
+
+        split = np.zeros(len(self.table))
+        split[self.table["subject_id"].isin(test_subjects)] = 2
+        split[self.table["subject_id"].isin(valid_subjects)] = 1
+
+        self.table["split"] = split
+
+        
     def __getitem__(self, idx):
         x, y =  super().__getitem__(idx)
 
+        print( self.mean.size() )
+        print( self.std.size() )
+        
+        print ( x.size() )
         x = ( x - self.mean ) / self.std
         
         if self.target_transform is not None:

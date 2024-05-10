@@ -11,44 +11,6 @@ from pytorch_metric_learning.reducers import ThresholdReducer
 from pytorch_metric_learning.regularizers import LpRegularizer
 
 
-class SequenceEncoder(nn.Module):
-    def __init__(self, input_dim: int, n_classes: int, latent_dim: int):
-        super(SequenceEncoder, self).__init__()
-        self.drop = nn.Dropout(0.5)
-        self.clf = nn.Linear(input_dim, n_classes)
-
-
-class SeqtoSeqModule(nn.Module):
-    def __init__(self, epoch_encoder, sequence_encoder):
-        super(SeqtoSeqModule, self).__init__()
-        self.epoch_encoder = epoch_encoder
-        self.sequence_encoder = sequence_encoder
-
-    def forward(self, x):
-        batch_size, sequence_lenght = x.size(0), x.size(1)
-
-        x_shape = [batch_size * sequence_lenght] + list(x.size()[2:])
-
-        x = x.reshape(x_shape)
-        x = self.epoch_encoder(x)
-
-        x = x.reshape(batch_size, sequence_lenght, -1)
-
-        return self.sequence_encoder(x)
-
-    def encode(self, x):
-        batch_size, sequence_lenght = x.size(0), x.size(1)
-        x_shape = [batch_size * sequence_lenght] + list(x.size()[2:])
-
-        x = x.reshape(x_shape)
-        x = self.epoch_encoder(x)
-
-        x = x.reshape(batch_size, sequence_lenght, -1)
-
-        # TODO: avoid double computation on forward and encode
-        return self.sequence_encoder.encode(x), self.sequence_encoder(x)
-
-
 class SleepModule(pl.LightningModule):
     def __init__(
         self, nn: nn.Module, config: Dict
@@ -80,14 +42,29 @@ class SleepModule(pl.LightningModule):
         # Definisci il tuo ottimizzatore
         self.opt = optim.Adam(
             self.nn.parameters(),
-            lr=float(self.module_config["learning_rate"]),
-            betas=(
-                float(self.module_config["adam_beta_1"]),
-                float(self.module_config["adam_beta_2"]),
-            ),
-            eps=float(self.module_config["adam_epsilon"]),
+            lr = 1e-4,
+            weight_decay = 1e-3,
         )
-        return self.opt
+        
+        self.scheduler = optim.lr_scheduler.ReduceLROnPlateau( self.opt,         
+            mode="max",
+            factor=0.5,
+            patience=10,
+            threshold=0.0001,
+            threshold_mode="rel",
+            cooldown=0,
+            min_lr=0,
+            eps=1e-08,
+            verbose=True
+        )
+        
+        return { 
+            "optimizer" : self.opt, 
+            "scheduler": {
+                'scheduler': self.scheduler,
+                'monitor': 'val_acc' 
+            }
+        }
 
     def forward(self, x):
         return self.nn(x)
