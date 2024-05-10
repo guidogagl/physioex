@@ -33,6 +33,7 @@ class Trainer:
         val_check_interval: int = 300,
         batch_size: int = 32,
         n_jobs: int = 10,
+        imbalance: bool = False,
     ):
 
         seed_everything(42, workers=True)
@@ -49,6 +50,8 @@ class Trainer:
         self.val_check_interval = val_check_interval
         self.version = version
         self.n_jobs = n_jobs
+
+        self.imbalance = imbalance
 
         if ckp_path is None:
             self.ckp_path = "models/" + str(uuid.uuid4()) + "/"
@@ -96,13 +99,22 @@ class Trainer:
         module = self.model_call(module_config=self.module_config)
 
         # Definizione delle callback
-        checkpoint_callback = ModelCheckpoint(
-            monitor="val_acc",
-            save_top_k=1,
-            mode="max",
-            dirpath=self.ckp_path,
-            filename="fold=%d-{epoch}-{step}-{val_acc:.2f}" % fold,
-        )
+        if self.imbalance:
+            checkpoint_callback = ModelCheckpoint(
+                monitor="val_f1",
+                save_top_k=1,
+                mode="max",
+                dirpath=self.ckp_path,
+                filename="fold=%d-{epoch}-{step}-{val_f1:.2f}" % fold,
+            )
+        else:
+            checkpoint_callback = ModelCheckpoint(
+                monitor="val_acc",
+                save_top_k=1,
+                mode="max",
+                dirpath=self.ckp_path,
+                filename="fold=%d-{epoch}-{step}-{val_acc:.2f}" % fold,
+            )
 
         progress_bar_callback = RichProgressBar()
 

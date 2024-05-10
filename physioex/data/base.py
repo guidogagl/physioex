@@ -88,6 +88,7 @@ class PhysioExDataset(torch.utils.data.Dataset):
 
         self.L = sequence_length
         self.target_transform = target_transform
+        self.input_transform = transform
 
         self.input_shape = self.config[ "shape_" + preprocessing ]
         

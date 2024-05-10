@@ -2,7 +2,10 @@ site_name: PhysioEx
 site_url: https://guidogagl.github.io/physioex/
 nav:
     - Home: index.md
-    - Train: train.md
+    - Train: 
+      - train CL: train.md
+      - networks: 
+        - Chambon 2018: train/networks/chambon2018.md
     - Explain: unavailable.md
     - Data: unavailable.md
     - Examples: 
@@ -43,6 +46,7 @@ repo_url: https://github.com/guidogagl/physioex
 plugins:
   - search
   - social
+  - mkdocstrings
 
 extra:
   social:

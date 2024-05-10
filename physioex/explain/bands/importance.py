@@ -1,9 +1,13 @@
+import os
+import uuid
 from itertools import combinations
 from typing import List
 
 import numpy as np
 import torch
 from captum.attr import IntegratedGradients
+from loguru import logger
+from npy_append_array import NpyAppendArray
 from scipy import signal
 from torch.nn import functional as F
 from torch.utils.data import DataLoader, Dataset, TensorDataset
@@ -31,17 +35,16 @@ def filtered_band_importance(
     model: torch.nn.Module,
     inputs: torch.Tensor,
     sampling_rate: int = 100,
-    compute_time: bool = True,
 ):
     batch_size, seq_len, n_channels, n_samples = inputs.shape
     baseline = torch.from_numpy(inputs.copy())
-    inputs = torch.squeeze(inputs).reshape(batch_size, seq_len * n_samples)
+    inputs = np.squeeze(inputs).reshape(batch_size, seq_len * n_samples)
 
     for band in bands:
         # filter bandstop - reject the frequencies specified in freq_band
         lowcut = band[0]
         highcut = band[1]
-        order = 4
+        order = 5
         nyq = 0.5 * sampling_rate
         low = lowcut / nyq
         high = highcut / nyq
@@ -55,24 +58,9 @@ def filtered_band_importance(
     inputs = torch.from_numpy(inputs)
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
     band_score = model(inputs.to(device)).cpu().detach().numpy()
 
-    batch_size, n_class = band_score.shape
-
-    time_importance = np.zeros((batch_size, seq_len, n_channels, n_samples, n_class))
-
-    if compute_time:
-        ig = IntegratedGradients(model)
-
-        for c in range(n_class):
-            time_importance[:, :, :, :, c] = (
-                ig.attribute(inputs.to(device), baseline.to(device), target=c)
-                .cpu()
-                .numpy()
-            )
-
-    return band_score, time_importance
+    return band_score
 
 
 def band_importance(
@@ -80,7 +68,6 @@ def band_importance(
     model: torch.nn.Module,
     dataloader: DataLoader,
     sampling_rate: int = 100,
-    compute_time: bool = True,
 ):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -90,49 +77,52 @@ def band_importance(
 
     exp = eXpDataset()
 
-    for _, batch in enumerate(tqdm(dataloader)):
-        inputs, y_true = batch
+    with torch.no_grad():
+        for _, batch in enumerate(tqdm(dataloader)):
+            inputs, y_true = batch
 
-        # compute the probas of the input data from the model
+            # compute the probas of the input data from the model
+            probas = model(inputs.to(device)).cpu().detach().numpy()
 
-        probas = model(inputs.to(device)).cpu().detach().numpy()
-        inputs = inputs.cpu().detach().numpy()
-        batch_size, n_class = probas.shape
+            # debug: check if probas contains negative elements and log their index
+            if (probas < 0).any():
+                logger.debug(f"Negative probas found in batch {_}")
 
-        mean = MeanImportance(n_class, len(bands), inputs.shape)
+            inputs = inputs.cpu().detach().numpy()
+            batch_size, seq_len, n_channels, n_samples = inputs.shape
 
-        for combination in combinations:
-            band_score, time_importance = filtered_band_importance(
-                [bands[i] for i in range(len(bands)) if combination[i] == 1],
-                model,
-                inputs.copy(),
-                sampling_rate,
-                compute_time,
+            bands_importance = np.zeros((batch_size, len(bands), probas.shape[1]))
+
+            D = len(np.where(combinations[:, 0] == 1)[0])
+
+            for combination in combinations:
+                b_indx = np.where(combination == 1)[0].astype(int)
+                band_score = filtered_band_importance(
+                    [bands[i] for i in b_indx],
+                    model,
+                    inputs.copy(),
+                    sampling_rate,
+                )
+
+                for indx in b_indx:
+                    bands_importance[:, indx, :] += band_score / D
+
+            # debug log the min and max value of bands_importance
+            # logger.debug(f"Min value of bands_importance: {bands_importance.min()}")
+            # logger.debug(f"Max value of bands_importance: {bands_importance.max()}")
+            # debug log the max value of probas
+            # logger.debug(f"Max value of probas: {probas.max()}")
+            # logger.debug(f"Min value of probas: {probas.min()}")
+
+            for i in range(len(bands)):
+                bands_importance[:, i, :] = probas - bands_importance[:, i, :]
+
+            exp.add(
+                y_true.numpy().astype(int),
+                probas.astype(float),
+                bands_importance.astype(float),
             )
 
-            # band_importance = probas - band_score
-            # mean.update(combination, band_importance, time_importance)
-
-            mean.update(combination, band_score, time_importance)
-
-        mean_band_score, times_importance = mean.get()
-
-        bands_importance = mean_band_score
-
-        for band in range(len(bands)):
-            bands_importance[:, band, :] = probas - bands_importance[:, band, :]
-
-        exp.add(
-            inputs.astype(float),
-            y_true.numpy().astype(int),
-            probas.astype(float),
-            np.argmax(probas, axis=1).astype(int),
-            bands_importance.astype(float),
-            times_importance.astype(float),
-        )
-
-        if _ >= 2:
-            break
     return exp
 
 
@@ -147,49 +137,40 @@ class SoftModel(torch.nn.Module):
 
 class eXpDataset(Dataset):
     def __init__(self):
-        self.inputs = []
         self.targets = []
         self.probas = []
-        self.preds = []
         self.bands = []
-        self.time = []
 
-    def add(self, inputs, targets, probas, preds, bands, time):
-        self.inputs.extend(inputs)
+    def add(
+        self,
+        targets: np.ndarray,
+        probas: np.ndarray,
+        bands: np.ndarray,
+    ):
         self.targets.extend(targets)
         self.probas.extend(probas)
-        self.preds.extend(preds)
         self.bands.extend(bands)
-        self.time.extend(time)
 
     def __len__(self):
-        return len(self.inputs)
+        return len(self.targets)
 
     def __getitem__(self, index):
         return (
-            self.inputs[index],
             self.targets[index],
             self.probas[index],
-            self.preds[index],
+            np.argmax(self.probas[index]),
             self.bands[index],
-            self.time[index],
         )
 
     def get_class_importance(self, c):
-        c_indx = np.where(np.array(self.preds) == c)[0]
+        preds = np.argmax(self.probas, axis=1)
+
+        c_indx = np.where(np.array(preds) == c)[0]
 
         ret = np.zeros((len(c_indx), len(self.bands[0])))
 
         for i, index in enumerate(c_indx):
             ret[i] = self.bands[index][:, c]
-
-        return ret
-
-    def get_bands_importance(self, b):
-        ret = np.zeros((len(self.inputs), len(self.probas[0])))
-
-        for index in range(len(self.inputs)):
-            ret[index] = self.bands[index][b, :]
 
         return ret
 

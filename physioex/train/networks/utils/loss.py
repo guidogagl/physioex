@@ -38,7 +38,10 @@ class SimilarityCombinedLoss(nn.Module, PhysioExLoss):
 class CrossEntropyLoss(nn.Module, PhysioExLoss):
     def __init__(self, params: Dict = None):
         super(CrossEntropyLoss, self).__init__()
-        self.ce_loss = nn.CrossEntropyLoss()
+
+        # check if class weights are provided in params
+        weights = params.get("class_weights") if params is not None else None
+        self.ce_loss = nn.CrossEntropyLoss(weight=weights)
 
     def forward(self, emb, preds, targets):
         return self.ce_loss(preds, targets)

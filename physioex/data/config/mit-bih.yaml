@@ -1,0 +1,71 @@
+HASH : "a2d22db558f792020cea93557c11b8da"
+
+MITBIH_to_AAMI : {
+    'N': 'N',  # Normale
+    'L': 'N',  # Ritmo sinusrato con blocco di branca
+    'R': 'N',  # Ritmo sinusrato con conduzione aberrante
+    'A': 'S',  # Contrazione atriale prematura
+    'V': 'V',  # Contrazione ventricolare prematura
+    'F': 'F',  # Fibrillazione ventricolare
+    'f': 'F',  # Flutter ventricolare
+    'j': 'N',  # Ritmo giunzionale
+    'a': 'S',  # Contrazione atriale aberrante
+    'E': 'V',  # Contrazione ventricolare ectopica
+    'J': 'N',  # Ritmo giunzionale prematuro
+    'Q': 'Q',  # Non classificato
+    '/': 'N',  # Pausa
+    'e': 'N',  # Contrazione ventricolare di fuga
+    'S': 'N'   # Contrazione sopraventricolare di fuga
+}
+
+AAMI_classes : ['N', 'S', 'V', 'F', 'Q']
+split:
+  train : [101, 106, 108, 109, 112, 114, 115, 116, 118, 119, 122, 124, 201, 203, 205, 207, 208, 209, 215, 220, 223, 230]
+  test : [100, 103, 105, 111, 113, 117, 121, 123, 200, 202, 210, 212, 213, 214, 219, 221, 222, 228, 231, 232, 233, 234]
+subjects:
+- 100
+- 101
+- 103
+- 105
+- 106
+- 107
+- 108
+- 109
+- 111
+- 112
+- 113
+- 114
+- 115
+- 116
+- 117
+- 118
+- 119
+- 121
+- 122
+- 123
+- 124
+- 200
+- 201
+- 202
+- 203
+- 205
+- 207
+- 208
+- 209
+- 210
+- 212
+- 213
+- 214
+- 215
+- 217
+- 219
+- 220
+- 221
+- 222
+- 223
+- 228
+- 230
+- 231
+- 232
+- 233
+- 234

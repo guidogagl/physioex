@@ -18,11 +18,12 @@ With PhysioEx you can simulate a state-of-the-art experiment just running the `t
 - [Chambon2018](https://ieeexplore.ieee.org/document/8307462) model for sleep stage classification.
 - [TinySleepNet](https://github.com/akaraspt/tinysleepnet) model for sleep stage classification.
 - [SeqSleepNet](https://arxiv.org/pdf/1809.10932.pdf) model for sleep stage classification (time-frequency images as input).
+- SeqECGnet model for ECG arrythmia classifiaction ( 5-AAMI classes ).
 
 ## Supported datasets
-
 - [SleepEDF (version 2018-2013)](https://physionet.org/physiobank/database/sleep-edfx/sleep-cassette/) sleep staging dataset.
 - [Dreem (version DODO-DODH)](https://github.com/Dreem-Organization/dreem-learning-open) sleep staging dataset.
+- [MIT-BIH Arrhythmia Database](https://physionet.org/content/mitdb/1.0.0/) dataset for ECG analysis.
 
 ## Installation guidelines
 
@@ -45,3 +46,4 @@ With PhysioEx you can simulate a state-of-the-art experiment just running the `t
 
 ## TODO
 - adding a download_pretrained command to let users automatically download pretrained models on the supported datasets
+- adding support for https://github.com/mkdocstrings/mkdocstrings?tab=readme-ov-file 

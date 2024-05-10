@@ -1,0 +1,12 @@
+n_classes: 5
+latent_space_dim: 32
+batch_size: 32
+in_chan: 1
+learning_rate: 1e-4
+adam_beta_1: 0.9
+adam_beta_2: 0.999
+adam_epsilon: 1e-8
+win_size : 2
+fs : 360
+in_channels : 1
+epoch_out : 32

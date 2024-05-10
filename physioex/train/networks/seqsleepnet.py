@@ -51,13 +51,13 @@ class EpochEncoder(nn.Module):
 
         assert (
             in_chans == self.in_chans
-        ), "channels dimension mismatch, provided input size: " + str(x.size())
-        assert T == self.T, "time dimension mismatch, provided input size: " + str(
-            x.size()
-        )
-        assert F == self.F, "frequency dimension mismatch, provided input size: " + str(
-            x.size()
-        )
+        ), f"channels dimension mismatch, provided input size: {str(x.size())}"
+        assert (
+            T == self.T
+        ), f"time dimension mismatch, provided input size: {str(x.size())}"
+        assert (
+            F == self.F
+        ), f"frequency dimension mismatch, provided input size: {str(x.size())}"
 
         x = self.F2_filtbank(x)
 
@@ -85,11 +85,11 @@ class SequenceEncoder(nn.Module):
         )
         self.norm = nn.LayerNorm(module_config["latent_space_dim"])
         self.lin = nn.Linear(
-            module_config["seqnhidden2"] * 2, module_config["n_classes"]
+            module_config["latent_space_dim"], module_config["n_classes"]
         )
 
     def forward(self, x):
-        x, _ = self.encode(x)
+        x = self.encode(x)
         x = self.lin(x)
         return x
 
