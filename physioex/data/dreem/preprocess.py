@@ -26,7 +26,7 @@ for p in processed_path:
         Path( p + "/" + v + "/").mkdir(parents=True, exist_ok=True)
 
 data_paths = [ utl.DODO_SETTINGS["h5_directory"], utl.DODH_SETTINGS["h5_directory"] ]
-"""
+
 logger.info("Fetching the dataset..")
 
 try:
@@ -179,7 +179,7 @@ for vers_indx , v in enumerate(versions):
     
     table.to_csv( str(Path.home()) + "/dreem/table_" + str(v) + ".csv" )
 
-""" 
+
 # ------ compute the splitting parameters for each version ----
 
 logger.info("Computing the splitting parameters" )

@@ -75,7 +75,7 @@ Path(raw_folder).mkdir(parents=True, exist_ok=True)
 
 
 # -------------- dataset creation ----------------- #
-"""
+
 logger.info("Fetching the dataset")
 
 dataset = SP(subject_ids=config["subjects_v2018"], recording_ids=[1, 2], crop_wake_mins=30, load_eeg_only=False)
@@ -197,7 +197,7 @@ for key in tqdm(windows_dataset.keys()):
     del fp
 
 # -------------- create the table for the dataset -------------- #
-"""
+
 
 logger.info("Creating the table for the dataset")
 # download the xls file

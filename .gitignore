@@ -11,6 +11,7 @@ models
 script
 temp 
 lightning_logs
+physioex/data/shhs/download.py
 
 # C extensions
 *.so
