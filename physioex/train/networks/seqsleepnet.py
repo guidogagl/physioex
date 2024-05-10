@@ -12,39 +12,37 @@ module_config = dict()
 
 class SeqSleepNet(SleepModule):
     def __init__(self, module_config=module_config):
-        super(SeqSleepNet, self).__init__(
-            Net(module_config), module_config
-        )
+        super(SeqSleepNet, self).__init__(Net(module_config), module_config)
 
 
 class Net(nn.Module):
-    def __init__(self,  module_config = module_config ):
+    def __init__(self, module_config=module_config):
         super().__init__()
-        
-        self.epoch_encoder = EpochEncoder( module_config )
-        self.sequence_encoder = SequenceEncoder ( module_config )
+
+        self.epoch_encoder = EpochEncoder(module_config)
+        self.sequence_encoder = SequenceEncoder(module_config)
 
     def encode(self, x):
-        
+
         batch, L, nchan, T, F = x.size()
-        
+
         x = x.reshape(-1, nchan, T, F)
-        
+
         x = self.epoch_encoder(x)
-        
-        x = x.reshape(batch, L, -1 )
-        
+
+        x = x.reshape(batch, L, -1)
+
         x = self.sequence_encoder.encode(x)
-        
+
         y = self.sequence_encoder.clf(x)
-        
+
         return x, y
-    
+
     def forward(self, x):
         x, y = self.encode(x)
         return y
-        
-        
+
+
 class EpochEncoder(nn.Module):
     def __init__(self, module_config):
         super(EpochEncoder, self).__init__()
@@ -101,7 +99,7 @@ class SequenceEncoder(nn.Module):
         super(SequenceEncoder, self).__init__()
 
         self.LSTM = nn.GRU(
-            input_size= 2 * module_config["seqnhidden1"],
+            input_size=2 * module_config["seqnhidden1"],
             hidden_size=module_config["seqnhidden2"],
             num_layers=module_config["seqnlayer2"],
             batch_first=True,

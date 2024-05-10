@@ -9,11 +9,12 @@ from physioex.train.networks.base import SleepModule
 
 module_config = dict()
 
+
 class FeatureExtractor(nn.Module):
     def __init__(self, config=module_config):
         super(FeatureExtractor, self).__init__()
         self.config = config
-        self.padding_edf = {  
+        self.padding_edf = {
             "conv1": (22, 22),
             "max_pool1": (2, 2),
             "conv2": (3, 4),
@@ -23,7 +24,13 @@ class FeatureExtractor(nn.Module):
         first_filter_stride = int(self.config["sampling_rate"] / 16.0)
 
         self.cnn = nn.Sequential(
-            self._conv_block(self.config["in_channels"], 128, first_filter_size, first_filter_stride, self.padding_edf["conv1"]),
+            self._conv_block(
+                self.config["in_channels"],
+                128,
+                first_filter_size,
+                first_filter_stride,
+                self.padding_edf["conv1"],
+            ),
             nn.ConstantPad1d(self.padding_edf["max_pool1"], 0),
             nn.MaxPool1d(kernel_size=8, stride=8),
             nn.Dropout(p=0.5),
@@ -58,7 +65,7 @@ class Classifier(nn.Module):
             num_layers=1,
             batch_first=True,
         )
-        self.rnn_dropout = nn.Dropout(p=0.5)  
+        self.rnn_dropout = nn.Dropout(p=0.5)
         self.clf = nn.Linear(self.config["n_rnn_units"], self.config["n_classes"])
 
     def forward(self, x):
@@ -82,36 +89,34 @@ class Classifier(nn.Module):
 class Net(nn.Module):
     def __init__(self, module_config=module_config):
         super().__init__()
-        
-        self.feature_extractor = FeatureExtractor( module_config )
-        self.clf = Classifier( module_config )
 
-        
+        self.feature_extractor = FeatureExtractor(module_config)
+        self.clf = Classifier(module_config)
+
     def encode(self, x):
         batch_size, seqlen, inchan, insamp = x.size()
-        
-        x = x.reshape( -1, inchan, insamp)
-        
+
+        x = x.reshape(-1, inchan, insamp)
+
         x = self.feature_extractor(x)
-        
+
         x = x.reshape(batch_size, seqlen, -1)
-        
+
         x = self.clf.encode(x)
-        
+
         batch_size, seq_len, rnn_units = x.size()
         y = x.reshape(batch_size * seq_len, rnn_units)
 
         y = self.clf.clf(y)
         y = y.reshape(batch_size, seq_len, -1)
-        return x, y 
-    
-    
+        return x, y
+
     def forward(self, x):
         x, y = self.encode(x)
-        
+
         return y
-        
-        
+
+
 class TinySleepNet(SleepModule):
     def __init__(self, module_config=module_config):
         super(TinySleepNet, self).__init__(

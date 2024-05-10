@@ -14,18 +14,14 @@ class FeatureExtractor(nn.Module):
     def __init__(self, config=module_config):
         super(FeatureExtractor, self).__init__()
         self.config = config
-        self.padding_edf = {  
+        self.padding_edf = {
             "conv1": (22, 22),
             "max_pool1": (2, 2),
             "conv2": (3, 4),
             "max_pool2": (0, 1),
         }
-        first_filter_size = int(
-            self.config["sampling_rate"] / 2.0
-        )  
-        first_filter_stride = int(
-            self.config["sampling_rate"] / 16.0
-        )  
+        first_filter_size = int(self.config["sampling_rate"] / 2.0)
+        first_filter_stride = int(self.config["sampling_rate"] / 16.0)
         self.cnn = nn.Sequential(
             nn.ConstantPad1d(self.padding_edf["conv1"], 0),  # conv1
             nn.Sequential(
@@ -46,10 +42,10 @@ class FeatureExtractor(nn.Module):
             ),
             nn.BatchNorm1d(num_features=128, eps=0.001, momentum=0.01),
             nn.ReLU(inplace=True),
-            nn.ConstantPad1d(self.padding_edf["max_pool1"], 0),  
+            nn.ConstantPad1d(self.padding_edf["max_pool1"], 0),
             nn.MaxPool1d(kernel_size=8, stride=8),
             nn.Dropout(p=0.5),
-            nn.ConstantPad1d(self.padding_edf["conv2"], 0),  
+            nn.ConstantPad1d(self.padding_edf["conv2"], 0),
             nn.Sequential(
                 OrderedDict(
                     [
@@ -106,7 +102,7 @@ class FeatureExtractor(nn.Module):
             ),
             nn.BatchNorm1d(num_features=128, eps=0.001, momentum=0.01),
             nn.ReLU(inplace=True),
-            nn.ConstantPad1d(self.padding_edf["max_pool2"], 0), 
+            nn.ConstantPad1d(self.padding_edf["max_pool2"], 0),
             nn.MaxPool1d(kernel_size=4, stride=4),
             nn.Flatten(),
             nn.Dropout(p=0.5),

@@ -23,7 +23,7 @@ import os
 
 from scipy import signal
 
-home_directory = str( Path.home() )
+home_directory = str(Path.home())
 BASE_DIRECTORY = os.path.join(home_directory, "dreem")
 BASE_DIRECTORY_H5 = os.path.join(BASE_DIRECTORY, "h5")
 
@@ -83,7 +83,7 @@ def butter_bandpass_filter(data, lowcut, highcut, fs, order=5):
     return y
 
 
-preprocessors=[
+preprocessors = [
     lambda data: np.multiply(data, 1e6),  # Convert from V to uV
     lambda data: butter_bandpass_filter(data, 0.3, 30, 250),
     lambda data: resample(data, 100 * 30),
@@ -91,7 +91,7 @@ preprocessors=[
 
 
 # xsleepnet preprocessing
-def xsleepnet_preprocessing( sig ):
+def xsleepnet_preprocessing(sig):
     # transform each signal into its spectrogram ( fast )
     # nfft 256, noverlap 1, win 2, fs 100, hamming window
     _, _, Sxx = signal.spectrogram(
@@ -106,6 +106,6 @@ def xsleepnet_preprocessing( sig ):
     # log_10 scale the spectrogram safely (using epsilon)
     Sxx = 20 * np.log10(np.abs(Sxx) + np.finfo(float).eps)
 
-    Sxx = np.transpose(Sxx, (1, 0))                
+    Sxx = np.transpose(Sxx, (1, 0))
 
     return Sxx

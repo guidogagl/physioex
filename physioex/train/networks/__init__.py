@@ -6,7 +6,8 @@ import physioex.train.networks.utils.target_transform as target_transform
 from physioex.train.networks.chambon2018 import Chambon2018Net
 from physioex.train.networks.seqsleepnet import SeqSleepNet
 from physioex.train.networks.tinysleepnet import TinySleepNet
-#from physioex.train.networks.seqecgnet import SeqECGnet
+
+# from physioex.train.networks.seqecgnet import SeqECGnet
 
 
 def read_config(model_name: str):
@@ -37,10 +38,10 @@ config = {
         "input_transform": "raw",
         "target_transform": None,
     },
-#    "seqecgnet": {
-#        "module_config": read_config("seqecgnet"),
-#        "module": SeqECGnet,
-#        "input_transform": None,
-#        "target_transform": None,
-#    },
+    #    "seqecgnet": {
+    #        "module_config": read_config("seqecgnet"),
+    #        "module": SeqECGnet,
+    #        "input_transform": None,
+    #        "target_transform": None,
+    #    },
 }

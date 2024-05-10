@@ -12,12 +12,10 @@ from pytorch_metric_learning.regularizers import LpRegularizer
 
 
 class SleepModule(pl.LightningModule):
-    def __init__(
-        self, nn: nn.Module, config: Dict
-    ):
+    def __init__(self, nn: nn.Module, config: Dict):
         super(SleepModule, self).__init__()
         self.nn = nn
-        
+
         # metrics
         self.acc = tm.Accuracy(
             task="multiclass", num_classes=config["n_classes"], average="weighted"
@@ -42,11 +40,12 @@ class SleepModule(pl.LightningModule):
         # Definisci il tuo ottimizzatore
         self.opt = optim.Adam(
             self.nn.parameters(),
-            lr = 1e-4,
-            weight_decay = 1e-3,
+            lr=1e-4,
+            weight_decay=1e-3,
         )
-        
-        self.scheduler = optim.lr_scheduler.ReduceLROnPlateau( self.opt,         
+
+        self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(
+            self.opt,
             mode="max",
             factor=0.5,
             patience=10,
@@ -55,15 +54,12 @@ class SleepModule(pl.LightningModule):
             cooldown=0,
             min_lr=0,
             eps=1e-08,
-            verbose=True
+            verbose=True,
         )
-        
-        return { 
-            "optimizer" : self.opt, 
-            "scheduler": {
-                'scheduler': self.scheduler,
-                'monitor': 'val_acc' 
-            }
+
+        return {
+            "optimizer": self.opt,
+            "scheduler": {"scheduler": self.scheduler, "monitor": "val_acc"},
         }
 
     def forward(self, x):

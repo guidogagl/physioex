@@ -44,7 +44,7 @@ class Trainer:
         self.target_transform = config[model_name]["target_transform"]
         self.module_config = config[model_name]["module_config"]
         self.module_config["seq_len"] = sequence_length
-        
+
         self.batch_size = batch_size
         self.max_epoch = max_epoch
         self.val_check_interval = val_check_interval
@@ -60,22 +60,22 @@ class Trainer:
 
         Path(self.ckp_path).mkdir(parents=True, exist_ok=True)
 
-        picks = picks.split( " " )
+        picks = picks.split(" ")
         self.module_config["in_channels"] = len(picks)
 
         logger.info("Loading dataset")
         self.dataset = self.dataset_call(
-            version = self.version, 
-            picks = picks, 
-            preprocessing = self.input_transform, 
-            sequence_length = sequence_length, 
-            target_transform = self.target_transform
+            version=self.version,
+            picks=picks,
+            preprocessing=self.input_transform,
+            sequence_length=sequence_length,
+            target_transform=self.target_transform,
         )
-        
+
         logger.info("Dataset loaded")
 
         self.folds = list(range(self.dataset.get_num_folds()))
-        
+
         self.module_config["loss_call"] = loss_config[loss_name]
         self.module_config["loss_params"] = dict()
 
@@ -91,9 +91,9 @@ class Trainer:
         datamodule = TimeDistributedModule(
             dataset=dataset,
             batch_size=self.batch_size,
-            fold = fold,
+            fold=fold,
         )
-        
+
         module = self.model_call(module_config=self.module_config)
 
         # Definizione delle callback

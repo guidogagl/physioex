@@ -1,4 +1,3 @@
-
 import numpy as np
 import pytorch_lightning as pl
 import torch
@@ -14,6 +13,7 @@ from typing import List, Callable
 import pandas as pd
 
 import bisect
+
 
 def transform_to_sequence(x, y, sequence_length):
 
@@ -31,29 +31,34 @@ def transform_to_sequence(x, y, sequence_length):
 
 
 def create_subject_index_map(df, sequence_lenght):
-    subject_start_indices = np.zeros( df["subject_id"].max() + 1)
-    subject_end_indices = np.zeros_like( subject_start_indices )
+    subject_start_indices = np.zeros(df["subject_id"].max() + 1)
+    subject_end_indices = np.zeros_like(subject_start_indices)
 
     start_index = 0
 
     for _, row in df.iterrows():
-        subject = row['subject_id']
-        num_windows = row['num_samples'] - sequence_lenght + 1
+        subject = row["subject_id"]
+        num_windows = row["num_samples"] - sequence_lenght + 1
 
-        subject_start_indices[ subject ] = start_index
-        
-        start_index = start_index + num_windows 
-        
-        subject_end_indices[ subject ] = start_index 
-                 
+        subject_start_indices[subject] = start_index
+
+        start_index = start_index + num_windows
+
+        subject_end_indices[subject] = start_index
+
     return subject_start_indices, subject_end_indices
 
+
 def find_subject_for_window(index, subject_start_indices, subject_end_indices):
-    
-    for subject in range(len( subject_start_indices )):
-        if subject_start_indices[subject] <= index and index < subject_end_indices[subject]:
+
+    for subject in range(len(subject_start_indices)):
+        if (
+            subject_start_indices[subject] <= index
+            and index < subject_end_indices[subject]
+        ):
             return subject, int(index - subject_start_indices[subject])
-        
+
+
 class PhysioExDataset(torch.utils.data.Dataset):
 
     def __init__(
@@ -73,9 +78,11 @@ class PhysioExDataset(torch.utils.data.Dataset):
 
         # drop from the table the rows with subject_id not in self.subjects
         self.table = self.table[self.table["subject_id"].isin(self.subjects)]
-        
-        self.subject_start_indices, self.subject_end_indices = create_subject_index_map(self.table, sequence_length)   
-        
+
+        self.subject_start_indices, self.subject_end_indices = create_subject_index_map(
+            self.table, sequence_length
+        )
+
         self.split_path = str(Path.home()) + self.config["splits_v" + version]
         self.data_path = str(Path.home()) + self.config[preprocessing + "_path"]
 
@@ -90,39 +97,50 @@ class PhysioExDataset(torch.utils.data.Dataset):
         self.target_transform = target_transform
         self.input_transform = transform
 
-        self.input_shape = self.config[ "shape_" + preprocessing ]
-        
+        self.input_shape = self.config["shape_" + preprocessing]
+
     def __len__(self):
-        return np.sum( self.table['num_samples'] - self.L + 1 ) 
+        return np.sum(self.table["num_samples"] - self.L + 1)
 
-    
     def __getitem__(self, idx):
-        subject_id, relative_id  = find_subject_for_window(idx, self.subject_start_indices, self.subject_end_indices)
-        
-        subject_num_samples = self.table[self.table['subject_id'] == subject_id]['num_samples'].values[0]
+        subject_id, relative_id = find_subject_for_window(
+            idx, self.subject_start_indices, self.subject_end_indices
+        )
 
-        
+        subject_num_samples = self.table[self.table["subject_id"] == subject_id][
+            "num_samples"
+        ].values[0]
+
         input = []
-        for pick in self.picks: 
-            path = self.data_path + f"/{pick}_{subject_id}.dat"        
-            
-            fp = np.memmap( path, dtype='float32', mode='r', shape=( subject_num_samples, *self.input_shape) )[ relative_id : relative_id + self.L ]
-            
+        for pick in self.picks:
+            path = self.data_path + f"/{pick}_{subject_id}.dat"
+
+            fp = np.memmap(
+                path,
+                dtype="float32",
+                mode="r",
+                shape=(subject_num_samples, *self.input_shape),
+            )[relative_id : relative_id + self.L]
+
             fp = np.expand_dims(fp, axis=0)
-            input.append( fp )
+            input.append(fp)
 
         input = np.concatenate(input, axis=0)
-        
-        
+
         if len(self.picks) == 1:
-            input = np.expand_dims( input, axis = 0)
-            
+            input = np.expand_dims(input, axis=0)
+
         # read the label in the same way
-        
-        y = np.memmap( self.data_path + f"/y_{subject_id}.dat", dtype='int16', mode='r', shape=( subject_num_samples ) )[ relative_id : relative_id + self.L ]
-        
+
+        y = np.memmap(
+            self.data_path + f"/y_{subject_id}.dat",
+            dtype="int16",
+            mode="r",
+            shape=(subject_num_samples),
+        )[relative_id : relative_id + self.L]
+
         return torch.tensor(input).float(), torch.tensor(y).view(-1).long()
-        
+
     def get_num_folds(self):
         pass
 
@@ -136,15 +154,18 @@ class PhysioExDataset(torch.utils.data.Dataset):
         test_idx = []
 
         for _, row in self.table.iterrows():
-            subject_id = int(row['subject_id'])
+            subject_id = int(row["subject_id"])
 
-            indices = np.arange( start=self.subject_start_indices[subject_id], stop=self.subject_end_indices[subject_id] )
+            indices = np.arange(
+                start=self.subject_start_indices[subject_id],
+                stop=self.subject_end_indices[subject_id],
+            )
 
-            if row['split'] == 0:
+            if row["split"] == 0:
                 train_idx.append(indices)
-            elif row['split'] == 1:
+            elif row["split"] == 1:
                 valid_idx.append(indices)
-            elif row['split'] == 2:
+            elif row["split"] == 2:
                 test_idx.append(indices)
 
         train_idx = np.concatenate(train_idx)
@@ -152,8 +173,6 @@ class PhysioExDataset(torch.utils.data.Dataset):
         test_idx = np.concatenate(test_idx)
 
         return train_idx, valid_idx, test_idx
-        
-
 
 
 class TimeDistributedModule(pl.LightningDataModule):
@@ -169,7 +188,7 @@ class TimeDistributedModule(pl.LightningDataModule):
         self.dataset = dataset
         self.batch_size = batch_size
         self.chunk_size = chunk_size
-        
+
         self.dataset.split(fold)
 
         self.train_idx, self.valid_idx, self.test_idx = self.dataset.get_sets()

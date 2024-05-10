@@ -1,6 +1,7 @@
 """
 This class  contains different functions that generates triangular linear filter shape, mel filter bank shape. The filterbank layer uses the triangular linear filterbank shape
 """
+
 import numpy as np
 
 

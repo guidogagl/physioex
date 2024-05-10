@@ -44,12 +44,18 @@ class SleepEDF(PhysioExDataset):
             sequence_length,
             target_transform,
         )
-        
-        scaling_file = np.load( str(Path.home()) + self.config[ self.preprocessing + "_path"] + "scaling_" + self.version + ".npz" )
-        
+
+        scaling_file = np.load(
+            str(Path.home())
+            + self.config[self.preprocessing + "_path"]
+            + "scaling_"
+            + self.version
+            + ".npz"
+        )
+
         EEG_mean, EOG_mean, EMG_mean = scaling_file["mean"]
         EEG_std, EOG_std, EMG_std = scaling_file["std"]
-        
+
         self.mean = []
         self.std = []
 
@@ -62,24 +68,21 @@ class SleepEDF(PhysioExDataset):
         if "EMG" in self.picks:
             self.mean.append(EMG_mean)
             self.std.append(EMG_std)
-            
-        self.mean = torch.tensor( np.array(self.mean) ).float()
-        self.std = torch.tensor( np.array(self.std) ).float()
+
+        self.mean = torch.tensor(np.array(self.mean)).float()
+        self.std = torch.tensor(np.array(self.std)).float()
 
     def get_num_folds(self):
         split_matrix = loadmat(self.split_path)["test_sub"]
 
         return len(split_matrix)
 
-
-
     def split(self, fold: int = 0):
 
         split_matrix = loadmat(self.split_path)
 
-        test_subjects = split_matrix["test_sub"][fold][0][0] 
-        valid_subjects = split_matrix["eval_sub"][fold][0][0] 
-        
+        test_subjects = split_matrix["test_sub"][fold][0][0]
+        valid_subjects = split_matrix["eval_sub"][fold][0][0]
 
         # add a column to the table with 0 if the subject is in train, 1 if in valid, 2 if in test
 
@@ -89,15 +92,12 @@ class SleepEDF(PhysioExDataset):
 
         self.table["split"] = split
 
-        
-        
     def __getitem__(self, idx):
-        x, y =  super().__getitem__(idx)
+        x, y = super().__getitem__(idx)
 
-        x = ( x - self.mean ) / self.std
-        
+        x = (x - self.mean) / self.std
+
         if self.target_transform is not None:
             y = self.target_transform(y)
-        
-        return x, y
 
+        return x, y

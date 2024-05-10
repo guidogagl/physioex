@@ -9,10 +9,10 @@ module_config = dict()
 
 
 class Net(nn.Module):
-    def __init__(self, module_config = module_config):
+    def __init__(self, module_config=module_config):
         super().__init__()
 
-        print( module_config["in_channels"])
+        print(module_config["in_channels"])
         self.epoch_encoder = SleepStagerChambon2018(
             n_chans=module_config["in_channels"],
             sfreq=module_config["sfreq"],
@@ -20,33 +20,35 @@ class Net(nn.Module):
             n_times=module_config["n_times"],
             return_feats=True,
         )
-        
-        self.clf = nn.Linear( self.epoch_encoder.len_last_layer * module_config["seq_len"], 5)
-        
+
+        self.clf = nn.Linear(
+            self.epoch_encoder.len_last_layer * module_config["seq_len"], 5
+        )
+
         self.drop = nn.Dropout(0.5)
-        
+
     def forward(self, x):
         x, y = self.encode(x)
         return y
 
     def encode(self, x):
         batch_size, seqlen, nchan, nsamp = x.size()
-        
+
         x = x.reshape(-1, nchan, nsamp)
-        
+
         x = self.epoch_encoder(x)
-        
-        x = x.reshape( batch_size, -1 )
-        
+
+        x = x.reshape(batch_size, -1)
+
         y = self.drop(x)
         y = self.clf(y)
-        
+
         return x, y
+
 
 class Chambon2018Net(SleepModule):
     def __init__(self, module_config=module_config):
         super(Chambon2018Net, self).__init__(Net(module_config), module_config)
-
 
     def compute_loss(
         self,
