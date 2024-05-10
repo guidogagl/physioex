@@ -43,7 +43,7 @@ class Dreem(PhysioExDataset):
 
         self.subjects = self.table["subject_id"].values.astype(int)
 
-        self.subject_start_indices, self.subject_end_indices = create_subject_index_map(
+        self.window_to_subject, self.subject_to_start = create_subject_index_map(
             self.table, sequence_length
         )
 

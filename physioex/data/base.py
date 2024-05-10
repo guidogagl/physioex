@@ -30,33 +30,29 @@ def transform_to_sequence(x, y, sequence_length):
     return x_seq, y_seq
 
 
-def create_subject_index_map(df, sequence_lenght):
-    subject_start_indices = np.zeros(df["subject_id"].max() + 1)
-    subject_end_indices = np.zeros_like(subject_start_indices)
+def create_subject_index_map(df, sequence_length):
+    max_windows = (df["num_samples"] - sequence_length + 1).sum()
+    window_to_subject = np.zeros(max_windows, dtype=np.int16)
+    subject_to_start = np.zeros(df["subject_id"].max() + 1, dtype=np.int32)
 
     start_index = 0
 
     for _, row in df.iterrows():
         subject = row["subject_id"]
-        num_windows = row["num_samples"] - sequence_lenght + 1
+        num_windows = row["num_samples"] - sequence_length + 1
 
-        subject_start_indices[subject] = start_index
+        window_to_subject[start_index:start_index + num_windows] = subject
+        subject_to_start[subject] = start_index
 
-        start_index = start_index + num_windows
+        start_index += num_windows
 
-        subject_end_indices[subject] = start_index
-
-    return subject_start_indices, subject_end_indices
+    return window_to_subject, subject_to_start
 
 
-def find_subject_for_window(index, subject_start_indices, subject_end_indices):
-
-    for subject in range(len(subject_start_indices)):
-        if (
-            subject_start_indices[subject] <= index
-            and index < subject_end_indices[subject]
-        ):
-            return subject, int(index - subject_start_indices[subject])
+def find_subject_for_window(index, window_to_subject, subject_to_start):
+    subject = window_to_subject[index]
+    start_index = subject_to_start[subject]
+    return subject, int(index - start_index)
 
 
 class PhysioExDataset(torch.utils.data.Dataset):
@@ -79,7 +75,7 @@ class PhysioExDataset(torch.utils.data.Dataset):
         # drop from the table the rows with subject_id not in self.subjects
         self.table = self.table[self.table["subject_id"].isin(self.subjects)]
 
-        self.subject_start_indices, self.subject_end_indices = create_subject_index_map(
+        self.window_to_subject, self.subject_to_start = create_subject_index_map(
             self.table, sequence_length
         )
 
@@ -95,8 +91,7 @@ class PhysioExDataset(torch.utils.data.Dataset):
 
         self.L = sequence_length
         self.target_transform = target_transform
-        self.input_transform = transform
-
+        
         self.input_shape = self.config["shape_" + preprocessing]
 
     def __len__(self):
@@ -104,7 +99,7 @@ class PhysioExDataset(torch.utils.data.Dataset):
 
     def __getitem__(self, idx):
         subject_id, relative_id = find_subject_for_window(
-            idx, self.subject_start_indices, self.subject_end_indices
+            idx, self.window_to_subject, self.subject_to_start
         )
 
         subject_num_samples = self.table[self.table["subject_id"] == subject_id][
@@ -122,13 +117,13 @@ class PhysioExDataset(torch.utils.data.Dataset):
                 shape=(subject_num_samples, *self.input_shape),
             )[relative_id : relative_id + self.L]
 
-            fp = np.expand_dims(fp, axis=0)
+            fp = np.expand_dims(fp, axis=1)
             input.append(fp)
 
-        input = np.concatenate(input, axis=0)
+        input = np.concatenate(input, axis=1)
 
-        if len(self.picks) == 1:
-            input = np.expand_dims(input, axis=0)
+        #if len(self.picks) == 1:
+        #    input = np.expand_dims(input, axis=0)
 
         # read the label in the same way
 
@@ -156,10 +151,10 @@ class PhysioExDataset(torch.utils.data.Dataset):
         for _, row in self.table.iterrows():
             subject_id = int(row["subject_id"])
 
-            indices = np.arange(
-                start=self.subject_start_indices[subject_id],
-                stop=self.subject_end_indices[subject_id],
-            )
+            start_index = self.subject_to_start[subject_id]
+            num_windows = row["num_samples"] - self.L + 1
+            indices = np.arange(start=start_index, stop=start_index + num_windows).astype(np.int32)
+
 
             if row["split"] == 0:
                 train_idx.append(indices)

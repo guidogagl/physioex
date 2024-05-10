@@ -17,14 +17,14 @@ import torch
 class SleepEDF(PhysioExDataset):
     def __init__(
         self,
-        version: str = "dodh",
+        version: str = "2018",
         picks: List[str] = ["Fpz-Cz"],  # available [ "Fpz-Cz", "EOG", "EMG" ]
         preprocessing: str = "raw",  # available [ "raw", "xsleepnet" ]
         sequence_length: int = 21,
         target_transform: Callable = None,
     ):
 
-        assert version in ["dodh", "dodo"], "version should be one of '2013'-'2018'"
+        assert version in ["2018", "2013"], "version should be one of '2013'-'2018'"
         assert preprocessing in [
             "raw",
             "xsleepnet",

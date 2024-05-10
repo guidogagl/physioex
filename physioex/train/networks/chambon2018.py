@@ -32,6 +32,7 @@ class Net(nn.Module):
         return y
 
     def encode(self, x):
+
         batch_size, seqlen, nchan, nsamp = x.size()
 
         x = x.reshape(-1, nchan, nsamp)

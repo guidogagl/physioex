@@ -13,7 +13,7 @@ class_descriptor : ["Sleep stage W", "Sleep stage 1", "Sleep stage 2", "Sleep st
 
 
 shape_raw : [ 3000 ]
-shape_xsleepent : [29, 129]
+shape_xsleepnet : [29, 129]
 
 ######### preprocess link #########
 
