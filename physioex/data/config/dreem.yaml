@@ -3,7 +3,7 @@ table_dodo : "/dreem/table_dodo.csv"
 table_dodh : "/dreem/table_dodh.csv"
 
 shape_raw : [ 3000 ]
-shape_xsleepent : [29, 129]
+shape_xsleepnet : [29, 129]
 
 dodh:
   fold_0:

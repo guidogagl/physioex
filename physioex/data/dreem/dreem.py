@@ -102,10 +102,6 @@ class Dreem(PhysioExDataset):
     def __getitem__(self, idx):
         x, y =  super().__getitem__(idx)
 
-        print( self.mean.size() )
-        print( self.std.size() )
-        
-        print ( x.size() )
         x = ( x - self.mean ) / self.std
         
         if self.target_transform is not None:

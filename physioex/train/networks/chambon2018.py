@@ -12,7 +12,7 @@ class Net(nn.Module):
     def __init__(self, module_config = module_config):
         super().__init__()
 
-        
+        print( module_config["in_channels"])
         self.epoch_encoder = SleepStagerChambon2018(
             n_chans=module_config["in_channels"],
             sfreq=module_config["sfreq"],
@@ -32,7 +32,10 @@ class Net(nn.Module):
     def encode(self, x):
         batch_size, seqlen, nchan, nsamp = x.size()
         
+        x = x.reshape(-1, nchan, nsamp)
+        
         x = self.epoch_encoder(x)
+        
         x = x.reshape( batch_size, -1 )
         
         y = self.drop(x)

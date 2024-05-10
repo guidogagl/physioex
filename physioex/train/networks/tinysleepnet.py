@@ -81,6 +81,7 @@ class Classifier(nn.Module):
 
 class Net(nn.Module):
     def __init__(self, module_config=module_config):
+        super().__init__()
         
         self.feature_extractor = FeatureExtractor( module_config )
         self.clf = Classifier( module_config )
@@ -95,7 +96,7 @@ class Net(nn.Module):
         
         x = x.reshape(batch_size, seqlen, -1)
         
-        x = self.clf.encoder(x)
+        x = self.clf.encode(x)
         
         batch_size, seq_len, rnn_units = x.size()
         y = x.reshape(batch_size * seq_len, rnn_units)
@@ -114,6 +115,6 @@ class Net(nn.Module):
 class TinySleepNet(SleepModule):
     def __init__(self, module_config=module_config):
         super(TinySleepNet, self).__init__(
-            Net(config=module_config),
+            Net(module_config=module_config),
             module_config,
         )
