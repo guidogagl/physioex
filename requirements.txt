@@ -12,3 +12,6 @@ boto3
 h5py
 
 mkdocs-material
+
+xlrd
+scipy

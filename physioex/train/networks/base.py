@@ -48,13 +48,13 @@ class SeqtoSeqModule(nn.Module):
         return self.sequence_encoder.encode(x), self.sequence_encoder(x)
 
 
-class SeqtoSeq(pl.LightningModule):
+class SleepModule(pl.LightningModule):
     def __init__(
-        self, epoch_encoder: nn.Module, sequence_encoder: nn.Module, config: Dict
+        self, nn: nn.Module, config: Dict
     ):
-        super(SeqtoSeq, self).__init__()
-        self.nn = SeqtoSeqModule(epoch_encoder, sequence_encoder)
-
+        super(SleepModule, self).__init__()
+        self.nn = nn
+        
         # metrics
         self.acc = tm.Accuracy(
             task="multiclass", num_classes=config["n_classes"], average="weighted"

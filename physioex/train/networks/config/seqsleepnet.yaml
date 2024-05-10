@@ -19,3 +19,4 @@ learning_rate: 1e-4
 adam_beta_1: 0.9
 adam_beta_2: 0.999
 adam_epsilon: 1e-8
+input_processing: xsleepnet

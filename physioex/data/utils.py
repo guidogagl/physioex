@@ -1,8 +1,11 @@
 import os
 import pickle
-from typing import List
 
 from loguru import logger
+
+import pkg_resources as pkg
+
+import yaml
 
 
 @logger.catch
@@ -30,3 +33,14 @@ def write_cache(data_path: str, cache):
     except:
         logger.exception("Exception rised while writing cache file")
     return
+
+
+@logger.catch
+def read_config(config_path: str):
+
+    config_file = pkg.resource_filename(__name__, config_path)
+
+    with open(config_file, "r") as file:
+        config = yaml.safe_load(file)
+
+    return config

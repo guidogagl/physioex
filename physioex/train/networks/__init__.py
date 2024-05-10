@@ -2,7 +2,6 @@ import pkg_resources as pkg
 import yaml
 
 import physioex as physioex
-import physioex.train.networks.utils.input_transform as input_transform
 import physioex.train.networks.utils.target_transform as target_transform
 from physioex.train.networks.chambon2018 import Chambon2018Net
 from physioex.train.networks.seqsleepnet import SeqSleepNet
@@ -22,19 +21,19 @@ config = {
     "chambon2018": {
         "module_config": read_config("chambon2018"),
         "module": Chambon2018Net,
-        "input_transform": None,
+        "input_transform": "raw",
         "target_transform": target_transform.get_mid_label,
     },
     "seqsleepnet": {
         "module_config": read_config("seqsleepnet"),
         "module": SeqSleepNet,
-        "input_transform": input_transform.xsleepnet_transform,
+        "input_transform": "xsleepnet",
         "target_transform": None,
     },
     "tinysleepnet": {
         "module_config": read_config("tinysleepnet"),
         "module": TinySleepNet,
-        "input_transform": None,
+        "input_transform": "raw",
         "target_transform": None,
     },
 }

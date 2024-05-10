@@ -8,3 +8,4 @@ adam_beta_1: 0.9
 adam_beta_2: 0.999
 adam_epsilon: 1e-8
 latent_space_dim: 32
+input_processing : raw

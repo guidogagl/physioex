@@ -1,2 +1,6 @@
 def get_mid_label(labels):
-    return labels[int((len(labels) - 1) / 2)]
+    
+    sequence_length = labels.size(0)
+    mid_sequence = int((sequence_length - 1) / 2)
+    
+    return labels[mid_sequence]
