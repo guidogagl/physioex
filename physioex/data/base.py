@@ -41,7 +41,7 @@ def create_subject_index_map(df, sequence_length):
         subject = row["subject_id"]
         num_windows = row["num_samples"] - sequence_length + 1
 
-        window_to_subject[start_index:start_index + num_windows] = subject
+        window_to_subject[start_index : start_index + num_windows] = subject
         subject_to_start[subject] = start_index
 
         start_index += num_windows
@@ -91,7 +91,7 @@ class PhysioExDataset(torch.utils.data.Dataset):
 
         self.L = sequence_length
         self.target_transform = target_transform
-        
+
         self.input_shape = self.config["shape_" + preprocessing]
 
     def __len__(self):
@@ -122,7 +122,7 @@ class PhysioExDataset(torch.utils.data.Dataset):
 
         input = np.concatenate(input, axis=1)
 
-        #if len(self.picks) == 1:
+        # if len(self.picks) == 1:
         #    input = np.expand_dims(input, axis=0)
 
         # read the label in the same way
@@ -153,8 +153,9 @@ class PhysioExDataset(torch.utils.data.Dataset):
 
             start_index = self.subject_to_start[subject_id]
             num_windows = row["num_samples"] - self.L + 1
-            indices = np.arange(start=start_index, stop=start_index + num_windows).astype(np.int32)
-
+            indices = np.arange(
+                start=start_index, stop=start_index + num_windows
+            ).astype(np.int32)
 
             if row["split"] == 0:
                 train_idx.append(indices)

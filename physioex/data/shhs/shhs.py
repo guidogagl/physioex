@@ -15,11 +15,11 @@ import torch
 import pandas as pd
 
 
-class Dreem(PhysioExDataset):
+class Shhs(PhysioExDataset):
     def __init__(
         self,
-        version: str = "dodh",
-        picks: List[str] = ["C3-M2"],  # available [ "C3-M3", "EOG", "EMG" ]
+        version: str = None,
+        picks: List[str] = ["EEG"],  # available [ "EEG", "EOG", "EMG" ]
         preprocessing: str = "raw",  # available [ "raw", "xsleepnet" ]
         sequence_length: int = 21,
         target_transform: Callable = None,
@@ -32,23 +32,22 @@ class Dreem(PhysioExDataset):
         ], "preprocessing should be one of 'raw'-'xsleepnet'"
         for pick in picks:
             assert pick in [
-                "C3-M2",
+                "EEG",
                 "EOG",
                 "EMG",
-            ], "pick should be one of 'C3-M2, 'EOG', 'EMG'"
+            ], "pick should be one of 'EEG, 'EOG', 'EMG'"
 
-        self.config = read_config("config/dreem.yaml")
+        self.table = pd.read_csv(str(Path.home()) + "/shhs/table.csv")
 
-        self.table = pd.read_csv(str(Path.home()) + self.config["table_" + version])
-
-        self.subjects = self.table["subject_id"].values.astype(int)
+        self.subjects = self.table["subject_id"].values.astype(np.int16)
 
         self.window_to_subject, self.subject_to_start = create_subject_index_map(
             self.table, sequence_length
         )
 
-        self.split_path = None
-        self.data_path = str(Path.home()) + f"/dreem/{preprocessing}/{version}/"
+        self.split_path = str(Path.home()) + f"/shhs/data_split_eval.mat"
+
+        self.data_path = str(Path.home()) + f"/shhs/{preprocessing}/"
 
         self.picks = picks
         self.version = version
@@ -60,11 +59,12 @@ class Dreem(PhysioExDataset):
         self.L = sequence_length
         self.target_transform = target_transform
 
-        self.input_shape = self.config["shape_" + preprocessing]
+        if self.preprocessing == "raw":
+            self.input_shape = [3000]
+        else:
+            self.input_shape = [29, 129]
 
-        scaling_file = np.load(
-            str(Path.home()) + f"/dreem/{preprocessing}/{version}/scaling.npz"
-        )
+        scaling_file = np.load(str(Path.home()) + f"/shhs/{preprocessing}/scaling.npz")
 
         EEG_mean, EOG_mean, EMG_mean = scaling_file["mean"]
         EEG_std, EOG_std, EMG_std = scaling_file["std"]
@@ -72,7 +72,7 @@ class Dreem(PhysioExDataset):
         self.mean = []
         self.std = []
 
-        if "C3-M2" in self.picks:
+        if "EEG" in self.picks:
             self.mean.append(EEG_mean)
             self.std.append(EEG_std)
         if "EOG" in self.picks:
@@ -86,16 +86,20 @@ class Dreem(PhysioExDataset):
         self.std = torch.tensor(np.array(self.std)).float()
 
     def get_num_folds(self):
-        return 10
+        split_matrix = loadmat(self.split_path)["test_sub"]
+
+        return len(split_matrix)
 
     def split(self, fold: int = 0):
 
-        test_subjects = self.config[self.version][f"fold_{fold}"]["test"]
-        valid_subjects = self.config[self.version][f"fold_{fold}"]["valid"]
+        split_matrix = loadmat(self.split_path)
+
+        test_subjects = np.array(split_matrix["test_sub"][fold].astype(np.int16))
+        valid_subjects = np.array(split_matrix["eval_sub"][fold].astype(np.int16))
 
         # add a column to the table with 0 if the subject is in train, 1 if in valid, 2 if in test
 
-        split = np.zeros(len(self.table))
+        split = np.zeros(len(self.table)).astype(np.int8)
         split[self.table["subject_id"].isin(test_subjects)] = 2
         split[self.table["subject_id"].isin(valid_subjects)] = 1
 
