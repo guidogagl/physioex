@@ -95,7 +95,7 @@ class PhysioExDataset(torch.utils.data.Dataset):
         self.input_shape = self.config["shape_" + preprocessing]
 
     def __len__(self):
-        return np.sum(self.table["num_samples"] - self.L + 1)
+        return int(np.sum(self.table["num_samples"] - self.L + 1))
 
     def __getitem__(self, idx):
         subject_id, relative_id = find_subject_for_window(

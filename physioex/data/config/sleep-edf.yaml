@@ -31,7 +31,7 @@ subjects_v2013 : [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 
 table: "/mne_data/sleep-edf-table.csv"
 
 splits_v2018 : "/mne_data/sleep-edf-split.mat"
-splits_v2013 : "/mne_data/sleep-edf-2013-split.mat"
+splits_v2013 : "/mne_data/sleep-edf-split-2013.mat"
 
 raw_path : "/mne_data/sleep-edf-raw/"
 xsleepnet_path : "/mne_data/sleep-edf-xsleepnet/"
