@@ -178,7 +178,7 @@ class TimeDistributedModule(pl.LightningDataModule):
         batch_size: int = 32,
         chunk_size: int = 256,
         fold: int = 0,
-        num_workers: int = 1,
+        num_workers: int = 32,
     ):
         super().__init__()
         self.dataset = dataset
