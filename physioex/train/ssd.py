@@ -12,6 +12,8 @@ from physioex.data import TimeDistributedModule, datasets
 from physioex.train.networks import config
 from physioex.train.networks.utils.loss import config as loss_config
 
+import json
+import numpy as np
 
 import torch
 from loguru import logger
@@ -27,7 +29,7 @@ train_domain = {
     "sequence_length": 21,
 }
 
-target_domain = target_domain = [
+target_domain = [
     {
         "name": "dreem",
         "version": "dodh",
@@ -55,11 +57,12 @@ target_domain = target_domain = [
 ]
 
 ckp_path = "models/ssd/" + str(uuid.uuid4()) + "/"
-max_epoch = 1
-batch_size = 512
+
+max_epoch = 100
+batch_size = 256
 imbalance = False
 
-val_check_interval = 1000
+val_check_interval = 300
 
 
 class SingleSourceDomain:
@@ -163,7 +166,7 @@ class SingleSourceDomain:
 
             target_call = datasets[target_domain["name"]]
             logger.info(
-                f"Loading target dataset {target_call} version {target_domain['version']}"
+                f"Loading target dataset {target_domain['name']} version {target_domain['version']}"
             )
 
             target_args = {
@@ -177,7 +180,13 @@ class SingleSourceDomain:
             target_dataset = target_call(**target_args)
 
             target_folds = list(range(target_dataset.get_num_folds()))
-            target_results[f"{target_call}_{target_domain['version']}"] = {}
+            
+            # check if the key exists in case create it
+            if target_domain["name"] not in target_results:
+                target_results[target_domain["name"]] = {}
+                
+            if target_domain["version"] not in target_results[target_domain["name"]]:
+                target_results[target_domain["name"]][target_domain["version"]] = {}
 
             for tf in target_folds:
                 target_dataset.split(fold)
@@ -190,44 +199,48 @@ class SingleSourceDomain:
 
                 logger.info("Evaluating model on fold %d" % tf)
 
-                target_results[f"{target_call}_{target_domain['version']}"][tf] = (
+                target_results[target_domain["name"]][target_domain["version"]][tf] = (
                     trainer.test(ckpt_path="best", datamodule=target_datamodule)
                 )
 
-        return {"ssd_results": ssd_results, "msd_resuts": target_results}
+        return {"ssd_results": ssd_results, "msd_results": target_results}
 
     def run(self):
-        results = [self.train_evaluate(fold) for fold in self.folds]
-        ssd_results = [result["ssd_results"] for result in results]
-        msd_results = [result["msd_results"] for result in results]
 
-        try:
-            all_test_results = []
-            for i, result in enumerate(ssd_results):
-                test_results = pd.DataFrame(result)
-                test_results["fold"] = i
-                all_test_results.append(test_results)
+        # ssd has only one fold : 0
+        results = self.train_evaluate(0)
 
-            all_test_results_df = pd.concat(all_test_results)
-            all_test_results_df.to_csv(self.ckp_path + "ssd_results.csv", index=False)
+        ssd_results = results["ssd_results"]
+        msd_results = results["msd_results"]
 
-            for target in msd_results[0].keys():
-                all_target_results = []
-                for fold in msd_results[0][target].keys():
-                    target_results = pd.DataFrame(
-                        [result[target][fold] for result in msd_results]
-                    )
-                    target_results["fold"] = fold
-                    all_target_results.append(target_results)
+        pd.DataFrame(ssd_results).to_csv(self.ckp_path + "ssd_results.csv", index=False)
 
-                all_target_results_df = pd.concat(all_target_results)
-                all_target_results_df.to_csv(
-                    self.ckp_path + f"{target}_results.csv", index=False
-                )
+        # save msd_results as a json file
 
-        except Exception as e:
-            logger.error(f"Error while saving results: {e}")
-            raise e
+        with open(self.ckp_path + "msd_results.json", "w") as f:
+            json.dump(msd_results, f)
+
+        # msd results saving
+        targets = list(msd_results.keys())
+
+        target_df = []
+        for target in targets:
+            versions = list(msd_results[target].keys())
+
+            for version in versions:
+
+                results_dict = msd_results[target][version]
+                results_folds = list(results_dict.keys())
+
+                for fold in results_folds:
+                    target_df.append(pd.DataFrame(results_dict[fold]))
+                    target_df[-1]["fold"] = fold
+                    target_df[-1]["version"] = version
+                    target_df[-1]["target"] = target
+
+        target_df = pd.concat(target_df)
+
+        target_df.to_csv(self.ckp_path + "msd_results.csv", index=False)
 
         logger.info("Results successfully saved in %s" % self.ckp_path)
 
