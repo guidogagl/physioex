@@ -24,8 +24,6 @@ class Shhs(PhysioExDataset):
         sequence_length: int = 21,
         target_transform: Callable = None,
     ):
-
-        assert version in ["dodo", "dodh"], "version should be one of 'dodo'-'dodh'"
         assert preprocessing in [
             "raw",
             "xsleepnet",
@@ -107,6 +105,7 @@ class Shhs(PhysioExDataset):
 
     def __getitem__(self, idx):
         x, y = super().__getitem__(idx)
+        y = y - 1
 
         x = (x - self.mean) / self.std
 

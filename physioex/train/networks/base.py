@@ -59,7 +59,7 @@ class SleepModule(pl.LightningModule):
 
         return {
             "optimizer": self.opt,
-            "scheduler": {"scheduler": self.scheduler, "monitor": "val_acc"},
+            "lr_scheduler": {"scheduler": self.scheduler, "monitor": "val_acc"},
         }
 
     def forward(self, x):

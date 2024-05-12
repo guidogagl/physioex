@@ -73,8 +73,13 @@ def process_file(filename, output_dir_raw, output_dir_preprocessed, statistics):
         filename.split("_")[0][1:],
         filename.split("_")[1].split(".")[0],
     )
-    with h5py.File(input_dir + filename, "r") as f:
-        data = {key: f[key][()] for key in f.keys()}
+
+    try:
+        with h5py.File(input_dir + filename, "r") as f:
+            data = {key: f[key][()] for key in f.keys()}
+    except Exception as e:
+        logger.error(f"Error reading file {filename}: {e}")
+        exit(-1)
 
     # todo: check this correctly
     raw_data = np.transpose(data["X1"], (1, 0)).astype(np.float32)
@@ -83,8 +88,8 @@ def process_file(filename, output_dir_raw, output_dir_preprocessed, statistics):
     if modality == "eeg":
         y = np.reshape(data["label"], (-1)).astype(np.int16)
         fp = np.memmap(
-            os.path.join(output_dir_raw, f"y_{int(subject_id)}.mmap"),
-            dtype="float32",
+            os.path.join(output_dir_raw, f"y_{int(subject_id)}.dat"),
+            dtype="int16",
             mode="w+",
             shape=y.shape,
         )
@@ -93,8 +98,8 @@ def process_file(filename, output_dir_raw, output_dir_preprocessed, statistics):
         del fp
 
         fp = np.memmap(
-            os.path.join(output_dir_preprocessed, f"y_{int(subject_id)}.mmap"),
-            dtype="float32",
+            os.path.join(output_dir_preprocessed, f"y_{int(subject_id)}.dat"),
+            dtype="int16",
             mode="w+",
             shape=y.shape,
         )
@@ -104,7 +109,7 @@ def process_file(filename, output_dir_raw, output_dir_preprocessed, statistics):
 
     modality = modality.upper()
 
-    new_filename = f"{int( subject_id )}_{modality}.mmap"
+    new_filename = f"{modality}_{int( subject_id )}.dat"
 
     # Create memmap for raw data
     raw_memmap = np.memmap(
@@ -154,10 +159,10 @@ def process_files(input_dir, output_dir_raw, output_dir_preprocessed, csv_path):
 
     filenames = os.listdir(input_dir)
 
-    results = Parallel(n_jobs=50)(
+    results = Parallel(n_jobs=-1)(
         delayed(process_file)(filename, output_dir_raw, output_dir_preprocessed, stats)
         for filename in tqdm(filenames)
-        if filename.endswith(".mat")
+        if filename.endswith(".mat") and filename.startswith("n")
     )
 
     logger.info("Processing the jobs results")
@@ -176,7 +181,9 @@ def process_files(input_dir, output_dir_raw, output_dir_preprocessed, csv_path):
             raw = (raw_mean, raw_std)
             preprocessed = (preprocessed_mean, preprocessed_std)
 
-            stats.add_values(modalities.index(modality), num_samples, raw, preprocessed)
+            stats.add_values(
+                modalities.index(modality.lower()), num_samples, raw, preprocessed
+            )
 
             col_ids.append(subject_id)
             col_samples.append(num_samples)
@@ -190,7 +197,7 @@ def process_files(input_dir, output_dir_raw, output_dir_preprocessed, csv_path):
 
     # remove from the df all the modalities wich are not EEG
     df = df[df["modality"] == "EEG"]
-    df = df.drop("modality")
+    df = df.drop("modality", axis="columns")
 
     df.to_csv(csv_path, index=False)
 
@@ -202,7 +209,7 @@ def process_files(input_dir, output_dir_raw, output_dir_preprocessed, csv_path):
         raw_std.append(np.array(rstd).astype(np.float32))
 
         prepr_mean.append(np.array(pm).astype(np.float32))
-        prepr_std.apend(np.array(pstd).astype(np.float32))
+        prepr_std.append(np.array(pstd).astype(np.float32))
 
     np.savez(
         f"{output_dir_raw}/scaling.npz",
