@@ -8,7 +8,7 @@ from joblib import Parallel, delayed
 from lightning.pytorch import seed_everything
 from pytorch_lightning.callbacks import ModelCheckpoint, RichProgressBar
 
-from physioex.data import TimeDistributedModule, datasets
+from physioex.data import TimeDistributedModule, CombinedTimeDistributedModule, datasets
 from physioex.train.networks import config
 from physioex.train.networks.utils.loss import config as loss_config
 
@@ -30,6 +30,12 @@ train_domain = {
 }
 
 target_domain = [
+    {
+        "name": "mass",
+        "version": None,
+        "picks": ["EEG"],
+        "sequence_length": 21,
+    },
     {
         "name": "dreem",
         "version": "dodh",
@@ -56,7 +62,7 @@ target_domain = [
     },
 ]
 
-ckp_path = "models/ssd/" + str(uuid.uuid4()) + "/"
+ckp_path = "models/ssd/pretrained/"
 
 max_epoch = 100
 batch_size = 256
@@ -133,35 +139,64 @@ class SingleSourceDomain:
         )
 
         module = self.model_call(module_config=self.module_config)
-
-        checkpoint_callback = ModelCheckpoint(
-            monitor="val_acc",
-            save_top_k=1,
-            mode="max",
-            dirpath=self.ckp_path,
-            filename="fold=%d-{epoch}-{step}-{val_acc:.2f}" % fold,
-        )
-
         progress_bar_callback = RichProgressBar()
 
-        logger.info("Trainer setup")
-        # Configura il trainer con le callback
-        trainer = pl.Trainer(
-            max_epochs=self.max_epoch,
-            val_check_interval=self.val_check_interval,
-            callbacks=[checkpoint_callback, progress_bar_callback],
-            deterministic=True,
-        )
+        # check if the model is already in the ckp_path if not train it
+        Path(self.ckp_path).mkdir(parents=True, exist_ok=True)
+        # get the file inside the folder and check if the model is already there
+        files = list(Path(self.ckp_path).rglob("*.ckpt"))
+        # if the list is empty than there is not model in the folder
 
-        logger.info("Training model")
-        # Addestra il modello utilizzando il trainer e il DataModule
-        trainer.fit(module, datamodule=datamodule)
+        if len(files) == 0:
+            logger.info("Model not found, training")
 
+            self.ckp_path = "models/ssd/" + str(uuid.uuid4()) + "/"
+
+            checkpoint_callback = ModelCheckpoint(
+                monitor="val_acc",
+                save_top_k=1,
+                mode="max",
+                dirpath=self.ckp_path,
+                filename="fold=%d-{epoch}-{step}-{val_acc:.2f}" % fold,
+            )
+
+            logger.info("Trainer setup")
+            # Configura il trainer con le callback
+            trainer = pl.Trainer(
+                max_epochs=self.max_epoch,
+                val_check_interval=self.val_check_interval,
+                callbacks=[checkpoint_callback, progress_bar_callback],
+                deterministic=True,
+            )
+
+            logger.info("Training model")
+            # Addestra il modello utilizzando il trainer e il DataModule
+            trainer.fit(module, datamodule=datamodule)
+            
+            # carica il modello migliore
+            module = self.model_call.load_from_checkpoint(
+                str(Path(self.ckp_path).rglob("*.ckpt")[0]), module_config=self.module_config
+            )
+
+        else:
+            logger.info("Model found, loading")
+
+            module = self.model_call.load_from_checkpoint(
+                str(files[0]), module_config=self.module_config
+            ).eval()
+
+            trainer = pl.Trainer(
+                callbacks=[progress_bar_callback],
+                deterministic=True,
+            )
+
+        
         logger.info("Evaluating model on single source domain")
-        ssd_results = trainer.test(ckpt_path="best", datamodule=datamodule)
-
+        ssd_results = trainer.test(module, datamodule=datamodule)
+        
         logger.info("Evaluating model on target domains")
         target_results = {}
+
         for target_domain in self.target_domain:
 
             target_call = datasets[target_domain["name"]]
@@ -179,29 +214,25 @@ class SingleSourceDomain:
 
             target_dataset = target_call(**target_args)
 
-            target_folds = list(range(target_dataset.get_num_folds()))
-            
             # check if the key exists in case create it
             if target_domain["name"] not in target_results:
                 target_results[target_domain["name"]] = {}
-                
+
             if target_domain["version"] not in target_results[target_domain["name"]]:
                 target_results[target_domain["name"]][target_domain["version"]] = {}
 
-            for tf in target_folds:
-                target_dataset.split(fold)
+            target_dataset.split(0)
 
-                target_datamodule = TimeDistributedModule(
-                    dataset=target_dataset,
-                    batch_size=self.batch_size,
-                    fold=fold,
-                )
+            target_datamodule = CombinedTimeDistributedModule(
+                dataset=target_dataset,
+                batch_size=self.batch_size,
+            )
 
-                logger.info("Evaluating model on fold %d" % tf)
+            logger.info("Evaluating model")
 
-                target_results[target_domain["name"]][target_domain["version"]][tf] = (
-                    trainer.test(ckpt_path="best", datamodule=target_datamodule)
-                )
+            target_results[target_domain["name"]][target_domain["version"]] = (
+                trainer.test(module, datamodule=target_datamodule)
+            )
 
         return {"ssd_results": ssd_results, "msd_results": target_results}
 
@@ -230,13 +261,9 @@ class SingleSourceDomain:
             for version in versions:
 
                 results_dict = msd_results[target][version]
-                results_folds = list(results_dict.keys())
-
-                for fold in results_folds:
-                    target_df.append(pd.DataFrame(results_dict[fold]))
-                    target_df[-1]["fold"] = fold
-                    target_df[-1]["version"] = version
-                    target_df[-1]["target"] = target
+                target_df.append( pd.DataFrame(results_dict) )
+                target_df[-1]["version"] = version
+                target_df[-1]["target"] = target
 
         target_df = pd.concat(target_df)
 

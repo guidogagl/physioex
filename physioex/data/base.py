@@ -176,14 +176,12 @@ class TimeDistributedModule(pl.LightningDataModule):
         self,
         dataset: PhysioExDataset,
         batch_size: int = 32,
-        chunk_size: int = 256,
         fold: int = 0,
         num_workers: int = 32,
     ):
         super().__init__()
         self.dataset = dataset
         self.batch_size = batch_size
-        self.chunk_size = chunk_size
 
         self.dataset.split(fold)
 
@@ -215,5 +213,22 @@ class TimeDistributedModule(pl.LightningDataModule):
             self.dataset,
             batch_size=self.batch_size,
             sampler=SubsetRandomSampler(self.test_idx),
+            num_workers=self.num_workers,
+        )
+
+
+class CombinedTimeDistributedModule(TimeDistributedModule):
+    def __init__(
+        self,
+        dataset: PhysioExDataset,
+        batch_size: int = 32,
+        num_workers: int = 32,
+    ):
+        super().__init__(dataset, batch_size, 0, num_workers)
+
+    def test_dataloader(self):
+        return DataLoader(
+            self.dataset,
+            batch_size=self.batch_size,
             num_workers=self.num_workers,
         )
