@@ -6,26 +6,27 @@ from scipy import signal
 
 from physioex.explain.spectralgradients.utils import generate_frequency_bands
 
+
 class SpectralGradients(IntegratedGradients):
     def __init__(
         self,
         forward_func: Callable,
         multiply_by_inputs: bool = True,
-        mode : str = "linear",
+        mode: str = "linear",
         n_bands: int = 10,
-        start_freq : float = 0.1,
+        start_freq: float = 0.1,
         fs: int = 100,
         filter_order=5,
     ):
         super().__init__(forward_func, multiply_by_inputs)
 
         assert mode in {"linear", "log"}, "band_stop must be either 'linear' or 'log'"
-        
-        
+
         nyquist = fs / 2
         bands = generate_frequency_bands(nyquist, n_bands, start_freq, mode)
-        self.bands = bands    
-        
+        self.bands = bands
+
+        print(f"Frequency bands: {bands}")
         self.filters = [
             signal.butter(
                 filter_order,
@@ -35,7 +36,7 @@ class SpectralGradients(IntegratedGradients):
             )
             for band in bands
         ]
-        
+
     def attribute(
         self,
         inputs,
@@ -55,7 +56,6 @@ class SpectralGradients(IntegratedGradients):
         baselines = self._construct_baseline(inputs)
         attr = torch.zeros_like(baselines).to(inputs.device)
 
-        
         for f in reversed(range(F)):
             attr[..., f] = super().attribute(
                 inputs,
@@ -90,13 +90,11 @@ class SpectralGradients(IntegratedGradients):
         for n in range(N):
             for c in range(C):
                 x = in_signal_np[n, c]
-                
+
                 for f, filt in reversed(list(enumerate(self.filters))):
 
-                    baselines[f, n, c] = torch.tensor(
-                        signal.sosfilt(filt, x)
-                    )
-                    
+                    baselines[f, n, c] = torch.tensor(signal.sosfilt(filt, x))
+
                     x = baselines[f, n, c].numpy()
 
         baselines = baselines.reshape(F, N, C, S, NS).permute(1, 3, 2, 4, 0)

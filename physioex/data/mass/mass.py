@@ -36,9 +36,9 @@ class Mass(PhysioExDataset):
             ], "pick should be one of 'EEG, 'EOG', 'EMG'"
 
         self.table = pd.read_csv(str(Path.home()) + "/mass/table.csv")
-        self.table = self.table[ self.table["modality"] == "EEG"]
-        self.table = self.table.drop( columns=["modality"] )
-        
+        self.table = self.table[self.table["modality"] == "EEG"]
+        self.table = self.table.drop(columns=["modality"])
+
         self.subjects = self.table["subject_id"].values.astype(np.int16)
 
         self.window_to_subject, self.subject_to_start = create_subject_index_map(
@@ -84,7 +84,7 @@ class Mass(PhysioExDataset):
 
         self.mean = torch.tensor(np.array(self.mean)).float()
         self.std = torch.tensor(np.array(self.std)).float()
-        
+
     def get_num_folds(self):
         split_matrix = loadmat(self.split_path)["test_sub"]
 
@@ -94,8 +94,12 @@ class Mass(PhysioExDataset):
 
         split_matrix = loadmat(self.split_path)
 
-        test_subjects = np.array( list( split_matrix["test_sub"][fold][0][0])).astype(np.int16)
-        valid_subjects = np.array( list( split_matrix["eval_sub"][fold][0][0])).astype(np.int16)
+        test_subjects = np.array(list(split_matrix["test_sub"][fold][0][0])).astype(
+            np.int16
+        )
+        valid_subjects = np.array(list(split_matrix["eval_sub"][fold][0][0])).astype(
+            np.int16
+        )
 
         # add a column to the table with 0 if the subject is in train, 1 if in valid, 2 if in test
 
@@ -108,9 +112,9 @@ class Mass(PhysioExDataset):
     def __getitem__(self, idx):
         x, y = super().__getitem__(idx)
         y = y - 1
-        
+
         x = (x - self.mean) / self.std
-        
+
         if self.target_transform is not None:
             y = self.target_transform(y)
 

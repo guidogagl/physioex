@@ -172,10 +172,11 @@ class SingleSourceDomain:
             logger.info("Training model")
             # Addestra il modello utilizzando il trainer e il DataModule
             trainer.fit(module, datamodule=datamodule)
-            
+
             # carica il modello migliore
             module = self.model_call.load_from_checkpoint(
-                str(Path(self.ckp_path).rglob("*.ckpt")[0]), module_config=self.module_config
+                str(Path(self.ckp_path).rglob("*.ckpt")[0]),
+                module_config=self.module_config,
             )
 
         else:
@@ -190,10 +191,9 @@ class SingleSourceDomain:
                 deterministic=True,
             )
 
-        
         logger.info("Evaluating model on single source domain")
         ssd_results = trainer.test(module, datamodule=datamodule)
-        
+
         logger.info("Evaluating model on target domains")
         target_results = {}
 
@@ -261,7 +261,7 @@ class SingleSourceDomain:
             for version in versions:
 
                 results_dict = msd_results[target][version]
-                target_df.append( pd.DataFrame(results_dict) )
+                target_df.append(pd.DataFrame(results_dict))
                 target_df[-1]["version"] = version
                 target_df[-1]["target"] = target
 
