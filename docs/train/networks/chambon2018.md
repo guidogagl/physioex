@@ -13,7 +13,7 @@ To train the model one could use the `train -experiment chambon2018` command.
       show_root_heading: true
       show_source: true
 
-::: physioex.train.networks.chambon2018.SequenceEncoder
+::: physioex.train.networks.chambon2018.Net
     handler: python
     options:
       members:
