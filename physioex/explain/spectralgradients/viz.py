@@ -11,6 +11,169 @@ from matplotlib import pyplot as plt
 sns.set_theme(style="whitegrid")
 
 from physioex.explain.spectralgradients.utils import generate_frequency_bands
+from physioex.explain.spectralgradients.spectral_gradients import SpectralGradients
+from typing import Dict
+
+import pandas as pd
+
+from tqdm import tqdm
+
+from loguru import logger
+
+
+def plot_class_spectrum(
+    dataloader: torch.utils.data.DataLoader,
+    model: torch.nn.Module,
+    sg: SpectralGradients,
+    n_classes: int = 5,
+    n_batches: int = torch.inf,
+    classes: Dict = None,
+    relevant_bands: Dict = None,
+    band_colors: Dict = None,
+    eeg_bands: Dict = None,
+    filename: str = None,
+    figsize: Tuple[float, float] = (10, 20),
+    device: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu"),
+):
+
+    n_bands = len(sg.bands)
+    spectral_importances = [
+        pd.DataFrame([], columns=[str(band) for band in sg.bands])
+        for _ in range(n_classes)
+    ]
+
+    logger.info(f"Computing spectral importances for {n_batches} batches")
+    error = False
+
+    with torch.no_grad():
+        for batch_idx, (inputs, labels) in enumerate(tqdm(dataloader)):
+
+            baselines = sg._construct_baseline(inputs)
+            importances = torch.zeros(len(inputs), n_bands)
+
+            temp_probas = model(inputs.to(device)).detach().cpu()
+            y_preds = temp_probas.argmax(dim=-1)
+
+            if not error:
+                try:
+                    # if we got engough gpu memory we can compute the spectral importances in one go
+                    # baselines is a tensor of shape
+                    batch_size, seq_len, n_channels, n_samples, n_frequencies = (
+                        baselines.shape
+                    )
+
+                    b = torch.permute(baselines.clone(), (0, 4, 1, 2, 3)).reshape(
+                        batch_size*n_frequencies, seq_len, n_channels, n_samples
+                    )
+                    y_probas = model(b.to(device)).detach().cpu()
+                    y_probas = y_probas.reshape(
+                        batch_size, n_frequencies, n_classes
+                    )
+                    y_probas = torch.permute(y_probas, (0, 2, 1))
+
+                    for i in range(1, n_frequencies + 1):
+                        for j in range(len(inputs)):
+                            importances[j, -i] = torch.norm(
+                                y_probas[j, y_preds[j], -i] - temp_probas[j, y_preds[j]]
+                            )
+                        temp_probas = y_probas[..., -i]
+
+                except RuntimeError:
+                    error = True
+                    logger.exception("Error computing spectral importances in one go")
+                    # log the stack trace
+                    
+            else:
+                for i in range(1, baselines.shape[-1] + 1):
+                    y_probas = model(baselines[..., -i].to(device)).detach().cpu()
+
+                    for j in range(len(inputs)):
+                        importances[j, -i] = torch.norm(
+                            y_probas[j, y_preds[j]] - temp_probas[j, y_preds[j]]
+                        )
+
+                    temp_probas = y_probas
+
+            for i in range(len(inputs)):
+                new_row = pd.DataFrame(
+                    importances[i]
+                    .numpy()
+                    .reshape(-1, len(spectral_importances[y_preds[i]].columns)),
+                    columns=spectral_importances[y_preds[i]].columns,
+                )
+                spectral_importances[y_preds[i]] = spectral_importances[
+                    y_preds[i]
+                ].append(new_row, ignore_index=True)
+
+            if batch_idx >= n_batches:
+                break
+
+    fig, ax = plt.subplots(n_classes, 1, figsize=figsize, sharex=True, sharey=True)
+
+    logger.info("Plotting spectral importances")
+
+    for i in range(n_classes):
+        class_label = classes[i] if classes is not None else f"Class {i}"
+        ax[i].set_title(
+            f"Predicted: {class_label}", fontsize=12, y=1.05
+        )  # Usa il nome della fase del sonno come titolo
+
+        df_new = pd.DataFrame(columns=["frequency", "value"])
+        for column in spectral_importances[i].columns:
+            start, end = map(float, column.strip("[]").split(", "))
+            df_new = pd.concat(
+                [
+                    df_new,
+                    pd.DataFrame(
+                        {
+                            "frequency": [start],
+                            "value": [spectral_importances[i][column].mean()],
+                        }
+                    ),
+                ]
+            )
+            df_new = pd.concat(
+                [
+                    df_new,
+                    pd.DataFrame(
+                        {
+                            "frequency": [end],
+                            "value": [spectral_importances[i][column].mean()],
+                        }
+                    ),
+                ]
+            )
+
+        if (
+            relevant_bands is not None
+            and band_colors is not None
+            and eeg_bands is not None
+        ):
+            for band in relevant_bands[
+                classes[i]
+            ]:  # Usa solo le bande rilevanti per la fase del sonno corrente
+                ax[i].fill_betweenx(
+                    [0, 1],
+                    *eeg_bands[band],
+                    color=band_colors[band],
+                    alpha=0.2,
+                    label=band,
+                )  # Regola l'opacità con alpha
+
+        # Crea il grafico a linee con l'asse x rappresentante le frequenze e l'asse y rappresentante i valori
+        sns.lineplot(
+            x="frequency", y="value", data=df_new, drawstyle="steps-pre", ax=ax[i]
+        )
+
+        ax[i].set_ylim([0, 1])
+        ax[i].legend()  # Mostra la legenda
+
+    plt.tight_layout()
+
+    if filename is not None:
+        plt.savefig(filename)
+
+    return
 
 
 def plot(

@@ -1,0 +1,22 @@
+n_classes : 5
+F : 128
+T : 29
+
+attention_size : 64
+
+frm_d_ff : 1024  # hidden dimension of feedforward layer
+frm_num_blocks : 2  # number of encoder/decoder blocks
+frm_num_heads : 8  # number of attention heads
+frm_fc_dropout : 0.1  # 0.3 dropout
+frm_attention_dropout : 0.1  # 0.3 dropout
+frm_smoothing : 0.0  # label smoothing rate
+        
+seq_d_ff : 1024  # hidden dimension of feedforward layer
+seq_num_blocks : 2  # number of encoder/decoder blocks
+seq_num_heads : 8  # number of attention heads
+seq_fc_dropout : 0.1  # 0.3 dropout
+seq_attention_dropout : 0.1  # 0.3 dropout
+seq_smoothing : 0.0  # label smoothing rate
+
+fc_hidden_size : 1024
+fc_dropout : 0.1

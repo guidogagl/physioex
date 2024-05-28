@@ -6,6 +6,7 @@ import physioex.train.networks.utils.target_transform as target_transform
 from physioex.train.networks.chambon2018 import Chambon2018Net
 from physioex.train.networks.seqsleepnet import SeqSleepNet
 from physioex.train.networks.tinysleepnet import TinySleepNet
+from physioex.train.networks.sleeptransformer import SleepTransformer
 
 # from physioex.train.networks.seqecgnet import SeqECGnet
 
@@ -29,6 +30,12 @@ config = {
     "seqsleepnet": {
         "module_config": read_config("seqsleepnet"),
         "module": SeqSleepNet,
+        "input_transform": "xsleepnet",
+        "target_transform": None,
+    },
+    "sleeptransformer": {
+        "module_config": read_config("sleeptransformer"),
+        "module": SleepTransformer,
         "input_transform": "xsleepnet",
         "target_transform": None,
     },

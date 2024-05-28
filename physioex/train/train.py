@@ -1,6 +1,49 @@
 import argparse
+import importlib
+
+import yaml
 
 from physioex.train import Trainer
+from physioex.train.networks import config
+
+from loguru import logger
+
+
+@logger.catch
+def register_experiment(experiment: str = None):
+
+    global config
+
+    logger.info(f"Registering experiment {experiment}")
+
+    try:
+        with open(experiment, "r") as f:
+            experiment = yaml.safe_load(f)
+    except FileNotFoundError:
+        raise FileNotFoundError(f"Experiment {experiment} not found")
+
+    experiment_name = experiment["name"]
+
+    config[experiment_name] = dict()
+
+    module = importlib.import_module(experiment["module"])
+
+    config[experiment_name]["module"] = getattr(module, experiment["class"])
+    config[experiment_name]["module_config"] = experiment["module_config"]
+    config[experiment_name]["input_transform"] = experiment["input_transform"]
+
+    if experiment["target_transform"] is not None:
+        if experiment["module"] != experiment["target_transform"]["module"]:
+            module = importlib.import_module(experiment["target_transform"]["module"])
+
+        config[experiment_name]["target_transform"] = getattr(
+            module, experiment["target_transform"]["function"]
+        )
+    else:
+        logger.warning(f"Target transform not found for {experiment_name}")
+        config[experiment_name]["target_transform"] = None
+
+    return experiment_name
 
 
 def main():
@@ -101,6 +144,10 @@ def main():
     )
 
     args = parser.parse_args()
+
+    # check if the experiment is a yaml file
+    if args.experiment.endswith(".yaml") or args.experiment.endswith(".yml"):
+        args.experiment = register_experiment(args.experiment)
 
     Trainer(
         model_name=args.experiment,

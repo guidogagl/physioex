@@ -69,8 +69,8 @@ max_epoch = 20
 batch_size = 256
 imbalance = False
 
-val_check_interval = 30
-num_folds = 10
+val_check_interval = 300
+num_folds = 2
 
 
 class MultiSourceDomain:
@@ -149,8 +149,27 @@ class MultiSourceDomain:
             deterministic=True,
         )
 
-        logger.info("Training model")
-        trainer.fit(module, datamodule=datamodule)
+        # check if the model is already in the ckp_path
+        # list the files inside the ckp_path
+        # if the model is already there, load it
+        files = list(Path(ckp_path).rglob("*.ckpt"))
+        if len(files) > 0:
+            files = [str(file) for file in files if f"fold={fold}" in str(file)]
+            if len(files) > 0:
+                ckp_path = files[0]
+                logger.info(f"Loading model from {ckp_path}")
+                module = self.model_call.load_from_checkpoint(
+                    ckp_path, module_config=self.module_config
+                )
+            else:
+                logger.warning("No model checkpoint found for the specified fold")
+                logger.info("Training model")
+                trainer.fit(module, datamodule=datamodule)
+
+        else:
+            logger.warning("No model checkpoints found in the specified directory")
+            logger.info("Training model")
+            trainer.fit(module, datamodule=datamodule)
 
         logger.info("Evaluating model on train domain")
         train_results = trainer.test(module, datamodule=datamodule)[0]
@@ -169,7 +188,7 @@ class MultiSourceDomain:
 
             return {"train_results": train_results, "test_results": target_results}
 
-        return {"train_results": train_results, "msd_results": train_results}
+        return {"train_results": train_results, "test_results": train_results}
 
     def run(self):
 
@@ -178,6 +197,9 @@ class MultiSourceDomain:
 
         for combination in domains_combinations:
             k = len(combination)
+
+            if k < 4:
+                continue
 
             train_domain = [self.msd_domain[idx] for idx in combination]
             test_domain = [
@@ -243,11 +265,12 @@ class MultiSourceDomain:
             ]
 
             train_results = [result["train_results"] for result in results]
-            test_results = [result["test_results"] for result in results]
-
             pd.DataFrame(train_results).to_csv(
                 ckp_path + "train_results.csv", index=False
             )
+
+            test_results = [result["test_results"] for result in results]
+
             pd.DataFrame(test_results).to_csv(
                 ckp_path + "test_results.csv", index=False
             )

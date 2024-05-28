@@ -16,3 +16,10 @@ datasets = {
     "mass": Mass,
     "MSD": MultiSourceDomain,
 }
+
+preprocess = {
+    "sleep_physionet": "physioex.data.sleep_edf.preprocess",
+    "dreem": "physioex.data.dreem.preprocess",
+    "shhs": "physioex.data.shhs.preprocess",
+    "mass": "physioex.data.mass.preprocess",
+}
