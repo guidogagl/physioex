@@ -5,8 +5,30 @@ import yaml
 
 from physioex.train import Trainer
 from physioex.train.networks import config
+from physioex.data import datasets
 
 from loguru import logger
+
+
+@logger.catch
+def register_dataset(dataset: str = None):
+
+    global datasets
+
+    logger.info(f"Registering dataset {dataset}")
+
+    try:
+        with open(dataset, "r") as f:
+            dataset = yaml.safe_load(f)
+    except FileNotFoundError:
+        raise FileNotFoundError(f"Dataset {dataset} not found")
+
+    dataset = dataset["dataset"]
+    dataset_name = dataset["name"]
+    module = importlib.import_module(dataset["module"])
+
+    datasets[dataset_name] = getattr(module, dataset["class"])
+    return dataset_name
 
 
 @logger.catch
@@ -21,6 +43,8 @@ def register_experiment(experiment: str = None):
             experiment = yaml.safe_load(f)
     except FileNotFoundError:
         raise FileNotFoundError(f"Experiment {experiment} not found")
+
+    experiment = experiment["experiment"]
 
     experiment_name = experiment["name"]
 
@@ -148,6 +172,10 @@ def main():
     # check if the experiment is a yaml file
     if args.experiment.endswith(".yaml") or args.experiment.endswith(".yml"):
         args.experiment = register_experiment(args.experiment)
+
+    # check if the dataset is a yaml file
+    if args.dataset.endswith(".yaml") or args.dataset.endswith(".yml"):
+        args.dataset = register_dataset(args.dataset)
 
     Trainer(
         model_name=args.experiment,

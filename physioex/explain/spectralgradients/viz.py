@@ -63,26 +63,25 @@ def plot_class_spectrum(
                     )
 
                     b = torch.permute(baselines.clone(), (0, 4, 1, 2, 3)).reshape(
-                        batch_size*n_frequencies, seq_len, n_channels, n_samples
+                        batch_size * n_frequencies, seq_len, n_channels, n_samples
                     )
                     y_probas = model(b.to(device)).detach().cpu()
-                    y_probas = y_probas.reshape(
-                        batch_size, n_frequencies, n_classes
-                    )
+                    y_probas = y_probas.reshape(batch_size, n_frequencies, n_classes)
                     y_probas = torch.permute(y_probas, (0, 2, 1))
 
                     for i in range(1, n_frequencies + 1):
                         for j in range(len(inputs)):
-                            importances[j, -i] = torch.norm(
-                                y_probas[j, y_preds[j], -i] - temp_probas[j, y_preds[j]]
+                            importances[j, -i] = (
+                                temp_probas[j, y_preds[j]] - y_probas[j, y_preds[j], -i]
                             )
+
                         temp_probas = y_probas[..., -i]
 
                 except RuntimeError:
                     error = True
                     logger.exception("Error computing spectral importances in one go")
                     # log the stack trace
-                    
+
             else:
                 for i in range(1, baselines.shape[-1] + 1):
                     y_probas = model(baselines[..., -i].to(device)).detach().cpu()
@@ -153,7 +152,7 @@ def plot_class_spectrum(
                 classes[i]
             ]:  # Usa solo le bande rilevanti per la fase del sonno corrente
                 ax[i].fill_betweenx(
-                    [0, 1],
+                    [-1, 1],
                     *eeg_bands[band],
                     color=band_colors[band],
                     alpha=0.2,
@@ -165,7 +164,7 @@ def plot_class_spectrum(
             x="frequency", y="value", data=df_new, drawstyle="steps-pre", ax=ax[i]
         )
 
-        ax[i].set_ylim([0, 1])
+        ax[i].set_ylim([-0.5, 0.5])
         ax[i].legend()  # Mostra la legenda
 
     plt.tight_layout()

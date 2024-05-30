@@ -26,11 +26,13 @@ class SpectralGradients(IntegratedGradients):
         bands = generate_frequency_bands(nyquist, n_bands, start_freq, mode)
         self.bands = bands
 
+        end_band = bands[-1][1]
+
         print(f"Frequency bands: {bands}")
         self.filters = [
             signal.butter(
                 filter_order,
-                [band[0] / nyquist, band[1] / nyquist],
+                [band[0] / nyquist, end_band / nyquist],
                 btype="bandstop",
                 output="sos",
             )
@@ -95,7 +97,7 @@ class SpectralGradients(IntegratedGradients):
 
                     baselines[f, n, c] = torch.tensor(signal.sosfilt(filt, x))
 
-                    x = baselines[f, n, c].numpy()
+                    # x = baselines[f, n, c].numpy()
 
         baselines = baselines.reshape(F, N, C, S, NS).permute(1, 3, 2, 4, 0)
 

@@ -11,8 +11,8 @@ module_config = dict()
 class Net(nn.Module):
     def __init__(self, module_config=module_config):
         """
-        The Net class extends nn.Module. This class implements the core network proposed by Chambon et al in 2018. 
-        The network consist of an encoder of epochs, a concatenation layer and a classification layer. 
+        The Net class extends nn.Module. This class implements the core network proposed by Chambon et al in 2018.
+        The network consist of an encoder of epochs, a concatenation layer and a classification layer.
         Multiple epochs are concatenated and fed to a linear classifier which predicts the sleep stage of the middle epoch of the sequence.
 
         Args:
@@ -53,7 +53,7 @@ class Net(nn.Module):
         x, y = self.encode(x)
         return y
 
-    def encode(self, x : torch.Tensor ):
+    def encode(self, x: torch.Tensor):
         """
         Encodes the input x using the epoch encoder, returns both the econdings and the classification outcome.
 
@@ -78,7 +78,7 @@ class Net(nn.Module):
 
 
 class Chambon2018Net(SleepModule):
-    def __init__(self, module_config : dict = module_config):
+    def __init__(self, module_config: dict = module_config):
         """
         The Chambon2018Net class extends SleepModule. This class is a wrapper for the core Chambon2018 network to be trained inside physioex.
 
@@ -99,7 +99,7 @@ class Chambon2018Net(SleepModule):
         log_metrics: bool = False,
     ):
         """
-        Computes the loss for the Chambon2018Net model. This is necessary because Chambon2018 is a multi-input-single-output model, while the base class is a multi-input-multi-output model ( sequence-to-sequence ). 
+        Computes the loss for the Chambon2018Net model. This is necessary because Chambon2018 is a multi-input-single-output model, while the base class is a multi-input-multi-output model ( sequence-to-sequence ).
 
         Args:
             embeddings (torch.Tensor): The embeddings tensors.

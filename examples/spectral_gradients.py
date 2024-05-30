@@ -36,7 +36,7 @@ from physioex.train.networks.utils.target_transform import get_mid_label
 import os
 
 # model parameters
-model_name = "tinysleepnet"
+model_name = "chambon2018"
 sequence_length = 21
 
 # dataset
@@ -46,10 +46,10 @@ fold = 0
 # dataloader
 batch_size = 64
 num_workers = os.cpu_count()
-n_batches = 2000
+n_batches = 1000
 
 # num of splitting bands
-n_bands = 20
+n_bands = 40
 
 # device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -60,7 +60,7 @@ model = networks[model_name]
 dataset = Shhs(
     picks=picks,
     sequence_length=sequence_length,
-    #target_transform=model["target_transform"],
+    # target_transform=model["target_transform"],
     target_transform=get_mid_label,
     preprocessing=model["input_transform"],
 )
@@ -78,6 +78,7 @@ model = load_pretrained_model(
     softmax=True,
 ).eval()
 
+
 class MidModel(torch.nn.Module):
     def __init__(self, model):
         super(MidModel, self).__init__()
@@ -87,11 +88,11 @@ class MidModel(torch.nn.Module):
         return self.model(x)[:, int((x.shape[1] - 1) / 2)]
 
 
-model = MidModel(model)
+# model = MidModel(model)
 
 
 # setup the explanations algorithms
-sg = SpectralGradients(model, n_bands=n_bands)
+sg = SpectralGradients(model, n_bands=n_bands, mode="log")
 
 plot_class_spectrum(
     dataloader=dataset.train_dataloader(),
