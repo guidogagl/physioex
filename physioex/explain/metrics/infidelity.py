@@ -1,6 +1,6 @@
-import torch
-
 from typing import Callable
+
+import torch
 
 
 def _infidelity(

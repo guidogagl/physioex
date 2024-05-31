@@ -1,12 +1,16 @@
-from physioex.data import preprocess
-
-import importlib
-
 import argparse
+import importlib
+from pathlib import Path
+
 from loguru import logger
+
+from physioex.data import preprocess
+from physioex.data.constant import set_data_folder
 
 
 def main():
+    global data_folder
+
     parser = argparse.ArgumentParser(description="Preprocess a dataset.")
     parser.add_argument(
         "--dataset",
@@ -17,7 +21,32 @@ def main():
         help="The name of the dataset to preprocess. Expected type: str. Required. Default: 'sleep_physionet'",
     )
 
+    parser.add_argument(
+        "--data_folder",
+        "-df",
+        type=str,
+        default=None,
+        required=False,
+        help="The absolute path of the directory where the physioex dataset are stored, if None the home directory is used. Expected type: str. Optional. Default: None",
+    )
+
     args = parser.parse_args()
+
+    if args.data_folder is not None:
+        # check if the path in args is a valid path
+        if not Path(args.data_folder).exists():
+            logger.warning(
+                f"Path {args.data_folder} does not exist. Trying to create it."
+            )
+            try:
+                Path(args.data_folder).mkdir(parents=True, exist_ok=True)
+            except Exception as e:
+                logger.error(f"Could not create the path {args.data_folder}.")
+                logger.error(f"Error: {e}")
+                return
+
+        set_data_folder(args.data_folder)
+        logger.info(f"Data folder set to {args.data_folder}")
 
     try:
         module = preprocess[args.dataset]

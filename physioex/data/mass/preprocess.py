@@ -1,18 +1,17 @@
 import os
-import numpy as np
-import h5py
-import pandas as pd
+from pathlib import Path
+from urllib.request import urlretrieve
 
+import h5py
+import numpy as np
+import pandas as pd
+from joblib import Parallel, delayed
+from loguru import logger
 from tqdm import tqdm
 
-from pathlib import Path
-from joblib import Parallel, delayed
+from physioex.data.constant import get_data_folder
 
-from loguru import logger
-from urllib.request import urlretrieve
-from pathlib import Path
-
-data_path = str(Path.home()) + "/mass/"
+data_path = get_data_folder()+ "/mass/"
 
 input_dir = data_path + "mat/"
 
@@ -272,4 +271,4 @@ if __name__ == "__main__":
     compute_mean_std()
 
     # url = "https://github.com/pquochuy/xsleepnet/raw/master/mass/data_split_eval.mat"
-    # urlretrieve(url, str(Path.home()) + "/mass/data_split_eval.mat")
+    # urlretrieve(url, get_data_folder()+ "/mass/data_split_eval.mat")

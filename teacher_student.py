@@ -1,10 +1,9 @@
 import numpy as np
 import torch
 
-from physioex.train.networks.base import SleepModule
-from physioex.models import load_pretrained_model
-
 from physioex.explain.spectralgradients import SpectralGradients
+from physioex.models import load_pretrained_model
+from physioex.train.networks.base import SleepModule
 
 
 class Unstandardize(torch.nn.Module):
@@ -51,7 +50,7 @@ class TeacherStudent(SleepModule):
             in_channels=module_config["in_channels"],
             sequence_length=module_config["seq_len"],
         ).nn
-        
+
         teacher.clf.rnn.train()
 
         # TODO: we know that the teacher is MIMO and we need to omologate it to MISO
@@ -67,8 +66,12 @@ class TeacherStudent(SleepModule):
         self.mean, _, _ = scaling_file["mean"]
         self.std, _, _ = scaling_file["std"]
 
-        self.mean = torch.nn.Parameter(torch.tensor(self.mean).float(), requires_grad=False)
-        self.std = torch.nn.Parameter(torch.tensor(self.std).float(), requires_grad=False)
+        self.mean = torch.nn.Parameter(
+            torch.tensor(self.mean).float(), requires_grad=False
+        )
+        self.std = torch.nn.Parameter(
+            torch.tensor(self.std).float(), requires_grad=False
+        )
 
         self.preprocess = Unstandardize(self.mean, self.std)
         self.nn = self.student
@@ -111,7 +114,7 @@ class TeacherStudent(SleepModule):
         # compute the explanations for both models for the target class
         # unstardadize the data
         inputs = self.preprocess(inputs)
-        
+
         with torch.no_grad():
             explanations_teacher = self.teacher_sg.attribute(inputs, target=targets)
             explanations_student = self.student_sg.attribute(inputs, target=targets)
@@ -158,14 +161,17 @@ class TeacherStudent(SleepModule):
         if log == "val" or log == "test":
             return cel
 
-        explanations_student, explanations_teacher = explanations_student.squeeze(), explanations_teacher.squeeze()
-        
+        explanations_student, explanations_teacher = (
+            explanations_student.squeeze(),
+            explanations_teacher.squeeze(),
+        )
+
         batch_size, seq_len, num_samples, n_bands = explanations_teacher.size()
 
         # consider only the first half of the bands + 1 ( the last is gamma and is not relevant for sleep )
         explanations_teacher = explanations_teacher[..., : int(n_bands / 2) + 1]
         explanations_student = explanations_student[..., : int(n_bands / 2) + 1]
-        
+
         # consider only the mid epoch of the sequence (the one that is more relevant)
         explanations_teacher = explanations_teacher[:, int((seq_len - 1) / 2)]
         explanations_student = explanations_student[:, int((seq_len - 1) / 2)]
@@ -175,18 +181,22 @@ class TeacherStudent(SleepModule):
 
         # smooth the num_samples dimension
 
-        explanations_student = self.smooth(explanations_student) * self.smooth.kernel_size[0]
-        explanations_teacher = self.smooth(explanations_teacher) * self.smooth.kernel_size[0]
+        explanations_student = (
+            self.smooth(explanations_student) * self.smooth.kernel_size[0]
+        )
+        explanations_teacher = (
+            self.smooth(explanations_teacher) * self.smooth.kernel_size[0]
+        )
 
         explanations_student = explanations_student.reshape(batch_size, -1)
         explanations_teacher = explanations_teacher.reshape(batch_size, -1)
 
         explanations_teacher_sign = torch.sign(explanations_teacher)
         explanations_student_sign = torch.sign(explanations_student)
-        
-        explanations_teacher = torch.pow(10, torch.abs(explanations_teacher) )  
-        explanations_student = torch.pow(10, torch.abs(explanations_student) )  
-        
+
+        explanations_teacher = torch.pow(10, torch.abs(explanations_teacher))
+        explanations_student = torch.pow(10, torch.abs(explanations_student))
+
         # Restore the original sign of the explanations
         explanations_teacher *= explanations_teacher_sign
         explanations_student *= explanations_student_sign

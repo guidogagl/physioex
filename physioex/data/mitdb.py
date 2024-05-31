@@ -9,11 +9,10 @@ import wfdb
 import yaml
 from dirhash import dirhash
 from loguru import logger
+from sklearn.model_selection import train_test_split
 
 from physioex.data.base import PhysioExDataset
 from physioex.data.utils import read_cache, write_cache
-
-from sklearn.model_selection import train_test_split
 
 
 def download_mitdb(mitdb_dir):

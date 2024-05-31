@@ -1,12 +1,10 @@
 import os
 import pickle
 
-import torch
-from loguru import logger
-
 import pkg_resources as pkg
-
+import torch
 import yaml
+from loguru import logger
 
 
 class StandardScaler:

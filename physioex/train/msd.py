@@ -1,32 +1,24 @@
 import copy
+import json
 import uuid
+from itertools import combinations
 from pathlib import Path
+from typing import Dict, List
 
+import numpy as np
 import pandas as pd
 import pytorch_lightning as pl
+import torch
 from joblib import Parallel, delayed
 from lightning.pytorch import seed_everything
+from loguru import logger
 from pytorch_lightning.callbacks import ModelCheckpoint, RichProgressBar
 
-from physioex.data import (
-    TimeDistributedModule,
-    CombinedTimeDistributedModule,
-    MultiSourceDomain as MSD,
-)
+from physioex.data import CombinedTimeDistributedModule
+from physioex.data import MultiSourceDomain as MSD
+from physioex.data import TimeDistributedModule
 from physioex.train.networks import config
 from physioex.train.networks.utils.loss import config as loss_config
-
-import json
-import numpy as np
-
-from typing import List, Dict
-
-import torch
-from loguru import logger
-
-from itertools import combinations
-
-from loguru import logger
 
 
 def calculate_combinations(elements):

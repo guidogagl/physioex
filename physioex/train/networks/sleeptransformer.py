@@ -1,16 +1,13 @@
-from types import SimpleNamespace
-import torch
-import numpy as np
-
-import torch.nn as nn
-
 import math
+from types import SimpleNamespace
 
-from torch.nn import TransformerEncoder, TransformerEncoderLayer
+import numpy as np
+import torch
+import torch.nn as nn
 import torch.nn.functional as F
+from torch.nn import TransformerEncoder, TransformerEncoderLayer
 
 from physioex.train.networks.base import SleepModule
-
 
 module_config = dict()
 

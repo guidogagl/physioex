@@ -1,18 +1,15 @@
-from typing import List, Callable
-
-from physioex.data.base import PhysioExDataset, create_subject_index_map
-from physioex.data.utils import read_config
-
 from pathlib import Path
-
-import numpy as np
+from typing import Callable, List
 
 import h5py
-
+import numpy as np
+import pandas as pd
+import torch
 from scipy.io import loadmat
 
-import torch
-import pandas as pd
+from physioex.data.base import PhysioExDataset, create_subject_index_map
+from physioex.data.constant import get_data_folder
+from physioex.data.utils import read_config
 
 
 class Dreem(PhysioExDataset):
@@ -39,7 +36,7 @@ class Dreem(PhysioExDataset):
 
         self.config = read_config("config/dreem.yaml")
 
-        self.table = pd.read_csv(str(Path.home()) + self.config["table_" + version])
+        self.table = pd.read_csv(get_data_folder()+ self.config["table_" + version])
 
         self.subjects = self.table["subject_id"].values.astype(int)
 
@@ -48,7 +45,7 @@ class Dreem(PhysioExDataset):
         )
 
         self.split_path = None
-        self.data_path = str(Path.home()) + f"/dreem/{preprocessing}/{version}/"
+        self.data_path = get_data_folder()+ f"/dreem/{preprocessing}/{version}/"
 
         self.picks = picks
         self.version = version
@@ -63,7 +60,7 @@ class Dreem(PhysioExDataset):
         self.input_shape = self.config["shape_" + preprocessing]
 
         scaling_file = np.load(
-            str(Path.home()) + f"/dreem/{preprocessing}/{version}/scaling.npz"
+            get_data_folder()+ f"/dreem/{preprocessing}/{version}/scaling.npz"
         )
 
         EEG_mean, EOG_mean, EMG_mean = scaling_file["mean"]

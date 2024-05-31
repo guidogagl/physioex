@@ -4,17 +4,16 @@ from pathlib import Path
 
 import pandas as pd
 import pytorch_lightning as pl
+import torch
 from joblib import Parallel, delayed
 from lightning.pytorch import seed_everything
+from loguru import logger
 from pytorch_lightning.callbacks import ModelCheckpoint, RichProgressBar
 
-from physioex.data import TimeDistributedModule, datasets
-from physioex.train.networks import config
+from physioex.data import TimeDistributedModule
+from physioex.data.constant import get_datasets
+from physioex.train.networks import get_config
 from physioex.train.networks.utils.loss import config as loss_config
-
-
-import torch
-from loguru import logger
 
 torch.set_float32_matmul_precision("medium")
 
@@ -37,7 +36,10 @@ class Trainer:
     ):
 
         seed_everything(42, workers=True)
-
+        
+        datasets = get_datasets()
+        config = get_config()
+        
         self.dataset_call = datasets[dataset_name]
         self.model_call = config[model_name]["module"]
         self.input_transform = config[model_name]["input_transform"]

@@ -1,39 +1,26 @@
-from loguru import logger
-
-import numpy as np
-import torch
-
-from tqdm import tqdm
-
-from captum.attr import IntegratedGradients
-
-from pytorch_lightning import seed_everything
-
 import matplotlib.pyplot as plt
-import seaborn as sns
-
-from scipy import signal
+import numpy as np
 import pandas as pd
+import seaborn as sns
+import torch
+from captum.attr import IntegratedGradients
+from loguru import logger
+from pytorch_lightning import seed_everything
+from scipy import signal
+from tqdm import tqdm
 
 seed_everything(42)
 
-from physioex.data import TimeDistributedModule, SleepEDF, Shhs
+import os
 
+from physioex.data import Shhs, SleepEDF, TimeDistributedModule
+from physioex.explain.spectralgradients import (SpectralGradients,
+                                                generate_frequency_bands, plot)
+from physioex.explain.spectralgradients.viz import plot_class_spectrum
+from physioex.models import load_pretrained_model
 from physioex.train.networks import config as networks
 from physioex.train.networks.utils.loss import config as losses
-
-from physioex.models import load_pretrained_model
-
-from physioex.explain.spectralgradients import (
-    SpectralGradients,
-    generate_frequency_bands,
-    plot,
-)
-
-from physioex.explain.spectralgradients.viz import plot_class_spectrum
 from physioex.train.networks.utils.target_transform import get_mid_label
-
-import os
 
 # model parameters
 model_name = "chambon2018"

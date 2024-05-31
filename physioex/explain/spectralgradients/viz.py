@@ -1,24 +1,21 @@
 from typing import Callable, List, Tuple
 
 import numpy as np
-
-import torch
-
 import seaborn as sns
+import torch
 from matplotlib import pyplot as plt
-
 
 sns.set_theme(style="whitegrid")
 
-from physioex.explain.spectralgradients.utils import generate_frequency_bands
-from physioex.explain.spectralgradients.spectral_gradients import SpectralGradients
 from typing import Dict
 
 import pandas as pd
-
+from loguru import logger
 from tqdm import tqdm
 
-from loguru import logger
+from physioex.explain.spectralgradients.spectral_gradients import \
+    SpectralGradients
+from physioex.explain.spectralgradients.utils import generate_frequency_bands
 
 
 def plot_class_spectrum(

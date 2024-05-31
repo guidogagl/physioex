@@ -1,22 +1,21 @@
 import copy
+import json
 import uuid
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 import pytorch_lightning as pl
+import torch
 from joblib import Parallel, delayed
 from lightning.pytorch import seed_everything
+from loguru import logger
 from pytorch_lightning.callbacks import ModelCheckpoint, RichProgressBar
 
-from physioex.data import TimeDistributedModule, CombinedTimeDistributedModule, datasets
+from physioex.data import (CombinedTimeDistributedModule,
+                           TimeDistributedModule, datasets)
 from physioex.train.networks import config
 from physioex.train.networks.utils.loss import config as loss_config
-
-import json
-import numpy as np
-
-import torch
-from loguru import logger
 
 torch.set_float32_matmul_precision("medium")
 

@@ -1,17 +1,16 @@
-import physioex.data.dreem.utils as utl
-from physioex.data.utils import read_config
-
-from loguru import logger
 import os
-from dirhash import dirhash
-
-import pandas as pd
-
-import numpy as np
-import h5py
-
 from pathlib import Path
+
+import h5py
+import numpy as np
+import pandas as pd
+from dirhash import dirhash
+from loguru import logger
 from tqdm import tqdm
+
+import physioex.data.dreem.utils as utl
+from physioex.data.constant import get_data_folder
+from physioex.data.utils import read_config
 
 picks = ["C3_M2", "EOG", "EMG"]
 
@@ -76,7 +75,7 @@ def create_table(version, num_samples):
     df["subject_id"] = subjects_ids
     df["num_samples"] = num_samples
 
-    df.to_csv(str(Path.home()) + "/dreem/table_" + str(version) + ".csv")
+    df.to_csv(get_data_folder()+ "/dreem/table_" + str(version) + ".csv")
 
     return
 

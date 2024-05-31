@@ -1,18 +1,15 @@
+import bisect
+from pathlib import Path
+from typing import Callable, List
+
 import numpy as np
+import pandas as pd
 import pytorch_lightning as pl
 import torch
-
 from torch.utils.data import DataLoader, SubsetRandomSampler
 
+from physioex.data.constant import get_data_folder
 from physioex.data.utils import read_config
-
-from pathlib import Path
-
-from typing import List, Callable
-
-import pandas as pd
-
-import bisect
 
 
 def transform_to_sequence(x, y, sequence_length):
@@ -70,7 +67,7 @@ class PhysioExDataset(torch.utils.data.Dataset):
 
         self.subjects = self.config["subjects_v" + version]
 
-        self.table = pd.read_csv(str(Path.home()) + self.config["table"])
+        self.table = pd.read_csv(get_data_folder() + self.config["table"])
 
         # drop from the table the rows with subject_id not in self.subjects
         self.table = self.table[self.table["subject_id"].isin(self.subjects)]
@@ -79,8 +76,8 @@ class PhysioExDataset(torch.utils.data.Dataset):
             self.table, sequence_length
         )
 
-        self.split_path = str(Path.home()) + self.config["splits_v" + version]
-        self.data_path = str(Path.home()) + self.config[preprocessing + "_path"]
+        self.split_path = get_data_folder() + self.config["splits_v" + version]
+        self.data_path = get_data_folder() + self.config[preprocessing + "_path"]
 
         self.picks = picks
         self.version = version

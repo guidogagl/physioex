@@ -7,23 +7,18 @@ import boto3
 import h5py
 import numpy as np
 import pandas as pd
-
 import pkg_resources as pkg
 import tqdm
 import yaml
-
 from botocore import UNSIGNED
 from botocore.client import Config
-
 from loguru import logger
+from scipy import signal
 from scipy.signal import butter, lfilter, resample
 
-from pathlib import Path
-import os
+from physioex.data.constant import get_data_folder
 
-from scipy import signal
-
-home_directory = str(Path.home())
+home_directory = get_data_folder()
 BASE_DIRECTORY = os.path.join(home_directory, "dreem")
 BASE_DIRECTORY_H5 = os.path.join(BASE_DIRECTORY, "h5")
 

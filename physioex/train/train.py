@@ -1,73 +1,13 @@
 import argparse
 import importlib
+from pathlib import Path
 
 import yaml
-
-from physioex.train import Trainer
-from physioex.train.networks import config
-from physioex.data import datasets
-
 from loguru import logger
 
-
-@logger.catch
-def register_dataset(dataset: str = None):
-
-    global datasets
-
-    logger.info(f"Registering dataset {dataset}")
-
-    try:
-        with open(dataset, "r") as f:
-            dataset = yaml.safe_load(f)
-    except FileNotFoundError:
-        raise FileNotFoundError(f"Dataset {dataset} not found")
-
-    dataset = dataset["dataset"]
-    dataset_name = dataset["name"]
-    module = importlib.import_module(dataset["module"])
-
-    datasets[dataset_name] = getattr(module, dataset["class"])
-    return dataset_name
-
-
-@logger.catch
-def register_experiment(experiment: str = None):
-
-    global config
-
-    logger.info(f"Registering experiment {experiment}")
-
-    try:
-        with open(experiment, "r") as f:
-            experiment = yaml.safe_load(f)
-    except FileNotFoundError:
-        raise FileNotFoundError(f"Experiment {experiment} not found")
-
-    experiment = experiment["experiment"]
-
-    experiment_name = experiment["name"]
-
-    config[experiment_name] = dict()
-
-    module = importlib.import_module(experiment["module"])
-
-    config[experiment_name]["module"] = getattr(module, experiment["class"])
-    config[experiment_name]["module_config"] = experiment["module_config"]
-    config[experiment_name]["input_transform"] = experiment["input_transform"]
-
-    if experiment["target_transform"] is not None:
-        if experiment["module"] != experiment["target_transform"]["module"]:
-            module = importlib.import_module(experiment["target_transform"]["module"])
-
-        config[experiment_name]["target_transform"] = getattr(
-            module, experiment["target_transform"]["function"]
-        )
-    else:
-        logger.warning(f"Target transform not found for {experiment_name}")
-        config[experiment_name]["target_transform"] = None
-
-    return experiment_name
+from physioex.data.constant import register_dataset, set_data_folder
+from physioex.train import Trainer
+from physioex.train.networks import config, register_experiment
 
 
 def main():
@@ -167,7 +107,32 @@ def main():
         help="Specify rather or not to use f1 score instead of accuracy to save the checkpoints. Expected type: bool. Default: False",
     )
 
+    parser.add_argument(
+            "--data_folder",
+            "-df",
+            type=str,
+            default=None,
+            required=False,
+            help="The absolute path of the directory where the physioex dataset are stored, if None the home directory is used. Expected type: str. Optional. Default: None",
+        )
+
     args = parser.parse_args()
+
+    if args.data_folder is not None:
+        # check if the path in args is a valid path
+        if not Path(args.data_folder).exists():
+            logger.warning(
+                f"Path {args.data_folder} does not exist. Trying to create it."
+            )
+            try:
+                Path(args.data_folder).mkdir(parents=True, exist_ok=True)
+            except Exception as e:
+                logger.error(f"Could not create the path {args.data_folder}.")
+                logger.error(f"Error: {e}")
+                return
+
+        set_data_folder(args.data_folder)
+        logger.info(f"Data folder set to {args.data_folder}")
 
     # check if the experiment is a yaml file
     if args.experiment.endswith(".yaml") or args.experiment.endswith(".yml"):

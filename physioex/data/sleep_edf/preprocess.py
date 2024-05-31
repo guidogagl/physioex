@@ -1,29 +1,21 @@
-from braindecode.datasets import SleepPhysionet as SP
-from braindecode.preprocessing import (
-    Preprocessor,
-    create_windows_from_events,
-    preprocess,
-)
+import os
+from pathlib import Path
+from urllib.request import urlretrieve
 
-import numpy as np
 import h5py
-from scipy import signal
-
-from tqdm import tqdm
+import numpy as np
 import pandas as pd
-
-from physioex.data.utils import read_config
-
-from tqdm import tqdm
-
+from braindecode.datasets import SleepPhysionet as SP
+from braindecode.preprocessing import (Preprocessor,
+                                       create_windows_from_events, preprocess)
+from loguru import logger
+from scipy import signal
 # read the file data/sleep-edf-split.mat
 from scipy.io import loadmat
+from tqdm import tqdm
 
-from urllib.request import urlretrieve
-from pathlib import Path
-
-
-from loguru import logger
+from physioex.data.constant import get_data_folder
+from physioex.data.utils import read_config
 
 
 # xsleepnet preprocessing
@@ -51,17 +43,15 @@ def xsleepnet_preprocessing(sig):
 
 logger.info("Loading config file")
 config = read_config("config/sleep-edf.yaml")
-
+home_dir = get_data_folder()
 preprocessors = [
     Preprocessor(lambda data: np.multiply(data, 1e6), apply_on_array=True),
     Preprocessor("filter", l_freq=0.3, h_freq=40),
 ]
 
-home_dir = str(Path.home())
-
 data_folder = home_dir + "/mne_data/physionet-sleep-data/"
 
-logger.info("Creating the folder for the data")
+logger.info(f"Creating the folder for the data {data_folder}")
 
 # create the folder for the processed data if not exists
 Path(data_folder).mkdir(parents=True, exist_ok=True)
@@ -73,10 +63,13 @@ raw_folder = home_dir + "/mne_data/sleep-edf-raw/"
 # create the folder for the raw data if not exists
 Path(raw_folder).mkdir(parents=True, exist_ok=True)
 
-
 # -------------- dataset creation ----------------- #
 
 logger.info("Fetching the dataset")
+
+# set the enviroment variable MNE_DATA to home dir
+
+os.environ["MNE_DATA"] = home_dir + "/mne_data"
 
 dataset = SP(
     subject_ids=config["subjects_v2018"],

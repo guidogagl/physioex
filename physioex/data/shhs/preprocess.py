@@ -1,24 +1,24 @@
 import os
-import numpy as np
-import h5py
-import pandas as pd
-
-from tqdm import tqdm
-
 from pathlib import Path
-from joblib import Parallel, delayed
-
-from loguru import logger
 from urllib.request import urlretrieve
 
-input_dir = str(Path().home()) + "/shhs/mat/"
+import h5py
+import numpy as np
+import pandas as pd
+from joblib import Parallel, delayed
+from loguru import logger
+from tqdm import tqdm
+
+from physioex.data.constant import get_data_folder
+
+input_dir = get_data_folder() + "/shhs/mat/"
 
 output_dirs = {
-    "raw": str(Path().home()) + "/shhs/raw/",
-    "xsleepnet": str(Path().home()) + "/shhs/xsleepnet/",
+    "raw": get_data_folder() + "/shhs/raw/",
+    "xsleepnet": get_data_folder() + "/shhs/xsleepnet/",
 }
 
-csv_path = str(Path().home()) + "/shhs/table.csv"
+csv_path = get_data_folder() + "/shhs/table.csv"
 
 modalities = ["eeg", "eog", "emg"]
 
@@ -235,4 +235,4 @@ if __name__ == "__main__":
     url = (
         "https://github.com/pquochuy/SleepTransformer/raw/main/shhs/data_split_eval.mat"
     )
-    urlretrieve(url, str(Path.home()) + "/shhs/data_split_eval.mat")
+    urlretrieve(url, get_data_folder()+ "/shhs/data_split_eval.mat")

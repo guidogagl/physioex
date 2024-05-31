@@ -1,46 +1,34 @@
-from utils import set_root
-
-from loguru import logger
-
-import numpy as np
-import torch
-
-from tqdm import tqdm
-
-from pytorch_lightning import seed_everything
-
 import matplotlib.pyplot as plt
-import seaborn as sns
-
-from scipy import signal
+import numpy as np
 import pandas as pd
+import seaborn as sns
+import torch
+from loguru import logger
+from pytorch_lightning import seed_everything
+from scipy import signal
+from tqdm import tqdm
+from utils import set_root
 
 seed_everything(42)
 
-from physioex.data import TimeDistributedModule, SleepEDF, Shhs
-
-from physioex.train.networks import config as networks
-from physioex.train.networks.utils.loss import config as losses
-
-from physioex.models import load_pretrained_model
-
-from physioex.train.networks.utils.target_transform import get_mid_label
+import os
 
 # importing
 import numpy as np
-from loguru import logger
-import os
-
-from physioex.train.networks import config
-from physioex.data import datasets
-
-from tqdm import tqdm
-import torch
-from matplotlib import pyplot as plt
 import seaborn as sns
-from sklearn.metrics import classification_report, accuracy_score, confusion_matrix
-
+import torch
 from loguru import logger
+from matplotlib import pyplot as plt
+from sklearn.metrics import (accuracy_score, classification_report,
+                             confusion_matrix)
+from tqdm import tqdm
+
+from physioex.data import Shhs, SleepEDF, TimeDistributedModule, datasets
+from physioex.models import load_pretrained_model
+from physioex.train.networks import config
+from physioex.train.networks import config as networks
+from physioex.train.networks.utils.loss import config as losses
+from physioex.train.networks.utils.target_transform import get_mid_label
 
 logger.remove()
 

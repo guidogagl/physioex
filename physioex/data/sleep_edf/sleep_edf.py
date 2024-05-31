@@ -1,17 +1,14 @@
-from typing import List, Callable
-
-from physioex.data.base import PhysioExDataset, transform_to_sequence
-from physioex.data.utils import read_config
-
 from pathlib import Path
-
-import numpy as np
+from typing import Callable, List
 
 import h5py
-
+import numpy as np
+import torch
 from scipy.io import loadmat
 
-import torch
+from physioex.data.base import PhysioExDataset, transform_to_sequence
+from physioex.data.constant import get_data_folder
+from physioex.data.utils import read_config
 
 
 class SleepEDF(PhysioExDataset):
@@ -46,7 +43,7 @@ class SleepEDF(PhysioExDataset):
         )
 
         scaling_file = np.load(
-            str(Path.home())
+            get_data_folder()
             + self.config[self.preprocessing + "_path"]
             + "scaling_"
             + self.version
