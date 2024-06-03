@@ -56,21 +56,29 @@ class SpectralGradients(IntegratedGradients):
         F = len(self.filters)
 
         baselines = self._construct_baseline(inputs)
-        attr = torch.zeros_like(baselines).to(inputs.device)
+        attr = torch.zeros_like(baselines)
 
         for f in reversed(range(F)):
-            attr[..., f] = super().attribute(
-                inputs,
-                baselines=baselines[..., f],
-                target=target,
-                additional_forward_args=additional_forward_args,
-                n_steps=n_steps,
-                method=method,
-                internal_batch_size=internal_batch_size,
-                return_convergence_delta=False,
+            attr[..., f] = (
+                super()
+                .attribute(
+                    inputs,
+                    baselines=baselines[..., f].to(inputs.device),
+                    target=(
+                        target.to(inputs.device)
+                        if isinstance(target, torch.Tensor)
+                        else target
+                    ),  # if tensor put it on the same device as inputs
+                    additional_forward_args=additional_forward_args,
+                    n_steps=n_steps,
+                    method=method,
+                    internal_batch_size=internal_batch_size,
+                    return_convergence_delta=False,
+                )
+                .cpu()
             )
 
-            inputs = baselines[..., f]
+            inputs = baselines[..., f].to(inputs.device)
         return attr
 
     def _construct_baseline(self, in_signals: torch.Tensor) -> torch.Tensor:
@@ -81,7 +89,6 @@ class SpectralGradients(IntegratedGradients):
         N, S, C, NS = in_signals.size()
         F = len(self.filters)
 
-        device = in_signals.device
         in_signal = in_signals.clone().detach().cpu()
         in_signal = in_signal.permute(0, 2, 1, 3).reshape(N, C, S * NS)
 
@@ -101,4 +108,4 @@ class SpectralGradients(IntegratedGradients):
 
         baselines = baselines.reshape(F, N, C, S, NS).permute(1, 3, 2, 4, 0)
 
-        return baselines.to(device)
+        return baselines.cpu()

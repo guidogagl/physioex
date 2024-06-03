@@ -12,8 +12,7 @@ from lightning.pytorch import seed_everything
 from loguru import logger
 from pytorch_lightning.callbacks import ModelCheckpoint, RichProgressBar
 
-from physioex.data import (CombinedTimeDistributedModule,
-                           TimeDistributedModule, datasets)
+from physioex.data import CombinedTimeDistributedModule, TimeDistributedModule, datasets
 from physioex.train.networks import config
 from physioex.train.networks.utils.loss import config as loss_config
 

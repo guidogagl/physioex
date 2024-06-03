@@ -1,4 +1,3 @@
-
 from typing import Callable, List
 
 import numpy as np

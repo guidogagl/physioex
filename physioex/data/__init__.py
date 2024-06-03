@@ -26,9 +26,11 @@ datasets = {
 def get_datasets():
     return datasets
 
+
 def add_dataset(name, dataset):
     global datasets
     datasets[name] = dataset
+
 
 @logger.catch
 def register_dataset(dataset: str = None):

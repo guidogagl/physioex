@@ -6,10 +6,14 @@ import h5py
 import numpy as np
 import pandas as pd
 from braindecode.datasets import SleepPhysionet as SP
-from braindecode.preprocessing import (Preprocessor,
-                                       create_windows_from_events, preprocess)
+from braindecode.preprocessing import (
+    Preprocessor,
+    create_windows_from_events,
+    preprocess,
+)
 from loguru import logger
 from scipy import signal
+
 # read the file data/sleep-edf-split.mat
 from scipy.io import loadmat
 from tqdm import tqdm

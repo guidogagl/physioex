@@ -13,8 +13,7 @@ import pandas as pd
 from loguru import logger
 from tqdm import tqdm
 
-from physioex.explain.spectralgradients.spectral_gradients import \
-    SpectralGradients
+from physioex.explain.spectralgradients.spectral_gradients import SpectralGradients
 from physioex.explain.spectralgradients.utils import generate_frequency_bands
 
 

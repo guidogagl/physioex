@@ -14,8 +14,11 @@ seed_everything(42)
 import os
 
 from physioex.data import Shhs, SleepEDF, TimeDistributedModule
-from physioex.explain.spectralgradients import (SpectralGradients,
-                                                generate_frequency_bands, plot)
+from physioex.explain.spectralgradients import (
+    SpectralGradients,
+    generate_frequency_bands,
+    plot,
+)
 from physioex.explain.spectralgradients.viz import plot_class_spectrum
 from physioex.models import load_pretrained_model
 from physioex.train.networks import config as networks
