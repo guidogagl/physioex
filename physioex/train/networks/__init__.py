@@ -56,8 +56,10 @@ config = {
     #    },
 }
 
+
 def get_config():
     return config
+
 
 def register_experiment(experiment: str = None):
     global config

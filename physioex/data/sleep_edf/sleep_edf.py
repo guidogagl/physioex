@@ -6,9 +6,8 @@ import numpy as np
 import torch
 from scipy.io import loadmat
 
-from physioex.data.base import PhysioExDataset, transform_to_sequence
+from physioex.data.base import PhysioExDataset
 from physioex.data.constant import get_data_folder
-from physioex.data.utils import read_config
 
 
 class SleepEDF(PhysioExDataset):

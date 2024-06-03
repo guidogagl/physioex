@@ -4,8 +4,14 @@ from pathlib import Path
 
 from loguru import logger
 
-from physioex.data import preprocess
 from physioex.data.constant import set_data_folder
+
+preprocess = {
+    "sleep_physionet": "physioex.data.sleep_edf.preprocess",
+    "dreem": "physioex.data.dreem.preprocess",
+    "shhs": "physioex.data.shhs.preprocess",
+    "mass": "physioex.data.mass.preprocess",
+}
 
 
 def main():

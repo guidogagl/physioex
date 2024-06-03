@@ -9,7 +9,6 @@ from scipy.io import loadmat
 
 from physioex.data.base import PhysioExDataset, create_subject_index_map
 from physioex.data.constant import get_data_folder
-from physioex.data.utils import read_config
 
 
 class Shhs(PhysioExDataset):
@@ -32,7 +31,7 @@ class Shhs(PhysioExDataset):
                 "EMG",
             ], "pick should be one of 'EEG, 'EOG', 'EMG'"
 
-        self.table = pd.read_csv(get_data_folder()+ "/shhs/table.csv")
+        self.table = pd.read_csv(get_data_folder() + "/shhs/table.csv")
 
         self.subjects = self.table["subject_id"].values.astype(np.int16)
 
@@ -40,9 +39,9 @@ class Shhs(PhysioExDataset):
             self.table, sequence_length
         )
 
-        self.split_path = get_data_folder()+ f"/shhs/data_split_eval.mat"
+        self.split_path = get_data_folder() + f"/shhs/data_split_eval.mat"
 
-        self.data_path = get_data_folder()+ f"/shhs/{preprocessing}/"
+        self.data_path = get_data_folder() + f"/shhs/{preprocessing}/"
 
         self.picks = picks
         self.version = version
@@ -59,7 +58,7 @@ class Shhs(PhysioExDataset):
         else:
             self.input_shape = [29, 129]
 
-        scaling_file = np.load(get_data_folder()+ f"/shhs/{preprocessing}/scaling.npz")
+        scaling_file = np.load(get_data_folder() + f"/shhs/{preprocessing}/scaling.npz")
 
         EEG_mean, EOG_mean, EMG_mean = scaling_file["mean"]
         EEG_std, EOG_std, EMG_std = scaling_file["std"]

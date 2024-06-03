@@ -36,7 +36,7 @@ class Dreem(PhysioExDataset):
 
         self.config = read_config("config/dreem.yaml")
 
-        self.table = pd.read_csv(get_data_folder()+ self.config["table_" + version])
+        self.table = pd.read_csv(get_data_folder() + self.config["table_" + version])
 
         self.subjects = self.table["subject_id"].values.astype(int)
 
@@ -45,7 +45,7 @@ class Dreem(PhysioExDataset):
         )
 
         self.split_path = None
-        self.data_path = get_data_folder()+ f"/dreem/{preprocessing}/{version}/"
+        self.data_path = get_data_folder() + f"/dreem/{preprocessing}/{version}/"
 
         self.picks = picks
         self.version = version
@@ -60,7 +60,7 @@ class Dreem(PhysioExDataset):
         self.input_shape = self.config["shape_" + preprocessing]
 
         scaling_file = np.load(
-            get_data_folder()+ f"/dreem/{preprocessing}/{version}/scaling.npz"
+            get_data_folder() + f"/dreem/{preprocessing}/{version}/scaling.npz"
         )
 
         EEG_mean, EOG_mean, EMG_mean = scaling_file["mean"]

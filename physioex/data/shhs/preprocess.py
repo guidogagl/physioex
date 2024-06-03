@@ -235,4 +235,4 @@ if __name__ == "__main__":
     url = (
         "https://github.com/pquochuy/SleepTransformer/raw/main/shhs/data_split_eval.mat"
     )
-    urlretrieve(url, get_data_folder()+ "/shhs/data_split_eval.mat")
+    urlretrieve(url, get_data_folder() + "/shhs/data_split_eval.mat")

@@ -11,7 +11,7 @@ from tqdm import tqdm
 
 from physioex.data.constant import get_data_folder
 
-data_path = get_data_folder()+ "/mass/"
+data_path = get_data_folder() + "/mass/"
 
 input_dir = data_path + "mat/"
 

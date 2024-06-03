@@ -75,7 +75,7 @@ def create_table(version, num_samples):
     df["subject_id"] = subjects_ids
     df["num_samples"] = num_samples
 
-    df.to_csv(get_data_folder()+ "/dreem/table_" + str(version) + ".csv")
+    df.to_csv(get_data_folder() + "/dreem/table_" + str(version) + ".csv")
 
     return
 

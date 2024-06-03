@@ -5,7 +5,7 @@ from pathlib import Path
 import yaml
 from loguru import logger
 
-from physioex.data.constant import register_dataset, set_data_folder
+from physioex.data import register_dataset, set_data_folder
 from physioex.train import Trainer
 from physioex.train.networks import config, register_experiment
 
@@ -108,13 +108,13 @@ def main():
     )
 
     parser.add_argument(
-            "--data_folder",
-            "-df",
-            type=str,
-            default=None,
-            required=False,
-            help="The absolute path of the directory where the physioex dataset are stored, if None the home directory is used. Expected type: str. Optional. Default: None",
-        )
+        "--data_folder",
+        "-df",
+        type=str,
+        default=None,
+        required=False,
+        help="The absolute path of the directory where the physioex dataset are stored, if None the home directory is used. Expected type: str. Optional. Default: None",
+    )
 
     args = parser.parse_args()
 
