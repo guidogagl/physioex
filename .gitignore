@@ -9,7 +9,7 @@ results/
 
 physioex/train/old/
 
-models
+/models/
 script
 temp 
 lightning_logs
