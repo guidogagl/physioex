@@ -1,3 +1,4 @@
+condor/
 
 # Byte-compiled / optimized / DLL files
 **/__pycache__/
@@ -9,7 +10,7 @@ results/
 
 physioex/train/old/
 
-models
+/models/
 script
 temp 
 lightning_logs
