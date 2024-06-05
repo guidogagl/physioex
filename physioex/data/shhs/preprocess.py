@@ -159,7 +159,7 @@ def process_files(input_dir, output_dir_raw, output_dir_preprocessed, csv_path):
 
     filenames = os.listdir(input_dir)
 
-    results = Parallel(n_jobs=-1)(
+    results = Parallel(n_jobs=1)(
         delayed(process_file)(filename, output_dir_raw, output_dir_preprocessed, stats)
         for filename in tqdm(filenames)
         if filename.endswith(".mat") and filename.startswith("n")
@@ -224,15 +224,15 @@ def process_files(input_dir, output_dir_raw, output_dir_preprocessed, csv_path):
     )
 
 
-if __name__ == "__main__":
 
-    # check if the output_dirs exists and create them if not
-    for key in output_dirs.keys():
-        Path(output_dirs[key]).mkdir(parents=True, exist_ok=True)
 
-    process_files(input_dir, output_dirs["raw"], output_dirs["xsleepnet"], csv_path)
+# check if the output_dirs exists and create them if not
+for key in output_dirs.keys():
+    Path(output_dirs[key]).mkdir(parents=True, exist_ok=True)
 
-    url = (
-        "https://github.com/pquochuy/SleepTransformer/raw/main/shhs/data_split_eval.mat"
-    )
-    urlretrieve(url, get_data_folder() + "/shhs/data_split_eval.mat")
+process_files(input_dir, output_dirs["raw"], output_dirs["xsleepnet"], csv_path)
+
+url = (
+    "https://github.com/pquochuy/SleepTransformer/raw/main/shhs/data_split_eval.mat"
+)
+urlretrieve(url, get_data_folder() + "/shhs/data_split_eval.mat")

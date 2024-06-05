@@ -178,90 +178,88 @@ def process_data(data_path, version, output_path, preprocessing):
     return np.array(num_samples).astype(int).reshape(-1)
 
 
-def main():
-    processed_paths = [
-        str(Path.home() / "dreem" / "raw"),
-        str(Path.home() / "dreem" / "xsleepnet"),
-    ]
-    versions = ["dodo", "dodh"]
+processed_paths = [
+    str(get_data_folder() + "/dreem/raw"),
+    str(get_data_folder() + "/dreem/xsleepnet"),
+]
+versions = ["dodo", "dodh"]
 
-    data_paths = [utl.DODO_SETTINGS["h5_directory"], utl.DODH_SETTINGS["h5_directory"]]
+data_paths = [utl.DODO_SETTINGS["h5_directory"], utl.DODH_SETTINGS["h5_directory"]]
 
-    for p in processed_paths:
-        for v in versions:
-            Path(p, v).mkdir(parents=True, exist_ok=True)
+for p in processed_paths:
+    for v in versions:
+        Path(p, v).mkdir(parents=True, exist_ok=True)
 
-    logger.info("Fetching the dataset..")
+logger.info("Fetching the dataset..")
 
-    try:
-        found = (
-            str(dirhash(utl.BASE_DIRECTORY_H5, "md5", jobs=os.cpu_count()))
-            == utl.DATASET_HASH
-        )
-    except Exception as e:
-        logger.error(f"An error occurred: {e}")
-        found = False
-
-    if not found:
-        logger.info("Data not found, download dataset...")
-        utl.download_dreem_dataset()
-
-    logger.info("Processing the data..")
-
-    # raw data processing
-    num_samples = {}
-    num_samples["dodh"] = process_data(
-        data_paths[1], "dodh", processed_paths[0], preprocessing=None
+try:
+    found = (
+        str(dirhash(utl.BASE_DIRECTORY_H5, "md5", jobs=os.cpu_count()))
+        == utl.DATASET_HASH
     )
-    num_samples["dodo"] = process_data(
-        data_paths[0], "dodo", processed_paths[0], preprocessing=None
-    )
+except Exception as e:
+    logger.error(f"An error occurred: {e}")
+    found = False
 
-    # xsleepnet data processing
-    process_data(
-        data_paths[1],
-        "dodh",
-        processed_paths[1],
-        preprocessing=utl.xsleepnet_preprocessing,
-    )
-    process_data(
-        data_paths[0],
-        "dodo",
-        processed_paths[1],
-        preprocessing=utl.xsleepnet_preprocessing,
-    )
+if not found:
+    logger.info("Data not found, download dataset...")
+    utl.download_dreem_dataset()
 
-    logger.info("Creating the tables..")
+logger.info("Processing the data..")
 
-    create_table("dodh", num_samples["dodh"])
-    create_table("dodo", num_samples["dodo"])
+# raw data processing
+num_samples = {}
+num_samples["dodh"] = process_data(
+    data_paths[1], "dodh", processed_paths[0], preprocessing=None
+)
+num_samples["dodo"] = process_data(
+    data_paths[0], "dodo", processed_paths[0], preprocessing=None
+)
 
-    logger.info("Computing the splitting parameters")
+# xsleepnet data processing
+process_data(
+    data_paths[1],
+    "dodh",
+    processed_paths[1],
+    preprocessing=utl.xsleepnet_preprocessing,
+)
+process_data(
+    data_paths[0],
+    "dodo",
+    processed_paths[1],
+    preprocessing=utl.xsleepnet_preprocessing,
+)
 
-    # raw data scaling
-    compute_splitting_parameters(
-        processed_paths[0] + "/dodh/",
-        subjects=np.arange(len(num_samples["dodh"])).astype(int),
-        shape=[3000],
-    )
-    compute_splitting_parameters(
-        processed_paths[0] + "/dodo/",
-        subjects=np.arange(len(num_samples["dodo"])).astype(int),
-        shape=[3000],
-    )
+logger.info("Creating the tables..")
 
-    # xsleepnet data scaling
-    compute_splitting_parameters(
-        processed_paths[1] + "/dodh/",
-        subjects=np.arange(len(num_samples["dodh"])).astype(int),
-        shape=[29, 129],
-    )
-    compute_splitting_parameters(
-        processed_paths[1] + "/dodo/",
-        subjects=np.arange(len(num_samples["dodo"])).astype(int),
-        shape=[29, 129],
-    )
+create_table("dodh", num_samples["dodh"])
+create_table("dodo", num_samples["dodo"])
+
+logger.info("Computing the splitting parameters")
+
+# raw data scaling
+compute_splitting_parameters(
+    processed_paths[0] + "/dodh/",
+    subjects=np.arange(len(num_samples["dodh"])).astype(int),
+    shape=[3000],
+)
+compute_splitting_parameters(
+    processed_paths[0] + "/dodo/",
+    subjects=np.arange(len(num_samples["dodo"])).astype(int),
+    shape=[3000],
+)
+
+# xsleepnet data scaling
+compute_splitting_parameters(
+    processed_paths[1] + "/dodh/",
+    subjects=np.arange(len(num_samples["dodh"])).astype(int),
+    shape=[29, 129],
+)
+compute_splitting_parameters(
+    processed_paths[1] + "/dodo/",
+    subjects=np.arange(len(num_samples["dodo"])).astype(int),
+    shape=[29, 129],
+)
 
 
-if __name__ == "__main__":
-    main()
+
