@@ -1,0 +1,109 @@
+{
+    "os": "Linux-6.9.3-200.fc40.x86_64-x86_64-with-glibc2.39",
+    "python": "3.10.0",
+    "heartbeatAt": "2024-06-06T11:52:00.247329",
+    "startedAt": "2024-06-06T11:51:59.439604",
+    "docker": null,
+    "cuda": null,
+    "args": [
+        "-e",
+        "chambon2018",
+        "-d",
+        "dreem",
+        "-v",
+        "dodh",
+        "-p",
+        "C3-M2",
+        "-bs",
+        "16",
+        "-ckpt",
+        "/esat/biomeddata/ggagliar/github/physioex-private/models/chambon2018/dreem/dodh/",
+        "-df",
+        "/esat/biomeddata/ggagliar/",
+        "-nj",
+        "1",
+        "-wdb"
+    ],
+    "state": "running",
+    "program": "/esat/biomeddata/ggagliar/miniconda3/envs/physioex/bin/train",
+    "codePathLocal": null,
+    "git": {
+        "remote": "https://github.com/guidogagl/physioex-private.git",
+        "commit": "0fb4098e111235faaeaa8adb5de20ec870ab0ea9"
+    },
+    "email": "gagliardi.guido.96@gmail.com",
+    "root": "/esat/biomeddata/ggagliar/github/physioex-private",
+    "host": "ricotta.esat.kuleuven.be",
+    "username": "ggagliar",
+    "executable": "/esat/biomeddata/ggagliar/miniconda3/envs/physioex/bin/python",
+    "cpu_count": 4,
+    "cpu_count_logical": 8,
+    "cpu_freq": {
+        "current": 1967.6246250000002,
+        "min": 1596.0,
+        "max": 2395.0
+    },
+    "cpu_freq_per_core": [
+        {
+            "current": 2625.904,
+            "min": 1596.0,
+            "max": 2395.0
+        },
+        {
+            "current": 1598.732,
+            "min": 1596.0,
+            "max": 2395.0
+        },
+        {
+            "current": 1596.0,
+            "min": 1596.0,
+            "max": 2395.0
+        },
+        {
+            "current": 1596.0,
+            "min": 1596.0,
+            "max": 2395.0
+        },
+        {
+            "current": 2546.018,
+            "min": 1596.0,
+            "max": 2395.0
+        },
+        {
+            "current": 1596.0,
+            "min": 1596.0,
+            "max": 2395.0
+        },
+        {
+            "current": 1998.165,
+            "min": 1596.0,
+            "max": 2395.0
+        },
+        {
+            "current": 2581.288,
+            "min": 1596.0,
+            "max": 2395.0
+        }
+    ],
+    "disk": {
+        "/": {
+            "total": 15.580928802490234,
+            "used": 8.312992095947266
+        }
+    },
+    "gpu": "NVIDIA GeForce GTX 1050 Ti",
+    "gpu_count": 2,
+    "gpu_devices": [
+        {
+            "name": "NVIDIA GeForce GTX 1050 Ti",
+            "memory_total": 4294967296
+        },
+        {
+            "name": "NVIDIA GeForce GTX 1050 Ti",
+            "memory_total": 4294967296
+        }
+    ],
+    "memory": {
+        "total": 11.670600891113281
+    }
+}

@@ -116,6 +116,13 @@ def main():
         help="The absolute path of the directory where the physioex dataset are stored, if None the home directory is used. Expected type: str. Optional. Default: None",
     )
 
+    parser.add_argument(
+        "--wandb",
+        "-wdb",
+        action='store_true',
+        help="Enables the logging on Weights and Biases. If the argument is present, it is set to True. Otherwise, it is set to False.",
+    )
+
     args = parser.parse_args()
 
     if args.data_folder is not None:
@@ -155,6 +162,7 @@ def main():
         batch_size=args.batch_size,
         n_jobs=args.n_jobs,
         imbalance=args.imbalance,
+        use_wandb=args.wandb,
     ).run()
 
 

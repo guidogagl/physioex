@@ -224,15 +224,11 @@ def process_files(input_dir, output_dir_raw, output_dir_preprocessed, csv_path):
     )
 
 
-
-
 # check if the output_dirs exists and create them if not
 for key in output_dirs.keys():
     Path(output_dirs[key]).mkdir(parents=True, exist_ok=True)
 
 process_files(input_dir, output_dirs["raw"], output_dirs["xsleepnet"], csv_path)
 
-url = (
-    "https://github.com/pquochuy/SleepTransformer/raw/main/shhs/data_split_eval.mat"
-)
+url = "https://github.com/pquochuy/SleepTransformer/raw/main/shhs/data_split_eval.mat"
 urlretrieve(url, get_data_folder() + "/shhs/data_split_eval.mat")

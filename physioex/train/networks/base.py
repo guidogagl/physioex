@@ -14,6 +14,7 @@ from pytorch_metric_learning.regularizers import LpRegularizer
 class SleepModule(pl.LightningModule):
     def __init__(self, nn: nn.Module, config: Dict):
         super(SleepModule, self).__init__()
+        self.save_hyperparameters()
         self.nn = nn
 
         # metrics

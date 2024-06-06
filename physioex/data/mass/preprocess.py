@@ -144,7 +144,7 @@ def process_files(input_dir, output_dir_raw, output_dir_preprocessed, csv_path):
 
     file_to_id = {filename: idx for idx, filename in enumerate(files_ids)}
 
-    results = Parallel(n_jobs = 1 )(
+    results = Parallel(n_jobs=1)(
         delayed(process_file)(
             filename, file_to_id, output_dir_raw, output_dir_preprocessed
         )
@@ -258,7 +258,6 @@ def compute_mean_std():
     return
 
 
-
 for key in output_dirs.keys():
     Path(output_dirs[key]).mkdir(parents=True, exist_ok=True)
 
@@ -269,4 +268,4 @@ logger.info("Computing mean and std")
 compute_mean_std()
 
 url = "https://github.com/pquochuy/xsleepnet/raw/master/mass/data_split_eval.mat"
-urlretrieve(url, get_data_folder()+ "/mass/data_split_eval.mat")
+urlretrieve(url, get_data_folder() + "/mass/data_split_eval.mat")

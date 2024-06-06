@@ -1,0 +1,201 @@
+wandb_version: 1
+
+_wandb:
+  desc: null
+  value:
+    python_version: 3.10.0
+    cli_version: 0.17.0
+    framework: lightning
+    is_jupyter_run: false
+    is_kaggle_kernel: false
+    start_time: 1717674719
+    t:
+      1:
+      - 1
+      - 5
+      - 9
+      - 32
+      - 53
+      - 55
+      - 103
+      2:
+      - 1
+      - 5
+      - 9
+      - 32
+      - 53
+      - 55
+      - 103
+      3:
+      - 1
+      - 7
+      - 13
+      - 23
+      - 66
+      4: 3.10.0
+      5: 0.17.0
+      8:
+      - 5
+      13: linux-x86_64
+    m:
+    - 1: trainer/global_step
+      6:
+      - 3
+    - 1: train_loss
+      5: 1
+      6:
+      - 1
+    - 1: train_acc
+      5: 1
+      6:
+      - 1
+    - 1: train_f1
+      5: 1
+      6:
+      - 1
+    - 1: epoch
+      5: 1
+      6:
+      - 1
+    - 1: val_loss
+      5: 1
+      6:
+      - 1
+    - 1: val_acc
+      5: 1
+      6:
+      - 1
+    - 1: val_f1
+      5: 1
+      6:
+      - 1
+    - 1: gradients/nn\.clf\.bias._type
+      5: 1
+      6:
+      - 1
+    - 1: gradients/nn\.clf\.bias.values
+      5: 1
+      6:
+      - 1
+    - 1: gradients/nn\.clf\.bias.bins
+      5: 1
+      6:
+      - 1
+    - 1: gradients/nn\.clf\.weight._type
+      5: 1
+      6:
+      - 1
+    - 1: gradients/nn\.clf\.weight.values
+      5: 1
+      6:
+      - 1
+    - 1: gradients/nn\.clf\.weight.bins
+      5: 1
+      6:
+      - 1
+    - 1: gradients/nn\.epoch_encoder\.feature_extractor\.4\.weight._type
+      5: 1
+      6:
+      - 1
+    - 1: gradients/nn\.epoch_encoder\.feature_extractor\.4\.weight.values
+      5: 1
+      6:
+      - 1
+    - 1: gradients/nn\.epoch_encoder\.feature_extractor\.4\.weight.bins
+      5: 1
+      6:
+      - 1
+    - 1: gradients/nn\.epoch_encoder\.feature_extractor\.4\.bias._type
+      5: 1
+      6:
+      - 1
+    - 1: gradients/nn\.epoch_encoder\.feature_extractor\.4\.bias.values
+      5: 1
+      6:
+      - 1
+    - 1: gradients/nn\.epoch_encoder\.feature_extractor\.4\.bias.bins
+      5: 1
+      6:
+      - 1
+    - 1: gradients/nn\.epoch_encoder\.feature_extractor\.0\.weight._type
+      5: 1
+      6:
+      - 1
+    - 1: gradients/nn\.epoch_encoder\.feature_extractor\.0\.weight.values
+      5: 1
+      6:
+      - 1
+    - 1: gradients/nn\.epoch_encoder\.feature_extractor\.0\.weight.bins
+      5: 1
+      6:
+      - 1
+    - 1: gradients/nn\.epoch_encoder\.feature_extractor\.0\.bias._type
+      5: 1
+      6:
+      - 1
+    - 1: gradients/nn\.epoch_encoder\.feature_extractor\.0\.bias.values
+      5: 1
+      6:
+      - 1
+    - 1: gradients/nn\.epoch_encoder\.feature_extractor\.0\.bias.bins
+      5: 1
+      6:
+      - 1
+model:
+  desc: null
+  value: chambon2018
+dataset:
+  desc: null
+  value: dreem
+version:
+  desc: null
+  value: dodh
+monitor:
+  desc: null
+  value: val_acc
+fold:
+  desc: null
+  value: 0
+batch_size:
+  desc: null
+  value: 16
+loss:
+  desc: null
+  value: cel
+nn:
+  desc: null
+  value: null
+config:
+  desc: null
+  value:
+    n_classes: 5
+    n_channels: 1
+    sfreq: 100
+    n_times: 3000
+    seq_len: 3
+    learning_rate: 1e-4
+    adam_beta_1: 0.9
+    adam_beta_2: 0.999
+    adam_epsilon: 1e-8
+    latent_space_dim: 32
+    input_processing: raw
+    in_channels: 1
+    loss_call: physioex.train.networks.utils.loss.CrossEntropyLoss
+    loss_params: {}
+module_config:
+  desc: null
+  value:
+    n_classes: 5
+    n_channels: 1
+    sfreq: 100
+    n_times: 3000
+    seq_len: 3
+    learning_rate: 1e-4
+    adam_beta_1: 0.9
+    adam_beta_2: 0.999
+    adam_epsilon: 1e-8
+    latent_space_dim: 32
+    input_processing: raw
+    in_channels: 1
+    loss_call: physioex.train.networks.utils.loss.CrossEntropyLoss
+    loss_params: {}

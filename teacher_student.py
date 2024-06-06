@@ -46,7 +46,7 @@ class MISO(torch.nn.Module):
 
 
 def smooth(x, kernel_size=3):
-    return torch.nn.AvgPool1d(kernel_size=kernel_size, stride=int(kernel_size / 2))(x) 
+    return torch.nn.AvgPool1d(kernel_size=kernel_size, stride=int(kernel_size / 2))(x)
 
 
 def process_explanations(explanations, kernel_size=300):
@@ -66,18 +66,18 @@ def process_explanations(explanations, kernel_size=300):
     # check if inf
     if torch.isinf(explanations).any():
         logger.warning("Inf in the explanations")
-        
+
     explanations = explanations.reshape(batch_size, -1)
 
     explanations_sign = torch.sign(explanations)
 
     explanations = torch.pow(10, torch.abs(explanations))
-    
+
     # check if inf
     if torch.isinf(explanations).any():
         logger.warning("Inf in the explanations")
         exit()
-        
+
     # Restore the original sign of the explanations
     explanations *= explanations_sign
 
@@ -135,7 +135,7 @@ class TeacherStudent(SleepModule):
 
         for param in teacher_exp.clf.parameters():
             param.requires_grad = False
-        
+
         teacher_exp = torch.nn.Sequential(
             self.StandardScaler,
             teacher_exp,
@@ -150,39 +150,28 @@ class TeacherStudent(SleepModule):
             teacher_exp, n_bands=module_config["n_bands"]
         )
 
-
     def training_step(self, batch, batch_idx):
         # Logica di training
         inputs, targets = batch
 
         outputs = self.nn(self.StandardScaler(inputs))
-        
+
         with torch.no_grad():
-            teacher_explanations = (
-                process_explanations(
-                    self.teacher_exp.attribute(
-                        inputs, target=targets, n_steps=5
-                    )
-                    .detach()
-                    .cpu(),
-                    self.kernel_size,
-                )
+            teacher_explanations = process_explanations(
+                self.teacher_exp.attribute(inputs, target=targets, n_steps=5)
+                .detach()
+                .cpu(),
+                self.kernel_size,
             )
 
-            student_explanations = (
-                process_explanations(
-                    self.student_exp.attribute(
-                        inputs, target=targets, n_steps=5
-                    )
-                    .detach()
-                    .cpu(),
-                    self.kernel_size,
-                )
+            student_explanations = process_explanations(
+                self.student_exp.attribute(inputs, target=targets, n_steps=5)
+                .detach()
+                .cpu(),
+                self.kernel_size,
             )
-        
-        self.exp_loss = self.mse(
-            student_explanations, teacher_explanations
-        )
+
+        self.exp_loss = self.mse(student_explanations, teacher_explanations)
 
         self.log("exp_loss", self.exp_loss, prog_bar=True)
 

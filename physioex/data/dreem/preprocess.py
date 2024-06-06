@@ -260,6 +260,3 @@ compute_splitting_parameters(
     subjects=np.arange(len(num_samples["dodo"])).astype(int),
     shape=[29, 129],
 )
-
-
-

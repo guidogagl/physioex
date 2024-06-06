@@ -2,6 +2,7 @@ braindecode
 wfdb
 pyyaml
 loguru
+wandb
 
 typing
 dirhash

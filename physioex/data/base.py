@@ -9,6 +9,7 @@ from torch.utils.data import DataLoader, SubsetRandomSampler
 from physioex.data.constant import get_data_folder
 from physioex.data.utils import read_config
 
+import os
 
 def transform_to_sequence(x, y, sequence_length):
 
@@ -172,7 +173,7 @@ class TimeDistributedModule(pl.LightningDataModule):
         dataset: PhysioExDataset,
         batch_size: int = 32,
         fold: int = 0,
-        num_workers: int = 32,
+        #num_workers: int = 32,
     ):
         super().__init__()
         self.dataset = dataset
@@ -182,7 +183,8 @@ class TimeDistributedModule(pl.LightningDataModule):
 
         self.train_idx, self.valid_idx, self.test_idx = self.dataset.get_sets()
 
-        self.num_workers = num_workers
+        self.num_workers = batch_size if os.cpu_count() - 1 > batch_size else os.cpu_count() - 1
+        self.num_workers = self.num_workers if self.num_workers >= 1 else 1
 
     def setup(self, stage: str):
         return
