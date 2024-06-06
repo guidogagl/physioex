@@ -150,7 +150,8 @@ class Trainer:
             val_check_interval=self.val_check_interval,
             callbacks=[checkpoint_callback, progress_bar_callback],
             deterministic=True,
-            logger = my_logger
+            logger = my_logger,
+            accelerator='ddp_spawn'
         )
 
         if self.use_wandb:
