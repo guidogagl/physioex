@@ -8,6 +8,8 @@ condor/
 
 results/
 
+wandb
+
 physioex/train/old/
 
 /models/
