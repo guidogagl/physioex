@@ -33,3 +33,4 @@ seaborn
 pandas
 
 npy-append-array
+rarfile

@@ -11,6 +11,10 @@ preprocess = {
     "dreem": "physioex.data.dreem.preprocess",
     "shhs": "physioex.data.shhs.preprocess",
     "mass": "physioex.data.mass.preprocess",
+    "svuh": "physioex.data.svuh.preprocess",
+    "hpap": "physioex.data.hpap.preprocess",
+    "dcsm": "physioex.data.dcsm.preprocess",
+    "isruc": "physioex.data.isruc.preprocess"
 }
 
 

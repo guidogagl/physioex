@@ -112,11 +112,10 @@ class TeacherStudent(SleepModule):
             target_transform=get_mid_label,
         )
 
-        self.mean, self.std = dataset.mean, dataset.std
-        self.StandardScaler = StandardScaler(self.mean, self.std)
+        self.scaler = StandardScaler(dataset.mean, dataset.std)
 
         student_exp = torch.nn.Sequential(
-            self.StandardScaler,
+            self.scaler,
             self.student,
             torch.nn.Softmax(dim=-1),
         )
@@ -137,7 +136,7 @@ class TeacherStudent(SleepModule):
             param.requires_grad = False
 
         teacher_exp = torch.nn.Sequential(
-            self.StandardScaler,
+            self.scaler,
             teacher_exp,
             torch.nn.Softmax(dim=-1),
         )
@@ -149,12 +148,14 @@ class TeacherStudent(SleepModule):
         self.teacher_exp = SpectralGradients(
             teacher_exp, n_bands=module_config["n_bands"]
         )
+        
+    
 
     def training_step(self, batch, batch_idx):
         # Logica di training
         inputs, targets = batch
 
-        outputs = self.nn(self.StandardScaler(inputs))
+        outputs = self.nn(self.scaler(inputs))
 
         with torch.no_grad():
             teacher_explanations = process_explanations(
@@ -180,13 +181,13 @@ class TeacherStudent(SleepModule):
     def validation_step(self, batch, batch_idx):
         # Logica di validazione
         inputs, targets = batch
-        outputs = self.nn(self.StandardScaler(inputs))
+        outputs = self.nn(self.scaler(inputs))
 
         return self.compute_loss(outputs, targets, "val")
 
     def test_step(self, batch, batch_idx):
         inputs, targets = batch
-        outputs = self.nn(self.StandardScaler(inputs))
+        outputs = self.nn(self.scaler(inputs))
         return self.compute_loss(outputs, targets, "test", log_metrics=True)
 
     def compute_loss(
