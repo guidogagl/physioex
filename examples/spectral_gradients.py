@@ -13,6 +13,8 @@ seed_everything(42)
 
 import os
 
+from captum.attr import IntegratedGradients
+
 from physioex.data import Shhs, SleepEDF, TimeDistributedModule
 from physioex.explain.spectralgradients import (
     SpectralGradients,
@@ -24,9 +26,6 @@ from physioex.models import load_pretrained_model
 from physioex.train.networks import config as networks
 from physioex.train.networks.utils.loss import config as losses
 from physioex.train.networks.utils.target_transform import get_mid_label
-
-
-from captum.attr import IntegratedGradients
 
 
 def smooth(x, kernel_size=3):

@@ -3,7 +3,6 @@ from typing import Callable, Dict, List
 import numpy as np
 
 from physioex.data.base import PhysioExDataset
-
 from physioex.data.dreem.dreem import Dreem
 from physioex.data.mass.mass import Mass
 from physioex.data.shhs.shhs import Shhs

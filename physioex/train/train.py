@@ -119,27 +119,14 @@ def main():
     parser.add_argument(
         "--wandb",
         "-wdb",
-        action='store_true',
+        action="store_true",
         help="Enables the logging on Weights and Biases. If the argument is present, it is set to True. Otherwise, it is set to False.",
     )
 
     args = parser.parse_args()
 
     if args.data_folder is not None:
-        # check if the path in args is a valid path
-        if not Path(args.data_folder).exists():
-            logger.warning(
-                f"Path {args.data_folder} does not exist. Trying to create it."
-            )
-            try:
-                Path(args.data_folder).mkdir(parents=True, exist_ok=True)
-            except Exception as e:
-                logger.error(f"Could not create the path {args.data_folder}.")
-                logger.error(f"Error: {e}")
-                return
-
         set_data_folder(args.data_folder)
-        logger.info(f"Data folder set to {args.data_folder}")
 
     # check if the experiment is a yaml file
     if args.experiment.endswith(".yaml") or args.experiment.endswith(".yml"):

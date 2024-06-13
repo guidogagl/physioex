@@ -8,7 +8,6 @@ from physioex.data.shhs.shhs import Shhs
 from physioex.explain.spectralgradients import SpectralGradients
 from physioex.models import load_pretrained_model
 from physioex.train.networks.base import SleepModule
-
 from physioex.train.networks.utils.target_transform import get_mid_label
 
 
@@ -148,8 +147,6 @@ class TeacherStudent(SleepModule):
         self.teacher_exp = SpectralGradients(
             teacher_exp, n_bands=module_config["n_bands"]
         )
-        
-    
 
     def training_step(self, batch, batch_idx):
         # Logica di training

@@ -1,3 +1,4 @@
+import os
 from typing import Callable, List
 
 import numpy as np
@@ -9,7 +10,6 @@ from torch.utils.data import DataLoader, SubsetRandomSampler
 from physioex.data.constant import get_data_folder
 from physioex.data.utils import read_config
 
-import os
 
 def transform_to_sequence(x, y, sequence_length):
 
@@ -52,92 +52,95 @@ def find_subject_for_window(index, window_to_subject, subject_to_start):
 
 
 class PhysioExDataset(torch.utils.data.Dataset):
-
+    
     def __init__(
         self,
-        version: str,
-        picks: List[str],  # available [ "Fpz-Cz", "EOG", "EMG" ]
-        preprocessing,  # available [ "raw", "xsleepnet" ]
-        config_path: str = None,
-        sequence_length: int = 21,
+        dataset_folder : str,
+        preprocessing : str,  # available [ "raw", "xsleepnet" ]
+        input_shape : List[int],
+        sequence_length: int,
+        selected_channels : List[int],
         target_transform: Callable = None,
     ):
-        self.config = read_config(config_path)
-
-        self.subjects = self.config["subjects_v" + version]
-
-        self.table = pd.read_csv(get_data_folder() + self.config["table"])
-
-        # drop from the table the rows with subject_id not in self.subjects
-        self.table = self.table[self.table["subject_id"].isin(self.subjects)]
+        table_path = os.path.join( dataset_folder, "table.csv")
+        self.table = pd.read_csv( table_path )
 
         self.window_to_subject, self.subject_to_start = create_subject_index_map(
             self.table, sequence_length
         )
-
-        self.split_path = get_data_folder() + self.config["splits_v" + version]
-        self.data_path = get_data_folder() + self.config[preprocessing + "_path"]
-
-        self.picks = picks
-        self.version = version
-        self.preprocessing = preprocessing
-
-        self.mean = None
-        self.std = None
-
+        
+        data_path = os.path.join( dataset_folder, preprocessing + ".dat")
+        labels_path = os.path.join( dataset_folder, "labels.dat")
+        
+        self.X = np.memmap(
+            data_path,
+            dtype="float32",
+            mode="r",
+            shape=( int( np.sum( self.table["num_samples"].values ) ), *input_shape),
+        )
+        
+        self.y = np.memmap(
+            labels_path,
+            dtype="int16",
+            mode="r",
+            shape=( int( np.sum( self.table["num_samples"].values ) ) ),
+        ) 
+        
+        splitting_path = os.path.join( dataset_folder, "splitting.npz")
+        self.splitting = np.load( splitting_path )
+        
+        scaling_path = os.path.join( dataset_folder, preprocessing + "_scaling.npz")
+        scaling = np.load( scaling_path )
+                
+        self.mean, self.std = scaling["mean"], scaling["std"]
+        self.mean, self.std = self.mean[selected_channels], self.std[selected_channels]
+        
+        self.mean, self.std = torch.tensor( self.mean ).float(), torch.tensor( self.std ).float()
+               
         self.L = sequence_length
         self.target_transform = target_transform
-
-        self.input_shape = self.config["shape_" + preprocessing]
-
+        self.selected_channels = selected_channels
+        
     def __len__(self):
         return int(np.sum(self.table["num_samples"] - self.L + 1))
 
     def __getitem__(self, idx):
+        
         subject_id, relative_id = find_subject_for_window(
             idx, self.window_to_subject, self.subject_to_start
         )
 
-        subject_num_samples = self.table[self.table["subject_id"] == subject_id][
-            "num_samples"
+        subject_start_indx = self.table[self.table["subject_id"] == subject_id][
+            "start_index"
         ].values[0]
+        
+        absolute_id = subject_start_indx + relative_id
+        
+        X = self.X[ absolute_id: absolute_id + self.L ]
+        y = self.y[ absolute_id: absolute_id + self.L ]
+        
+        # L, n_channels, ... other dims
 
-        input = []
-        for pick in self.picks:
-            path = self.data_path + f"/{pick}_{subject_id}.dat"
-
-            fp = np.memmap(
-                path,
-                dtype="float32",
-                mode="r",
-                shape=(subject_num_samples, *self.input_shape),
-            )[relative_id : relative_id + self.L]
-
-            fp = np.expand_dims(fp, axis=1)
-            input.append(fp)
-
-        input = np.concatenate(input, axis=1)
-
-        # if len(self.picks) == 1:
-        #    input = np.expand_dims(input, axis=0)
-
-        # read the label in the same way
-
-        y = np.memmap(
-            self.data_path + f"/y_{subject_id}.dat",
-            dtype="int16",
-            mode="r",
-            shape=(subject_num_samples),
-        )[relative_id : relative_id + self.L]
-
-        return torch.tensor(input).float(), torch.tensor(y).view(-1).long()
+        X = X[:, self.selected_channels]
+        
+        return torch.tensor(X).float(), torch.tensor(y).view(-1).long()
 
     def get_num_folds(self):
-        pass
+        return self.splitting["train"].shape[0]
 
-    def split(self):
-        pass
+    def split(self, fold : int):
 
+        valid_subjects = self.splitting["valid"][fold].astype(np.int16)
+        test_subjects = self.splitting["test"][fold].astype(np.int16)
+
+        # add a column to the table with 0 if the subject is in train, 1 if in valid, 2 if in test
+
+        split = np.zeros(len(self.table)).astype(np.int8)
+        split[self.table["subject_id"].isin(test_subjects)] = 2
+        split[self.table["subject_id"].isin(valid_subjects)] = 1
+
+        self.table["split"] = split
+        
     def get_sets(self):
         # return the indexes in the table of the train, valid and test subjects
         train_idx = []
@@ -173,7 +176,7 @@ class TimeDistributedModule(pl.LightningDataModule):
         dataset: PhysioExDataset,
         batch_size: int = 32,
         fold: int = 0,
-        #num_workers: int = 32,
+        # num_workers: int = 32,
     ):
         super().__init__()
         self.dataset = dataset
@@ -183,9 +186,9 @@ class TimeDistributedModule(pl.LightningDataModule):
 
         self.train_idx, self.valid_idx, self.test_idx = self.dataset.get_sets()
 
-        #self.num_workers = max(min(batch_size, os.cpu_count() - 1), 1)
+        # self.num_workers = max(min(batch_size, os.cpu_count() - 1), 1)
         self.num_workers = 1
-        
+
     def setup(self, stage: str):
         return
 
