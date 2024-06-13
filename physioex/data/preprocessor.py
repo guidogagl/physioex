@@ -11,6 +11,9 @@ from tqdm import tqdm
 
 from physioex.data.constant import get_data_folder, set_data_folder
 
+import pickle
+
+
 def bandpass_filter(data, lowcut, highcut, fs, order=5):
     nyquist = 0.5 * fs
     low = lowcut / nyquist
@@ -18,6 +21,7 @@ def bandpass_filter(data, lowcut, highcut, fs, order=5):
     b, a = butter(order, [low, high], btype="band")
     filtered_data = filtfilt(b, a, data)
     return filtered_data
+
 
 def compute_mean_std_incremental(data, batch_size, shape):
     total_sq, total = np.zeros(shape), np.zeros(shape)
@@ -34,6 +38,7 @@ def compute_mean_std_incremental(data, batch_size, shape):
     std = np.sqrt(np.maximum(total_sq / n - mean**2, 0))
 
     return mean.astype(np.float32), std.astype(np.float32)
+
 
 def chmod_recursive(path, mode):
     for dirpath, dirnames, filenames in os.walk(path):
@@ -135,7 +140,7 @@ class Preprocessor:
         return table
 
     @logger.catch
-    def get_sets(self) -> Tuple[np.array, np.array, np.array]:
+    def get_sets(self) -> Tuple[List, List, List]:
         # this method should be provided by the user
         # the method should return the train valid and test subjects,
         pass
@@ -245,32 +250,32 @@ class Preprocessor:
 
         logger.info("Computing splitting parameters ...")
 
-        split_path = os.path.join(self.dataset_folder, "splitting.npz")
+        split_path = os.path.join(self.dataset_folder, "splitting.pkl")
         train_subjects, valid_subjects, test_subjects = self.get_sets()
-        np.savez(
-            split_path,
-            train = train_subjects,
-            valid = valid_subjects,
-            test = test_subjects,
-        )
+
+        with open(split_path, "wb") as f:
+            pickle.dump(
+                {
+                    "train": train_subjects,
+                    "valid": valid_subjects,
+                    "test": test_subjects,
+                },
+                f,
+            )
 
         logger.info("Computing scaling parameters ...")
 
-        print( raw_mp.shape )
-        
-        raw_mean, raw_std = compute_mean_std_incremental(
-            raw_mp, self.batch_size, self.signal_shape
-        )
-        print( raw_mean.shape, raw_std.shape)
+        print(raw_mp.shape)
+
+        raw_mean, raw_std = raw_mp.mean( axis = 0), raw_mp.std(axis = 0)
+        print(raw_mean.shape, raw_std.shape)
         scaling_path = os.path.join(self.dataset_folder, "raw_scaling.npz")
         np.savez(scaling_path, mean=raw_mean, std=raw_std)
 
         for i, name in enumerate(self.preprocessors_name):
             scaling_path = os.path.join(self.dataset_folder, name + "_scaling.npz")
-            p_mean, p_std = compute_mean_std_incremental(
-                p_mp[i], self.batch_size, self.preprocessors_shape[i]
-            )
-            print( p_mean.shape, p_std.shape)
+            p_mean, p_std = p_mp[i].mean(axis = 0), p_mp[i].std(axis = 0)
+            print(p_mean.shape, p_std.shape)
 
             np.savez(scaling_path, mean=p_mean, std=p_std)
 

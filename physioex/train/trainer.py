@@ -139,7 +139,7 @@ class Trainer:
                 entity="ggagliar-sleep",
             )
         else:
-            my_logger = CSVLogger( save_dir = self.ckp_path)
+            my_logger = CSVLogger(save_dir=self.ckp_path)
 
         # Configura il trainer con le callback
         trainer = pl.Trainer(

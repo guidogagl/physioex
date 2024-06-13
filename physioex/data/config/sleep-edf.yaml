@@ -12,8 +12,7 @@ sfreq: 100
 class_descriptor : ["Sleep stage W", "Sleep stage 1", "Sleep stage 2", "Sleep stage 3/4", "Sleep stage R"]
 
 
-shape_raw : [ 3000 ]
-shape_xsleepnet : [29, 129]
+
 
 ######### preprocess link #########
 

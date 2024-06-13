@@ -10,9 +10,13 @@ from loguru import logger
 
 from tqdm import tqdm
 
-from scipy.signal import  resample
+from scipy.signal import resample
 
-from physioex.data.preprocessor import Preprocessor, xsleepnet_preprocessing, bandpass_filter
+from physioex.data.preprocessor import (
+    Preprocessor,
+    xsleepnet_preprocessing,
+    bandpass_filter,
+)
 from physioex.data.svuh.constant import (
     SVUH_NUM_WINDOWS,
     signal_shape,
@@ -37,6 +41,7 @@ def download_file(url, destination):
     if total_size_in_bytes != 0 and progress_bar.n != total_size_in_bytes:
         print("ERROR, something went wrong")
 
+
 def extract_large_zip(zip_path, extract_path):
     with zipfile.ZipFile(zip_path, "r") as zf:
         for member in zf.infolist():
@@ -46,6 +51,7 @@ def extract_large_zip(zip_path, extract_path):
                 if unix_attributes:
                     os.chmod(extracted_path, unix_attributes)
     os.remove(zip_path)
+
 
 def read_edf(file_path):
 
@@ -211,7 +217,11 @@ class SVUHPreprocessor(Preprocessor):
         )
         valid_subjects = np.setdiff1d(valid_subjects, test_subjects, assume_unique=True)
 
-        return train_subjects.reshape(1, -1), valid_subjects.reshape(1, -1), test_subjects.reshape(1, -1)
+        return (
+            train_subjects.reshape(1, -1),
+            valid_subjects.reshape(1, -1),
+            test_subjects.reshape(1, -1),
+        )
 
 
 if __name__ == "__main__":

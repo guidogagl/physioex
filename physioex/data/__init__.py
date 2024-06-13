@@ -18,7 +18,7 @@ datasets = {
     "dreem": Dreem,
     "shhs": Shhs,
     "mass": Mass,
-    "svuh" : Svuh,
+    "svuh": Svuh,
     "MSD": MultiSourceDomain,
 }
 
