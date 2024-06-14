@@ -11,7 +11,7 @@ from tqdm import tqdm
 
 import physioex.data.dreem.utils as utl
 from physioex.data.preprocessor import Preprocessor, xsleepnet_preprocessing
-
+from physioex.data.constant import get_data_folder, set_data_folder
 picks = ["C3_M2", "EOG", "EMG"]
 
 
@@ -19,7 +19,7 @@ class DREEMPreprocessor(Preprocessor):
 
     def __init__(self, data_folder: str = None):
 
-        self.download_dir = os.path.join(data_folder, "dreem", "h5")
+        self.download_dir = os.path.join( get_data_folder() if data_folder is None else set_data_folder(data_folder) , "dreem", "h5")
 
         logger.info("Pre-fetching the dataset")
         try:
@@ -32,6 +32,7 @@ class DREEMPreprocessor(Preprocessor):
             found = False
 
         if not found:
+            os.makedirs(self.download_dir, exist_ok=True)
             logger.info("Data not found, download dataset...")
             utl.download_dreem_dataset(self.download_dir)
 
@@ -51,12 +52,15 @@ class DREEMPreprocessor(Preprocessor):
 
         self.version = "dodh"
         self.dataset_folder = os.path.join(dataset_folder, self.version)
+        
+        os.makedirs(self.dataset_folder, exist_ok=True)
 
         logger.info(f"Processing dataset version {self.version}")
         super().run()
 
         self.version = "dodo"
         self.dataset_folder = os.path.join(dataset_folder, self.version)
+        os.makedirs(self.dataset_folder, exist_ok=True)
 
         logger.info(f"Processing dataset version {self.version}")
         super().run()

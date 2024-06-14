@@ -136,7 +136,9 @@ class DCSMPreprocessor(Preprocessor):
         url = "https://erda.ku.dk/public/archives/db553715ecbe1f3ac66c1dc569826eef/dcsm_dataset.zip"
 
         if not os.path.exists(os.path.join(download_dir, "data", "sleep", "DCSM")):
-
+            
+            os.makedirs( os.path.join(download_dir, "data", "sleep", "DCSM"), exist_ok=True )
+            
             zip_file = os.path.join(self.dataset_folder, "dcsm_dataset.zip")
 
             if not os.path.exists(zip_file):

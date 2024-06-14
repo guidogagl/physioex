@@ -12,6 +12,10 @@ from tqdm import tqdm
 
 from physioex.data.preprocessor import Preprocessor, xsleepnet_preprocessing
 
+from pyunpack import Archive
+
+
+
 fs = 200
 
 subgroups = [
@@ -60,7 +64,7 @@ class ISRUCPreprocessor(Preprocessor):
                     url = f"http://dataset.isr.uc.pt/ISRUC_Sleep/{subgroup['id']}/{subject}.rar"
 
                     download_file(url, file_path)
-
+                    
                     with rarfile.RarFile(file_path, "r") as rar_ref:
                         rar_ref.extractall(subgroup_path)
 

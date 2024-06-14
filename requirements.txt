@@ -4,6 +4,9 @@ pyyaml
 loguru
 wandb
 
+pyunpack 
+patool
+
 typing
 dirhash
 lightning
@@ -34,3 +37,7 @@ pandas
 
 npy-append-array
 rarfile
+
+pyedflib
+
+openpyxl
