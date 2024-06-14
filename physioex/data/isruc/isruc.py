@@ -9,7 +9,7 @@ from physioex.data.constant import get_data_folder
 AVAILABLE_PICKS = ["EEG"]
 
 
-class Svuh(PhysioExDataset):
+class Isruc(PhysioExDataset):
     def __init__(
         self,
         version: str = None,
