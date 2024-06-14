@@ -6,20 +6,18 @@ import numpy as np
 from physioex.data.base import PhysioExDataset
 from physioex.data.constant import get_data_folder
 
-AVAILABLE_PICKS = ["EEG", "EOG", "EMG"]
+AVAILABLE_PICKS = ["EEG", "EOG", "EMG", "ECG"]
 
 
-class Dreem(PhysioExDataset):
+class Dcsm(PhysioExDataset):
     def __init__(
         self,
-        version: str = "dodh", # available ["dodo", dodh]
+        version: str = None,
         picks: List[str] = ["EEG"],  # available [ "EEG", "EOG", "EMG", "ECG" ]
         preprocessing: str = "raw",  # available [ "raw", "xsleepnet" ]
         sequence_length: int = 21,
         target_transform: Callable = None,
     ):
-        assert version in ["dodo", "dodh"], "version should be one of 'dodo'-'dodh'"
-        
         assert preprocessing in [
             "raw",
             "xsleepnet",
@@ -27,16 +25,15 @@ class Dreem(PhysioExDataset):
         for pick in picks:
             assert (
                 pick in AVAILABLE_PICKS
-            ), "pick should be one of 'EEG, 'EOG', 'EMG'"
+            ), "pick should be one of 'EEG, 'EOG', 'EMG', 'ECG'"
 
         selected_channels = np.array(
             [AVAILABLE_PICKS.index(pick) for pick in picks]
         ).astype(int)
-        
-        input_shape = [3, 3000] if preprocessing == "raw" else [3, 29, 129]
+        input_shape = [4, 3000] if preprocessing == "raw" else [4, 29, 129]
 
         super().__init__(
-            dataset_folder=os.path.join(get_data_folder(), "dreem", version),
+            dataset_folder=os.path.join(get_data_folder(), "dcsm"),
             preprocessing=preprocessing,
             input_shape=input_shape,
             sequence_length=sequence_length,

@@ -19,7 +19,8 @@ import seaborn as sns
 import torch
 from loguru import logger
 from matplotlib import pyplot as plt
-from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+from sklearn.metrics import (accuracy_score, classification_report,
+                             confusion_matrix)
 from tqdm import tqdm
 
 from physioex.data import Shhs, SleepEDF, TimeDistributedModule, datasets

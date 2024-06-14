@@ -1,42 +1,26 @@
 import os
-from pathlib import Path
-from urllib.request import urlretrieve
-
-from braindecode.datasets import SleepPhysionet as SP
-from braindecode.preprocessing import (
-    Preprocessor as PR,
-    create_windows_from_events,
-    preprocess,
-)
-import os
+import sys
+import warnings
 import zipfile
+from pathlib import Path
 from typing import List, Tuple
+from urllib.request import urlretrieve
 
 import numpy as np
 import pandas as pd
-
+from braindecode.datasets import SleepPhysionet as SP
+from braindecode.preprocessing import Preprocessor as PR
+from braindecode.preprocessing import create_windows_from_events, preprocess
 from loguru import logger
-
 from scipy.io import loadmat
-
+from scipy.signal import resample
 from tqdm import tqdm
 
-from scipy.signal import resample
-import sys
-from physioex.data.preprocessor import (
-    Preprocessor,
-    xsleepnet_preprocessing,
-    bandpass_filter,
-)
-from physioex.data.sleep_edf.constant import (
-    subjects,
-    mapping,
-    shape_raw,
-    shape_xsleepnet,
-    TOT_SLEEPEDF_NUM_WINDOWS,
-)
-
-import warnings
+from physioex.data.preprocessor import (Preprocessor, bandpass_filter,
+                                        xsleepnet_preprocessing)
+from physioex.data.sleep_edf.constant import (TOT_SLEEPEDF_NUM_WINDOWS,
+                                              mapping, shape_raw,
+                                              shape_xsleepnet, subjects)
 
 
 class SLEEPEDFPreprocessor(Preprocessor):

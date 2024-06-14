@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from typing import List, Tuple
 
 import h5py
 import numpy as np
@@ -9,15 +10,7 @@ from loguru import logger
 from tqdm import tqdm
 
 import physioex.data.dreem.utils as utl
-from physioex.data.constant import get_data_folder
-from physioex.data.utils import read_config
-
-from typing import List, Tuple
-
-from physioex.data.preprocessor import (
-    Preprocessor,
-    xsleepnet_preprocessing,
-)
+from physioex.data.preprocessor import Preprocessor, xsleepnet_preprocessing
 
 picks = ["C3_M2", "EOG", "EMG"]
 

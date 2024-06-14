@@ -1,4 +1,5 @@
 import os
+import pickle
 from typing import Callable, List
 
 import numpy as np
@@ -9,8 +10,6 @@ from torch.utils.data import DataLoader, SubsetRandomSampler
 
 from physioex.data.constant import get_data_folder
 from physioex.data.utils import read_config
-
-import pickle
 
 
 def transform_to_sequence(x, y, sequence_length):

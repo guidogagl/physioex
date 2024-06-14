@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from typing import List, Tuple
 from urllib.request import urlretrieve
 
 import h5py
@@ -7,13 +8,11 @@ import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed
 from loguru import logger
-from tqdm import tqdm
 from scipy.io import loadmat
+from tqdm import tqdm
+
 from physioex.data.constant import get_data_folder
-
 from physioex.data.preprocessor import Preprocessor, xsleepnet_preprocessing
-
-from typing import List, Tuple
 
 
 class MASSPreprocessor(Preprocessor):

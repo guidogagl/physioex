@@ -1,5 +1,6 @@
-from typing import Callable, List
 import os
+from typing import Callable, List
+
 import numpy as np
 
 from physioex.data.base import PhysioExDataset

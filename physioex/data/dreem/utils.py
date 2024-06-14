@@ -1,8 +1,8 @@
 import os
+
 import boto3
 import numpy as np
 import tqdm
-
 from botocore import UNSIGNED
 from botocore.client import Config
 from scipy.signal import butter, lfilter, resample
