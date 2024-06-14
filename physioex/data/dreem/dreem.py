@@ -12,27 +12,25 @@ AVAILABLE_PICKS = ["EEG", "EOG", "EMG"]
 class Dreem(PhysioExDataset):
     def __init__(
         self,
-        version: str = "dodh", # available ["dodo", dodh]
+        version: str = "dodh",  # available ["dodo", dodh]
         picks: List[str] = ["EEG"],  # available [ "EEG", "EOG", "EMG", "ECG" ]
         preprocessing: str = "raw",  # available [ "raw", "xsleepnet" ]
         sequence_length: int = 21,
         target_transform: Callable = None,
     ):
         assert version in ["dodo", "dodh"], "version should be one of 'dodo'-'dodh'"
-        
+
         assert preprocessing in [
             "raw",
             "xsleepnet",
         ], "preprocessing should be one of 'raw'-'xsleepnet'"
         for pick in picks:
-            assert (
-                pick in AVAILABLE_PICKS
-            ), "pick should be one of 'EEG, 'EOG', 'EMG'"
+            assert pick in AVAILABLE_PICKS, "pick should be one of 'EEG, 'EOG', 'EMG'"
 
         selected_channels = np.array(
             [AVAILABLE_PICKS.index(pick) for pick in picks]
         ).astype(int)
-        
+
         input_shape = [3, 3000] if preprocessing == "raw" else [3, 29, 129]
 
         super().__init__(

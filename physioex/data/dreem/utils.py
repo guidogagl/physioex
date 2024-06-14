@@ -9,10 +9,11 @@ from scipy.signal import butter, lfilter, resample
 
 DATASET_HASH = "911138415522fa7ffe2d30ece62e3a12"
 
-def download_dreem_dataset( download_dir ):
-    
-    dodo_dir = os.path.join(download_dir, "dodo"),
-    dodh_dir = os.path.join(download_dir, "dodh"),
+
+def download_dreem_dataset(download_dir):
+
+    dodo_dir = (os.path.join(download_dir, "dodo"),)
+    dodh_dir = (os.path.join(download_dir, "dodh"),)
     client = boto3.client("s3", config=Config(signature_version=UNSIGNED))
 
     bucket_objects = client.list_objects(Bucket="dreem-dod-o")["Contents"]
@@ -22,7 +23,7 @@ def download_dreem_dataset( download_dir ):
         client.download_file(
             Bucket="dreem-dod-o",
             Key=filename,
-            Filename= dodo_dir + "/{}".format(filename),
+            Filename=os.path.join(dodo_dir, filename),
         )
 
     bucket_objects = client.list_objects(Bucket="dreem-dod-h")["Contents"]
@@ -32,7 +33,7 @@ def download_dreem_dataset( download_dir ):
         client.download_file(
             Bucket="dreem-dod-h",
             Key=filename,
-            Filename= dodh_dir + "/{}".format(filename),
+            Filename=os.path.join(dodh_dir, filename),
         )
 
 

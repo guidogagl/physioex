@@ -14,12 +14,13 @@ from physioex.data.preprocessor import Preprocessor, xsleepnet_preprocessing
 
 picks = ["C3_M2", "EOG", "EMG"]
 
+
 class DREEMPreprocessor(Preprocessor):
 
     def __init__(self, data_folder: str = None):
-        
-        self.download_dir = os.path.join( data_folder, "dreem", "h5" )
-        
+
+        self.download_dir = os.path.join(data_folder, "dreem", "h5")
+
         logger.info("Pre-fetching the dataset")
         try:
             found = (
@@ -32,35 +33,34 @@ class DREEMPreprocessor(Preprocessor):
 
         if not found:
             logger.info("Data not found, download dataset...")
-            utl.download_dreem_dataset( self.download_dir )
+            utl.download_dreem_dataset(self.download_dir)
 
-        
         self.version = None
 
         super().__init__(
-            dataset_name = "dreem",
-            signal_shape= [3, 3000],
+            dataset_name="dreem",
+            signal_shape=[3, 3000],
             preprocessors_name=["xsleepnet"],
             preprocessors=[xsleepnet_preprocessing],
-            preprocessors_shape=[ [3, 29, 129] ],
+            preprocessors_shape=[[3, 29, 129]],
             data_folder=data_folder,
         )
 
     def run(self):
         dataset_folder = self.dataset_folder
-        
-        self.version = "dodh"        
-        self.dataset_folder = os.path.join( dataset_folder, self.version )        
+
+        self.version = "dodh"
+        self.dataset_folder = os.path.join(dataset_folder, self.version)
 
         logger.info(f"Processing dataset version {self.version}")
         super().run()
 
         self.version = "dodo"
-        self.dataset_folder = os.path.join( dataset_folder, self.version )
+        self.dataset_folder = os.path.join(dataset_folder, self.version)
 
         logger.info(f"Processing dataset version {self.version}")
         super().run()
-                    
+
     @logger.catch
     def get_dataset_num_windows(self) -> int:
         dodh = 24662
@@ -69,17 +69,17 @@ class DREEMPreprocessor(Preprocessor):
 
     @logger.catch
     def get_subjects_records(self) -> List[str]:
-        
-        download_dir = os.path.join( self.download_dir, self.version )
-        
-        files = [f for f in os.listdir( download_dir) if f.endswith(".h5")]
+
+        download_dir = os.path.join(self.download_dir, self.version)
+
+        files = [f for f in os.listdir(download_dir) if f.endswith(".h5")]
 
         return files
 
     @logger.catch
     def read_subject_record(self, record: str) -> Tuple[np.array, np.array]:
 
-        subj = h5py.File(os.path.join( self.download_dir, self.version,  record), "r")
+        subj = h5py.File(os.path.join(self.download_dir, self.version, record), "r")
         hyp = np.array(subj["hypnogram"][:], dtype=int)
 
         n_win = len(hyp)
@@ -109,7 +109,7 @@ class DREEMPreprocessor(Preprocessor):
 
         X = np.array(X)
         y = np.array(y).reshape(-1)
-        
+
         return X, y
 
     @logger.catch
@@ -128,7 +128,9 @@ class DREEMPreprocessor(Preprocessor):
         train_subjects = np.random.choice(
             table["subject_id"], size=int(table.shape[0] * 0.7), replace=False
         )
-        valid_subjects = np.setdiff1d(table["subject_id"], train_subjects, assume_unique=True)
+        valid_subjects = np.setdiff1d(
+            table["subject_id"], train_subjects, assume_unique=True
+        )
         test_subjects = np.random.choice(
             valid_subjects, size=int(table.shape[0] * 0.15), replace=False
         )
@@ -142,6 +144,6 @@ class DREEMPreprocessor(Preprocessor):
 
 
 if __name__ == "__main__":
-    
-    p = DREEMPreprocessor( data_folder = "/esat/biomeddata/ggagliar/")
+
+    p = DREEMPreprocessor(data_folder="/esat/biomeddata/ggagliar/")
     p.run()

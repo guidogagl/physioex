@@ -5,13 +5,13 @@ from pathlib import Path
 import pandas as pd
 import pytorch_lightning as pl
 import torch
+import wandb
 from joblib import Parallel, delayed
 from lightning.pytorch import seed_everything
 from loguru import logger
 from pytorch_lightning.callbacks import ModelCheckpoint, RichProgressBar
 from pytorch_lightning.loggers import CSVLogger, WandbLogger
 
-import wandb
 from physioex.data import TimeDistributedModule, get_datasets
 from physioex.train.networks import get_config
 from physioex.train.networks.utils.loss import config as loss_config

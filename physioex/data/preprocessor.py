@@ -265,14 +265,14 @@ class Preprocessor:
 
         print(raw_mp.shape)
 
-        raw_mean, raw_std = raw_mp.mean( axis = 0), raw_mp.std(axis = 0)
+        raw_mean, raw_std = raw_mp.mean(axis=0), raw_mp.std(axis=0)
         print(raw_mean.shape, raw_std.shape)
         scaling_path = os.path.join(self.dataset_folder, "raw_scaling.npz")
         np.savez(scaling_path, mean=raw_mean, std=raw_std)
 
         for i, name in enumerate(self.preprocessors_name):
             scaling_path = os.path.join(self.dataset_folder, name + "_scaling.npz")
-            p_mean, p_std = p_mp[i].mean(axis = 0), p_mp[i].std(axis = 0)
+            p_mean, p_std = p_mp[i].mean(axis=0), p_mp[i].std(axis=0)
             print(p_mean.shape, p_std.shape)
 
             np.savez(scaling_path, mean=p_mean, std=p_std)

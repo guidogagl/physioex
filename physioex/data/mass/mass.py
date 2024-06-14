@@ -12,7 +12,7 @@ AVAILABLE_PICKS = ["EEG", "EOG", "EMG"]
 class Mass(PhysioExDataset):
     def __init__(
         self,
-        version: str = None,  # 
+        version: str = None,  #
         picks: List[str] = ["EEG"],  # available [ "EEG", "EOG", "EMG" ]
         preprocessing: str = "raw",  # available [ "raw", "xsleepnet" ]
         sequence_length: int = 21,

@@ -7,25 +7,20 @@ import pyedflib
 import rarfile
 import requests
 from loguru import logger
-from scipy.signal import  resample
+from scipy.signal import resample
 from tqdm import tqdm
 
 from physioex.data.preprocessor import Preprocessor, xsleepnet_preprocessing
 
 fs = 200
 
-subgroups = [ 
-            {
-               "id" : "subgroupI",
-               "subjects": list(range(1, 101))
-            },
-            {
-                "id" : "subgroupIII",
-                "subjects": list(range(1, 11))
-            }
-            ]
+subgroups = [
+    {"id": "subgroupI", "subjects": list(range(1, 101))},
+    {"id": "subgroupIII", "subjects": list(range(1, 11))},
+]
 
-subgroups[0]["subjects"].remove( 40 )
+subgroups[0]["subjects"].remove(40)
+
 
 class ISRUCPreprocessor(Preprocessor):
 
@@ -33,10 +28,10 @@ class ISRUCPreprocessor(Preprocessor):
 
         super().__init__(
             dataset_name="isruc",
-            signal_shape= [1, 3000],
+            signal_shape=[1, 3000],
             preprocessors_name=["xsleepnet"],
             preprocessors=[xsleepnet_preprocessing],
-            preprocessors_shape=[ [1, 29, 129] ],
+            preprocessors_shape=[[1, 29, 129]],
             data_folder=data_folder,
         )
 
@@ -48,20 +43,20 @@ class ISRUCPreprocessor(Preprocessor):
             os.makedirs(download_dir, exist_ok=True)
 
         for subgroup in subgroups:
-            
-            subgroup_path = os.path.join( download_dir, subgroup["id"] )
-            
+
+            subgroup_path = os.path.join(download_dir, subgroup["id"])
+
             if not os.path.exists(subgroup_path):
                 os.makedirs(subgroup_path, exist_ok=True)
-            
-            for subject in tqdm(subgroup["subjects"]):
-                subject_path = os.path.join( subgroup_path, str(subject) )
 
-                if not os.path.exists( subject_path ):
-                    os.makedirs( subject_path, exist_ok=True )
-                    
-                    file_path = os.path.join( subgroup_path, "tmp.rar")
-                    
+            for subject in tqdm(subgroup["subjects"]):
+                subject_path = os.path.join(subgroup_path, str(subject))
+
+                if not os.path.exists(subject_path):
+                    os.makedirs(subject_path, exist_ok=True)
+
+                    file_path = os.path.join(subgroup_path, "tmp.rar")
+
                     url = f"http://dataset.isr.uc.pt/ISRUC_Sleep/{subgroup['id']}/{subject}.rar"
 
                     download_file(url, file_path)
@@ -72,19 +67,26 @@ class ISRUCPreprocessor(Preprocessor):
                     # Rimuovi il file rar
                     os.remove(file_path)
 
-                    
     @logger.catch
     def get_dataset_num_windows(self) -> int:
         return 98201
 
     @logger.catch
     def get_subjects_records(self) -> List[str]:
-        
+
         records = []
-        
+
         for subgroup in subgroups:
             for subject in subgroup["subjects"]:
-                records.append( os.path.join( self.dataset_folder, "download", subgroup["id"], str(subject), str(subject)) )
+                records.append(
+                    os.path.join(
+                        self.dataset_folder,
+                        "download",
+                        subgroup["id"],
+                        str(subject),
+                        str(subject),
+                    )
+                )
 
         return records
 
@@ -104,8 +106,8 @@ class ISRUCPreprocessor(Preprocessor):
         )
 
         # todo: remove discarded subjects from sub1desc
-        sub1_desc = sub1_desc[ sub1_desc["Subject"] != 40 ]
-        sub1_desc["Subject"] = list( range( sub1_desc.shape[0] ) )
+        sub1_desc = sub1_desc[sub1_desc["Subject"] != 40]
+        sub1_desc["Subject"] = list(range(sub1_desc.shape[0]))
 
         sub3_desc["Subject"] = sub3_desc["Subject"] - 1 + sub1_desc.shape[0]
 
@@ -129,7 +131,9 @@ class ISRUCPreprocessor(Preprocessor):
         train_subjects = np.random.choice(
             table["subject_id"], size=int(table.shape[0] * 0.7), replace=False
         )
-        valid_subjects = np.setdiff1d(table["subject_id"], train_subjects, assume_unique=True)
+        valid_subjects = np.setdiff1d(
+            table["subject_id"], train_subjects, assume_unique=True
+        )
         test_subjects = np.random.choice(
             valid_subjects, size=int(table.shape[0] * 0.15), replace=False
         )
@@ -148,7 +152,6 @@ def download_file(url, destination):
     with open(destination, "wb") as f:
         for chunk in response.iter_content(chunk_size=8192):
             f.write(chunk)
-
 
 
 def get_labels(filepath):

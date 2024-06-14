@@ -6,17 +6,14 @@ from loguru import logger
 
 from physioex.data.base import TimeDistributedModule
 from physioex.data.constant import get_data_folder, set_data_folder
-
-
+from physioex.data.dcsm.dcsm import Dcsm
 from physioex.data.dreem.dreem import Dreem
+from physioex.data.isruc.isruc import Isruc
 from physioex.data.mass.mass import Mass
+from physioex.data.msd.msd import MultiSourceDomain
 from physioex.data.shhs.shhs import Shhs
 from physioex.data.sleep_edf.sleep_edf import SleepEDF
 from physioex.data.svuh.svuh import Svuh
-from physioex.data.isruc.isruc import Isruc
-from physioex.data.dcsm.dcsm import Dcsm
-
-from physioex.data.msd.msd import MultiSourceDomain
 
 datasets = {
     "sleep_edf": SleepEDF,

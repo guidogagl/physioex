@@ -18,6 +18,7 @@ preprocessors = {
     "svuh": SVUHPreprocessor,
 }
 
+
 def main():
     parser = argparse.ArgumentParser(description="Preprocess a dataset.")
     parser.add_argument(
@@ -40,4 +41,4 @@ def main():
 
     args = parser.parse_args()
 
-    preprocessors[ args.dataset ]( data_folder = args.data_folder ).run()
+    preprocessors[args.dataset](data_folder=args.data_folder).run()

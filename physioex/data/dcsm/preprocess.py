@@ -3,33 +3,19 @@ import shutil
 import stat
 import subprocess
 import zipfile
+from typing import List, Tuple
 
+import h5py
 import numpy as np
 import pandas as pd
 import pyedflib
 import requests
 from loguru import logger
 from scipy.signal import butter, filtfilt, resample, spectrogram
-from tqdm import tqdm
-
-from physioex.data.constant import get_data_folder
-
-
-import h5py
-
-import os
-import zipfile
-from typing import List, Tuple
-
-import numpy as np
-import pandas as pd
-import pyedflib
-import requests
-from loguru import logger
-from scipy.signal import resample
 from scipy.stats import mode
 from tqdm import tqdm
 
+from physioex.data.constant import get_data_folder
 from physioex.data.preprocessor import (Preprocessor, bandpass_filter,
                                         xsleepnet_preprocessing)
 
@@ -61,22 +47,24 @@ def extract_large_zip(zip_path, extract_path):
                     os.chmod(extracted_path, unix_attributes)
     os.remove(zip_path)
 
+
 import numpy as np
 
-SLEEP_STAGES = ['W', 'N1', 'N2', 'N3', 'REM']
+SLEEP_STAGES = ["W", "N1", "N2", "N3", "REM"]
+
 
 def read_edf(file_path):
-    
+
     f = pyedflib.EdfReader(os.path.join(file_path, "psg.edf"))
     labels = f.getSignalLabels()
     fs = 256
-    
-    idx_eeg = labels.index('C3-M2' if "C3-M2" in labels else "C4-M1")
+
+    idx_eeg = labels.index("C3-M2" if "C3-M2" in labels else "C4-M1")
     EEG = f.readSignal(idx_eeg).reshape(-1, fs)
-    
+
     # Get the indices of the EOG signals
-    idx_eog1 = labels.index('E1-M2')
-    idx_eog2 = labels.index('E2-M2')
+    idx_eog1 = labels.index("E1-M2")
+    idx_eog2 = labels.index("E2-M2")
 
     # Read the EOG signals
     signal_eog1 = f.readSignal(idx_eog1).reshape(-1, fs)
@@ -85,39 +73,49 @@ def read_edf(file_path):
     # Combine the EOG signals
     EOG = signal_eog1 + signal_eog2
 
-    idx_emg = labels.index('CHIN')
-    idx_ecg = labels.index('ECG-II')
+    idx_emg = labels.index("CHIN")
+    idx_ecg = labels.index("ECG-II")
 
     EMG = f.readSignal(idx_emg).reshape(-1, fs)
     ECG = f.readSignal(idx_ecg).reshape(-1, fs)
 
     f._close()
-    
+
     n_windows = EEG.shape[0] // 30
-    
-    EEG, EOG, EMG, ECG = EEG[:n_windows].reshape(n_windows, -1), EOG[:n_windows].reshape(n_windows, -1), EMG[:n_windows].reshape(n_windows, -1), ECG[:n_windows].reshape(n_windows, -1)
-    
-    signal = np.transpose( np.array([EEG, EOG, EMG, ECG]), (1, 0, 2) )
-    
+
+    EEG, EOG, EMG, ECG = (
+        EEG[:n_windows].reshape(n_windows, -1),
+        EOG[:n_windows].reshape(n_windows, -1),
+        EMG[:n_windows].reshape(n_windows, -1),
+        ECG[:n_windows].reshape(n_windows, -1),
+    )
+
+    signal = np.transpose(np.array([EEG, EOG, EMG, ECG]), (1, 0, 2))
+
     signal = resample(signal, num=30 * 100, axis=2)
     # pass band the signal between 0.3 and 40 Hz
     signal = bandpass_filter(signal, 0.3, 40, 100)
-    
-    # Read the file
-    hyp = pd.read_csv(os.path.join(file_path, "hypnogram.ids"), header = None).values
 
-    start_index, end_index, hyp = hyp[:, 0].astype(int), hyp[:, 1].astype(int), hyp[:, 2]    
-    hyp = np.array([ SLEEP_STAGES.index( stage ) for stage in hyp ]).astype(int)
-    
-    labels = np.zeros( n_windows * 30 ).astype(int)
-    
-    for start, step, stage in zip( start_index, end_index, hyp ):        
-        labels[ start: start + step] = stage * np.ones( step )
-    
-    labels = labels.reshape( n_windows, -1 )
-    labels = mode(labels, axis =1)[0]
-    
+    # Read the file
+    hyp = pd.read_csv(os.path.join(file_path, "hypnogram.ids"), header=None).values
+
+    start_index, end_index, hyp = (
+        hyp[:, 0].astype(int),
+        hyp[:, 1].astype(int),
+        hyp[:, 2],
+    )
+    hyp = np.array([SLEEP_STAGES.index(stage) for stage in hyp]).astype(int)
+
+    labels = np.zeros(n_windows * 30).astype(int)
+
+    for start, step, stage in zip(start_index, end_index, hyp):
+        labels[start : start + step] = stage * np.ones(step)
+
+    labels = labels.reshape(n_windows, -1)
+    labels = mode(labels, axis=1)[0]
+
     return signal.astype(np.float32), labels.astype(np.int16)
+
 
 class DCSMPreprocessor(Preprocessor):
 
@@ -125,10 +123,10 @@ class DCSMPreprocessor(Preprocessor):
 
         super().__init__(
             dataset_name="dcsm",
-            signal_shape= [4, 3000],
+            signal_shape=[4, 3000],
             preprocessors_name=["xsleepnet"],
             preprocessors=[xsleepnet_preprocessing],
-            preprocessors_shape=[ [4, 29, 129] ],
+            preprocessors_shape=[[4, 29, 129]],
             data_folder=data_folder,
         )
 
@@ -136,8 +134,8 @@ class DCSMPreprocessor(Preprocessor):
     def download_dataset(self) -> None:
         download_dir = self.dataset_folder
         url = "https://erda.ku.dk/public/archives/db553715ecbe1f3ac66c1dc569826eef/dcsm_dataset.zip"
-        
-        if not os.path.exists( os.path.join(download_dir, "data", "sleep", "DCSM") ):
+
+        if not os.path.exists(os.path.join(download_dir, "data", "sleep", "DCSM")):
 
             zip_file = os.path.join(self.dataset_folder, "dcsm_dataset.zip")
 
@@ -158,13 +156,14 @@ class DCSMPreprocessor(Preprocessor):
 
         subjects_dir = os.path.join(self.dataset_folder, "data", "sleep", "DCSM")
 
-        records = list( os.listdir( subjects_dir ) )
+        records = list(os.listdir(subjects_dir))
         return records
 
     @logger.catch
     def read_subject_record(self, record: str) -> Tuple[np.array, np.array]:
-        return read_edf(os.path.join(self.dataset_folder, "data", "sleep", "DCSM", record))
-
+        return read_edf(
+            os.path.join(self.dataset_folder, "data", "sleep", "DCSM", record)
+        )
 
     @logger.catch
     def get_sets(self) -> Tuple[np.array, np.array, np.array]:
@@ -196,4 +195,3 @@ if __name__ == "__main__":
     p = DCSMPreprocessor(data_folder="/esat/biomeddata/ggagliar/")
 
     p.run()
-
