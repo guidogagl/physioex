@@ -6,7 +6,7 @@ import pandas as pd
 import pytorch_lightning as pl
 import torch
 import wandb
-from joblib import Parallel, delayed
+#from joblib import Parallel, delayed
 from lightning.pytorch import seed_everything
 from loguru import logger
 from pytorch_lightning.callbacks import ModelCheckpoint, RichProgressBar
@@ -15,6 +15,8 @@ from pytorch_lightning.loggers import CSVLogger, WandbLogger
 from physioex.data import TimeDistributedModule, get_datasets
 from physioex.train.networks import get_config
 from physioex.train.networks.utils.loss import config as loss_config
+
+from multiprocessing import Pool
 
 torch.set_float32_matmul_precision("medium")
 
@@ -105,7 +107,7 @@ class Trainer:
         )
 
         module = self.model_call(module_config=self.module_config)
-
+        
         # Definizione delle callback
         if self.imbalance:
             checkpoint_callback = ModelCheckpoint(
@@ -127,8 +129,6 @@ class Trainer:
             )
 
         progress_bar_callback = RichProgressBar()
-
-        callbacks = [checkpoint_callback, progress_bar_callback]
 
         if self.use_wandb:
             my_logger = WandbLogger(
@@ -188,9 +188,7 @@ class Trainer:
     def run(self):
         logger.info("Jobs pool spawning")
 
-        results = Parallel(n_jobs=self.n_jobs)(
-            delayed(self.train_evaluate)(fold) for fold in self.folds
-        )
+        results = [self.train_evaluate(fold) for fold in self.folds]
 
         logger.info("Results successfully collected from jobs pool")
 

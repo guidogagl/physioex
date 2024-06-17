@@ -1,7 +1,4 @@
 import os
-import shutil
-import stat
-import subprocess
 import zipfile
 from typing import List, Tuple
 
@@ -15,7 +12,6 @@ from scipy.signal import butter, filtfilt, resample, spectrogram
 from scipy.stats import mode
 from tqdm import tqdm
 
-from physioex.data.constant import get_data_folder
 from physioex.data.preprocessor import (Preprocessor, bandpass_filter,
                                         xsleepnet_preprocessing)
 
@@ -48,7 +44,6 @@ def extract_large_zip(zip_path, extract_path):
     os.remove(zip_path)
 
 
-import numpy as np
 
 SLEEP_STAGES = ["W", "N1", "N2", "N3", "REM"]
 
@@ -80,14 +75,14 @@ def read_edf(file_path):
     ECG = f.readSignal(idx_ecg).reshape(-1, fs)
 
     f._close()
-
+    # EEG shape n_seconds, fs
     n_windows = EEG.shape[0] // 30
 
     EEG, EOG, EMG, ECG = (
-        EEG[:n_windows].reshape(n_windows, -1),
-        EOG[:n_windows].reshape(n_windows, -1),
-        EMG[:n_windows].reshape(n_windows, -1),
-        ECG[:n_windows].reshape(n_windows, -1),
+        EEG[:n_windows * 30].reshape(n_windows, 30 * fs),
+        EOG[:n_windows * 30].reshape(n_windows, 30 * fs),
+        EMG[:n_windows * 30].reshape(n_windows, 30 * fs),
+        ECG[:n_windows * 30].reshape(n_windows, 30 * fs),
     )
 
     signal = np.transpose(np.array([EEG, EOG, EMG, ECG]), (1, 0, 2))

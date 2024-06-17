@@ -7,8 +7,19 @@ from physioex.data.dreem.dreem import Dreem
 from physioex.data.mass.mass import Mass
 from physioex.data.shhs.shhs import Shhs
 from physioex.data.sleep_edf.sleep_edf import SleepEDF
+from physioex.data.dcsm.dcsm import Dcsm
+from physioex.data.isruc.isruc import Isruc
+from physioex.data.svuh.svuh import Svuh
 
-datasets = {"sleep_physionet": SleepEDF, "dreem": Dreem, "shhs": Shhs, "mass": Mass}
+
+datasets = {"sleep_edf": SleepEDF, 
+            "dreem": Dreem, 
+            "shhs": Shhs, 
+            "mass": Mass,
+            "dcsm": Dcsm,
+            "isruc": Isruc,
+            "svuh": Svuh,
+            }
 
 
 class MultiSourceDomain(PhysioExDataset):

@@ -192,8 +192,7 @@ class TimeDistributedModule(pl.LightningDataModule):
 
         self.train_idx, self.valid_idx, self.test_idx = self.dataset.get_sets()
 
-        # self.num_workers = max(min(batch_size, os.cpu_count() - 1), 1)
-        self.num_workers = 1
+        self.num_workers = max(min(batch_size, os.cpu_count() - 1), 1)
 
     def setup(self, stage: str):
         return

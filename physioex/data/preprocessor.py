@@ -264,15 +264,16 @@ class Preprocessor:
         logger.info("Computing scaling parameters ...")
 
         print(raw_mp.shape)
+        raw_mean, raw_std = online_variance( raw_mp )
 
-        raw_mean, raw_std = raw_mp.mean(axis=0), raw_mp.std(axis=0)
         print(raw_mean.shape, raw_std.shape)
         scaling_path = os.path.join(self.dataset_folder, "raw_scaling.npz")
         np.savez(scaling_path, mean=raw_mean, std=raw_std)
 
         for i, name in enumerate(self.preprocessors_name):
             scaling_path = os.path.join(self.dataset_folder, name + "_scaling.npz")
-            p_mean, p_std = p_mp[i].mean(axis=0), p_mp[i].std(axis=0)
+            p_mean, p_std = online_variance( prep_mp[i] )
+
             print(p_mean.shape, p_std.shape)
 
             np.savez(scaling_path, mean=p_mean, std=p_std)
@@ -282,3 +283,18 @@ class Preprocessor:
             self.dataset_folder,
             stat.S_IRWXU | stat.S_IRGRP | stat.S_IXGRP | stat.S_IROTH | stat.S_IXOTH,
         )
+
+
+def online_variance(data):
+    n = 0
+    mean = 0
+    M2 = 0
+
+    for x in tqdm(data):
+        n = n + 1
+        delta = x - mean
+        mean = mean + delta/n
+        M2 = M2 + delta*(x - mean)
+
+    variance = M2/(n - 1)
+    return mean.astype(np.float32), np.sqrt( variance.astype(np.double) ).astype(np.float32)
