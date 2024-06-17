@@ -25,18 +25,6 @@ from physioex.models import load_pretrained_model
 
 from joblib import Parallel, delayed
 
-# ...
-
-class MultiSourceDomain:
-    # ...
-
-    def run_all(self):
-        domains_id = list(range(len(self.msd_domain)))
-        domains_combinations = calculate_combinations(domains_id)
-
-        # Utilizza joblib per eseguire le chiamate a 'run' in parallelo
-        Parallel(n_jobs=-1)(delayed(self.run)(domains_id, combination) for combination in domains_combinations)
-
 import wandb
 
 def calculate_combinations(elements):
@@ -51,11 +39,26 @@ torch.set_float32_matmul_precision("medium")
 model_dataset = "seqsleepnet"
 
 target_domain = [
-    {
-        "dataset": "mass",
-        "version": None,
-        "picks": ["EEG"],
-    },
+    #{
+    #    "dataset": "dcsm",
+    #    "version": "None",
+    #    "picks": ["EEG"],
+    #},
+    #{
+    #    "dataset": "isruc",
+    #    "version": "None",
+    #    "picks": ["EEG"],
+    #},
+    #            {
+    #    "dataset": "svuh",
+    #    "version": "None",
+    #    "picks": ["EEG"],
+    #},
+    #{
+    #    "dataset": "mass",
+    #    "version": None,
+    #    "picks": ["EEG"],
+    #},
     {
         "dataset": "dreem",
         "version": "dodh",
@@ -66,26 +69,12 @@ target_domain = [
         "version": "dodo",
         "picks": ["EEG"],
     },
-    {
-        "dataset": "sleep_edf",
-        "version": "None",
-        "picks": ["EEG"],
-    },
-    {
-        "dataset": "dcsm",
-        "version": "None",
-        "picks": ["EEG"],
-    },
-    {
-        "dataset": "isruc",
-        "version": "None",
-        "picks": ["EEG"],
-    },
-                {
-        "dataset": "svuh",
-        "version": "None",
-        "picks": ["EEG"],
-    },
+    #{
+    #    "dataset": "sleep_edf",
+    #    "version": "None",
+    #    "picks": ["EEG"],
+    #},
+
 ]
 
 max_epoch = 10
@@ -184,13 +173,13 @@ class MultiSourceDomain:
         if len(list_of_files) > 0:
             logger.info("Model already trained, loading model")
             model_path = list_of_files[0]
-            module = type(module).load_from_checkpoint(model_path, module_config=self.module_config).eval()
+            module = type(module).load_from_checkpoint(model_path, module_config=self.module_config)
         else:            
             logger.info("Training model")
             trainer.fit(module, datamodule=datamodule)
             
             # load the best model from the checkpoint callback
-            module = type(module).load_from_checkpoint(checkpoint_callback.best_model_path, module_config=self.module_config).eval()
+            #module = type(module).load_from_checkpoint(checkpoint_callback.best_model_path, module_config=self.module_config).eval()
 
 
         logger.info("Evaluating model on train domain")
@@ -219,6 +208,9 @@ class MultiSourceDomain:
 
         k = len(combination)
 
+        if k != 1:
+            return
+        
         train_domain = [self.msd_domain[idx] for idx in combination]
         test_domain = [
             self.msd_domain[idx] for idx in domains_id if idx not in combination

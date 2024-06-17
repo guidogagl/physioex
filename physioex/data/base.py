@@ -28,7 +28,8 @@ def transform_to_sequence(x, y, sequence_length):
 
 
 def create_subject_index_map(df, sequence_length):
-    max_windows = (df["num_samples"] - sequence_length + 1).sum()
+
+    max_windows = int( np.sum( df["num_samples"] - sequence_length + 1) )
     window_to_subject = np.zeros(max_windows, dtype=np.int16)
     subject_to_start = np.zeros(df["subject_id"].max() + 1, dtype=np.int32)
 

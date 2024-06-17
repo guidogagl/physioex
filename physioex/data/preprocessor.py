@@ -212,15 +212,15 @@ class Preprocessor:
                 signal.ndim == 3
             ), f"ERR: subject record - {subject_records} - signal should be a 3D array of shape [ n_windows, n_channels, n_timestamps ]"
 
-            labels_mp[current_index : current_index + signal.shape[0]] = labels
-            raw_mp[current_index : current_index + signal.shape[0]] = signal
+            labels_mp[current_index : current_index + signal.shape[0]] = labels.astype( np.int16 )
+            raw_mp[current_index : current_index + signal.shape[0]] = signal.astype( np.float32 )  
 
             raw_mp.flush()
             labels_mp.flush()
 
             for i, p_mp in enumerate(prep_mp):
                 p_mp[current_index : current_index + signal.shape[0]] = (
-                    self.preprocessors[i](signal)
+                    self.preprocessors[i](signal).astype( np.float32 )
                 )
 
                 p_mp.flush()
@@ -286,15 +286,24 @@ class Preprocessor:
 
 
 def online_variance(data):
+
+    shape = data.shape[1:]
+    
     n = 0
     mean = 0
     M2 = 0
 
     for x in tqdm(data):
+        x = np.reshape( x, -1 ).astype( np.double )
+        
         n = n + 1
         delta = x - mean
         mean = mean + delta/n
         M2 = M2 + delta*(x - mean)
 
     variance = M2/(n - 1)
-    return mean.astype(np.float32), np.sqrt( variance.astype(np.double) ).astype(np.float32)
+    
+    variance = np.reshape( variance, shape )
+    mean = np.reshape( mean, shape )
+    
+    return mean.astype(np.float32), np.sqrt( variance ).astype(np.float32)

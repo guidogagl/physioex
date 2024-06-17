@@ -169,14 +169,23 @@ def get_labels(filepath):
     return labels
 
 
+mapping = {
+    "W" : 0, "N1": 1, "N2": 2, "N3": 3, "R": 4
+}
+
 @logger.catch
 def read_edf(file_path):
-
-    labels = get_labels(file_path)
-
+    try:
+        labels = pd.read_excel( file_path + "_1.xlsx" )["Stage"].dropna()
+    except:
+        labels = pd.read_excel( file_path + "_1.xlsx", header=None )[1].dropna()
+        
+    num_windows = len(labels)
+    
+    # map the labels to the new values using pandas
+    labels = labels.map( mapping ).values
+    
     f = pyedflib.EdfReader(file_path + ".rec")
-
-    buffer = []
 
     try:
         i = f.getSignalLabels().index("C3-A2")
@@ -196,37 +205,21 @@ def read_edf(file_path):
 
     # windowing of the signal
     signal = signal.reshape(-1, fs)
-    num_windows = signal.shape[0] // 30
+
+    if num_windows != signal.shape[0] // 30:
+        logger.warning( "Number of windows mismatch" )
+        print( "Label estimated windows ", num_windows)
+        print( "Signal esitmated windows ", signal.shape[0] // 30 )
+        num_windows = min( num_windows, signal.shape[0] // 30)
+        labels = labels[:num_windows]
+            
     signal = signal[: num_windows * 30]
-    signal = signal.reshape(-1, 30 * fs)
+    signal = signal.reshape(num_windows, 30 * fs)
 
-    signal = resample(signal, num=30 * 100, axis=1)
-    buffer.append(signal)
-
-    buffer = np.array(buffer)
-    n_samples = min(labels.shape[0], buffer.shape[1])
-
-    buffer, labels = buffer[:, :n_samples, :], labels[:n_samples]
-
-    mask = np.logical_and(labels != 6, labels != 7)
-    buffer, labels = buffer[:, mask], labels[mask]
-
-    # map the labels to the new values
-    labels = np.array(
-        list(
-            map(
-                lambda x: (
-                    0
-                    if x == 0
-                    else 4 if x == 1 else 1 if x == 2 else 2 if x == 3 else 3
-                ),
-                labels,
-            )
-        )
-    )
-
-    # print( f"Buffer shape {buffer.shape} labels shape {labels.shape}" )
-    buffer = np.transpose(buffer, (1, 0, 2))
+    signal = resample(signal, num=3000, axis=1)
+    
+    buffer = signal.reshape( num_windows, 1, 3000 )
+    
     return buffer, labels
 
 
