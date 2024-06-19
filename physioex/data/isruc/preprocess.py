@@ -165,7 +165,7 @@ def get_labels(filepath):
 
     labels = np.array(
         [int(label.strip()) for label in labels if label.strip().isdigit()]
-    ).astype(int)
+    ).astype(np.int16)
     return labels
 
 
@@ -180,10 +180,14 @@ def read_edf(file_path):
     except:
         labels = pd.read_excel( file_path + "_1.xlsx", header=None )[1].dropna()
         
-    num_windows = len(labels)
+    # Stampa gli elementi unici di labels che non sono in mapping
+    not_in_mapping = labels[~labels.isin(mapping.keys())].unique()
     
     # map the labels to the new values using pandas
+    labels = labels[ labels.isin( mapping.keys() )] 
     labels = labels.map( mapping ).values
+
+    num_windows = len(labels)
     
     f = pyedflib.EdfReader(file_path + ".rec")
 
@@ -212,14 +216,15 @@ def read_edf(file_path):
         print( "Signal esitmated windows ", signal.shape[0] // 30 )
         num_windows = min( num_windows, signal.shape[0] // 30)
         labels = labels[:num_windows]
-            
+        print(f"Elementi unici in labels che non sono in mapping: {not_in_mapping}")
+
     signal = signal[: num_windows * 30]
     signal = signal.reshape(num_windows, 30 * fs)
 
     signal = resample(signal, num=3000, axis=1)
     
     buffer = signal.reshape( num_windows, 1, 3000 )
-    
+        
     return buffer, labels
 
 
