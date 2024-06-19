@@ -41,40 +41,36 @@ def extract_large_zip(zip_path, extract_path):
                     os.chmod(extracted_path, unix_attributes)
     os.remove(zip_path)
 
-stages_map = ["Sleep stage W", "Sleep stage N1", "Sleep stage N2", "Sleep stage N3", "Sleep stage R", "Lights off", "Lights on"]
+stages_map = ["Sleep stage W", "Sleep stage N1", "Sleep stage N2", "Sleep stage N3", "Sleep stage R"]
 fs = 256
 
 def read_edf(file_path):
 
     stages_path = file_path[:-4] + "_sleepscoring.edf"
-    f = pyedflib.EdfReader(stages_path + ".rec")
-    annotations = f.readAnnotations()
+    f = pyedflib.EdfReader(stages_path)
+    _, _, annt = f.readAnnotations()
     f._close()
     
-    # take the annotations["Annotations"] and convert them as the index in the stages_map    
-    labels = [ stages_map.index( annotation ) for annotation in annotations["Annotations"] ]
+    annotations = []
+    for a in annt:
+        if a in stages_map:
+            annotations.append( stages_map.index(a) )        
+
+    labels = np.reshape( np.array( annotations ).astype(int), (-1) )
     
-    # remove the labels correponding to lighs off/on
-    mask = np.logical_and( labels != 5, labels != 6 )
-    labels = np.array( labels )[mask].astype(int)
-    
-    num_windows = len(labels)
+    num_windows = labels.shape[0]
     
     f = pyedflib.EdfReader(file_path)
-    print(f.getSignalLabels())
-    exit()
     buffer = []
-
-    for indx, modality in enumerate(["C3/M2", "EOG", "EMG", "ECG"]):
+    
+    for indx, modality in enumerate(["EEG C3-M2", "EOG", "EMG chin", "ECG"]):
         if modality == "EOG":
 
-            left = f.getSignalLabels().index("E1/M2")
-            right = f.getSignalLabels().index("E2/M2")
+            left = f.getSignalLabels().index("EOG E1-M2")
+            right = f.getSignalLabels().index("EOG E2-M2")
 
             signal = (f.readSignal(left) + f.readSignal(right)).reshape(-1, fs)
 
-            signal = signal[: num_windows * 30]
-            signal = signal.reshape(-1, 30 * fs)
 
         else:
 
@@ -82,14 +78,8 @@ def read_edf(file_path):
             fs = int(f.getSampleFrequency(i))
             signal = f.readSignal(i).reshape(-1, fs)
 
-            # print( f"Modality {modality} fs {fs} shape {signal.shape}" )
-            # consider windows of 30 seconds, discard the last epoch if not fit
-            num_windows = signal.shape[0] // 30
-
-            # print( f"Modality {modality} fs {fs} num windows {num_windows} shape {signal.shape}" )
-
-            signal = signal[: num_windows * 30]
-            signal = signal.reshape(-1, 30 * fs)
+        signal = signal[: num_windows * 30]
+        signal = signal.reshape(-1, 30 * fs)
 
         # resample the signal at 100Hz
         signal = resample(signal, num=30 * 100, axis=1)
@@ -100,29 +90,8 @@ def read_edf(file_path):
     f._close()
 
     buffer = np.array(buffer)
-    n_samples = min(n_samples, buffer.shape[1])
-
-    buffer, labels = buffer[:, :n_samples, :], labels[:n_samples]
-
-    mask = np.logical_and(labels != 6, labels != 7)
-    buffer, labels = buffer[:, mask], labels[mask]
-
-    # map the labels to the new values
-    labels = np.array(
-        list(
-            map(
-                lambda x: (
-                    0
-                    if x == 0
-                    else 4 if x == 1 else 1 if x == 2 else 2 if x == 3 else 3
-                ),
-                labels,
-            )
-        )
-    )
-
-    # print( f"Buffer shape {buffer.shape} labels shape {labels.shape}" )
     buffer = np.transpose(buffer, (1, 0, 2))
+    
     return buffer, labels
 
 
@@ -158,15 +127,12 @@ class HMCPreprocessor(Preprocessor):
 
     @logger.catch
     def get_dataset_num_windows(self) -> int:
-        num_windows = super().get_dataset_num_windows()
-        print(num_windows)
-        exit()
-        return SVUH_NUM_WINDOWS
+        return 137243
 
     @logger.catch
     def get_subjects_records(self) -> List[str]:
 
-        subjects_dir = os.path.join(self.dataset_folder, "download", "files", "hmc-sleep-staging", "1.1")
+        subjects_dir = os.path.join(self.dataset_folder, "download", "haaglanden-medisch-centrum-sleep-staging-database-1.1")
 
         records_file = os.path.join( subjects_dir, "RECORDS")
         
@@ -179,16 +145,10 @@ class HMCPreprocessor(Preprocessor):
 
     @logger.catch
     def read_subject_record(self, record: str) -> Tuple[np.array, np.array]:
-        return read_edf(os.path.join(self.dataset_folder, "download", "files", "hmc-sleep-staging", "1.1", record))
+        return read_edf(os.path.join(self.dataset_folder, "download", "haaglanden-medisch-centrum-sleep-staging-database-1.1", record))
 
     @logger.catch
     def customize_table(self, table) -> pd.DataFrame:
-        subjects_dir = os.path.join(self.dataset_folder, "download", "files")
-        desc = pd.read_excel(os.path.join(subjects_dir, "SubjectDetails.xls"))
-
-        table["sex"] = desc["Gender"]
-        table["age"] = desc["Age"]
-
         return table
 
     @logger.catch

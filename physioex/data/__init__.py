@@ -14,6 +14,7 @@ from physioex.data.msd.msd import MultiSourceDomain
 from physioex.data.shhs.shhs import Shhs
 from physioex.data.sleep_edf.sleep_edf import SleepEDF
 from physioex.data.svuh.svuh import Svuh
+from physioex.data.hmc.hmc import Hmc
 
 datasets = {
     "sleep_edf": SleepEDF,
@@ -23,6 +24,7 @@ datasets = {
     "svuh": Svuh,
     "isruc": Isruc,
     "dcsm": Dcsm,
+    "hmc": Hmc,
     "MSD": MultiSourceDomain,
 }
 

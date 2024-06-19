@@ -88,6 +88,9 @@ class PhysioExDataset(torch.utils.data.Dataset):
             shape=(int(np.sum(self.table["num_samples"].values))),
         )
 
+        self.X = self.X[:]
+        self.y = self.y[:]
+        
         split_path = os.path.join(dataset_folder, "splitting.pkl")
 
         with open(split_path, "rb") as f:
@@ -193,7 +196,7 @@ class TimeDistributedModule(pl.LightningDataModule):
 
         self.train_idx, self.valid_idx, self.test_idx = self.dataset.get_sets()
 
-        self.num_workers = max(min(batch_size, os.cpu_count() - 1), 1)
+        self.num_workers = os.cpu_count()
 
     def setup(self, stage: str):
         return

@@ -1,0 +1,6 @@
+done : k1, k2, k3
+
+mlp1 --- k6
+mlp2 --- k7
+
+to be done k4, k8, k5

@@ -19,13 +19,12 @@ from physioex.data import TimeDistributedModule
 from physioex.train.networks import config
 from physioex.train.networks.utils.loss import config as loss_config
 
-from pytorch_lightning.loggers import WandbLogger
+from pytorch_lightning.loggers import CSVLogger
 
 from physioex.models import load_pretrained_model
-
+from physioex.data.constant import set_data_folder
 from joblib import Parallel, delayed
 
-import wandb
 
 def calculate_combinations(elements):
     combinations_list = []
@@ -39,26 +38,26 @@ torch.set_float32_matmul_precision("medium")
 model_dataset = "seqsleepnet"
 
 target_domain = [
-    #{
-    #    "dataset": "dcsm",
-    #    "version": "None",
-    #    "picks": ["EEG"],
-    #},
-    #{
-    #    "dataset": "isruc",
-    #    "version": "None",
-    #    "picks": ["EEG"],
-    #},
-    #            {
-    #    "dataset": "svuh",
-    #    "version": "None",
-    #    "picks": ["EEG"],
-    #},
-    #{
-    #    "dataset": "mass",
-    #    "version": None,
-    #    "picks": ["EEG"],
-    #},
+    {
+        "dataset": "dcsm",
+        "version": "None",
+        "picks": ["EEG"],
+    },
+    {
+        "dataset": "isruc",
+        "version": "None",
+        "picks": ["EEG"],
+    },
+    {
+        "dataset": "svuh",
+        "version": "None",
+        "picks": ["EEG"],
+    },
+    {
+        "dataset": "mass",
+        "version": None,
+        "picks": ["EEG"],
+    },
     {
         "dataset": "dreem",
         "version": "dodh",
@@ -69,12 +68,16 @@ target_domain = [
         "version": "dodo",
         "picks": ["EEG"],
     },
-    #{
-    #    "dataset": "sleep_edf",
-    #    "version": "None",
-    #    "picks": ["EEG"],
-    #},
-
+    {
+        "dataset": "sleep_edf",
+        "version": "None",
+        "picks": ["EEG"],
+    },
+    {
+        "dataset": "hmc",
+        "version": "None",
+        "picks": ["EEG"],
+    },
 ]
 
 max_epoch = 10
@@ -88,6 +91,7 @@ num_folds = 1
 class MultiSourceDomain:
     def __init__(
         self,
+        data_path: str= None,
         model_dataset: str = model_dataset,
         msd_domain: List[Dict] = target_domain,
         sequence_length: int = 21,
@@ -97,7 +101,8 @@ class MultiSourceDomain:
         imbalance: bool = imbalance,
         num_folds: int = num_folds,
     ):
-
+        if data_path is not None:
+            set_data_folder(data_path)
         seed_everything(42, workers=True)
 
         self.msd_domain = msd_domain
@@ -166,9 +171,9 @@ class MultiSourceDomain:
         
         # check if the model is already on the disk fitted .ckpt file with fold=fold
         # if it is, load it and skip training
-        
+        logger.info("Loading the model...")
         list_of_files = list(Path(ckp_path).rglob(f"fold={fold}-*.ckpt"))
-        module = load_pretrained_model(name = "seqsleepnet")
+        module = load_pretrained_model(name = "seqsleepnet").train()
         
         if len(list_of_files) > 0:
             logger.info("Model already trained, loading model")
@@ -191,9 +196,7 @@ class MultiSourceDomain:
             target_results = trainer.test(module, datamodule=test_datamodule)[0]
             target_results["fold"] = fold
 
-            wandb.finish()
             return {"train_results": train_results, "test_results": target_results}
-        wandb.finish()
         return {"train_results": train_results, "test_results": train_results}
 
     
@@ -208,7 +211,7 @@ class MultiSourceDomain:
 
         k = len(combination)
 
-        if k != 1:
+        if k not in [ 7 ]: 
             return
         
         train_domain = [self.msd_domain[idx] for idx in combination]
@@ -273,11 +276,8 @@ class MultiSourceDomain:
         results = []
         for fold in range( self.num_folds ):
 
-            my_logger = WandbLogger(
-                project = f"msd-k={k}",
-                name=f"{train_domain_names}-fold={fold}",
-                log_model="False",
-                entity="ggagliar-sleep",
+            my_logger = CSVLogger(
+                save_dir=results_path
             )
         
             results.append(
@@ -300,5 +300,5 @@ class MultiSourceDomain:
 
 
 if __name__ == "__main__":
-    ssd = MultiSourceDomain()
+    ssd = MultiSourceDomain( data_path = "/home/guido/shared/")
     ssd.run_all()

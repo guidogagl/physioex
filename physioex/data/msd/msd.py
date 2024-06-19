@@ -10,7 +10,7 @@ from physioex.data.sleep_edf.sleep_edf import SleepEDF
 from physioex.data.dcsm.dcsm import Dcsm
 from physioex.data.isruc.isruc import Isruc
 from physioex.data.svuh.svuh import Svuh
-
+from physioex.data.hmc.hmc import Hmc
 
 datasets = {"sleep_edf": SleepEDF, 
             "dreem": Dreem, 
@@ -19,6 +19,7 @@ datasets = {"sleep_edf": SleepEDF,
             "dcsm": Dcsm,
             "isruc": Isruc,
             "svuh": Svuh,
+            "hmc" : Hmc,
             }
 
 
