@@ -18,6 +18,7 @@ temp
 lightning_logs
 physioex/data/shhs/download.py
 physioex/data/mass/download.py
+physioex/data/hpap/download.py
 
 # C extensions
 *.so
