@@ -29,7 +29,7 @@ def transform_to_sequence(x, y, sequence_length):
 
 def create_subject_index_map(df, sequence_length):
 
-    max_windows = int( np.sum( df["num_samples"] - sequence_length + 1) )
+    max_windows = int(np.sum(df["num_samples"] - sequence_length + 1))
     window_to_subject = np.zeros(max_windows, dtype=np.int16)
     subject_to_start = np.zeros(df["subject_id"].max() + 1, dtype=np.int32)
 
@@ -63,6 +63,7 @@ class PhysioExDataset(torch.utils.data.Dataset):
         sequence_length: int,
         selected_channels: List[int],
         target_transform: Callable = None,
+        task: str = "sleep",
     ):
         table_path = os.path.join(dataset_folder, "table.csv")
         self.table = pd.read_csv(table_path)
@@ -88,9 +89,9 @@ class PhysioExDataset(torch.utils.data.Dataset):
             shape=(int(np.sum(self.table["num_samples"].values))),
         )
 
-        self.X = self.X[:]
-        self.y = self.y[:]
-        
+        # self.X = self.X[:]
+        # self.y = self.y[:]
+
         split_path = os.path.join(dataset_folder, "splitting.pkl")
 
         with open(split_path, "rb") as f:
@@ -111,6 +112,8 @@ class PhysioExDataset(torch.utils.data.Dataset):
         self.target_transform = target_transform
         self.selected_channels = selected_channels
 
+        self.task = task
+
     def __len__(self):
         return int(np.sum(self.table["num_samples"] - self.L + 1))
 
@@ -127,13 +130,32 @@ class PhysioExDataset(torch.utils.data.Dataset):
         absolute_id = subject_start_indx + relative_id
 
         X = self.X[absolute_id : absolute_id + self.L]
-        y = self.y[absolute_id : absolute_id + self.L]
+
+        if self.task == "sleep":
+            y = self.y[absolute_id : absolute_id + self.L]
+            y = torch.tensor(y).long()
+        elif self.task == "age":
+            y = (
+                np.ones(self.L)
+                * float(
+                    self.table[self.table["subject_id"] == subject_id]["age"].values[0]
+                )
+                / 100
+            )
+            y = torch.tensor(y).float()
+        elif self.task == "sex":
+            y = np.ones(self.L) * int(
+                self.table[self.table["subject_id"] == subject_id]["sex"].values[0]
+            )
+            y = torch.tensor(y).long()
+        else:
+            raise ValueError("the task is unrecognized")
 
         # L, n_channels, ... other dims
 
         X = X[:, self.selected_channels]
 
-        return torch.tensor(X).float(), torch.tensor(y).view(-1).long()
+        return torch.tensor(X).float(), y.view(-1)
 
     def get_num_folds(self):
         return len(self.splitting["train"])
@@ -196,7 +218,7 @@ class TimeDistributedModule(pl.LightningDataModule):
 
         self.train_idx, self.valid_idx, self.test_idx = self.dataset.get_sets()
 
-        self.num_workers = os.cpu_count()
+        self.num_workers = os.cpu_count() // 4
 
     def setup(self, stage: str):
         return

@@ -17,24 +17,31 @@ class SleepModule(pl.LightningModule):
         self.save_hyperparameters()
         self.nn = nn
 
-        # metrics
-        self.acc = tm.Accuracy(
-            task="multiclass", num_classes=config["n_classes"], average="weighted"
-        )
-        self.f1 = tm.F1Score(
-            task="multiclass", num_classes=config["n_classes"], average="weighted"
-        )
-        self.ck = tm.CohenKappa(task="multiclass", num_classes=config["n_classes"])
-        self.pr = tm.Precision(
-            task="multiclass", num_classes=config["n_classes"], average="weighted"
-        )
-        self.rc = tm.Recall(
-            task="multiclass", num_classes=config["n_classes"], average="weighted"
-        )
+        self.n_classes = config["n_classes"]
+
+        if self.n_classes > 1:
+            # classification experiment
+            self.acc = tm.Accuracy(
+                task="multiclass", num_classes=config["n_classes"], average="weighted"
+            )
+            self.f1 = tm.F1Score(
+                task="multiclass", num_classes=config["n_classes"], average="weighted"
+            )
+            self.ck = tm.CohenKappa(task="multiclass", num_classes=config["n_classes"])
+            self.pr = tm.Precision(
+                task="multiclass", num_classes=config["n_classes"], average="weighted"
+            )
+            self.rc = tm.Recall(
+                task="multiclass", num_classes=config["n_classes"], average="weighted"
+            )
+        elif self.n_classes == 1:
+            # regression experiment
+            self.mse = tm.MeanSquaredError()
+            self.mae = tm.MeanAbsoluteError()
+            self.r2 = tm.R2Score()
 
         # loss
         self.loss = config["loss_call"](config["loss_params"])
-
         self.module_config = config
 
     def configure_optimizers(self):
@@ -84,16 +91,29 @@ class SleepModule(pl.LightningModule):
         outputs = outputs.reshape(-1, n_class)
         targets = targets.reshape(-1)
 
-        loss = self.loss(embeddings, outputs, targets)
+        if self.n_classes > 1:
+            loss = self.loss(embeddings, outputs, targets)
 
-        self.log(f"{log}_loss", loss, prog_bar=True)
-        self.log(f"{log}_acc", self.acc(outputs, targets), prog_bar=True)
-        self.log(f"{log}_f1", self.f1(outputs, targets), prog_bar=True)
+            self.log(f"{log}_loss", loss, prog_bar=True)
+            self.log(f"{log}_acc", self.acc(outputs, targets), prog_bar=True)
+            self.log(f"{log}_f1", self.f1(outputs, targets), prog_bar=True)
+        else:
+            outputs = outputs.view(-1)
+
+            loss = self.loss(embeddings, outputs, targets)
+
+            self.log(f"{log}_loss", loss, prog_bar=True)
+            self.log(f"{log}_mae", self.mae(outputs, targets), prog_bar=True)
+            self.log(f"{log}_mse", self.mse(outputs, targets), prog_bar=True)
+            self.log(f"{log}_r2", self.r2(outputs, targets), prog_bar=True)
+
+            self.log(f"{log}_acc", 1 / (loss + 1e-8), prog_bar=False)
 
         if log_metrics:
-            self.log(f"{log}_ck", self.ck(outputs, targets))
-            self.log(f"{log}_pr", self.pr(outputs, targets))
-            self.log(f"{log}_rc", self.rc(outputs, targets))
+            if self.n_classes > 1:
+                self.log(f"{log}_ck", self.ck(outputs, targets))
+                self.log(f"{log}_pr", self.pr(outputs, targets))
+                self.log(f"{log}_rc", self.rc(outputs, targets))
 
         return loss
 

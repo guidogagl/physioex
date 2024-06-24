@@ -7,14 +7,11 @@ import pyedflib
 import rarfile
 import requests
 from loguru import logger
+from pyunpack import Archive
 from scipy.signal import resample
 from tqdm import tqdm
 
 from physioex.data.preprocessor import Preprocessor, xsleepnet_preprocessing
-
-from pyunpack import Archive
-
-
 
 fs = 200
 
@@ -64,7 +61,7 @@ class ISRUCPreprocessor(Preprocessor):
                     url = f"http://dataset.isr.uc.pt/ISRUC_Sleep/{subgroup['id']}/{subject}.rar"
 
                     download_file(url, file_path)
-                    
+
                     with rarfile.RarFile(file_path, "r") as rar_ref:
                         rar_ref.extractall(subgroup_path)
 
@@ -169,26 +166,25 @@ def get_labels(filepath):
     return labels
 
 
-mapping = {
-    "W" : 0, "N1": 1, "N2": 2, "N3": 3, "R": 4
-}
+mapping = {"W": 0, "N1": 1, "N2": 2, "N3": 3, "R": 4}
+
 
 @logger.catch
 def read_edf(file_path):
     try:
-        labels = pd.read_excel( file_path + "_1.xlsx" )["Stage"].dropna()
+        labels = pd.read_excel(file_path + "_1.xlsx")["Stage"].dropna()
     except:
-        labels = pd.read_excel( file_path + "_1.xlsx", header=None )[1].dropna()
-        
+        labels = pd.read_excel(file_path + "_1.xlsx", header=None)[1].dropna()
+
     # Stampa gli elementi unici di labels che non sono in mapping
     not_in_mapping = labels[~labels.isin(mapping.keys())].unique()
-    
+
     # map the labels to the new values using pandas
-    labels = labels[ labels.isin( mapping.keys() )] 
-    labels = labels.map( mapping ).values
+    labels = labels[labels.isin(mapping.keys())]
+    labels = labels.map(mapping).values
 
     num_windows = len(labels)
-    
+
     f = pyedflib.EdfReader(file_path + ".rec")
 
     try:
@@ -211,10 +207,10 @@ def read_edf(file_path):
     signal = signal.reshape(-1, fs)
 
     if num_windows != signal.shape[0] // 30:
-        logger.warning( "Number of windows mismatch" )
-        print( "Label estimated windows ", num_windows)
-        print( "Signal esitmated windows ", signal.shape[0] // 30 )
-        num_windows = min( num_windows, signal.shape[0] // 30)
+        logger.warning("Number of windows mismatch")
+        print("Label estimated windows ", num_windows)
+        print("Signal esitmated windows ", signal.shape[0] // 30)
+        num_windows = min(num_windows, signal.shape[0] // 30)
         labels = labels[:num_windows]
         print(f"Elementi unici in labels che non sono in mapping: {not_in_mapping}")
 
@@ -222,9 +218,9 @@ def read_edf(file_path):
     signal = signal.reshape(num_windows, 30 * fs)
 
     signal = resample(signal, num=3000, axis=1)
-    
-    buffer = signal.reshape( num_windows, 1, 3000 )
-        
+
+    buffer = signal.reshape(num_windows, 1, 3000)
+
     return buffer, labels
 
 

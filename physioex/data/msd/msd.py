@@ -3,24 +3,27 @@ from typing import Callable, Dict, List
 import numpy as np
 
 from physioex.data.base import PhysioExDataset
+from physioex.data.dcsm.dcsm import Dcsm
 from physioex.data.dreem.dreem import Dreem
+from physioex.data.hmc.hmc import Hmc
+from physioex.data.hpap.hpap import Hpap
+from physioex.data.isruc.isruc import Isruc
 from physioex.data.mass.mass import Mass
 from physioex.data.shhs.shhs import Shhs
 from physioex.data.sleep_edf.sleep_edf import SleepEDF
-from physioex.data.dcsm.dcsm import Dcsm
-from physioex.data.isruc.isruc import Isruc
 from physioex.data.svuh.svuh import Svuh
-from physioex.data.hmc.hmc import Hmc
 
-datasets = {"sleep_edf": SleepEDF, 
-            "dreem": Dreem, 
-            "shhs": Shhs, 
-            "mass": Mass,
-            "dcsm": Dcsm,
-            "isruc": Isruc,
-            "svuh": Svuh,
-            "hmc" : Hmc,
-            }
+datasets = {
+    "sleep_edf": SleepEDF,
+    "dreem": Dreem,
+    "shhs": Shhs,
+    "mass": Mass,
+    "dcsm": Dcsm,
+    "isruc": Isruc,
+    "svuh": Svuh,
+    "hmc": Hmc,
+    "hpap": Hpap,
+}
 
 
 class MultiSourceDomain(PhysioExDataset):
@@ -31,6 +34,7 @@ class MultiSourceDomain(PhysioExDataset):
         sequence_length: int = 1,
         target_transform: Callable = None,
         num_folds: int = 1,
+        task: str = "sleep",
     ):
 
         # assert each domain has a dataset key and a version key
@@ -50,6 +54,7 @@ class MultiSourceDomain(PhysioExDataset):
                     preprocessing=preprocessing,
                     sequence_length=sequence_length,
                     target_transform=target_transform,
+                    task=task,
                 )
             )
 

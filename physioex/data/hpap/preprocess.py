@@ -1,275 +1,327 @@
 import os
-import subprocess
+import xml.etree.ElementTree as ET
+from pathlib import Path
+from typing import List, Tuple
+from urllib.request import urlretrieve
 
 import numpy as np
 import pandas as pd
 import pyedflib
 from loguru import logger
-from scipy.signal import butter, filtfilt, resample, spectrogram
+from scipy.signal import resample
 from tqdm import tqdm
 
 from physioex.data.constant import get_data_folder
+from physioex.data.preprocessor import (Preprocessor, bandpass_filter,
+                                        xsleepnet_preprocessing)
 
-# 0 - Wake --> map 0
-# 1 - REM ---> map 4
-# 2 - Stage 1 ---> map 1
-# 3 - Stage 2 ---> map 2
-# 4 - Stage 3 ---> map 3
-# 5 - Stage 4 ---> map 3
+url = "https://anon.erda.au.dk/share_redirect/DCuFnOpr1n/datasets/homepap-baseline-harmonized-dataset-0.2.0.csv"
+
+mapping = {
+    0: 0,  # Wake
+    1: 1,  # Stage 1
+    2: 2,  # Stage 2
+    3: 3,  # Stage 3
+    4: 3,  # Stage 4
+    5: 4,  # REM
+    6: 5,
+    9: -1,  # Not scored
+}
+
+eeg_labels = [("c3", "m2"), ("c3", "a2"), "c3-m2", ("c3", "o2")]
+emg_labels = [
+    ("lchin", "cchin"),
+    ("lchin", "rchin"),
+    ("chin1", "chin2"),
+    "chin",
+    "chin emg",
+    "emg chin",
+    "chin1-chin2",
+    "lchin-cchin",
+    ("emg3", "emg1"),
+    ("emg3", "emg2"),
+    "emg3-emg1",
+    "emg3-emg2",
+    "emg1-emg3",
+    "emg",
+    ("l-legs", "r-legs"),
+]
+ecg_labels = [
+    ("ecg3", "ecg1"),
+    ("ekg3", "ekg1"),
+    ("ecg2", "ecg1"),
+    ("ekg2", "ekg1"),
+    "ecg3-ecg1",
+    "ecg3-ecg2",
+    "ecg1-ecg3",
+    "ekg3-ekg2",
+    "ekg",
+    "ekg3-ekg1",
+    "ecg",
+    ("ecg ii", "ecg i"),
+]
+eog_labels = [
+    ("e1", "e2"),
+    ("e1-m2", "e2-m1"),
+    ("loc", "roc"),
+    ("e-1", "e-2"),
+    ("l-eog", "r-eog"),
+    "e1-e2",
+    "e2-m1",
+]
 
 
-def bandpass_filter(data, lowcut, highcut, fs, order=5):
-    nyquist = 0.5 * fs
-    low = lowcut / nyquist
-    high = highcut / nyquist
-    b, a = butter(order, [low, high], btype="band")
-    filtered_data = filtfilt(b, a, data)
-    return filtered_data
+def extract_signal(f, possible_labels):
+    signal_labels = [
+        label.lower() for label in f.getSignalLabels()
+    ]  # Converti tutte le etichette in minuscolo
 
+    for label in possible_labels:
+        # check if label is a tuple
+        if isinstance(label, tuple):
+            # check if the tuple is of 2 elements or 3
+            if len(label) == 2:
+                try:
+                    signal = f.readSignal(signal_labels.index(label[0])) - f.readSignal(
+                        signal_labels.index(label[1])
+                    )
+                    return signal
+                except:
+                    continue
+            elif len(label) == 3:
+                try:
 
-def read_edf(file_path):
-
-    # open the txt file to get the labels
-    with open(file_path + "_stage.txt", "r") as f:
-        labels = f.readlines()
-
-    # remove \n from the labels
-    labels = list(map(lambda x: int(x.strip()), labels))
-    labels = np.array(labels)
-
-    n_samples = labels.shape[0]
-
-    f = pyedflib.EdfReader(file_path + ".rec")
-
-    buffer = []
-
-    for indx, modality in enumerate(["C3A2", "EOG", "EMG", "ECG"]):
-        if modality == "EOG":
-
-            left = f.getSignalLabels().index("Lefteye")
-            right = f.getSignalLabels().index("RightEye")
-
-            if f.getSampleFrequency(left) != f.getSampleFrequency(right):
-                logger.error("Sampling frequency of EOG signals is different")
-                exit()
-
-            fs = int(f.getSampleFrequency(left))
-
-            signal = (f.readSignal(left) - f.readSignal(right)).reshape(-1, fs)
-            num_windows = signal.shape[0] // 30
-
-            # print( f"Modality {modality} fs {fs} num windows {num_windows} shape {signal.shape}" )
-
-            signal = signal[: num_windows * 30]
-            signal = signal.reshape(-1, 30 * fs)
-
+                    Lchin = f.readSignal(
+                        signal_labels.index(label[0])
+                    )  # Cerca l'indice in modo case-insensitive
+                    Rchin = f.readSignal(signal_labels.index(label[1]))
+                    Cchin = f.readSignal(signal_labels.index(label[2]))
+                    return np.sqrt(Lchin**2 + Rchin**2 + Cchin**2)
+                except:
+                    continue
         else:
-            i = f.getSignalLabels().index(modality)
-            fs = int(f.getSampleFrequency(i))
-            signal = f.readSignal(i).reshape(-1, fs)
+            try:
+                signal = f.readSignal(signal_labels.index(label))
+                return signal
+            except:
+                continue
 
-            # print( f"Modality {modality} fs {fs} shape {signal.shape}" )
-            # consider windows of 30 seconds, discard the last epoch if not fit
-            num_windows = signal.shape[0] // 30
+    logger.error(f"Labels {possible_labels} not found in : {signal_labels}")
+    exit(-1)
 
-            # print( f"Modality {modality} fs {fs} num windows {num_windows} shape {signal.shape}" )
 
-            signal = signal[: num_windows * 30]
-            signal = signal.reshape(-1, 30 * fs)
+def extract_fs(f):
+    signal_labels = [
+        label.lower() for label in f.getSignalLabels()
+    ]  # Converti tutte le etichette in minuscolo
 
-        # resample the signal at 100Hz
-        signal = resample(signal, num=30 * 100, axis=1)
-        # pass band the signal between 0.3 and 40 Hz
-        signal = bandpass_filter(signal, 0.3, 40, 100)
+    for label in eeg_labels:
+        # check if label is a tuple
+        if isinstance(label, tuple):
+            try:
+                fs = int(f.getSampleFrequencies()[signal_labels.index(label[0])])
+                return fs
+            except:
+                continue
+        else:
+            try:
+                fs = int(f.getSampleFrequencies()[signal_labels.index(label)])
+                return fs
+            except:
+                continue
 
-        buffer.append(signal)
-    f._close()
+    logger.error(f"Labels {eeg_labels} not found in : {signal_labels}")
+    exit(-1)
 
-    buffer = np.array(buffer)
-    n_samples = min(n_samples, buffer.shape[1])
 
-    buffer, labels = buffer[:, :n_samples, :], labels[:n_samples]
+class HPAPPreprocessor(Preprocessor):
 
-    mask = np.logical_and(labels != 6, labels != 7)
-    buffer, labels = buffer[:, mask], labels[mask]
+    def __init__(self, data_folder: str = None):
 
-    # map the labels to the new values
-    labels = np.array(
-        list(
-            map(
-                lambda x: (
-                    0
-                    if x == 0
-                    else 4 if x == 1 else 1 if x == 2 else 2 if x == 3 else 3
-                ),
-                labels,
+        super().__init__(
+            dataset_name="hpap",
+            signal_shape=[4, 3000],
+            preprocessors_name=["xsleepnet"],
+            preprocessors=[xsleepnet_preprocessing],
+            preprocessors_shape=[[4, 29, 129]],
+            data_folder=data_folder,
+        )
+
+    @logger.catch
+    def get_subjects_records(self) -> List[str]:
+        # this method should be provided by the user
+        # the method should return a list containing the path of each subject record
+        # each path is needed to be passed as argument to the function read_subject_record(self, record)
+
+        records = pd.read_csv(url)["nsrrid"].values
+        records = [str(record) for record in records]
+
+        list_files = os.listdir(os.path.join(self.dataset_folder, "download"))
+        list_files = [
+            file
+            for file in list_files
+            if file.endswith(".edf") and file.startswith("lab")
+        ]
+
+        result = []
+
+        for record in records:
+
+            files = [file for file in list_files if file.endswith(record + ".edf")]
+
+            record_name = ""
+            for file in files:
+                record_name += file + " "
+            if len(files) > 0:
+                result.append(record_name)
+
+        return result
+
+    def read_subject_record(self, record: str) -> Tuple[np.array, np.array]:
+
+        records = record.split(" ")
+        download_folder = os.path.join(self.dataset_folder, "download")
+
+        signal_records = []
+        labels_records = []
+
+        for my_record in records:
+            if not my_record.endswith(".edf"):
+                continue
+
+            filepath = os.path.join(download_folder, my_record)
+            anntpath = filepath.replace(".edf", "-profusion.xml")
+
+            # logger.info(f"Reading xml record {my_record}")
+            annt = ET.parse(anntpath).findall("SleepStages")[0]
+
+            labels = np.zeros(len(annt))
+
+            for i, annotation in enumerate(annt):
+                labels[i] = int(annotation.text)
+
+            # map the labels, remove the not scored windows
+            labels = np.array([mapping[int(label)] for label in labels])
+            labels = labels[labels != -1]
+            labels = labels[labels != 5]
+            return None, labels
+
+            # logger.info(f"Reading edf record {my_record}")
+            f = pyedflib.EdfReader(filepath)
+
+            fs = extract_fs(f)
+            EEG = extract_signal(f, eeg_labels)
+            EOG = extract_signal(f, eog_labels)
+            EMG = extract_signal(f, emg_labels)
+            ECG = extract_signal(f, ecg_labels)
+
+            f.close()
+
+            # logger.info( f"Resampling and filtering record {my_record}")
+
+            signal_record = np.array([EEG, EOG, EMG, ECG])
+
+            signal_record = np.reshape(signal_record, (4, -1, fs))
+
+            num_windows = signal_record.shape[1] // 30
+
+            if num_windows != labels.shape[0]:
+                logger.error(
+                    f"Record {my_record} has {num_windows} windows and {labels.shape[0]} labels"
+                )
+                num_windows = min(num_windows, labels.shape[0])
+
+            signal_record = signal_record[:, : num_windows * 30]
+            labels = labels[:num_windows]
+
+            signal_record = np.reshape(signal_record, (4, num_windows, 30 * fs))
+
+            signal_record = resample(signal_record, num=30 * 100, axis=2)
+            signal_record = bandpass_filter(signal_record, 0.3, 40, 100)
+
+            signal_record = np.transpose(signal_record, (1, 0, 2))
+
+            # remove the windows correspondig to movements
+            mask = labels == 5
+            signal_record = signal_record[~mask]
+            labels = labels[~mask]
+
+            signal_records.append(signal_record)
+            labels_records.append(labels)
+
+        # logger.info(f"Concatenating records")
+
+        signal_records = np.concatenate(signal_records, axis=0)
+        labels_records = np.concatenate(labels_records, axis=0)
+        # logger.info(f"Records concatenated")
+
+        return signal_records, labels_records
+
+    @logger.catch
+    def customize_table(self, table) -> pd.DataFrame:
+        records = pd.read_csv(url)  # ["nsrrid", "nsrr_age", "nsrr_sex"]
+
+        # map the nsrrsex column in 1:female and 0:male
+        records["nsrr_sex"] = records["nsrr_sex"].map({"female": 1, "male": 0})
+
+        list_files = os.listdir(os.path.join(self.dataset_folder, "download"))
+        list_files = [
+            file
+            for file in list_files
+            if file.endswith(".edf") and file.startswith("lab")
+        ]
+
+        selected_id = []
+        for record in records["nsrrid"]:
+            files = [file for file in list_files if str(record) in file]
+            if len(files) > 0:
+                selected_id.append(record)
+
+        # select the records
+        records = records[records["nsrrid"].isin(selected_id)]
+
+        if len(records) != len(table):
+            logger.error(
+                f"Table has {len(table)} records and the records has {len(records)} records"
             )
+
+        table["nsrrid"] = records["nsrrid"].values
+        table["age"] = records["nsrr_age"].values
+        table["sex"] = records["nsrr_sex"].values
+
+        return table
+
+    @logger.catch
+    def get_sets(self) -> Tuple[np.array, np.array, np.array]:
+
+        np.random.seed(42)
+
+        table = self.table.copy()
+
+        train_subjects = np.random.choice(
+            table["subject_id"], size=int(table.shape[0] * 0.7), replace=False
         )
-    )
-
-    # print( f"Buffer shape {buffer.shape} labels shape {labels.shape}" )
-    buffer = np.transpose(buffer, (1, 0, 2))
-    return buffer, labels
-
-
-# xsleepnet preprocessing
-def xsleepnet_preprocessing(sig):
-    # transform each signal into its spectrogram ( fast )
-    # nfft 256, noverlap 1, win 2, fs 100, hamming window
-    _, _, Sxx = spectrogram(
-        sig.reshape(-1),
-        fs=100,
-        window="hamming",
-        nperseg=200,
-        noverlap=100,
-        nfft=256,
-    )
-
-    # log_10 scale the spectrogram safely (using epsilon)
-    Sxx = 20 * np.log10(np.abs(Sxx) + np.finfo(float).eps)
-
-    Sxx = np.transpose(Sxx, (1, 0))
-
-    return Sxx
-
-
-def save_memmaps(path, signal, labels, subject_id):
-
-    for i, modality in enumerate(["EEG", "EOG", "EMG", "ECG"]):
-        fp = np.memmap(
-            f"{path}/{modality}_{subject_id}.dat",
-            dtype="float32",
-            mode="w+",
-            shape=signal[i].shape,
+        valid_subjects = np.setdiff1d(
+            table["subject_id"], train_subjects, assume_unique=True
         )
-        fp[:] = signal[i][:]
-        fp.flush()
-        del fp
+        test_subjects = np.random.choice(
+            valid_subjects, size=int(table.shape[0] * 0.15), replace=False
+        )
+        valid_subjects = np.setdiff1d(valid_subjects, test_subjects, assume_unique=True)
 
-    fp = np.memmap(
-        f"{path}/y_{subject_id}.dat", dtype="int16", mode="w+", shape=labels.shape
-    )
+        return (
+            train_subjects.reshape(1, -1),
+            valid_subjects.reshape(1, -1),
+            test_subjects.reshape(1, -1),
+        )
 
-    fp[:] = labels[:]
-    fp.flush()
-    del fp
-    return
+    @logger.catch
+    def get_dataset_num_windows(self) -> int:
+        return 231434
 
 
-# Specifica la directory in cui desideri scaricare i file
-dl_dir = get_data_folder()
-dl_dir += "hpap/"
-files = dl_dir + "physionet.org/files/ucddb/1.0.0/"
+if __name__ == "__main__":
 
-# check if the dataset exists
+    p = HPAPPreprocessor(data_folder="/home/guido/shared/")
 
-if not os.path.exists(files):
-    logger.info("Fetching the dataset...")
-    os.makedirs(dl_dir, exist_ok=True)
-    # URL del dataset
-    url = "https://anon.erda.au.dk/share_redirect/AtAGmjoATh"
-
-    # Scarica il dataset
-    subprocess.run(["wget", "-r", "-N", "-c", "-np", url, "-P", dl_dir])
-
-    exit()
-
-logger.info("Dataset is available at {}".format(files))
-
-subject_details = pd.read_excel(files + "SubjectDetails.xls")
-
-table = pd.DataFrame()
-table["subject_id"] = subject_details["S/No"]
-table["file_id"] = subject_details["Study Number"]
-table["gender"] = subject_details["Gender"]
-table["age"] = subject_details["Age"]
-# table["num_samples"] = subject_details["No of data blocks in EDF"]
-
-logger.info("Saving table to csv...")
-
-table.to_csv(dl_dir + "table.csv")
-
-num_samples = []
-
-logger.info("Processing the data...")
-
-os.makedirs(dl_dir + "raw", exist_ok=True)
-os.makedirs(dl_dir + "xsleepnet", exist_ok=True)
-
-raw_data, xsleepnet_data = [], []
-
-# iter on the table rows using tqdm
-for index, row in tqdm(table.iterrows(), total=table.shape[0]):
-
-    subject_id = row["subject_id"]
-    filename = row["file_id"].lower()
-
-    signal, labels = read_edf(files + filename)
-    num_samples.append(len(labels))
-
-    raw_data.extend(signal)
-
-    xsleepnet = np.zeros((signal.shape[0], 4, 29, 129))
-    for i in range(len(signal)):
-        for m in range(4):
-            xsleepnet[i, m] = xsleepnet_preprocessing(signal[i, m])
-
-    xsleepnet_data.extend(xsleepnet)
-
-    save_memmaps(dl_dir + "raw", signal, labels, subject_id)
-    save_memmaps(dl_dir + "xsleepnet", xsleepnet, labels, subject_id)
-
-table["num_samples"] = np.array(num_samples)
-table.to_csv(dl_dir + "table.csv")
-
-logger.info("Data processing completed, computing standardization")
-
-raw_data = np.array(raw_data)
-xsleepnet_data = np.array(xsleepnet_data)
-
-print(xsleepnet_data.shape, raw_data.shape)
-
-raw_mean, raw_std = np.mean(raw_data, axis=0), np.std(raw_data, axis=0)
-xsleepnet_mean, xsleepnet_std = np.mean(xsleepnet_data, axis=0), np.std(
-    xsleepnet_data, axis=0
-)
-
-logger.info("Saving scaling parameters")
-# save the mean and std for each signal
-np.savez(
-    f"{dl_dir}/raw/scaling.npz",
-    mean=raw_mean,
-    std=raw_std,
-)
-
-np.savez(
-    f"{dl_dir}/xsleepnet/scaling.npz",
-    mean=xsleepnet_mean,
-    std=xsleepnet_std,
-)
-
-print(raw_mean.shape, raw_std.shape, xsleepnet_mean.shape, xsleepnet_std.shape)
-
-logger.info("Saving splitting parameters")
-# computing the splitting subjects train valid test with ratio 0.7 0.15 0.15
-# use a setted seed for reproducibility
-
-np.random.seed(42)
-
-train_subjects = np.random.choice(
-    table["subject_id"], size=int(table.shape[0] * 0.7), replace=False
-)
-valid_subjects = np.setdiff1d(table["subject_id"], train_subjects, assume_unique=True)
-test_subjects = np.random.choice(
-    valid_subjects, size=int(table.shape[0] * 0.15), replace=False
-)
-valid_subjects = np.setdiff1d(valid_subjects, test_subjects, assume_unique=True)
-
-print(train_subjects.shape, valid_subjects.shape, test_subjects.shape)
-
-np.savez(
-    f"{dl_dir}/splitting.npz",
-    train=train_subjects,
-    valid=valid_subjects,
-    test=test_subjects,
-)
+    p.run()

@@ -17,6 +17,7 @@ class Dreem(PhysioExDataset):
         preprocessing: str = "raw",  # available [ "raw", "xsleepnet" ]
         sequence_length: int = 21,
         target_transform: Callable = None,
+        task: str = "sleep",
     ):
         assert version in ["dodo", "dodh"], "version should be one of 'dodo'-'dodh'"
 

@@ -35,7 +35,8 @@ class Net(nn.Module):
         )
 
         self.clf = nn.Linear(
-            self.epoch_encoder.len_last_layer * module_config["seq_len"], 5
+            self.epoch_encoder.len_last_layer * module_config["seq_len"],
+            module_config["n_classes"],
         )
 
         self.drop = nn.Dropout(0.5)

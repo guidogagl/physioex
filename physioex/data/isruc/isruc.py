@@ -17,6 +17,7 @@ class Isruc(PhysioExDataset):
         preprocessing: str = "raw",  # available [ "raw", "xsleepnet" ]
         sequence_length: int = 21,
         target_transform: Callable = None,
+        task: str = "sleep",
     ):
         assert preprocessing in [
             "raw",
@@ -37,6 +38,7 @@ class Isruc(PhysioExDataset):
             sequence_length=sequence_length,
             selected_channels=selected_channels,
             target_transform=target_transform,
+            task=task,
         )
 
     def __getitem__(self, idx):

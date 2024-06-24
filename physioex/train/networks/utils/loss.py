@@ -47,4 +47,20 @@ class CrossEntropyLoss(nn.Module, PhysioExLoss):
         return self.ce_loss(preds, targets)
 
 
-config = {"cel": CrossEntropyLoss, "scl": SimilarityCombinedLoss}
+class RegressionLoss(nn.Module):
+    def __init__(self, params: Dict = None):
+        super(RegressionLoss, self).__init__()
+        self.mae_loss = nn.L1Loss()
+        self.params = params
+
+    def forward(self, emb, preds, targets):
+        mae = self.mae_loss(preds, targets)
+        ss_tot = torch.sum((targets - torch.mean(targets)) ** 2)
+        ss_res = torch.sum((targets - preds) ** 2)
+        r2_score = 1 - ss_res / ss_tot
+
+        combined_loss = 0.5 * mae + 0.5 * (1 - r2_score)
+        return combined_loss
+
+
+config = {"cel": CrossEntropyLoss, "scl": SimilarityCombinedLoss, "reg": RegressionLoss}

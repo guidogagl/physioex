@@ -41,8 +41,16 @@ def extract_large_zip(zip_path, extract_path):
                     os.chmod(extracted_path, unix_attributes)
     os.remove(zip_path)
 
-stages_map = ["Sleep stage W", "Sleep stage N1", "Sleep stage N2", "Sleep stage N3", "Sleep stage R"]
+
+stages_map = [
+    "Sleep stage W",
+    "Sleep stage N1",
+    "Sleep stage N2",
+    "Sleep stage N3",
+    "Sleep stage R",
+]
 fs = 256
+
 
 def read_edf(file_path):
 
@@ -50,19 +58,19 @@ def read_edf(file_path):
     f = pyedflib.EdfReader(stages_path)
     _, _, annt = f.readAnnotations()
     f._close()
-    
+
     annotations = []
     for a in annt:
         if a in stages_map:
-            annotations.append( stages_map.index(a) )        
+            annotations.append(stages_map.index(a))
 
-    labels = np.reshape( np.array( annotations ).astype(int), (-1) )
-    
+    labels = np.reshape(np.array(annotations).astype(int), (-1))
+
     num_windows = labels.shape[0]
-    
+
     f = pyedflib.EdfReader(file_path)
     buffer = []
-    
+
     for indx, modality in enumerate(["EEG C3-M2", "EOG", "EMG chin", "ECG"]):
         if modality == "EOG":
 
@@ -70,7 +78,6 @@ def read_edf(file_path):
             right = f.getSignalLabels().index("EOG E2-M2")
 
             signal = (f.readSignal(left) + f.readSignal(right)).reshape(-1, fs)
-
 
         else:
 
@@ -91,7 +98,7 @@ def read_edf(file_path):
 
     buffer = np.array(buffer)
     buffer = np.transpose(buffer, (1, 0, 2))
-    
+
     return buffer, labels
 
 
@@ -101,10 +108,10 @@ class HMCPreprocessor(Preprocessor):
 
         super().__init__(
             dataset_name="hmc",
-            signal_shape= [4, 3000],
+            signal_shape=[4, 3000],
             preprocessors_name=["xsleepnet"],
             preprocessors=[xsleepnet_preprocessing],
-            preprocessors_shape=[ [4, 29, 129] ],
+            preprocessors_shape=[[4, 29, 129]],
             data_folder=data_folder,
         )
 
@@ -132,20 +139,31 @@ class HMCPreprocessor(Preprocessor):
     @logger.catch
     def get_subjects_records(self) -> List[str]:
 
-        subjects_dir = os.path.join(self.dataset_folder, "download", "haaglanden-medisch-centrum-sleep-staging-database-1.1")
+        subjects_dir = os.path.join(
+            self.dataset_folder,
+            "download",
+            "haaglanden-medisch-centrum-sleep-staging-database-1.1",
+        )
 
-        records_file = os.path.join( subjects_dir, "RECORDS")
-        
-        with open(records_file, 'r') as file:
+        records_file = os.path.join(subjects_dir, "RECORDS")
+
+        with open(records_file, "r") as file:
             records = file.readlines()
-        
-        records = [record.rstrip('\n') for record in records]
+
+        records = [record.rstrip("\n") for record in records]
 
         return records
 
     @logger.catch
     def read_subject_record(self, record: str) -> Tuple[np.array, np.array]:
-        return read_edf(os.path.join(self.dataset_folder, "download", "haaglanden-medisch-centrum-sleep-staging-database-1.1", record))
+        return read_edf(
+            os.path.join(
+                self.dataset_folder,
+                "download",
+                "haaglanden-medisch-centrum-sleep-staging-database-1.1",
+                record,
+            )
+        )
 
     @logger.catch
     def customize_table(self, table) -> pd.DataFrame:

@@ -1,4 +1,5 @@
 import os
+import sys
 import zipfile
 from typing import List, Tuple
 
@@ -41,42 +42,64 @@ def extract_large_zip(zip_path, extract_path):
                     os.chmod(extracted_path, unix_attributes)
     os.remove(zip_path)
 
-stages_map = ["Sleep stage W", "Sleep stage N1", "Sleep stage N2", "Sleep stage N3", "Sleep stage R"]
+
 fs = 256
+
+EVENTS = ["SLEEP-S0", "SLEEP-S1", "SLEEP-S2", "SLEEP-S3", "SLEEP-S4", "SLEEP-REM"]
+SLEEP_MAP = {"W": 0, "S1": 1, "S2": 2, "S3": 3, "S4": 3, "REM": 4, "R": 4}
+
 
 def read_edf(file_path):
 
-    stages_path = file_path[:-4] + "_sleepscoring.edf"
-    f = pyedflib.EdfReader(stages_path)
-    _, _, annt = f.readAnnotations()
-    f._close()
-    
-    annotations = []
-    for a in annt:
-        if a in stages_map:
-            annotations.append( stages_map.index(a) )        
+    edf_path = file_path + ".edf"
+    ann_path = file_path + ".txt"
 
-    labels = np.reshape( np.array( annotations ).astype(int), (-1) )
-    
+    with open(ann_path, "r") as f:
+        annotations = f.readlines()
+
+    header = "Sleep Stage\tPosition\tTime [hh:mm:ss]\tEvent\tDuration[s]\tLocation\n"
+    header_indx = annotations.index(header)
+    # Remove the header
+    annotations = annotations[header_indx + 1 :]
+
+    # Split each line on the tab character
+    annotations = [line.split("\t") for line in annotations]
+
+    # Convert the list of lists into a DataFrame
+    df = pd.DataFrame(
+        annotations,
+        columns=[
+            "Sleep Stage",
+            "Position",
+            "Time [hh:mm:ss]",
+            "Event",
+            "Duration[s]",
+            "Location",
+        ],
+    ).dropna()
+    # remove the rows corresponding to events not in EVENTS
+    df = df[df["Event"].isin(EVENTS)]
+    # map the sleep stages to the corresponding integer
+    df["Sleep Stage"] = df["Sleep Stage"].map(SLEEP_MAP)
+    labels = df["Sleep Stage"].values.astype(int)
+
     num_windows = labels.shape[0]
-    
-    f = pyedflib.EdfReader(file_path)
+
+    try:
+        f = pyedflib.EdfReader(edf_path)
+    except:
+        f.close()
+        logger.warning(f"Error reading file {edf_path}, subject discarded")
+        # print the error
+        return None, None
+
     buffer = []
-    
-    for indx, modality in enumerate(["EEG C3-M2", "EOG", "EMG chin", "ECG"]):
-        if modality == "EOG":
 
-            left = f.getSignalLabels().index("EOG E1-M2")
-            right = f.getSignalLabels().index("EOG E2-M2")
+    for indx, modality in enumerate(["Fp2-F4", "ROC-LOC", "EMG1-EMG2", "ECG1-ECG2"]):
 
-            signal = (f.readSignal(left) + f.readSignal(right)).reshape(-1, fs)
-
-
-        else:
-
-            i = f.getSignalLabels().index(modality)
-            fs = int(f.getSampleFrequency(i))
-            signal = f.readSignal(i).reshape(-1, fs)
+        i = f.getSignalLabels().index(modality)
+        fs = int(f.getSampleFrequency(i))
+        signal = f.readSignal(i).reshape(-1, fs)
 
         signal = signal[: num_windows * 30]
         signal = signal.reshape(-1, 30 * fs)
@@ -91,7 +114,7 @@ def read_edf(file_path):
 
     buffer = np.array(buffer)
     buffer = np.transpose(buffer, (1, 0, 2))
-    
+
     return buffer, labels
 
 
@@ -101,10 +124,10 @@ class CAPPreprocessor(Preprocessor):
 
         super().__init__(
             dataset_name="cap",
-            signal_shape= [4, 3000],
+            signal_shape=[4, 3000],
             preprocessors_name=["xsleepnet"],
             preprocessors=[xsleepnet_preprocessing],
-            preprocessors_shape=[ [4, 29, 129] ],
+            preprocessors_shape=[[4, 29, 129]],
             data_folder=data_folder,
         )
 
@@ -132,25 +155,40 @@ class CAPPreprocessor(Preprocessor):
     @logger.catch
     def get_subjects_records(self) -> List[str]:
 
-        subjects_dir = os.path.join(self.dataset_folder, "download", " ")
+        subjects_dir = os.path.join(
+            self.dataset_folder, "download", "cap-sleep-database-1.0.0"
+        )
 
-        records_file = os.path.join( subjects_dir, "gender-age.xlsx")
-        
-        records = pd.read_excel( records_file , header= None)[0].values
-                
+        records_file = os.path.join(subjects_dir, "gender-age.xlsx")
+
+        records = pd.read_excel(records_file, header=None)[0].values
+
         records = [record.lower() for record in records]
+
+        for i in range(len(records)):
+            if "sbd" in records[i]:
+                records[i] = records[i].replace("sbd", "sdb")
 
         return records
 
     @logger.catch
     def read_subject_record(self, record: str) -> Tuple[np.array, np.array]:
-        return read_edf(os.path.join(self.dataset_folder, "download", " ", record))
+        return read_edf(
+            os.path.join(
+                self.dataset_folder, "download", "cap-sleep-database-1.0.0", record
+            )
+        )
 
     @logger.catch
     def customize_table(self, table) -> pd.DataFrame:
-        my_table = os.path.join(self.dataset_folder, "download", " ", "gender-age.xlsx")
-        my_table = pd.read_excel( my_table , header= None)
-        
+        my_table = os.path.join(
+            self.dataset_folder,
+            "download",
+            "cap-sleep-database-1.0.0",
+            "gender-age.xlsx",
+        )
+        my_table = pd.read_excel(my_table, header=None)
+
         table["age"] = my_table[2].values
         table["sex"] = my_table[1].values
 
@@ -183,6 +221,6 @@ class CAPPreprocessor(Preprocessor):
 
 if __name__ == "__main__":
 
-    p = CAPPreprocessor(data_folder="/esat/biomeddata/ggagliar/")
+    p = CAPPreprocessor(data_folder="/home/guido/shared/")
 
     p.run()

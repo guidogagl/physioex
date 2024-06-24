@@ -212,24 +212,28 @@ class Preprocessor:
                 signal.ndim == 3
             ), f"ERR: subject record - {subject_records} - signal should be a 3D array of shape [ n_windows, n_channels, n_timestamps ]"
 
-            labels_mp[current_index : current_index + signal.shape[0]] = labels.astype( np.int16 )
-            raw_mp[current_index : current_index + signal.shape[0]] = signal.astype( np.float32 )  
+            labels_mp[current_index : current_index + signal.shape[0]] = labels.astype(
+                np.int16
+            )
+            raw_mp[current_index : current_index + signal.shape[0]] = signal.astype(
+                np.float32
+            )
 
             raw_mp.flush()
             labels_mp.flush()
 
             for i, p_mp in enumerate(prep_mp):
                 p_mp[current_index : current_index + signal.shape[0]] = (
-                    self.preprocessors[i](signal).astype( np.float32 )
+                    self.preprocessors[i](signal).astype(np.float32)
                 )
 
                 p_mp.flush()
 
             ids.append(subject_id)
-            num_windows.append(signal.shape[0])
+            num_windows.append(labels.shape[0])
             start_index.append(current_index)
 
-            current_index += signal.shape[0]
+            current_index += labels.shape[0]
 
         logger.info("Table creation ...")
 
@@ -264,7 +268,7 @@ class Preprocessor:
         logger.info("Computing scaling parameters ...")
 
         print(raw_mp.shape)
-        raw_mean, raw_std = online_variance( raw_mp )
+        raw_mean, raw_std = online_variance(raw_mp)
 
         print(raw_mean.shape, raw_std.shape)
         scaling_path = os.path.join(self.dataset_folder, "raw_scaling.npz")
@@ -272,7 +276,7 @@ class Preprocessor:
 
         for i, name in enumerate(self.preprocessors_name):
             scaling_path = os.path.join(self.dataset_folder, name + "_scaling.npz")
-            p_mean, p_std = online_variance( prep_mp[i] )
+            p_mean, p_std = online_variance(prep_mp[i])
 
             print(p_mean.shape, p_std.shape)
 
@@ -288,22 +292,22 @@ class Preprocessor:
 def online_variance(data):
 
     shape = data.shape[1:]
-    
+
     n = 0
     mean = 0
     M2 = 0
 
     for x in tqdm(data):
-        x = np.reshape( x, -1 ).astype( np.double )
-        
+        x = np.reshape(x, -1).astype(np.double)
+
         n = n + 1
         delta = x - mean
-        mean = mean + delta/n
-        M2 = M2 + delta*(x - mean)
+        mean = mean + delta / n
+        M2 = M2 + delta * (x - mean)
 
-    variance = M2/(n - 1)
-    
-    variance = np.reshape( variance, shape )
-    mean = np.reshape( mean, shape )
-    
-    return mean.astype(np.float32), np.sqrt( variance ).astype(np.float32)
+    variance = M2 / (n - 1)
+
+    variance = np.reshape(variance, shape)
+    mean = np.reshape(mean, shape)
+
+    return mean.astype(np.float32), np.sqrt(variance).astype(np.float32)

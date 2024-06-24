@@ -2,12 +2,12 @@ import argparse
 
 from physioex.data.dcsm.preprocess import DCSMPreprocessor
 from physioex.data.dreem.preprocess import DREEMPreprocessor
+from physioex.data.hmc.preprocess import HMCPreprocessor
 from physioex.data.isruc.preprocess import ISRUCPreprocessor
 from physioex.data.mass.preprocess import MASSPreprocessor
 from physioex.data.shhs.preprocess import SHHSPreprocessor
 from physioex.data.sleep_edf.preprocess import SLEEPEDFPreprocessor
 from physioex.data.svuh.preprocess import SVUHPreprocessor
-from physioex.data.hmc.preprocess import HMCPreprocessor
 
 preprocessors = {
     "dcsm": DCSMPreprocessor,

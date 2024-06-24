@@ -44,7 +44,6 @@ def extract_large_zip(zip_path, extract_path):
     os.remove(zip_path)
 
 
-
 SLEEP_STAGES = ["W", "N1", "N2", "N3", "REM"]
 
 
@@ -79,10 +78,10 @@ def read_edf(file_path):
     n_windows = EEG.shape[0] // 30
 
     EEG, EOG, EMG, ECG = (
-        EEG[:n_windows * 30].reshape(n_windows, 30 * fs),
-        EOG[:n_windows * 30].reshape(n_windows, 30 * fs),
-        EMG[:n_windows * 30].reshape(n_windows, 30 * fs),
-        ECG[:n_windows * 30].reshape(n_windows, 30 * fs),
+        EEG[: n_windows * 30].reshape(n_windows, 30 * fs),
+        EOG[: n_windows * 30].reshape(n_windows, 30 * fs),
+        EMG[: n_windows * 30].reshape(n_windows, 30 * fs),
+        ECG[: n_windows * 30].reshape(n_windows, 30 * fs),
     )
 
     signal = np.transpose(np.array([EEG, EOG, EMG, ECG]), (1, 0, 2))
@@ -131,9 +130,11 @@ class DCSMPreprocessor(Preprocessor):
         url = "https://erda.ku.dk/public/archives/db553715ecbe1f3ac66c1dc569826eef/dcsm_dataset.zip"
 
         if not os.path.exists(os.path.join(download_dir, "data", "sleep", "DCSM")):
-            
-            os.makedirs( os.path.join(download_dir, "data", "sleep", "DCSM"), exist_ok=True )
-            
+
+            os.makedirs(
+                os.path.join(download_dir, "data", "sleep", "DCSM"), exist_ok=True
+            )
+
             zip_file = os.path.join(self.dataset_folder, "dcsm_dataset.zip")
 
             if not os.path.exists(zip_file):
