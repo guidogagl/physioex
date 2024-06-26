@@ -337,6 +337,9 @@ class MultiSourceDomain:
                 train_domain, test_domain, self.sequence_length
             )
 
+            if X_train is None:
+                continue
+
             # random select 128 samples from the train and test embeddings
             idx_train = np.random.choice(X_train.shape[0], 1024, replace=False).astype(
                 int
@@ -713,6 +716,7 @@ def get_embeddings(train_domain, test_domain, sequence_length):
     list_of_files = list(Path(results_path).rglob("*.ckpt"))
     if len(list_of_files) == 0:
         logger.error(f"Model not found in {results_path}")
+        return None, None, None, None
 
     logger.info("Loading the model...")
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

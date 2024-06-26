@@ -70,7 +70,7 @@ class SpectralGradients(IntegratedGradients):
                         else target
                     ),  # if tensor put it on the same device as inputs
                     additional_forward_args=additional_forward_args,
-                    n_steps=n_steps,
+                    n_steps=n_steps // F,
                     method=method,
                     internal_batch_size=internal_batch_size,
                     return_convergence_delta=False,

@@ -40,7 +40,7 @@ def main():
     parser.add_argument(
         "-d",
         "--dataset",
-        default="sleep_physionet",
+        default="sleep_edf",
         type=str,
         help='Specify the dataset to use. Expected type: str. Default: "SleepPhysionet"',
     )

@@ -12,8 +12,11 @@ from scipy.signal import resample
 from tqdm import tqdm
 
 from physioex.data.constant import get_data_folder
-from physioex.data.preprocessor import (Preprocessor, bandpass_filter,
-                                        xsleepnet_preprocessing)
+from physioex.data.preprocessor import (
+    Preprocessor,
+    bandpass_filter,
+    xsleepnet_preprocessing,
+)
 
 url = "https://anon.erda.au.dk/share_redirect/DCuFnOpr1n/datasets/homepap-baseline-harmonized-dataset-0.2.0.csv"
 

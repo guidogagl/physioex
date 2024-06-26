@@ -1,0 +1,20 @@
+experiment:
+  name: fine-tuned-seqsleepnet
+  module: physioex.train.new_msd
+  class: FineTunedModel
+  module_config: # this is the argument passed to your model constructor
+    n_classes: 5
+    model_params:
+      name: seqsleepnet
+      in_channels: 1
+      seq_len: 21
+    loss_call: "cel"
+    loss_params: null    
+  input_transform: xsleepnet
+  target_transform: null
+
+
+checkpoint: "models/moulti-source-domain/"
+val_check_interval: 1000
+max_epochs: 20
+batch_size: 32

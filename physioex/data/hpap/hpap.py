@@ -24,7 +24,9 @@ class Hpap(PhysioExDataset):
             "xsleepnet",
         ], "preprocessing should be one of 'raw'-'xsleepnet'"
         for pick in picks:
-            assert pick in AVAILABLE_PICKS, "pick should be one of 'EEG'"
+            assert (
+                pick in AVAILABLE_PICKS
+            ), "pick should be one of 'EEG' 'EOG' 'EMG' 'ECG'"
 
         selected_channels = np.array(
             [AVAILABLE_PICKS.index(pick) for pick in picks]
