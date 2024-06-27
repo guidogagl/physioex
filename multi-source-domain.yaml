@@ -16,5 +16,5 @@ experiment:
 
 checkpoint: "models/moulti-source-domain/"
 val_check_interval: 300
-max_epoch: 10
+max_epoch: 20
 batch_size: 32

@@ -48,11 +48,12 @@ class FineTunedModule( SleepModule ):
             weight_decay=1e-6,
         )
 
-        #self.scheduler = optim.lr_scheduler.ExponentialLR(
-        #    self.opt,
-        #    gamma=0.9,
-        #)
+        self.scheduler = optim.lr_scheduler.ExponentialLR(
+            self.opt,
+            gamma=0.9,
+        )
         
+        """
         self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(
             self.opt,
             mode="max",
@@ -65,7 +66,8 @@ class FineTunedModule( SleepModule ):
             eps=1e-08,
             verbose=True,
         )
-
+        """
+        
         return {
             "optimizer": self.opt,
             "lr_scheduler": {"scheduler": self.scheduler, "monitor": "val_acc"},
