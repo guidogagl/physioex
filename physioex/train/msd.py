@@ -22,6 +22,7 @@ from physioex.train.networks.utils.loss import config as loss_config
 import pandas as pd
 
 from pathlib import Path
+import numpy as np
 
 class FineTunedModule( SleepModule ):
     def __init__( self, module_config : Dict ):
@@ -47,13 +48,13 @@ class FineTunedModule( SleepModule ):
             lr=1e-7,
             weight_decay=1e-6,
         )
-
+        """
         self.scheduler = optim.lr_scheduler.ExponentialLR(
             self.opt,
             gamma=0.9,
         )
-        
         """
+
         self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(
             self.opt,
             mode="max",
@@ -66,12 +67,43 @@ class FineTunedModule( SleepModule ):
             eps=1e-08,
             verbose=True,
         )
-        """
         
         return {
             "optimizer": self.opt,
             "lr_scheduler": {"scheduler": self.scheduler, "monitor": "val_acc"},
         }
+        
+class _MultiSourceDomain( MSD ):
+    def __init__(self, version, picks, preprocessing, sequence_length, target_transform, train_datasets = None):
+
+        train_datasets.insert( 0, "shhs" )
+        domains = [ { "dataset" : dts, "version": version, "picks": picks } for dts in train_datasets ]
+        super().__init__( 
+            domains = domains,
+            sequence_length = sequence_length,
+            target_transform = target_transform,
+            preprocessing = preprocessing,        
+        )
+
+    def get_sets(self):
+        total_train_idx = []
+        total_valid_idx = []
+        total_test_idx = []
+
+        for i, dataset in enumerate(self.datasets):
+            train_idx, valid_idx, test_idx = dataset.get_sets()
+
+            total_valid_idx.append(valid_idx + self.offsets[i])
+
+            if i!=0 :
+                total_train_idx.append(train_idx + self.offsets[i])
+                total_test_idx.append(test_idx + self.offsets[i])
+
+        return (
+            np.concatenate(total_train_idx),
+            np.concatenate(total_valid_idx),
+            np.concatenate(total_test_idx),
+        )
 
 
 if __name__ == "__main__":
@@ -103,11 +135,13 @@ if __name__ == "__main__":
     
     if k > 0:
         def MultiSourceDomain( version, picks, preprocessing, sequence_length, target_transform ):
-            return MSD( 
-                domains = [ { "dataset" : dts, "version": version, "picks": picks } for dts in train_datasets ],
+            return _MultiSourceDomain( 
+                version = version,
+                picks = picks,
                 sequence_length = sequence_length,
                 target_transform = target_transform,
                 preprocessing = preprocessing,        
+                train_datasets = train_datasets,
             )
 
         dataset_config[ "multi-source-domain"] = MultiSourceDomain

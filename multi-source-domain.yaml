@@ -14,7 +14,7 @@ experiment:
   target_transform: null
 
 
-checkpoint: "models/moulti-source-domain/"
+checkpoint: "models/multi-source-domain/"
 val_check_interval: 300
-max_epoch: 20
+max_epoch: 5
 batch_size: 32

@@ -29,7 +29,7 @@ datasets = {
     "hmc": Hmc,
     "hpap": Hpap,
     "MSD": MultiSourceDomain,
-    "physio2018" : Physio2018,
+    "physio2018": Physio2018,
 }
 
 
