@@ -149,6 +149,7 @@ class Trainer:
             callbacks=[checkpoint_callback, progress_bar_callback],
             deterministic=True,
             logger=my_logger,
+            num_sanity_val_steps = -1
         )
 
         if self.use_wandb:
@@ -165,6 +166,7 @@ class Trainer:
             )
 
         logger.info("JOB:%d-Training model" % fold)
+        #trainer.validate(module, datamodule.val_dataloader())
         # Addestra il modello utilizzando il trainer e il DataModule
         trainer.fit(module, datamodule=datamodule)
 

@@ -48,12 +48,6 @@ config = {
         "input_transform": "raw",
         "target_transform": None,
     },
-    #    "seqecgnet": {
-    #        "module_config": read_config("seqecgnet"),
-    #        "module": SeqECGnet,
-    #        "input_transform": None,
-    #        "target_transform": None,
-    #    },
 }
 
 

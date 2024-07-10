@@ -8,6 +8,7 @@ experiment:
       name: seqsleepnet
       in_channels: 1
       seq_len: 21
+      val_dataloader: null
     loss_call: "cel"
     loss_params: null    
   input_transform: xsleepnet
@@ -16,5 +17,5 @@ experiment:
 
 checkpoint: "models/multi-source-domain/"
 val_check_interval: 300
-max_epoch: 5
-batch_size: 32
+max_epoch: 20
+batch_size: 128

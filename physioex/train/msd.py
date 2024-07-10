@@ -10,7 +10,7 @@ from typing import Dict
 
 from physioex.train.networks.base import SleepModule
 from physioex.train.trainer import Trainer
-from physioex.train.networks import register_experiment
+from physioex.train.networks import register_experiment, get_config
 
 from physioex.models import load_pretrained_model
 
@@ -23,6 +23,9 @@ import pandas as pd
 
 from pathlib import Path
 import numpy as np
+
+from tqdm import tqdm
+
 
 class FineTunedModule( SleepModule ):
     def __init__( self, module_config : Dict ):
@@ -40,37 +43,20 @@ class FineTunedModule( SleepModule ):
             module_config["loss_call"] = loss_config[ module_config["loss_call"] ]
         
         super().__init__( model.nn, module_config )
-    
-    def configure_optimizers(self):
-        # Definisci il tuo ottimizzatore
-        self.opt = optim.Adam(
-            self.nn.parameters(),
-            lr=1e-7,
-            weight_decay=1e-6,
-        )
-        """
-        self.scheduler = optim.lr_scheduler.ExponentialLR(
-            self.opt,
-            gamma=0.9,
-        )
-        """
 
-        self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(
-            self.opt,
-            mode="max",
-            factor=0.5,
-            patience=10,
-            threshold=0.0001,
-            threshold_mode="rel",
-            cooldown=0,
-            min_lr=0,
-            eps=1e-08,
-            verbose=True,
-        )
+    def configure_optimizers(self):
+        opt = optim.Adam(self.parameters(), lr=1e-3, weight_decay=1e-6)
         
+        scheduler1 = optim.lr_scheduler.ExponentialLR(opt, gamma=0.5)
+        
+        # Restituisci entrambi gli scheduler in una lista di dizionari
         return {
-            "optimizer": self.opt,
-            "lr_scheduler": {"scheduler": self.scheduler, "monitor": "val_acc"},
+            "optimizer": opt,
+            "lr_scheduler": {
+                "scheduler": scheduler1,
+                "interval": "epoch",  # Esegui scheduler1 ad ogni epoca
+                "frequency": 1,
+            },
         }
         
 class _MultiSourceDomain( MSD ):
@@ -157,6 +143,26 @@ if __name__ == "__main__":
             
             exp = register_experiment( "multi-source-domain.yaml" )
             
+            # calcola il val_check_interval in modo che ci siano sempre almeno 3 valutazioni
+            
+            logger.info( "Computing val_check_interval" )
+            dataset = MultiSourceDomain(
+                version=None,
+                picks = ["EEG"],
+                preprocessing = config["experiment"]["input_transform"],
+                sequence_length = config["experiment"]["module_config"]["model_params"]["seq_len"],
+                target_transform = config["experiment"]["target_transform"],
+            ) 
+            dataset.split(0)
+            dataset = TimeDistributedModule( 
+                dataset = dataset, 
+                batch_size = config["batch_size"],
+                fold = 0
+                )
+            
+            num_train_steps = len( dataset.train_dataloader() )
+            val_check_interval = max( 1, num_train_steps // 3 )
+            
             Trainer(
                 model_name = exp,
                 dataset_name = "multi-source-domain",
@@ -165,7 +171,7 @@ if __name__ == "__main__":
                 picks = "EEG",
                 ckp_path = checkpoint_dir,
                 max_epoch = config["max_epoch"],
-                val_check_interval = config["val_check_interval"],
+                val_check_interval = val_check_interval,
                 batch_size = config["batch_size"],
                 n_jobs = 1,
             ).run()
