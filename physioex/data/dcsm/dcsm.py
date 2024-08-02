@@ -4,7 +4,7 @@ from typing import Callable, List
 import numpy as np
 
 from physioex.data.base import PhysioExDataset
-from physioex.data.constant import get_data_folder
+from physioex.utils.constant import get_data_folder
 
 AVAILABLE_PICKS = ["EEG", "EOG", "EMG", "ECG"]
 

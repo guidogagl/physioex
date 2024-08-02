@@ -10,7 +10,8 @@ from joblib import Parallel, delayed
 from loguru import logger
 
 from physioex.data import TimeDistributedModule
-from physioex.explain.bands.importance import band_importance as compute_band_importance
+from physioex.explain.bands.importance import \
+    band_importance as compute_band_importance
 from physioex.explain.bands.importance import eXpDataset
 from physioex.explain.base import PhysioExplainer
 

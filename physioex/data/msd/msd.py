@@ -4,24 +4,25 @@ import numpy as np
 
 from physioex.data.base import PhysioExDataset
 from physioex.data.dcsm.dcsm import Dcsm
-from physioex.data.dreem.dreem import Dreem
-from physioex.data.hmc.hmc import Hmc
+# from physioex.data.dreem.dreem import Dreem
+# from physioex.data.hmc.hmc import Hmc
 from physioex.data.hpap.hpap import Hpap
-from physioex.data.isruc.isruc import Isruc
+# from physioex.data.isruc.isruc import Isruc
 from physioex.data.mass.mass import Mass
 from physioex.data.shhs.shhs import Shhs
-from physioex.data.sleep_edf.sleep_edf import SleepEDF
-from physioex.data.svuh.svuh import Svuh
+
+# from physioex.data.sleep_edf.sleep_edf import SleepEDF
+# from physioex.data.svuh.svuh import Svuh
 
 datasets = {
-    "sleep_edf": SleepEDF,
-    "dreem": Dreem,
+    # "sleep_edf": SleepEDF,
+    # "dreem": Dreem,
     "shhs": Shhs,
     "mass": Mass,
     "dcsm": Dcsm,
-    "isruc": Isruc,
-    "svuh": Svuh,
-    "hmc": Hmc,
+    # "isruc": Isruc,
+    # "svuh": Svuh,
+    # "hmc": Hmc,
     "hpap": Hpap,
 }
 

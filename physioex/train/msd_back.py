@@ -26,7 +26,7 @@ from tqdm import tqdm
 
 from physioex.data import MultiSourceDomain as MSD
 from physioex.data import TimeDistributedModule
-from physioex.data.constant import set_data_folder
+from physioex.utils.constant import set_data_folder
 from physioex.models import load_pretrained_model
 from physioex.train.networks import config
 from physioex.train.networks.utils.loss import config as loss_config

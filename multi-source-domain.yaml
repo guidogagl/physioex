@@ -1,6 +1,6 @@
 experiment:
   name: fine-tuned-seqsleepnet
-  module: physioex.train.msd
+  module: physioex.train.msd_utils
   class: FineTunedModule
   module_config: # this is the argument passed to your model constructor
     n_classes: 5
@@ -16,6 +16,6 @@ experiment:
 
 
 checkpoint: "models/multi-source-domain/"
-val_check_interval: 300
-max_epoch: 20
+val_check_interval: 3
+max_epoch: 15
 batch_size: 128

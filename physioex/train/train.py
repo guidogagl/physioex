@@ -5,7 +5,6 @@ from pathlib import Path
 import yaml
 from loguru import logger
 
-from physioex.data import register_dataset, set_data_folder
 from physioex.train import Trainer
 from physioex.train.networks import config, register_experiment
 
@@ -40,30 +39,30 @@ def main():
     parser.add_argument(
         "-d",
         "--dataset",
-        default="sleep_edf",
+        default="mass",
         type=str,
-        help='Specify the dataset to use. Expected type: str. Default: "SleepPhysionet"',
+        help='Specify the dataset to use. Expected type: str. Default: "MASS dataset"',
     )
     parser.add_argument(
         "-v",
         "--version",
-        default="2018",
+        default=None,
         type=str,
-        help='Specify the version of the dataset. Expected type: str. Default: "2018"',
+        help='Specify the version of the dataset. Expected type: str. Default: "None"',
     )
     parser.add_argument(
         "-p",
         "--picks",
-        default="Fpz-Cz",
+        default="EEG",
         type=str,
-        help="Specify the signal electrodes to pick to train the model. Expected type: list. Default: 'Fpz-Cz'",
+        help="Specify the signal electrodes to pick to train the model. Expected type: list. Default: 'EEG'",
     )
 
     # sequence
     parser.add_argument(
         "-sl",
         "--sequence_lenght",
-        default=3,
+        default=21,
         type=int,
         help="Specify the sequence length for the model. Expected type: int. Default: 3",
     )
@@ -79,7 +78,7 @@ def main():
     parser.add_argument(
         "-vci",
         "--val_check_interval",
-        default=300,
+        default=3,
         type=int,
         help="Specify the validation check interval during training. Expected type: int. Default: 300",
     )
@@ -91,21 +90,6 @@ def main():
         help="Specify the batch size for training. Expected type: int. Default: 32",
     )
 
-    parser.add_argument(
-        "-nj",
-        "--n_jobs",
-        default=10,
-        type=int,
-        help="Specify the number of jobs for parallelization. Expected type: int. Default: 10",
-    )
-
-    parser.add_argument(
-        "-imb",
-        "--imbalance",
-        default=False,
-        type=bool,
-        help="Specify rather or not to use f1 score instead of accuracy to save the checkpoints. Expected type: bool. Default: False",
-    )
 
     parser.add_argument(
         "--data_folder",
@@ -115,41 +99,60 @@ def main():
         required=False,
         help="The absolute path of the directory where the physioex dataset are stored, if None the home directory is used. Expected type: str. Optional. Default: None",
     )
-
+    
     parser.add_argument(
-        "--wandb",
-        "-wdb",
-        action="store_true",
-        help="Enables the logging on Weights and Biases. If the argument is present, it is set to True. Otherwise, it is set to False.",
+        "--config",
+        "-c",
+        type=str,
+        required=False,
+        help="Path to the configuration file in YAML format",
     )
 
+    parser.add_argument(
+        "--random_fold",
+        "-rf",
+        type=bool,
+        default=False,
+        required=False,
+        help="Weather or not to perform the training on a random fold. Expected type: bool. Optional. Default: False",
+    )
+    
     args = parser.parse_args()
-
-    if args.data_folder is not None:
-        set_data_folder(args.data_folder)
-
+    
+    if args.config:
+        with open(args.config, 'r') as file:
+            config = yaml.safe_load(file)
+            # Override command line arguments with config file values
+            for key, value in config.items():
+                if hasattr(args, key):
+                    setattr(args, key, value)
+                    
     # check if the experiment is a yaml file
     if args.experiment.endswith(".yaml") or args.experiment.endswith(".yml"):
         args.experiment = register_experiment(args.experiment)
 
     # check if the dataset is a yaml file
-    if args.dataset.endswith(".yaml") or args.dataset.endswith(".yml"):
-        args.dataset = register_dataset(args.dataset)
 
+    # convert the datasets into a list by diving by " "
+    datasets = args.dataset.split(" ")
+    versions = args.version.split(" ") if args.version is not None else None
+    picks = args.picks.split(" ")
+    
+    print(datasets)
+    print(versions)
+    
     Trainer(
         model_name=args.experiment,
-        dataset_name=args.dataset,
-        ckp_path=args.checkpoint,
-        loss_name=args.loss,
-        version=args.version,
-        picks=args.picks,
+        datasets = datasets,
+        versions = versions,
+        ckp_path = args.checkpoint,
+        loss_name = args.loss,
+        selected_channels= picks,
         sequence_length=args.sequence_lenght,
         max_epoch=args.max_epoch,
         val_check_interval=args.val_check_interval,
         batch_size=args.batch_size,
-        n_jobs=args.n_jobs,
-        imbalance=args.imbalance,
-        use_wandb=args.wandb,
+        random_fold = args.random_fold,
     ).run()
 
 

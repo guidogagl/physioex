@@ -11,7 +11,7 @@ from loguru import logger
 from scipy.io import loadmat
 from tqdm import tqdm
 
-from physioex.data.constant import get_data_folder
+from physioex.utils.constant import get_data_folder
 from physioex.data.preprocessor import Preprocessor, xsleepnet_preprocessing
 
 
@@ -105,15 +105,19 @@ class MASSPreprocessor(Preprocessor):
 
         os.remove(matpath)
 
+        train_subjects = np.array(train_subjects).reshape((len(train_subjects), -1))
+        valid_subjects = np.array(valid_subjects).reshape((len(valid_subjects), -1))
+        test_subjects = np.array(test_subjects).reshape((len(test_subjects), -1))
+
         return train_subjects, valid_subjects, test_subjects
 
-    @logger.catch
-    def get_dataset_num_windows(self) -> int:
-        return 228870
+    # @logger.catch
+    # def get_dataset_num_windows(self) -> int:
+    #   return 228870
 
 
 if __name__ == "__main__":
 
-    p = MASSPreprocessor(data_folder="/esat/biomeddata/ggagliar/")
+    p = MASSPreprocessor(data_folder="/home/guido/shared/")
 
     p.run()
