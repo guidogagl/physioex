@@ -18,6 +18,8 @@ DATASETS = {
     "mros": ["EEG", "EOG", "EMG"], #
 }
 
+import h5py
+
 class PhysioExDataset(torch.utils.data.Dataset):
     def __init__(
         self,
@@ -132,32 +134,34 @@ class PhysioExDataset(torch.utils.data.Dataset):
 
         start_index = 0
 
-        self.subject_idx = np.zeros(num_windows, dtype=np.uint16)
+        self.subject_idx = np.zeros(num_windows, dtype=np.uint32)
         for table in self.tables:
             for _, row in table.iterrows():
                 subject_id = int(row["subject_id"])
                 n_win = int(row["num_windows"]) - self.L + 1
-                self.subject_idx[start_index : start_index + n_win] = np.uint16(
+                self.subject_idx[start_index : start_index + n_win] = np.uint32(
                     subject_id
                 )
                 start_index += n_win
 
         # window --> relative index
         # we need a uint32 for the relative index
-        self.relative_idx = np.zeros(num_windows, dtype=np.uint16)
+        self.relative_idx = np.zeros(num_windows, dtype=np.uint32)
         start_index = 0
         for table in self.tables:
             for _, row in table.iterrows():
                 n_win = int(row["num_windows"]) - self.L + 1
                 self.relative_idx[start_index : start_index + n_win] = np.arange(
-                    n_win, dtype=np.uint16
+                    n_win, dtype=np.uint32
                 )
-                if n_win > np.iinfo(np.uint16).max:
+                if n_win > np.iinfo(np.uint32).max:
                     raise ValueError(
                         f"Value {n_win} exceeds the maximum value for np.uint16"
                     )
 
                 start_index += n_win
+        
+            
 
     def __len__(self):
 
@@ -224,16 +228,25 @@ class PhysioExDataset(torch.utils.data.Dataset):
         labels_path = subject_info["labels"].values[0]
         data_path = subject_info[self.preprocessing].values[0]
         subject_windows = subject_info["num_windows"].values[0]
-
+        
+        data_folder = self.dataset_folders[table_idx]
         # read the numpy memmap files
-        X = np.memmap(data_path, dtype='float32', mode='r', shape=(subject_windows, *self.input_shape))
-        y = np.memmap(labels_path, dtype='uint16', mode='r', shape=(subject_windows,))
+        AVAILABLE_CHANNELS = ["EEG", "EOG", "EMG", "ECG"]
 
-        # select the windows
+        with h5py.File(data_folder + "/hpc_dataset.h5", "r") as h5file:
+            X = []
+            #print the keys
+            #print(h5file.keys())
+            for channel in self.channels_index:
+                channel_name = AVAILABLE_CHANNELS[channel]
+                X.append(h5file[str(subject_id) + ".npy"][self.preprocessing][channel_name][relative_id : relative_id + self.L])
+            
+            X = np.array(X)
+            
+            y = h5file[str(subject_id) + ".npy"]["labels"][relative_id : relative_id + self.L]
 
-        X = X[relative_id : relative_id + self.L, self.channels_index]
-        y = y[relative_id : relative_id + self.L]
-
+            
+            
         X = (torch.tensor(X).float() - mean) / std
         y = torch.tensor(y).long()
 
@@ -259,7 +272,7 @@ class PhysioExDataset(torch.utils.data.Dataset):
 
                 indices = np.arange(
                     start=start_index, stop=start_index + num_windows
-                ).astype(np.uint16)
+                ).astype(np.uint32)
 
                 start_index += num_windows
 

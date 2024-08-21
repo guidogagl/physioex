@@ -11,7 +11,7 @@ setup(
     entry_points={
         "console_scripts": [
             "train=physioex.train.train:main",
-            "preprocess=physioex.data.preprocess:main",
+            "preprocess=physioex.preprocess.main:main",
         ],
     },
 )

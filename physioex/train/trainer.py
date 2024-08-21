@@ -69,7 +69,7 @@ class Trainer:
         
             self.folds = list(range(self.folds))
         
-        num_steps = PhysioExDataset(
+        num_steps = int( PhysioExDataset(
             datasets=datasets,
             versions=versions,
             preprocessing=network_config["input_transform"],
@@ -77,7 +77,7 @@ class Trainer:
             sequence_length=sequence_length,
             target_transform = network_config["target_transform"],
             data_folder=data_folder,
-        ).__len__() // batch_size
+        ).__len__() * 0.7 ) // batch_size
         
         val_check_interval = max(1, num_steps // val_check_interval)
         

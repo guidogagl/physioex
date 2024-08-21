@@ -98,8 +98,12 @@ def process_sleepdata_file(edf_path, xml_path):
     
     #stages = read_sleepdata_annotation( os.path.join( xml_path, f'{name}-nsrr.xml'))
     
-    stages = read_sleepdata_annotation( xml_path )
-    
+    try:
+        stages = read_sleepdata_annotation( xml_path )
+    except Exception as e:
+        print(f'Error reading file: {xml_path}')
+        print(f'skipping subject')
+        return None, None
     available_channels = get_channels( edf_path )
     
     eeg_channel = get_channel_from_available(available_channels, POSSIBLE_EEG_CHANNELS)
@@ -257,7 +261,9 @@ POSSIBLE_EEG_CHANNELS = [
     ("C4", "M1"), 
     ("C4", "A1"), 
     "C4-M1", 
-    "C4M1"
+    "C4-A1", 
+    "C4M1",
+    "C4A1",
 ]
 
 POSSIBLE_EOG_CHANNELS = [
@@ -276,6 +282,8 @@ POSSIBLE_EMG_CHANNELS = [
     "EMG",
     ("LCHIN", "CCHIN"),
     ("LCHIN", "RCHIN"),
+    ('L CHIN', 'R CHIN'),
+    ('L CHIN', 'C CHIN'),
     ("CHIN1", "CHIN2"),
     "CHIN",
     "CHIN EMG",

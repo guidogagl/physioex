@@ -1,25 +1,20 @@
 import argparse
 
-from physioex.data.dcsm.preprocess import DCSMPreprocessor
-from physioex.data.dreem.preprocess import DREEMPreprocessor
-from physioex.data.hmc.preprocess import HMCPreprocessor
-from physioex.data.isruc.preprocess import ISRUCPreprocessor
-from physioex.data.mass.preprocess import MASSPreprocessor
-from physioex.data.shhs.preprocess import SHHSPreprocessor
-from physioex.data.sleep_edf.preprocess import SLEEPEDFPreprocessor
-from physioex.data.svuh.preprocess import SVUHPreprocessor
+from physioex.preprocess.dcsm import DCSMPreprocessor
+from physioex.preprocess.shhs import SHHSPreprocessor
+from physioex.preprocess.mass import MASSPreprocessor
+from physioex.preprocess.hmc import HMCPreprocessor
+from physioex.preprocess.mesa import MESAPreprocessor
+from physioex.preprocess.mros import MROSPreprocessor
 
 preprocessors = {
     "dcsm": DCSMPreprocessor,
-    "dreem": DREEMPreprocessor,
-    "isruc": ISRUCPreprocessor,
     "mass": MASSPreprocessor,
     "shhs": SHHSPreprocessor,
-    "sleep_edf": SLEEPEDFPreprocessor,
-    "svuh": SVUHPreprocessor,
     "hmc": HMCPreprocessor,
+    "mesa": MESAPreprocessor,
+    "mros": MROSPreprocessor,
 }
-
 
 def main():
     parser = argparse.ArgumentParser(description="Preprocess a dataset.")

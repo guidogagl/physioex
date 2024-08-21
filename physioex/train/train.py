@@ -5,9 +5,11 @@ from pathlib import Path
 import yaml
 from loguru import logger
 
+print( "Importing the trainer")
 from physioex.train import Trainer
+print("Importing the utilities")
 from physioex.train.networks import config, register_experiment
-
+print("Done!")
 
 def main():
     parser = argparse.ArgumentParser(description="Training script")

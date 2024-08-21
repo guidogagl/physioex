@@ -21,11 +21,17 @@ class SleepModule(pl.LightningModule):
 
         if self.n_classes > 1:
             # classification experiment
-            self.acc = tm.Accuracy(
+            self.wacc = tm.Accuracy(
                 task="multiclass", num_classes=config["n_classes"], average="weighted"
             )
-            self.f1 = tm.F1Score(
+            self.macc = tm.Accuracy(
+                task="multiclass", num_classes=config["n_classes"], average="macro"
+            )
+            self.wf1 = tm.F1Score(
                 task="multiclass", num_classes=config["n_classes"], average="weighted"
+            )
+            self.mf1 = tm.F1Score(
+                task="multiclass", num_classes=config["n_classes"], average="macro"
             )
             self.ck = tm.CohenKappa(task="multiclass", num_classes=config["n_classes"])
             self.pr = tm.Precision(
@@ -84,7 +90,7 @@ class SleepModule(pl.LightningModule):
         log: str = "train",
         log_metrics: bool = False,
     ):
-        # print(targets.size())
+        
         batch_size, seq_len, n_class = outputs.size()
 
         embeddings = embeddings.reshape(batch_size * seq_len, -1)
@@ -95,8 +101,8 @@ class SleepModule(pl.LightningModule):
             loss = self.loss(embeddings, outputs, targets)
 
             self.log(f"{log}_loss", loss, prog_bar=True)
-            self.log(f"{log}_acc", self.acc(outputs, targets), prog_bar=True)
-            self.log(f"{log}_f1", self.f1(outputs, targets), prog_bar=True)
+            self.log(f"{log}_acc", self.wacc(outputs, targets), prog_bar=True)
+            self.log(f"{log}_f1", self.wf1(outputs, targets), prog_bar=True)
         else:
             outputs = outputs.view(-1)
 
@@ -114,7 +120,8 @@ class SleepModule(pl.LightningModule):
                 self.log(f"{log}_ck", self.ck(outputs, targets))
                 self.log(f"{log}_pr", self.pr(outputs, targets))
                 self.log(f"{log}_rc", self.rc(outputs, targets))
-
+                self.log(f"{log}_macc", self.macc(outputs, targets))
+                self.log(f"{log}_mf1", self.mf1(outputs, targets))
         return loss
 
     def training_step(self, batch, batch_idx):

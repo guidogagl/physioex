@@ -13,6 +13,7 @@ from typing import Dict
 import pandas as pd
 import pytorch_lightning as pl
 import torch.optim as optim
+import torch
 from loguru import logger
 
 from physioex.data import PhysioExDataModule
@@ -24,46 +25,53 @@ from physioex.train.networks.utils.loss import config as loss_config
 from physioex.train.trainer import Trainer
 
 
-class FineTunedModule(SleepModule):
-    def __init__(self, module_config: Dict):
+class MultiSourceLayer( torch.nn.Module ):
+    
+    def __init__( self, single_source_layer : torch.nn.Module ):
+        super().__init__()
+        import copy
 
-        model_params = module_config["model_params"]
+        self.single_source_layer = single_source_layer
+ 
+        # add a new layer to the model equal to the single source layer by cloning it
+        self.multi_source_layer =  copy.deepcopy(single_source_layer)
+        # initialize the weights of the new layer
+        for param in self.multi_source_layer.parameters():
+            torch.nn.init.zeros_(param)
+                    
+        # freeze the weights of the single source layer
+        for param in self.single_source_layer.parameters():
+            param.requires_grad = False 
+    
+    def forward(self, x ):
+        # apply the single source
+        with torch.no_grad():
+            single_source_output = self.single_source_layer(x)
+        # apply the multi source
+        multi_source_output = self.multi_source_layer(x)        
+        return single_source_output + multi_source_output
 
-        model = load_pretrained_model(
-            name=model_params["name"],
-            in_channels=model_params["in_channels"],
-            sequence_length=model_params["seq_len"],
-        ).train()
-        # check if it is a string
 
-        if isinstance(module_config["loss_call"], str):
-            module_config["loss_call"] = loss_config[module_config["loss_call"]]
 
-        super().__init__(model.nn, module_config)
+class MultiSourceModule(FineTunedModule):
+    def __init__(self, module_config: Dict, module_checkpoint : str = None):
+        super().__init__(module_config)
+        
+        # if module_checkpoint is None the model is just a FineTunedModule
+        
+        # else
+        
+        if module_checkpoint is not None:
+            # load the checkpoint
+            checkpoint = torch.load(module_checkpoint)
+            # load the weights of the model
+            self.load_state_dict(checkpoint["state_dict"])
+            # freeze the weights of the model
+            for param in self.parameters():
+                param.requires_grad = False
+        
+        self.nn.epoch_encoder = MultiSourceLayer( self.nn.epoch_encoder )
 
-    def configure_optimizers(self):
-        opt = optim.Adam(self.parameters(), lr=1e-7, weight_decay=1e-6)
-
-        scheduler_exp = optim.lr_scheduler.ExponentialLR(opt, gamma=0.5)
-        scheduler_plateau = optim.lr_scheduler.ReduceLROnPlateau(
-            opt, mode="min", factor=0.1, patience=10, verbose=True
-        )
-
-        # Restituisci entrambi gli scheduler in una lista di dizionari
-        return {
-            "optimizer": opt,
-            "lr_scheduler": {
-                "scheduler": scheduler_exp,
-                "interval": "epoch",  # Esegui scheduler_exp ad ogni epoca
-                "frequency": 1,
-            },
-            "lr_scheduler_plateau": {
-                "scheduler": scheduler_plateau,
-                "interval": "epoch",  # Esegui scheduler_plateau ad ogni epoca
-                "frequency": 1,
-                "monitor": "val_loss",  # Necessario per ReduceLROnPlateau
-            },
-        }
 
 
 def main(train_dataset=None):
@@ -71,7 +79,7 @@ def main(train_dataset=None):
 
     train_dataset = list(train_dataset)
     
-    test_datasets = ["mass", "hpap", "dcsm", "mesa", "mros"]
+    test_datasets = ["mass", "hmc", "dcsm", "mesa", "mros"]
 
     with open("multi-source-domain.yaml", "r") as f:
         config = yaml.safe_load(f)
@@ -171,8 +179,8 @@ def chunked_iterable(iterable, size):
 
 if __name__ == "__main__":
 
-    # datasets = ["hpap", "mass", "dcsm", "sleep_edf", "svuh", "isruc", "hmc"]
-    datasets = ["hpap", "mass", "dcsm", "sleep_edf", "hmc"]
+    datasets = ["mass", "hmc", "dcsm", "mesa", "mros"]
+    #datasets = ["mass", "hmc"]
     N = 10  # Numero di sessioni di screen da eseguire in parallelo
 
     train_datasets = [
@@ -190,8 +198,12 @@ if __name__ == "__main__":
     for group in chunked_iterable(train_datasets, N):
         screen_sessions = []
         for train_dataset in group:
+            log_file = f"log/train_multi_source_{train_dataset}.log"
             screen_name = "train_" + "_".join(train_dataset)
-            command = f'screen -dmS {screen_name} python -c "from physioex.train.multi_source import main; main(train_dataset={train_dataset})"'
+            log_dir = f"log/multi_source/k={len(train_dataset)}/{'_'.join(train_dataset)}"
+            Path(log_dir).mkdir(parents=True, exist_ok=True)
+            log_file = f"{log_dir}/output.log"
+            command = f'screen -dmS {screen_name} bash -c "python -c \\"from physioex.train.multi_source import main; main(train_dataset={train_dataset})\\" > {log_file} 2>&1"'
             subprocess.run(command, shell=True)
             screen_sessions.append(screen_name)
             logger.info(f"Launched main in screen session: {screen_name}")
