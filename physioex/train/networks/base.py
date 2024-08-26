@@ -55,26 +55,29 @@ class SleepModule(pl.LightningModule):
         self.opt = optim.Adam(
             self.nn.parameters(),
             lr=1e-4,
-            weight_decay=1e-3,
+            weight_decay=1e-6,
         )
 
-        self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(
+        scheduler = optim.lr_scheduler.ReduceLROnPlateau(
             self.opt,
-            mode="max",
+            mode="min",
             factor=0.5,
-            patience=10,
+            patience=3,
             threshold=0.0001,
             threshold_mode="rel",
             cooldown=0,
             min_lr=0,
             eps=1e-08,
-            verbose=True,
+            #verbose=True,
         )
-
-        return {
-            "optimizer": self.opt,
-            "lr_scheduler": {"scheduler": self.scheduler, "monitor": "val_acc"},
+        scheduler = {
+            "scheduler": scheduler,
+            "name": "lr_scheduler",
+            "monitor": "val_loss",
+            "interval": "step",
+            "frequency": 1000,
         }
+        return [ self.opt ] , [ scheduler ]
 
     def forward(self, x):
         return self.nn(x)
@@ -128,7 +131,7 @@ class SleepModule(pl.LightningModule):
         # Logica di training
         inputs, targets = batch
         embeddings, outputs = self.encode(inputs)
-
+                
         return self.compute_loss(embeddings, outputs, targets)
 
     def validation_step(self, batch, batch_idx):

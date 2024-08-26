@@ -1,4 +1,5 @@
 from typing import List
+import os
 
 import uuid
 from pathlib import Path
@@ -179,20 +180,38 @@ class FineTuner:
                 target_transform= self.target_transform,
             )
             
-            logger.info("FOLD:%d-Training model" % fold)
             # trainer.validate(module, datamodule.val_dataloader())
             # Addestra il modello utilizzando il trainer e il DataModule
             
-            trainer.fit(module, datamodule=train_datamodule)
+            # check if the checkpoint exists already:
+            saved_checks = os.listdir(self.ckp_path)
+            saved_checks = [ check for check in saved_checks if "fold=%d" % fold in check ]
+            if len( saved_checks ) > 0:
+                # take the absolute path
+                saved_checks = os.path.join(self.ckp_path, saved_checks[0])
+                
+                logger.info("FOLD:%d-Loading checkpoint %s" % (fold, saved_checks))
+                
+                module = self.model_call.load_from_checkpoint(
+                    saved_checks, module_config=self.module_config
+                )
+            else:
+                logger.info("FOLD:%d-Training model" % fold)
+                trainer.fit(module, datamodule=train_datamodule)
 
+                # load the best model
+                module = self.model_call.load_from_checkpoint(
+                    checkpoint_callback.best_model_path, module_config=self.module_config
+                )
+            
             logger.info("FOLD:%d-Evaluating model" % fold)
             val_results = trainer.test(
-                ckpt_path="best", dataloaders=train_datamodule.val_dataloader()
+                module, dataloaders=train_datamodule.val_dataloader()
             )[0]
             
             val_results["fold"] = fold
             
-            test_results = trainer.test(ckpt_path="best", datamodule=train_datamodule)[0]
+            test_results = trainer.test(module, datamodule=train_datamodule)[0]
             
             test_results["fold"] = fold
         else:
@@ -214,14 +233,14 @@ class FineTuner:
                 )
 
                 multi_source_result = trainer.test(
-                    ckpt_path="best", datamodule=test_datamodule
+                    module, datamodule=test_datamodule
                 )[0]
 
                 multi_source_result["fold"] = fold
                 multi_source_result["dataset"] = test_dataset
                 multi_source_results.append(multi_source_result)
 
-            multi_source_results = pd.concat(multi_source_results)
+            multi_source_results = pd.DataFrame(multi_source_results)
         else:
             multi_source_results = pd.DataFrame([])
         
@@ -254,7 +273,7 @@ if __name__ == "__main__":
     
     parser.add_argument('--train_datasets', nargs='+', default=[], help='List of training datasets')
     parser.add_argument('--train_versions', nargs='+', default=None, help='List of training dataset versions')
-    parser.add_argument('--test_datasets', nargs='+', default=["mass", "hmc", "dcsm", "mesa", "mros"], help='List of test datasets')
+    parser.add_argument('--test_datasets', nargs='+', default=["mass", "hmc", "dcsm", "mesa"], help='List of test datasets')
     parser.add_argument('--test_versions', nargs='+', default=None, help='List of test dataset versions')
     parser.add_argument('--batch_size', type=int, default=128, help='Batch size')
     parser.add_argument('--selected_channels', nargs='+', default=["EEG", "EOG", "EMG"], help='List of selected channels')
@@ -303,75 +322,3 @@ def chunked_iterable(iterable, size):
         yield chunk
 
     
-def test_fine_tuned_model( multi_source_module : bool = False):
-    from itertools import combinations
-    import subprocess
-    import time
-    
-    datasets = ["mass", "hmc", "dcsm", "mesa", "mros"]
-    
-    train_datasets = [
-        combo
-        for r in range(1, len(datasets) + 1)
-        for combo in combinations(datasets, r)
-    ]
-    
-    # add empty combination at the beginning
-    
-    #train_datasets.insert(0, [])
-    
-    print(train_datasets)
-    
-    screen_sessions = []
-    for train_dataset in train_datasets:
-        print( train_dataset )
-        screen_name = "train_" + "_".join(train_dataset)
-        log_dir = f"log/msd/fine_tuned_model/k={len(train_dataset)}/{'_'.join(train_dataset)}"
-        Path(log_dir).mkdir(parents=True, exist_ok=True)
-        log_file = f"{log_dir}/output.log"
-        ckp_path = f"models/multi-source-domain/finetunedmodel/k={len(train_dataset)}/{'_'.join(train_dataset)}/"
-
-        if len(train_dataset) == 0:
-            command = (
-                f'screen -dmS {screen_name} bash -c "'
-                f'source /home/guidogl/miniconda3/etc/profile.d/conda.sh && '
-                f'conda activate physioex && '
-                f'python physioex/train/finetuner.py '
-                f'--ckp_path {ckp_path} '
-                f'> {log_file} 2>&1"'
-            )
-            print(command)
-        else:
-            train_dataset =  " ".join(train_dataset)                    
-            command = (
-                f'screen -dmS {screen_name} bash -c "'
-                f'source /home/guidogl/miniconda3/etc/profile.d/conda.sh && '
-                f'conda activate physioex && '
-                f'python physioex/train/finetuner.py '
-                f'--train_datasets {train_dataset} '
-                f'--ckp_path {ckp_path} '
-                f'--batch_size 128 '
-                f'--random_fold '
-                f'--max_epoch 10 "' 
-            )
-
-        subprocess.run(command, shell=True)
-        screen_sessions.append(screen_name)
-        logger.info(f"Launched main in screen session: {screen_name}")
-
-        # Aspetta che tutte le sessioni di questo gruppo terminino
-        all_done = False
-        while not all_done:
-            all_done = True
-            for session in screen_sessions:
-                # Controlla se la sessione è ancora attiva
-                result = subprocess.run(
-                    f"screen -list | grep {session}", shell=True, stdout=subprocess.PIPE
-                )
-                if result.stdout:
-                    all_done = False
-                    break  # Una sessione è ancora attiva, quindi aspetta e poi controlla di nuovo
-            if not all_done:
-                time.sleep(60)  # Aspetta 5 secondi prima di controllare di nuovo
-
-        logger.info(f"All sessions in group completed.")

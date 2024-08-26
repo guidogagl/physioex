@@ -44,30 +44,28 @@ def xsleepnet_preprocessing(signals):
     return S.astype(np.float32)
 
 
-class online_variance:
-    def __init__(self):
-        self.n = 0
-        self.mean = 0
-        self.M2 = 0
-        self.shape = -1
+import numpy as np
 
-    def set_shape(self, shape):
+class OnlineVariance:
+    def __init__(self, shape):
+        self.n = 0
+        self.mean = np.zeros(shape, dtype=np.float64)
+        self.M2 = np.zeros(shape, dtype=np.float64)
         self.shape = shape
-        return self
 
     def add(self, data):
-
+        # data.shape = batch_size, data_shape
         for x in data:
-            x = np.reshape(x, -1).astype(np.double)
-
             self.n += 1
             delta = x - self.mean
-            self.mean = self.mean + delta / self.n
-            self.M2 = self.M2 + delta * (x - self.mean)
+            self.mean += delta / self.n
+            self.M2 += delta * (x - self.mean)
 
     def compute(self):
+        if self.n < 2:
+            return np.zeros(self.shape).astype(np.float32), np.zeros(self.shape).astype(np.float32)
+        
         variance = self.M2 / (self.n - 1)
-
         variance = np.reshape(variance, self.shape)
         mean = np.reshape(self.mean, self.shape)
 

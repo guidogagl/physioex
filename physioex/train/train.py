@@ -155,6 +155,7 @@ def main():
         val_check_interval=args.val_check_interval,
         batch_size=args.batch_size,
         random_fold = args.random_fold,
+        data_folder=args.data_folder,
     ).run()
 
 

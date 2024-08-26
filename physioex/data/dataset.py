@@ -63,8 +63,8 @@ class PhysioExDataset(torch.utils.data.Dataset):
         self.tables = []
         self.scaling = []
 
-        
-        
+        input_shape = [3000] if preprocessing == "raw" else [29, 129]
+        self.input_shape = []
         for dataset, version in zip(datasets, versions):
             self.dataset_folders += [os.path.join(data_folder, dataset)]
     
@@ -90,15 +90,13 @@ class PhysioExDataset(torch.utils.data.Dataset):
                     torch.tensor(std).float(),
                 )
             ]
+            
+            self.input_shape.append( [ len( DATASETS[dataset] ) ] + input_shape  ) 
 
         # set the table fold to the 0 fold by default
         self.split()
 
-        self.input_shape = [3000] if preprocessing == "raw" else [29, 129]
         self.preprocessing = preprocessing
-
-        # add the channel dimension to the input shape
-        self.input_shape = [len(selected_channels)] + self.input_shape
 
         self.channels_index = [
             DATASETS[datasets[0]].index(channel) for channel in selected_channels
@@ -144,15 +142,15 @@ class PhysioExDataset(torch.utils.data.Dataset):
 
         # window --> relative index
         # we need a uint32 for the relative index
-        self.relative_idx = np.zeros(num_windows, dtype=np.uint16)
+        self.relative_idx = np.zeros(num_windows, dtype=np.uint32)
         start_index = 0
         for table in self.tables:
             for _, row in table.iterrows():
                 n_win = int(row["num_windows"]) - self.L + 1
                 self.relative_idx[start_index : start_index + n_win] = np.arange(
-                    n_win, dtype=np.uint16
+                    n_win, dtype=np.uint32
                 )
-                if n_win > np.iinfo(np.uint16).max:
+                if n_win > np.iinfo(np.uint32).max:
                     raise ValueError(
                         f"Value {n_win} exceeds the maximum value for np.uint16"
                     )
@@ -221,14 +219,19 @@ class PhysioExDataset(torch.utils.data.Dataset):
 
         subject_info = table[table["subject_id"] == subject_id]
 
-        labels_path = subject_info["labels"].values[0]
-        data_path = subject_info[self.preprocessing].values[0]
+        data_folder = self.dataset_folders[table_idx]
+        
+        data_path = os.path.join( data_folder, self.preprocessing, str(subject_id) + ".npy")
+        labels_path = os.path.join( data_folder, "labels", str(subject_id) + ".npy")
+        
         subject_windows = subject_info["num_windows"].values[0]
 
+        input_shape = self.input_shape[table_idx]
+        
         # read the numpy memmap files
-        X = np.memmap(data_path, dtype='float32', mode='r', shape=(subject_windows, *self.input_shape))
-        y = np.memmap(labels_path, dtype='uint16', mode='r', shape=(subject_windows,))
-
+        X = np.memmap(data_path, dtype='float32', mode='r', shape=(subject_windows, *input_shape))
+        y = np.memmap(labels_path, dtype='int16', mode='r', shape=(subject_windows,))
+        
         # select the windows
 
         X = X[relative_id : relative_id + self.L, self.channels_index]
@@ -237,11 +240,9 @@ class PhysioExDataset(torch.utils.data.Dataset):
         X = (torch.tensor(X).float() - mean) / std
         y = torch.tensor(y).long()
 
-
         if self.target_transform is not None:
             y = self.target_transform(y)
 
-        
         return X, y
 
     def get_sets(self):
@@ -259,7 +260,7 @@ class PhysioExDataset(torch.utils.data.Dataset):
 
                 indices = np.arange(
                     start=start_index, stop=start_index + num_windows
-                ).astype(np.uint16)
+                ).astype(np.uint32)
 
                 start_index += num_windows
 

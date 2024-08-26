@@ -27,9 +27,9 @@ class FineTunedModule(SleepModule):
     def configure_optimizers(self):
         
         # depending on how big is n_train the learning rate and weight decay are adjusted
-        # min is 1e-7 and max is 1e-5
+        # min is 1e-7 and max is 1e-4
         
-        lr = 1e-7 + ( (1e-5 - 1e-7) * self.n_train )
+        lr = 1e-7 + ( (1e-4 - 1e-7) * self.n_train )
         weight_decay = lr / 10
                   
         opt = optim.Adam(self.parameters(), lr=lr, weight_decay=weight_decay)

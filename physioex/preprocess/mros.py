@@ -63,6 +63,6 @@ class MROSPreprocessor(Preprocessor):
 
 if __name__ == "__main__":
 
-    p = MROSPreprocessor(data_folder="/home/guidogl/physioex-data/")
+    p = MROSPreprocessor(data_folder="/home/guido/physioex-data/")
 
     p.run()

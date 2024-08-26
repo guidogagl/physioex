@@ -192,6 +192,6 @@ class HMCPreprocessor(Preprocessor):
 
 if __name__ == "__main__":
 
-    p = HMCPreprocessor(data_folder="/home/guidogl/physioex-data/")
+    p = HMCPreprocessor(data_folder="/mnt/guido-data/")
 
     p.run()

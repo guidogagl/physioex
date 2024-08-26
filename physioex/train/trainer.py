@@ -9,7 +9,7 @@ import torch
 
 from lightning.pytorch import seed_everything
 from loguru import logger
-from pytorch_lightning.callbacks import ModelCheckpoint, RichProgressBar
+from pytorch_lightning.callbacks import ModelCheckpoint, RichProgressBar, LearningRateMonitor
 from pytorch_lightning.loggers import CSVLogger
 
 from physioex.data import PhysioExDataModule, PhysioExDataset, get_datasets
@@ -150,7 +150,7 @@ class Trainer:
             devices="auto",
             max_epochs=self.max_epoch,
             val_check_interval=self.val_check_interval,
-            callbacks=[checkpoint_callback, progress_bar_callback],
+            callbacks=[checkpoint_callback, progress_bar_callback, LearningRateMonitor(logging_interval="step")],
             deterministic=True,
             logger=my_logger,
             # num_sanity_val_steps = -1

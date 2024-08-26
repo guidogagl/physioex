@@ -116,6 +116,6 @@ class MASSPreprocessor(Preprocessor):
 
 if __name__ == "__main__":
 
-    p = MASSPreprocessor(data_folder="/home/guidogl/physioex-data/")
+    p = MASSPreprocessor(data_folder="/mnt/guido-data/")
 
     p.run()

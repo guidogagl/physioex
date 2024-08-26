@@ -10,11 +10,10 @@ import pandas as pd
 from loguru import logger
 from tqdm import tqdm
 
-from physioex.preprocess.utils.signal import online_variance
+from physioex.preprocess.utils.signal import OnlineVariance
 
 from physioex.utils import get_data_folder, set_data_folder
 
-import h5py
 
 class Preprocessor:
 
@@ -124,54 +123,79 @@ class Preprocessor:
             Path(path).mkdir(parents=True, exist_ok=True)
 
         logger.info("Fetching the dataset ...")
-        
-        index_to_subject = []
-        index_to_index = []
-        
-        raw_var = online_variance().set_shape(self.signal_shape)
+        subjects_paths = []
+        start_index = 0
+
+        raw_var = OnlineVariance(self.signal_shape)
         prep_var = [
-            online_variance().set_shape(self.preprocessors_shape[i])
+            OnlineVariance(self.preprocessors_shape[i])
             for i in range(len(self.preprocessors_name))
         ]
 
-        h5_file_path = os.path.join(self.dataset_folder, "dataset.h5")
-        
-        with h5py.File(h5_file_path, 'w') as h5_file:
-        
-            for subject_id, subject_records in enumerate(tqdm(self.get_subjects_records())):
-                signal, labels = self.read_subject_record(subject_records)
+        for subject_id, subject_records in enumerate(tqdm(self.get_subjects_records())):
+            signal, labels = self.read_subject_record(subject_records)
 
-                if signal is None and labels is None:
-                    logger.warning(
-                        f"subject record - {subject_records} - is being discarded"
-                    )
-                    continue
-                
-                # compute the online mean and variance
-                raw_var.add(signal)
+            if signal is None and labels is None:
+                logger.warning(
+                    f"subject record - {subject_records} - is being discarded"
+                )
+                continue
 
-                num_windows = labels.shape[0]
+            # compute the online mean and variance
+            raw_var.add(signal)
 
-                index_to_subject += [subject_id] * num_windows
-                index_to_index += list(range(num_windows))
+            l_path = os.path.join(labels_path, f"{subject_id}.npy")
+            s_path = os.path.join(raw_path, f"{subject_id}.npy")
+            p_paths = [
+                os.path.join(prep_path[i], f"{subject_id}.npy")
+                for i in range(len(self.preprocessors_name))
+            ]
 
-                group = h5_file.create_group(str(subject_id))
-                group.create_dataset("raw", data=signal.astype(np.float32), dtype=np.float32)
-                group.create_dataset("labels", data=labels.astype(np.int16), dtype=np.int16)
+            labels_memmap = np.memmap(l_path, dtype=np.int16, mode='w+', shape=labels.shape)
+            labels_memmap[:] = labels[:]
+            labels_memmap.flush()
 
-                for i, prep_name in enumerate( self.preprocessors_name ):
-                    p_signal = self.preprocessors[i](signal)
-                    
-                    group.create_dataset(prep_name, data=p_signal.astype(np.float32), dtype=np.float32)
-                    
-                    prep_var[i].add(p_signal)
-                
-            index_to_subject = np.array(index_to_subject).astype(np.uint16)
-            index_to_index = np.array(index_to_index).astype(np.uint32)    
+            signal_memmap = np.memmap(s_path, dtype=np.float32, mode='w+', shape=signal.shape)
+            signal_memmap[:] = signal[:]
+            signal_memmap.flush()
 
-            h5_file.create_dataset("index_to_subject", data=index_to_subject, dtype=np.uint16)
-            h5_file.create_dataset("index_to_index", data=index_to_index, dtype=np.uint32)
-            
+            for i, p_path in enumerate(p_paths):
+                p_signal = self.preprocessors[i](signal)
+                prep_var[i].add(p_signal)
+
+                p_signal_memmap = np.memmap(p_path, dtype=np.float32, mode='w+', shape=p_signal.shape)
+                p_signal_memmap[:] = p_signal[:]
+                p_signal_memmap.flush()
+
+            paths = [
+                subject_id,
+                start_index,
+                labels.shape[0],
+                start_index + labels.shape[0],
+                l_path,
+                s_path,
+            ] + p_paths
+            subjects_paths.append(paths)
+
+            start_index += labels.shape[0]
+
+        logger.info("Table creation ...")
+
+        table = pd.DataFrame(
+            subjects_paths,
+            columns=[
+                "subject_id",
+                "start_index",
+                "num_windows",
+                "end_index",
+                "labels",
+                "raw",
+            ]
+            + self.preprocessors_name,
+        )
+
+        table = self.customize_table(table)
+
         self.table = table
 
         logger.info("Computing splitting parameters ...")

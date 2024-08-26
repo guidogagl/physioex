@@ -192,6 +192,6 @@ class DCSMPreprocessor(Preprocessor):
 
 if __name__ == "__main__":
 
-    p = DCSMPreprocessor(data_folder="/home/guidogl/physioex-data/")
+    p = DCSMPreprocessor(data_folder="/home/guido/physioex-data/")
 
     p.run()
