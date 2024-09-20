@@ -12,7 +12,6 @@ wandb
 
 physioex/train/old/
 hpc/
-bin/
 /papers
 /models/
 /hpc
