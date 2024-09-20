@@ -3,7 +3,8 @@ import os
 from pathlib import Path
 from loguru import logger
 
-data_folder = os.path.join( str( Path.home() ), "physioex-data" )
+data_folder = os.path.join(str(Path.home()), "physioex-data")
+
 
 def get_data_folder():
     return data_folder

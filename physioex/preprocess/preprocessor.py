@@ -36,7 +36,6 @@ class Preprocessor:
             len(preprocessors_name) == len(preprocessors) == len(preprocessors_shape)
         ), "ERR: lists preprocessors_name, preprocessors e preprocessors_shape should match first dimension"
 
-        
         self.data_folder = (
             get_data_folder() if data_folder is None else set_data_folder(data_folder)
         )
@@ -151,11 +150,15 @@ class Preprocessor:
                 for i in range(len(self.preprocessors_name))
             ]
 
-            labels_memmap = np.memmap(l_path, dtype=np.int16, mode='w+', shape=labels.shape)
+            labels_memmap = np.memmap(
+                l_path, dtype=np.int16, mode="w+", shape=labels.shape
+            )
             labels_memmap[:] = labels[:]
             labels_memmap.flush()
 
-            signal_memmap = np.memmap(s_path, dtype=np.float32, mode='w+', shape=signal.shape)
+            signal_memmap = np.memmap(
+                s_path, dtype=np.float32, mode="w+", shape=signal.shape
+            )
             signal_memmap[:] = signal[:]
             signal_memmap.flush()
 
@@ -163,7 +166,9 @@ class Preprocessor:
                 p_signal = self.preprocessors[i](signal)
                 prep_var[i].add(p_signal)
 
-                p_signal_memmap = np.memmap(p_path, dtype=np.float32, mode='w+', shape=p_signal.shape)
+                p_signal_memmap = np.memmap(
+                    p_path, dtype=np.float32, mode="w+", shape=p_signal.shape
+                )
                 p_signal_memmap[:] = p_signal[:]
                 p_signal_memmap.flush()
 

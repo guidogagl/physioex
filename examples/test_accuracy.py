@@ -1,153 +1,66 @@
-import matplotlib.pyplot as plt
-import numpy as np
-import pandas as pd
-import seaborn as sns
-import torch
-from loguru import logger
-from pytorch_lightning import seed_everything
-from scipy import signal
-from tqdm import tqdm
 from utils import set_root
 
+from pytorch_lightning import seed_everything
+
 seed_everything(42)
+set_root()
 
-import os
-
-# importing
-import numpy as np
-import seaborn as sns
-import torch
-from loguru import logger
-from matplotlib import pyplot as plt
-from sklearn.metrics import (accuracy_score, classification_report,
-                             confusion_matrix)
-from tqdm import tqdm
-
-from physioex.data import Shhs, SleepEDF, TimeDistributedModule, datasets
+from physioex.data import PhysioExDataModule
 from physioex.models import load_pretrained_model
-from physioex.train.networks import config
-from physioex.train.networks import config as networks
-from physioex.train.networks.utils.loss import config as losses
+from physioex.models.load import get_models_table
 from physioex.train.networks.utils.target_transform import get_mid_label
 
-logger.remove()
+import pandas as pd
+import numpy as np
 
-# model parameters
-model_name = "tinysleepnet"
-sequence_length = 21
-
-# dataset
-picks = ["EEG"]
-fold = 0
-
-# dataloader
-batch_size = 512
-num_workers = 32
-
-# device
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-results_dir = f"results/{model_name}/"
-
-# load dataset and model
-model = networks[model_name]
-
-dataset = Shhs(
-    picks=picks,
-    sequence_length=sequence_length,
-    # target_transform=model["target_transform"],
-    target_transform=get_mid_label,
-    preprocessing=model["input_transform"],
-)
-
-dataset.split(fold=fold)
-
-dataset = TimeDistributedModule(
-    dataset=dataset, batch_size=batch_size, fold=fold, num_workers=num_workers
-)
-
-model = load_pretrained_model(
-    name=model_name,
-    in_channels=len(picks),
-    sequence_length=sequence_length,
-    softmax=True,
-).eval()
+import pytorch_lightning as pl
 
 
-class MidModel(torch.nn.Module):
-    def __init__(self, model):
-        super(MidModel, self).__init__()
-        self.model = model
+# iterate over the table rows and load the model corrispoding to the row
 
-    def forward(self, x):
-        return self.model(x)[:, int((x.shape[1] - 1) / 2)]
+import argparse
 
+parser = argparse.ArgumentParser()
+parser.add_argument("--data_folder", type=str, default="/mnt/guido-data/")
+parser.add_argument("--test_dataset", type=str, default="shhs")
 
-model = MidModel(model)
+args = parser.parse_args()
 
-# compute the metrics on the test set
+test_dataset = args.test_dataset
+data_folder = args.data_folder
 
-dataloder = dataset.test_dataloader()
+df = []
 
-acc = []
-cm = []
-reports = []
+for i, row in get_models_table().iterrows():
 
-y_pred = []
-pred_probas = []
-y_true = []
+    model = load_pretrained_model(
+        name=row["name"],
+        in_channels=row["in_channels"],
+        sequence_length=row["sequence_length"],
+    )
 
-with torch.no_grad():
-    # Aggiungi tqdm per mostrare il progresso
-    for i, (inputs, labels) in tqdm(enumerate(dataloder), total=len(dataloder)):
-        # Calcola le previsioni del modello
+    for dataset in ["mros", "mesa", "dcsm", "hmc", "mass"]:
 
-        batch_preds = model(inputs.to(device)).cpu().detach()
+        data_module = PhysioExDataModule(
+            datasets=[dataset],
+            batch_size=256,
+            preprocessing="xsleepnet" if row["name"] == "seqsleepnet" else "raw",
+            selected_channels=(
+                ["EEG"] if row["in_channels"] == 1 else ["EEG", "EOG", "EMG"]
+            ),
+            target_transform=None if row["name"] != "chambon2018" else get_mid_label,
+            data_folder=data_folder,
+        )
 
-        if len(batch_preds.size()) == 2:  # in this case the model is seq to seq
-            batch_preds = batch_preds.reshape(-1, batch_preds.shape[-1])
-            labels = labels.reshape(-1)
+        trainer = pl.Trainer(deterministic=True)
 
-        pred_probas.extend(batch_preds)
-        y_pred.extend(torch.argmax(batch_preds, dim=1))
-        y_true.extend(labels)
+        results = trainer.test(model, datamodule=data_module)[0]
 
+        results["model"] = row["name"]
+        results["in_channels"] = row["in_channels"]
+        results["sequence_length"] = row["sequence_length"]
+        results["dataset"] = dataset
+        df.append(results)
 
-y_true = torch.stack(y_true).numpy()
-y_pred = torch.stack(y_pred).numpy()
-pred_probas = torch.stack(pred_probas).numpy()
-
-accuracy = accuracy_score(y_true, y_pred)
-conf_mat = confusion_matrix(y_true, y_pred)
-report = classification_report(y_true, y_pred)
-
-print(f"Accuracy: {accuracy * 100:.2f}%")
-
-print(f"Report:")
-print(report)
-
-conf_mat_norm = conf_mat.astype("float") / conf_mat.sum(axis=1)[:, np.newaxis]
-
-fig = plt.figure(figsize=(6, 5))
-sns.heatmap(
-    conf_mat_norm,
-    annot=True,
-    fmt=".2f",
-    cmap="Blues",
-    xticklabels=["Wake", "N1", "N2", "N3", "REM"],
-    yticklabels=["Wake", "N1", "N2", "N3", "REM"],
-)
-plt.title("Confusion matrix")
-plt.ylabel("True label")
-plt.xlabel("Predicted label")
-plt.show()
-
-# Save all the results in the results folder
-fig.savefig(f"{results_dir}confusion_matrix.png")
-
-with open(f"{results_dir}classification_report.txt", "w") as f:
-    # write the first line with the accuracy:
-    f.write(f"Accuracy: {accuracy * 100:.2f}%\n")
-    # write the report
-    f.write("Report:\n")
-    f.write(report)
+df = pd.DataFrame(df)
+df.to_csv("results.csv")

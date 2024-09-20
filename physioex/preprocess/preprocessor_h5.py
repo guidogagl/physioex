@@ -16,6 +16,7 @@ from physioex.utils import get_data_folder, set_data_folder
 
 import h5py
 
+
 class Preprocessor:
 
     def __init__(
@@ -37,7 +38,6 @@ class Preprocessor:
             len(preprocessors_name) == len(preprocessors) == len(preprocessors_shape)
         ), "ERR: lists preprocessors_name, preprocessors e preprocessors_shape should match first dimension"
 
-        
         self.data_folder = (
             get_data_folder() if data_folder is None else set_data_folder(data_folder)
         )
@@ -124,10 +124,10 @@ class Preprocessor:
             Path(path).mkdir(parents=True, exist_ok=True)
 
         logger.info("Fetching the dataset ...")
-        
+
         index_to_subject = []
         index_to_index = []
-        
+
         raw_var = online_variance().set_shape(self.signal_shape)
         prep_var = [
             online_variance().set_shape(self.preprocessors_shape[i])
@@ -135,10 +135,12 @@ class Preprocessor:
         ]
 
         h5_file_path = os.path.join(self.dataset_folder, "dataset.h5")
-        
-        with h5py.File(h5_file_path, 'w') as h5_file:
-        
-            for subject_id, subject_records in enumerate(tqdm(self.get_subjects_records())):
+
+        with h5py.File(h5_file_path, "w") as h5_file:
+
+            for subject_id, subject_records in enumerate(
+                tqdm(self.get_subjects_records())
+            ):
                 signal, labels = self.read_subject_record(subject_records)
 
                 if signal is None and labels is None:
@@ -146,7 +148,7 @@ class Preprocessor:
                         f"subject record - {subject_records} - is being discarded"
                     )
                     continue
-                
+
                 # compute the online mean and variance
                 raw_var.add(signal)
 
@@ -156,22 +158,32 @@ class Preprocessor:
                 index_to_index += list(range(num_windows))
 
                 group = h5_file.create_group(str(subject_id))
-                group.create_dataset("raw", data=signal.astype(np.float32), dtype=np.float32)
-                group.create_dataset("labels", data=labels.astype(np.int16), dtype=np.int16)
+                group.create_dataset(
+                    "raw", data=signal.astype(np.float32), dtype=np.float32
+                )
+                group.create_dataset(
+                    "labels", data=labels.astype(np.int16), dtype=np.int16
+                )
 
-                for i, prep_name in enumerate( self.preprocessors_name ):
+                for i, prep_name in enumerate(self.preprocessors_name):
                     p_signal = self.preprocessors[i](signal)
-                    
-                    group.create_dataset(prep_name, data=p_signal.astype(np.float32), dtype=np.float32)
-                    
-                    prep_var[i].add(p_signal)
-                
-            index_to_subject = np.array(index_to_subject).astype(np.uint16)
-            index_to_index = np.array(index_to_index).astype(np.uint32)    
 
-            h5_file.create_dataset("index_to_subject", data=index_to_subject, dtype=np.uint16)
-            h5_file.create_dataset("index_to_index", data=index_to_index, dtype=np.uint32)
-            
+                    group.create_dataset(
+                        prep_name, data=p_signal.astype(np.float32), dtype=np.float32
+                    )
+
+                    prep_var[i].add(p_signal)
+
+            index_to_subject = np.array(index_to_subject).astype(np.uint16)
+            index_to_index = np.array(index_to_index).astype(np.uint32)
+
+            h5_file.create_dataset(
+                "index_to_subject", data=index_to_subject, dtype=np.uint16
+            )
+            h5_file.create_dataset(
+                "index_to_index", data=index_to_index, dtype=np.uint32
+            )
+
         self.table = table
 
         logger.info("Computing splitting parameters ...")

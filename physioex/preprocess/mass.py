@@ -64,9 +64,9 @@ class MASSPreprocessor(Preprocessor):
 
         signal = np.array(signal)
         signal = np.transpose(signal, (1, 0, 2))
-        
+
         labels = labels - 1
-        
+
         if min(labels) < 0 or max(labels) > 4:
             logger.error(f"Invalid labels for record {record}")
             logger.error(f"Min label: {min(labels)}")

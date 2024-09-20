@@ -11,8 +11,13 @@ results/
 wandb
 
 physioex/train/old/
-
+hpc/
+bin/
+/papers
 /models/
+/hpc
+/mlp
+
 script
 temp 
 lightning_logs

@@ -8,6 +8,12 @@ from physioex.train.networks import register_experiment
 from physioex.train.networks.utils.loss import config as losses
 
 
+def get_models_table():
+    check_table_path = pkg.resource_filename("physioex", "models/check_table.csv")
+    check_table = pd.read_csv(check_table_path)
+    return check_table
+
+
 def load_pretrained_model(
     name: str = None,
     in_channels: int = 1,

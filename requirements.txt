@@ -4,7 +4,7 @@ wfdb
 pyyaml
 loguru
 wandb
-
+h5py
 pyunpack 
 patool
 

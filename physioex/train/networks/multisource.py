@@ -15,31 +15,31 @@ from physioex.train.networks.base import SleepModule
 
 module_config = dict()
 
-class MultiSourceLayer( torch.nn.Module ):
-    
-    def __init__( self, single_source_layer : torch.nn.Module ):
+
+class MultiSourceLayer(torch.nn.Module):
+
+    def __init__(self, single_source_layer: torch.nn.Module):
         super().__init__()
 
         self.single_source_layer = single_source_layer
- 
+
         # add a new layer to the model equal to the single source layer by cloning it
-        self.multi_source_layer =  copy.deepcopy(single_source_layer)
+        self.multi_source_layer = copy.deepcopy(single_source_layer)
         # initialize the weights of the new layer
         for param in self.multi_source_layer.parameters():
             torch.nn.init.zeros_(param)
-                    
+
         # freeze the weights of the single source layer
         for param in self.single_source_layer.parameters():
-            param.requires_grad = False 
-    
-    def forward(self, x ):
+            param.requires_grad = False
+
+    def forward(self, x):
         # apply the single source
         with torch.no_grad():
             single_source_output = self.single_source_layer(x)
         # apply the multi source
-        multi_source_output = self.multi_source_layer(x)        
+        multi_source_output = self.multi_source_layer(x)
         return single_source_output + multi_source_output
-
 
 
 class MultiSourceModule(SleepModule):
@@ -50,16 +50,16 @@ class MultiSourceModule(SleepModule):
             in_channels=module_config["in_channels"],
             sequence_length=module_config["seq_len"],
         ).train()
-        
-        super().__init__(model.nn, module_config)                
-        
-        if module_config[ "module_checkpoint" ] is not None:
+
+        super().__init__(model.nn, module_config)
+
+        if module_config["module_checkpoint"] is not None:
             # load the checkpoint
-            checkpoint = torch.load(module_config[ "module_checkpoint" ])
+            checkpoint = torch.load(module_config["module_checkpoint"])
             # load the weights of the model
             self.load_state_dict(checkpoint["state_dict"])
-                
-        self.nn.epoch_encoder = MultiSourceLayer( self.nn.epoch_encoder )
+
+        self.nn.epoch_encoder = MultiSourceLayer(self.nn.epoch_encoder)
 
     def configure_optimizers(self):
         opt = optim.Adam(self.parameters(), lr=1e-7, weight_decay=1e-6)

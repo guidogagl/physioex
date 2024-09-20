@@ -67,7 +67,7 @@ class SHHSPreprocessor(Preprocessor):
         signal = np.transpose(signal, (1, 0, 2))
 
         labels = labels - 1
-        
+
         return signal, labels
 
     @logger.catch

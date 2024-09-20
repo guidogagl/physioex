@@ -86,10 +86,9 @@ def read_edf(file_path):
 
     signal = np.transpose(np.array([EEG, EOG, EMG, ECG]), (1, 0, 2))
 
-
     # pass band the signal between 0.3 and 40 Hz
     signal = bandpass_filter(signal, 0.3, 40, 100)
-    
+
     signal = resample(signal, num=30 * 100, axis=2)
 
     # Read the file

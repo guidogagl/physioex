@@ -16,18 +16,98 @@ from scipy.io import loadmat
 from scipy.signal import resample
 from tqdm import tqdm
 
-from physioex.data.preprocessor import (
-    Preprocessor,
-    bandpass_filter,
-    xsleepnet_preprocessing,
-)
-from physioex.data.sleep_edf.constant import (
-    TOT_SLEEPEDF_NUM_WINDOWS,
-    mapping,
-    shape_raw,
-    shape_xsleepnet,
-    subjects,
-)
+from physioex.preprocess.preprocessor import Preprocessor
+from physioex.preprocess.utils.signal import xsleepnet_preprocessing
+
+SLEEPEDF_SUBJECTS = [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23,
+    24,
+    25,
+    26,
+    27,
+    28,
+    29,
+    30,
+    31,
+    32,
+    33,
+    34,
+    35,
+    36,
+    37,
+    38,
+    40,
+    41,
+    42,
+    43,
+    44,
+    45,
+    46,
+    47,
+    48,
+    49,
+    50,
+    51,
+    52,
+    53,
+    54,
+    55,
+    56,
+    57,
+    58,
+    59,
+    60,
+    61,
+    62,
+    63,
+    64,
+    65,
+    66,
+    67,
+    70,
+    71,
+    72,
+    73,
+    74,
+    75,
+    76,
+    77,
+    80,
+    81,
+    82,
+]
+
+mapping = {
+    "Sleep stage W": 0,
+    "Sleep stage 1": 1,
+    "Sleep stage 2": 2,
+    "Sleep stage 3": 3,
+    "Sleep stage 4": 3,
+    "Sleep stage R": 4,
+}
 
 
 class SLEEPEDFPreprocessor(Preprocessor):
@@ -35,11 +115,11 @@ class SLEEPEDFPreprocessor(Preprocessor):
     def __init__(self, data_folder: str = None):
 
         super().__init__(
-            dataset_name="mne_data",
-            signal_shape=shape_raw,
+            dataset_name="sleepedf",
+            signal_shape=[3, 3000],
             preprocessors_name=["xsleepnet"],
             preprocessors=[xsleepnet_preprocessing],
-            preprocessors_shape=[shape_xsleepnet],
+            preprocessors_shape=[[3, 29, 129]],
             data_folder=data_folder,
         )
         warnings.filterwarnings("ignore")
@@ -49,7 +129,7 @@ class SLEEPEDFPreprocessor(Preprocessor):
         os.environ["MNE_DATA"] = self.dataset_folder
         sys.stdout = open(os.devnull, "w")
         SP(
-            subject_ids=subjects,
+            subject_ids=SLEEPEDF_SUBJECTS,
             recording_ids=[1, 2],
             crop_wake_mins=30,
             load_eeg_only=False,
@@ -59,12 +139,13 @@ class SLEEPEDFPreprocessor(Preprocessor):
 
     @logger.catch
     def get_subjects_records(self) -> List[str]:
-        records = [str(record) for record in subjects]
+        records = [str(record) for record in SLEEPEDF_SUBJECTS]
 
         return records
 
     @logger.catch
     def read_subject_record(self, record: str) -> Tuple[np.array, np.array]:
+        os.environ["MNE_DATA"] = self.dataset_folder
 
         # suppress printing
         sys.stdout = open(os.devnull, "w")
@@ -115,19 +196,6 @@ class SLEEPEDFPreprocessor(Preprocessor):
         return signals, labels
 
     @logger.catch
-    def customize_table(self, table) -> pd.DataFrame:
-        desc = pd.read_excel(
-            "https://physionet.org/files/sleep-edfx/1.0.0/SC-subjects.xls"
-        )
-
-        desc = desc.drop(columns=["night", "LightsOff"]).drop_duplicates()
-
-        table["sex"] = desc["sex (F=1)"]
-        table["age"] = desc["age"]
-
-        return table
-
-    @logger.catch
     def get_sets(self) -> Tuple[List, List, List]:
 
         tmp_path = os.path.join(self.dataset_folder, "tmp.mat")
@@ -146,7 +214,7 @@ class SLEEPEDFPreprocessor(Preprocessor):
 
             train_s = [
                 subject
-                for subject in subjects
+                for subject in SLEEPEDF_SUBJECTS
                 if subject not in test_subjects[-1]
                 and subject not in valid_subjects[-1]
             ]
@@ -156,14 +224,9 @@ class SLEEPEDFPreprocessor(Preprocessor):
 
         return train_subjects, valid_subjects, test_subjects
 
-    @logger.catch
-    def get_dataset_num_windows(self) -> int:
-
-        return TOT_SLEEPEDF_NUM_WINDOWS
-
 
 if __name__ == "__main__":
 
-    p = SLEEPEDFPreprocessor(data_folder="/esat/biomeddata/ggagliar/")
+    p = SLEEPEDFPreprocessor(data_folder="/mnt/guido-data/")
 
     p.run()

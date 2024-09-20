@@ -7,165 +7,74 @@ import pandas as pd
 import pytorch_lightning as pl
 import torch
 
-from physioex.utils import get_data_folder, set_data_folder
+from physioex.utils import get_data_folder
+from physioex.data.datareader import DataReader
+from loguru import logger
+
+CHANNEL_INDEX = ["EEG", "EOG", "EMG", "ECG"]
 
 DATASETS = {
     "mass": ["EEG", "EOG", "EMG"],
     "hmc": ["EEG", "EOG", "EMG", "ECG"],
     "shhs": ["EEG", "EOG", "EMG"],
     "dcsm": ["EEG", "EOG", "EMG", "ECG"],
-    "mesa": ["EEG", "EOG", "EMG"], #
-    "mros": ["EEG", "EOG", "EMG"], #
+    "mesa": ["EEG", "EOG", "EMG"],  #
+    "mros": ["EEG", "EOG", "EMG"],  #
+    "sleepedf": ["EEG", "EOG", "EMG"],  #    
 }
+
 
 class PhysioExDataset(torch.utils.data.Dataset):
     def __init__(
         self,
         datasets: List[str],
-        versions: List[str] = None,
         preprocessing: str = "raw",
         selected_channels: List[int] = ["EEG"],
         sequence_length: int = 21,
         target_transform: Callable = None,
-        #task: str = "sleep",
         data_folder: str = None,
+        hpc : bool = False,
     ):
-        
-        for dataset in datasets:
-            assert (
-                dataset in DATASETS.keys()
-            ), f"ERR: dataset {dataset} not available"
-            for channel in selected_channels:
-                assert (
-                    channel in DATASETS[dataset]
-                ), f"ERR: channel {channel} not available in dataset {dataset}"
 
-        if versions is not None:
-            assert len(datasets) == len(
-                versions
-            ), "ERR: datasets and versions should have the same length"
-
-        else:
-            versions = [None] * len(datasets)
-
-    
-        assert preprocessing in [
-            "raw",
-            "xsleepnet",
-        ], "ERR: preprocessing should be 'raw' or 'xsleepnet'"
-
-        if data_folder is not None:
-            data_folder = set_data_folder(data_folder)
-        else:
+        if data_folder is None:
             data_folder = get_data_folder()
+
+        self.datasets = datasets
+        self.L = sequence_length
+        self.channels_index = [ CHANNEL_INDEX.index( ch ) for ch in selected_channels ]
         
-        self.dataset_folders = []
+        self.readers = []
         self.tables = []
-        self.scaling = []
-
-        input_shape = [3000] if preprocessing == "raw" else [29, 129]
-        self.input_shape = []
-        for dataset, version in zip(datasets, versions):
-            self.dataset_folders += [os.path.join(data_folder, dataset)]
-    
-            if version is not None:
-                self.dataset_folders[-1] = os.path.join(self.dataset_folders[-1], version)
-    
-            self.tables += [
-                pd.read_csv(os.path.join(self.dataset_folders[-1], "table.csv"))
-            ]
-
-            scaling = np.load(
-                os.path.join(self.dataset_folders[-1], preprocessing,  "scaling.npz")
+        self.dataset_idx = []
+        
+        offset = 0
+        for i, dataset in enumerate(datasets):
+            reader = DataReader(
+                data_folder = data_folder,
+                dataset = dataset,
+                preprocessing = preprocessing,
+                sequence_length = sequence_length,
+                channels_index = self.channels_index,
+                offset = offset,
+                hpc = hpc,
             )
-            mean, std = scaling["mean"], scaling["std"]
-            
-            # take the selected channels 
-            mean = mean[[DATASETS[dataset].index(channel) for channel in selected_channels]]
-            std = std[[DATASETS[dataset].index(channel) for channel in selected_channels]]
-            
-            self.scaling += [
-                (
-                    torch.tensor(mean).float(),
-                    torch.tensor(std).float(),
-                )
-            ]
-            
-            self.input_shape.append( [ len( DATASETS[dataset] ) ] + input_shape  ) 
+            offset += len(reader)
 
+            self.dataset_idx += list( np.ones( len(reader) ) * i ) 
+
+            self.tables += [reader.get_table()]
+            self.readers += [reader]
+            
+        self.dataset_idx = np.array( self.dataset_idx, dtype=np.uint8 )
         # set the table fold to the 0 fold by default
         self.split()
-
-        self.preprocessing = preprocessing
-
-        self.channels_index = [
-            DATASETS[datasets[0]].index(channel) for channel in selected_channels
-        ]
-
-        self.L = sequence_length
-
         self.target_transform = target_transform
 
-        #self.task = task
-
-        # create the index maps for the windows
-
-        # window --> dataset table
-
-        num_windows = self.__len__()
-        start_index = 0
-
-        self.dataset_idx = np.zeros(num_windows, dtype=np.uint8)
-        for i, table in enumerate(self.tables):
-            dataset_num_windows = int(
-                np.sum(table["num_windows"].values - self.L + 1)
-            )
-            self.dataset_idx[start_index : start_index + dataset_num_windows] = (
-                np.uint8(i)
-            )
-            start_index += dataset_num_windows
-
-        # window --> subject
-        # datasets can have up to 5000 subjects, so we need a uint16
-
-        start_index = 0
-
-        self.subject_idx = np.zeros(num_windows, dtype=np.uint16)
-        for table in self.tables:
-            for _, row in table.iterrows():
-                subject_id = int(row["subject_id"])
-                n_win = int(row["num_windows"]) - self.L + 1
-                self.subject_idx[start_index : start_index + n_win] = np.uint16(
-                    subject_id
-                )
-                start_index += n_win
-
-        # window --> relative index
-        # we need a uint32 for the relative index
-        self.relative_idx = np.zeros(num_windows, dtype=np.uint32)
-        start_index = 0
-        for table in self.tables:
-            for _, row in table.iterrows():
-                n_win = int(row["num_windows"]) - self.L + 1
-                self.relative_idx[start_index : start_index + n_win] = np.arange(
-                    n_win, dtype=np.uint32
-                )
-                if n_win > np.iinfo(np.uint32).max:
-                    raise ValueError(
-                        f"Value {n_win} exceeds the maximum value for np.uint16"
-                    )
-
-                start_index += n_win
+        self.len = offset
+        print( self.len )
 
     def __len__(self):
-
-        num_windows = 0
-        for table in self.tables:
-            num_windows += int(
-                np.sum(table["num_windows"].values - self.L + 1)
-            )
-
-        return num_windows
+        return self.len
 
     def split(self, fold: int = -1, dataset_idx: int = -1):
         assert dataset_idx < len(self.tables), "ERR: dataset_idx out of range"
@@ -204,42 +113,17 @@ class PhysioExDataset(torch.utils.data.Dataset):
         # take the min number of folds for each dataset table
         num_folds = 100
         for table in self.tables:
-            num_folds = min(num_folds, len([col for col in table.columns if "fold_" in col]))
+            num_folds = min(
+                num_folds, len([col for col in table.columns if "fold_" in col])
+            )
         return num_folds
-        
+
     def __getitem__(self, idx):
 
-        table_idx = int(self.dataset_idx[idx])
-        subject_id = int(self.subject_idx[idx])
-        relative_id = int(self.relative_idx[idx])
-
-        # get the path to the subject data from the table
-        table = self.tables[table_idx]
-        mean, std = self.scaling[table_idx]
-
-        subject_info = table[table["subject_id"] == subject_id]
-
-        data_folder = self.dataset_folders[table_idx]
+        dataset_idx = int(self.dataset_idx[idx])
         
-        data_path = os.path.join( data_folder, self.preprocessing, str(subject_id) + ".npy")
-        labels_path = os.path.join( data_folder, "labels", str(subject_id) + ".npy")
+        X, y = self.readers[dataset_idx][idx]
         
-        subject_windows = subject_info["num_windows"].values[0]
-
-        input_shape = self.input_shape[table_idx]
-        
-        # read the numpy memmap files
-        X = np.memmap(data_path, dtype='float32', mode='r', shape=(subject_windows, *input_shape))
-        y = np.memmap(labels_path, dtype='int16', mode='r', shape=(subject_windows,))
-        
-        # select the windows
-
-        X = X[relative_id : relative_id + self.L, self.channels_index]
-        y = y[relative_id : relative_id + self.L]
-
-        X = (torch.tensor(X).float() - mean) / std
-        y = torch.tensor(y).long()
-
         if self.target_transform is not None:
             y = self.target_transform(y)
 
@@ -276,5 +160,7 @@ class PhysioExDataset(torch.utils.data.Dataset):
         train_idx = np.concatenate(train_idx)
         valid_idx = np.concatenate(valid_idx)
         test_idx = np.concatenate(test_idx)
+        
+        print( max(train_idx), max(valid_idx), max(test_idx) )
 
         return train_idx, valid_idx, test_idx

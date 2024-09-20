@@ -9,15 +9,25 @@ import torch
 
 from lightning.pytorch import seed_everything
 from loguru import logger
-from pytorch_lightning.callbacks import ModelCheckpoint, RichProgressBar, LearningRateMonitor
+from pytorch_lightning.callbacks import (
+    ModelCheckpoint,
+    RichProgressBar,
+    LearningRateMonitor,
+)
 from pytorch_lightning.loggers import CSVLogger
 
-from physioex.data import PhysioExDataModule, PhysioExDataset, get_datasets
+from physioex.data import (
+    PhysioExDataModule,
+    PhysioExDataset,
+    get_datasets,
+    HPCPhysioExDataset,
+)
 from physioex.train.networks import get_config
 from physioex.train.networks.utils.loss import config as loss_config
 
 torch.set_float32_matmul_precision("medium")
 seed_everything(42, workers=True)
+
 
 class Trainer:
     def __init__(
@@ -27,60 +37,32 @@ class Trainer:
         batch_size: int = 32,
         selected_channels: List[int] = ["EEG"],
         sequence_length: int = 21,
-        #task: str = "sleep",
+        # task: str = "sleep",
         data_folder: str = None,
-        
-        random_fold : bool = False,
-        
+        random_fold: bool = False,
         model_name: str = "chambon2018",
-        
         loss_name: str = "cel",
-        
         ckp_path: str = None,
         max_epoch: int = 20,
         val_check_interval: int = 3,
-    ):   
+        hpc: bool = False,
+    ):
         ###### module setup ######
         network_config = get_config()[model_name]
 
         module_config = network_config["module_config"]
         module_config["seq_len"] = sequence_length
-        module_config["loss_call"] = loss_config[loss_name] 
+        module_config["loss_call"] = loss_config[loss_name]
         module_config["loss_params"] = dict()
         module_config["in_channels"] = len(selected_channels)
-        
+
         self.model_call = network_config["module"]
-        self.module_config = module_config    
-        
+        self.module_config = module_config
+
         ###### datamodule setup ######
-        
-        if random_fold :
-            self.folds = [ -1 ]
-        else:
-            self.folds = PhysioExDataset(
-                datasets=datasets,
-                versions=versions,
-                preprocessing=network_config["input_transform"],
-                selected_channels=selected_channels,
-                sequence_length=sequence_length,
-                target_transform = network_config["target_transform"],
-                data_folder=data_folder,
-            ).get_num_folds()
-        
-            self.folds = list(range(self.folds))
-        
-        num_steps = int( PhysioExDataset(
-            datasets=datasets,
-            versions=versions,
-            preprocessing=network_config["input_transform"],
-            selected_channels=selected_channels,
-            sequence_length=sequence_length,
-            target_transform = network_config["target_transform"],
-            data_folder=data_folder,
-        ).__len__() * 0.7 ) // batch_size
-        
-        val_check_interval = max(1, num_steps // val_check_interval)
-        
+
+        self.folds = [-1]
+
         self.datasets = datasets
         self.versions = versions
         self.batch_size = batch_size
@@ -88,30 +70,30 @@ class Trainer:
         self.selected_channels = selected_channels
         self.sequence_length = sequence_length
         self.data_folder = data_folder
-        self.target_transform = network_config["target_transform"] 
-                
-        ##### trainer setup #####
-    
+        self.target_transform = network_config["target_transform"]
 
+        ##### trainer setup #####
+
+        self.hpc = hpc
         self.batch_size = batch_size
         self.max_epoch = max_epoch
         self.val_check_interval = val_check_interval
-        
-        self.ckp_path = ckp_path if ckp_path is not None else "models/" + str(uuid.uuid4()) + "/"
+
+        self.ckp_path = (
+            ckp_path if ckp_path is not None else "models/" + str(uuid.uuid4()) + "/"
+        )
         Path(self.ckp_path).mkdir(parents=True, exist_ok=True)
-        
+
         #############################
-
-
 
     def train_evaluate(self, fold: int = 0):
 
         logger.info(
             "JOB:%d-Splitting dataset into train, validation and test sets" % fold
         )
-        
+
         #### datamodules setup ####
-        
+
         train_datamodule = PhysioExDataModule(
             datasets=self.datasets,
             versions=self.versions,
@@ -120,17 +102,21 @@ class Trainer:
             selected_channels=self.selected_channels,
             sequence_length=self.sequence_length,
             data_folder=self.data_folder,
-            preprocessing = self.preprocessing,
-            target_transform= self.target_transform,
+            preprocessing=self.preprocessing,
+            target_transform=self.target_transform,
+            hpc=self.hpc,
         )
         
+        num_steps = train_datamodule.dataset.__len__() * 0.7 // self.batch_size
+
+        val_check_interval = max(1, num_steps //self.val_check_interval)
+
         ###### module setup ######
-        
+
         module = self.model_call(module_config=self.module_config)
 
-        
         ###### trainer setup ######
-        
+
         # Definizione delle callback
         checkpoint_callback = ModelCheckpoint(
             monitor="val_acc",
@@ -149,15 +135,19 @@ class Trainer:
         trainer = pl.Trainer(
             devices="auto",
             max_epochs=self.max_epoch,
-            val_check_interval=self.val_check_interval,
-            callbacks=[checkpoint_callback, progress_bar_callback, LearningRateMonitor(logging_interval="step")],
+            val_check_interval=val_check_interval,
+            callbacks=[
+                checkpoint_callback,
+                progress_bar_callback,
+                LearningRateMonitor(logging_interval="step"),
+            ],
             deterministic=True,
             logger=my_logger,
             # num_sanity_val_steps = -1
         )
 
         ###### training ######
-        
+
         logger.info("JOB:%d-Training model" % fold)
         # trainer.validate(module, datamodule.val_dataloader())
         # Addestra il modello utilizzando il trainer e il DataModule
@@ -167,9 +157,9 @@ class Trainer:
         val_results = trainer.test(
             ckpt_path="best", dataloaders=train_datamodule.val_dataloader()
         )[0]
-        
+
         val_results["fold"] = fold
-        
+
         test_results = trainer.test(ckpt_path="best", datamodule=train_datamodule)[0]
 
         return {"val_results": val_results, "test_results": test_results}
@@ -179,9 +169,7 @@ class Trainer:
         results = [self.train_evaluate(fold) for fold in self.folds]
 
         val_results = pd.DataFrame([result["val_results"] for result in results])
-        test_results = pd.DataFrame(
-            [result["test_results"] for result in results]
-        )
+        test_results = pd.DataFrame([result["test_results"] for result in results])
 
         val_results.to_csv(self.ckp_path + "val_results.csv", index=False)
         test_results.to_csv(self.ckp_path + "test_results.csv", index=False)

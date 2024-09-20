@@ -17,8 +17,11 @@ from tqdm import tqdm
 from wfdb.io import rdann
 
 from physioex.data.constant import get_data_folder
-from physioex.data.preprocessor import (Preprocessor, bandpass_filter,
-                                        xsleepnet_preprocessing)
+from physioex.data.preprocessor import (
+    Preprocessor,
+    bandpass_filter,
+    xsleepnet_preprocessing,
+)
 
 
 class PHYSIOPreprocessor(Preprocessor):

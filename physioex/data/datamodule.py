@@ -2,8 +2,7 @@ import os
 from typing import Callable, List, Union
 
 import pytorch_lightning as pl
-from torch.utils.data import DataLoader, SubsetRandomSampler
-
+from torch.utils.data import DataLoader, SubsetRandomSampler, DistributedSampler, Subset
 from physioex.data.dataset import PhysioExDataset
 
 
@@ -11,31 +10,29 @@ class PhysioExDataModule(pl.LightningDataModule):
     def __init__(
         self,
         datasets: List[str],
-        versions: List[str] = None,
-        folds: Union[int, List[int]] = -1,
         batch_size: int = 32,
         preprocessing: str = "raw",
         selected_channels: List[int] = ["EEG"],
         sequence_length: int = 21,
         target_transform: Callable = None,
-        #task: str = "sleep",
+        folds: Union[int, List[int]] = -1,
         data_folder: str = None,
+        hpc: bool = False,
     ):
         super().__init__()
 
         self.dataset = PhysioExDataset(
             datasets=datasets,
-            versions=versions,
             preprocessing=preprocessing,
             selected_channels=selected_channels,
             sequence_length=sequence_length,
             target_transform=target_transform,
-            #task=task,
             data_folder=data_folder,
+            hpc=hpc,
         )
 
         self.batch_size = batch_size
-         
+
         # if fold is an int
         if isinstance(folds, int):
             self.dataset.split(folds)
@@ -46,33 +43,50 @@ class PhysioExDataModule(pl.LightningDataModule):
             for i, fold in enumerate(folds):
                 self.dataset.split(fold, i)
 
-        self.train_idx, self.valid_idx, self.test_idx = self.dataset.get_sets()
+        train_idx, valid_idx, test_idx = self.dataset.get_sets()
 
-        self.num_workers = os.cpu_count() // 2
+        if not hpc:
+            self.train_sampler = SubsetRandomSampler(train_idx)
+            self.valid_sampler = SubsetRandomSampler(valid_idx)
+            self.test_sampler = SubsetRandomSampler(test_idx)
+        else:
+            self.train_sampler = DistributedSampler(Subset(self.dataset, train_idx))
+            self.valid_sampler = DistributedSampler(Subset(self.dataset, valid_idx))
+            self.test_sampler = DistributedSampler(Subset(self.dataset, test_idx))
 
+        self.train = DataLoader(
+            self.dataset if not hpc else Subset(self.dataset, train_idx),
+            batch_size=self.batch_size,
+            sampler=self.train_sampler,
+            num_workers=os.cpu_count(),
+        )
+        
+        self.valid = DataLoader(
+            self.dataset if not hpc else Subset(self.dataset, valid_idx),
+            batch_size=self.batch_size,
+            sampler=self.valid_sampler,
+            num_workers=os.cpu_count(),
+        )
+        
+        self.test = DataLoader(
+            self.dataset if not hpc else Subset(self.dataset, test_idx),
+            batch_size=self.batch_size,
+            sampler=self.test_sampler,
+            num_workers=os.cpu_count(),
+        )        
+                    
     def setup(self, stage: str):
         return
 
     def train_dataloader(self):
-        return DataLoader(
-            self.dataset,
-            batch_size=self.batch_size,
-            sampler=SubsetRandomSampler(self.train_idx),
-            num_workers=self.num_workers,
-        )
+        return self.train
 
     def val_dataloader(self):
-        return DataLoader(
-            self.dataset,
-            batch_size=self.batch_size,
-            sampler=SubsetRandomSampler(self.valid_idx),
-            num_workers=self.num_workers,
-        )
+        return self.valid
 
     def test_dataloader(self):
-        return DataLoader(
-            self.dataset,
-            batch_size=self.batch_size,
-            sampler=SubsetRandomSampler(self.test_idx),
-            num_workers=self.num_workers,
-        )
+        return self.test
+    
+    def teardown(self, stage: str):
+        del self.train, self.valid, self.test, self.dataset
+        return

@@ -47,7 +47,7 @@ config = {
         "module": TinySleepNet,
         "input_transform": "raw",
         "target_transform": None,
-    }
+    },
 }
 
 

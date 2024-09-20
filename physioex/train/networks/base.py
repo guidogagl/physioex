@@ -14,7 +14,7 @@ from pytorch_metric_learning.regularizers import LpRegularizer
 class SleepModule(pl.LightningModule):
     def __init__(self, nn: nn.Module, config: Dict):
         super(SleepModule, self).__init__()
-        self.save_hyperparameters()
+        self.save_hyperparameters(ignore=['nn'])
         self.nn = nn
 
         self.n_classes = config["n_classes"]
@@ -50,12 +50,17 @@ class SleepModule(pl.LightningModule):
         self.loss = config["loss_call"](config["loss_params"])
         self.module_config = config
 
+        # learning rate
+        
+        self.learning_rate = 1e-4
+        self.weight_decay = 1e-6
+        
     def configure_optimizers(self):
         # Definisci il tuo ottimizzatore
         self.opt = optim.Adam(
             self.nn.parameters(),
-            lr=1e-4,
-            weight_decay=1e-6,
+            lr=self.learning_rate,
+            weight_decay=self.weight_decay,
         )
 
         scheduler = optim.lr_scheduler.ReduceLROnPlateau(
@@ -68,7 +73,7 @@ class SleepModule(pl.LightningModule):
             cooldown=0,
             min_lr=0,
             eps=1e-08,
-            #verbose=True,
+            # verbose=True,
         )
         scheduler = {
             "scheduler": scheduler,
@@ -77,7 +82,7 @@ class SleepModule(pl.LightningModule):
             "interval": "step",
             "frequency": 1000,
         }
-        return [ self.opt ] , [ scheduler ]
+        return [self.opt], [scheduler]
 
     def forward(self, x):
         return self.nn(x)
@@ -93,7 +98,7 @@ class SleepModule(pl.LightningModule):
         log: str = "train",
         log_metrics: bool = False,
     ):
-        
+
         batch_size, seq_len, n_class = outputs.size()
 
         embeddings = embeddings.reshape(batch_size * seq_len, -1)
@@ -131,7 +136,7 @@ class SleepModule(pl.LightningModule):
         # Logica di training
         inputs, targets = batch
         embeddings, outputs = self.encode(inputs)
-                
+
         return self.compute_loss(embeddings, outputs, targets)
 
     def validation_step(self, batch, batch_idx):

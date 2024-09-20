@@ -6,9 +6,9 @@ PhysioEx provides a fast and customizable way to train, evaluate and save state-
 
 Before using the `train` command, you need to set up a virtual environment and install the package in development mode. Here are the steps:
 
-1. Make sure to have anaconda or miniconda correctly installed in your machine, then start installing a new virtual enviroment
+1. Make sure to have anaconda or miniconda correctly installed in your machine, then start installing a new virtual enviroment, in this case the new venv will be called `physioex`
 ```bash
-    conda create -n myenv python==3.10
+    conda create -n physioex python==3.12
 ```    
 
 2. Now jump into the enviroment and upgrade pip
@@ -25,46 +25,69 @@ Before using the `train` command, you need to set up a virtual environment and i
     pip install -e .
 ```    
 
-## Experiments
-- `chambon2018`: This experiment uses the [Chambon2018](https://ieeexplore.ieee.org/document/8307462) model for sleep stage classification.
-- `tinysleepnet`: This experiment uses the [TinySleepNet](https://github.com/akaraspt/tinysleepnet) model for sleep stage classification.
-- `seqsleepnet`: This experiment uses the [SeqSleepNet](https://arxiv.org/pdf/1809.10932.pdf) model for sleep stage classification (time-frequency images as input).
+## Command-Line Arguments
 
-To run an experiment, use the `-e` or `--experiment` argument followed by the name of the experiment. For example:
+The `train` command accepts several arguments to customize the training process. Below is a detailed description of each argument:
+
+- `-m, --model`: Specify the model to train. This can be a registered model name or a path to a YAML configuration file. Default: `"chambon2018"`.
+- `-ck, --checkpoint_dir`: Directory to save the checkpoint. Default: `None`.
+- `-d, --datasets`: List of datasets to train the model on. Default: `["mass"]`.
+- `-sc, --selected_channels`: List of channels to train the model. Default: `["EEG"]`.
+- `-sl, --sequence_length`: Sequence length for the model. Default: `21`.
+- `-l, --loss`: Loss function to use. Default: `"cel"` (Cross Entropy Loss).
+- `-me, --max_epoch`: Maximum number of epochs for training. Default: `20`.
+- `-nv, --num_validations`: Number of validation steps per epoch. Default: `10`.
+- `-bs, --batch_size`: Batch size for training. Default: `32`.
+- `--data_folder, -df`: Absolute path of the directory where the PhysioEx datasets are stored. Default: `None`.
+- `--test, -t`: Test the model after training. Default: `False`.
+- `--aggregate, -a`: Aggregate the results of the test. Default: `False`.
+- `--hpc, -hpc`: Use high-performance computing setups. Default: `False`.
+- `--num_nodes, -nn`: Number of nodes for distributed training. Default: `1`.
+- `--config, -c`: Path to the configuration file for training options. Default: `None`.
+
+You can use the `train -h --help` command to access the command documentation.
+
+### Using a YAML Configuration File
+
+You can specify a custom model configuration using a YAML file. Below is an example of how to structure your YAML file and use it with the `train` command. The model package can point to a custom python file into your working directory.
+
+#### Example YAML Configuration (`my_model_config.yaml`)
+
+```yaml
+model_package: physioex.train.networks.seqsleepnet
+model_class: SeqSleepNet
+module_config:
+  seq_len: 21
+  in_channels: 1
+  loss_call: cel
+  loss_params: {}
+preprocessing: xsleepnet
+target_transform: get_mid_label
+```
+
+#### Running the Training with a YAML Configuration
+
+To run the training using the above YAML configuration file, use the following command:
 
 ```bash
-train --experiment chambon2018
+train --model my_model_config.yaml --datasets mass hmc --checkpoint_dir ./checkpoints --max_epoch 20 --batch_size 32
 ```
-### Dataset-experiment compatibility
-|                     | SleepPhysioNet | Dreem |
-|---------------------|:--------------:|:-----:|
-| chambon2018         |       ✔        |   ✔️   |
-| tinysleepnet        |       ✔        |   ✔️   |
-| seqsleepnet         |       ✔        |   ✔️   |
-| contr_chambon2018   |       ✔        |   ✔️   |
-| contr_tinysleepnet  |       ✔        |   ✔️   |
-| contr_seqsleepnet   |       ✔        |   ✔️   |
 
-## Train Command
-The train command is used to train models. Here are the available arguments:
+### Basic Usage
 
-- `-e`, `--experiment`: Specify the experiment to run. Expected `type: str`. `Default: "chambon2018"`.
-- `-ckpt`, `--chekpoint`:  Specify where to save the checkpoint. Expected `type: str`. `Default: None`    
-- `-d`, `--dataset`: Specify the dataset to use. Expected `type: str`. `Default: "SleepPhysionet"`.
-- `-v`, `--version`: Specify the version of the dataset. Expected `type: str`. `Default: "2018"`.
-- `-c`, `--use_cache`: Specify whether to use cache for the dataset. Expected `type: bool`. `Default: True`.
-- `-sl`, `--sequence_lenght`: Specify the sequence length for the model. Expected `type: int`. `Default: 3`.
-- `-me`, `--max_epoch`: Specify the maximum number of epochs for training. Expected `type: int`. `Default: 20`.
-- `-vci`, `--val_check_interval`: Specify the validation check interval during training. Expected `type: int`. `Default: 300`.
-- `-bs`, `--batch_size`: Specify the batch size for training. Expected `type: int`. `Default: 32`.
-- `-nj`, `--n_jobs`: Specify the number of jobs for parallelization. Expected `type: int`. `Default: 10`
-- `-imb`, `--imbalance`:  -me "Specify rather or not to use f1 score instead of accuracy to save the checkpoints. Expected `type: bool`. `Default: False`
+```bash
+train --model chambon2018 --datasets mass --checkpoint_dir ./checkpoints --max_epoch 20 --batch_size 32
+```
+#### Testing the Model After Training
 
-## Experimental Results
-### Sequence Lenght: 3
+```bash
+train --model chambon2018 --datasets mass --checkpoint_dir ./checkpoints --max_epoch 20 --batch_size 32 --test
+```
 
-=== "Standard models"
-    ![results table](evaluations/ccl_seqlen=3.svg){ width="75%" }
+#### Using High-Performance Computing
 
-=== "Similarity models"
-    ![results table](evaluations/scl_seqlen=3.svg){ width="75%" }
+```bash
+srun train --model chambon2018 --datasets mass --checkpoint_dir ./checkpoints --max_epoch 20 --batch_size 32 --hpc --num_nodes 4
+```
+
+Note that in this case the number of nodes needs to be properly setted up according to slurm or torque, i.e. you need to setup `--ntasks-per-core` or `ppn` value equal to the number of nodes you want to train the model on.  
