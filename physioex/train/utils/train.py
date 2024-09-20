@@ -152,7 +152,7 @@ def train(
     val_check_interval = max(1, num_steps // num_validations)
 
     trainer = Trainer(
-        devices="auto",
+        devices="auto" if not hpc else -1,
         strategy="ddp" if hpc and num_nodes > 1 else "auto",
         num_nodes=num_nodes if hpc else 1,
         max_epochs=max_epochs,

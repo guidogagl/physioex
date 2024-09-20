@@ -21,6 +21,8 @@ class PhysioExDataModule(pl.LightningDataModule):
     ):
         super().__init__()
 
+        self.datasets_id = datasets
+        
         self.dataset = PhysioExDataset(
             datasets=datasets,
             preprocessing=preprocessing,

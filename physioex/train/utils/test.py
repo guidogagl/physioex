@@ -120,9 +120,9 @@ def test(
         deterministic=True,
     )
     results =[]
-    for test_datamodule in datamodule:
+    for _,  test_datamodule in enumerate(datamodule):
         results += [ trainer.test(model, datamodule=test_datamodule)[0] ]
-        results[-1]["dataset"] = test_datamodule.dataset.datasets[0] if not aggregate_datasets else "aggregate"
+        results[-1]["dataset"] = test_datamodule.datasets_id[0] if not aggregate_datasets else "aggregate"
         results[-1]["fold"] = fold
     
     results = pd.DataFrame(results)
