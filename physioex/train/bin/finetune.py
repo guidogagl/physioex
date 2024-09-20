@@ -299,3 +299,5 @@ def finetune_script():
             aggregate_datasets  = args.aggregate,
         )
 
+if __name__ == "__main__":
+    finetune_script()
