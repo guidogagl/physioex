@@ -139,8 +139,7 @@ class H5Reader(Reader):
         keys = list(self.file.keys())
         for key in keys:
             if "fold_" in key:
-                table[key] = self.file[key][()]
-        
+                table[key] = self.file[key][()].astype(int)
         return table
     
     def __getitem__(self, idx):
@@ -197,7 +196,6 @@ class DataReader(Reader ):
             del self.reader
     def get_table(self):
         return self.reader.get_table()
-
 
 def build_index( nums_windows, subjects_ids, sequence_length ):
     data_len = int(np.sum(nums_windows - sequence_length + 1))

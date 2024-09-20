@@ -62,7 +62,7 @@ class PhysioExDataset(torch.utils.data.Dataset):
 
             self.dataset_idx += list( np.ones( len(reader) ) * i ) 
 
-            self.tables += [reader.get_table()]
+            self.tables.append( reader.get_table() )
             self.readers += [reader]
             
         self.dataset_idx = np.array( self.dataset_idx, dtype=np.uint8 )
@@ -154,7 +154,9 @@ class PhysioExDataset(torch.utils.data.Dataset):
                 elif row["split"] == 2:
                     test_idx.append(indices)
                 else:
-                    raise ValueError("ERR: split should be 0, 1 or 2")
+                    error_string  = "ERR: split should be 0, 1 or 2. Not " + str(row["split"])
+                    logger.error( error_string )
+                    raise ValueError( "ERR: split should be 0, 1 or 2")
 
         train_idx = np.concatenate(train_idx)
         valid_idx = np.concatenate(valid_idx)
