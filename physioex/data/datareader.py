@@ -107,13 +107,13 @@ class H5Reader(Reader):
         self.offset = offset
         self.preprocessing = preprocessing
         
-        file = h5.File( os.path.join( data_folder, dataset + ".h5" ), "r" )
+        self.file = h5.File( os.path.join( data_folder, dataset + ".h5" ), "r" )
         
-        self.mean = torch.tensor( file[preprocessing]["mean"][channels_index][()] ).float()
-        self.std = torch.tensor( file[preprocessing]["std"][ channels_index][()] ).float()
+        self.mean = torch.tensor( self.file[preprocessing]["mean"][channels_index][()] ).float()
+        self.std = torch.tensor( self.file[preprocessing]["std"][ channels_index][()] ).float()
         
-        num_windows = file["num_windows"][()]
-        subjects_id = file["subject_id"][()]        
+        num_windows = self.file["num_windows"][()]
+        subjects_id = self.file["subject_id"][()]        
         
         self.len = int(np.sum( num_windows - self.L + 1))
         
@@ -123,7 +123,8 @@ class H5Reader(Reader):
         self.windows_index = None
         
     def __del__(self):
-        self.file.close()
+        if hasattr(self, "file"):
+            self.file.close()
         
     def __len__(self):
         return self.len
