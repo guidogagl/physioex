@@ -168,6 +168,8 @@ def finetune_script():
             "sequence_length" : args.sequence_length,
             "loss" : args.loss,            
         }
+        target_transform = networks_config[args.model]["target_transform"]
+        preprocessing = networks_config[args.model]["input_transform"]
         model_class, model_config, model_checkpoint = None, None, None
     else:
     # check if the experiment is a yaml file

@@ -58,7 +58,6 @@ class MemmapReader(Reader):
         subjects_id = self.table["subject_id"].values        
         
         self.len = int(np.sum(self.table["num_windows"].values - self.L + 1))
-        print( self.len)
         self.subject_idx, self.relative_idx, self.windows_index = build_index( num_windows, subjects_id, self.L )
         
     

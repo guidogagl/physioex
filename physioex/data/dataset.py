@@ -71,7 +71,6 @@ class PhysioExDataset(torch.utils.data.Dataset):
         self.target_transform = target_transform
 
         self.len = offset
-        print( self.len )
 
     def __len__(self):
         return self.len
@@ -160,7 +159,5 @@ class PhysioExDataset(torch.utils.data.Dataset):
         train_idx = np.concatenate(train_idx)
         valid_idx = np.concatenate(valid_idx)
         test_idx = np.concatenate(test_idx)
-        
-        print( max(train_idx), max(valid_idx), max(test_idx) )
 
         return train_idx, valid_idx, test_idx

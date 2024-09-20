@@ -150,7 +150,7 @@ def train(
     ########### Trainer Setup ############
     num_steps = datamodule.dataset.__len__() * 0.7 // batch_size
     val_check_interval = max(1, num_steps // num_validations)
-
+    
     trainer = Trainer(
         devices="auto" if not hpc else -1,
         strategy="ddp" if hpc and num_nodes > 1 else "auto",
@@ -162,6 +162,8 @@ def train(
         logger=my_logger,
     )
     
+    # setup the model in training mode if needed
+    model = model.train()
     # Start training
     trainer.fit(model, datamodule=datamodule)
     
