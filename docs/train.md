@@ -1,6 +1,6 @@
 # Train state-of-the-art Pytorch Models
 
-PhysioEx provides a fast and customizable way to train, evaluate and save state-of-the-art models for different physiological signal analysis tasks with different physiological signal datasets. This functionality is provided by the `train` command provided by this repository.
+PhysioEx provides a fast and customizable way to train, evaluate and save state-of-the-art models for different physiological signal analysis tasks with different physiological signal datasets. This functionality is provided by the `train`, `test_model` and `finetune` commands provided by this repository.
 
 ## Setup
 
@@ -25,7 +25,7 @@ Before using the `train` command, you need to set up a virtual environment and i
     pip install -e .
 ```    
 
-## Command-Line Arguments
+## Train CLI
 
 The `train` command accepts several arguments to customize the training process. Below is a detailed description of each argument:
 
@@ -91,3 +91,75 @@ srun train --model chambon2018 --datasets mass --checkpoint_dir ./checkpoints --
 ```
 
 Note that in this case the number of nodes needs to be properly setted up according to slurm or torque, i.e. you need to setup `--ntasks-per-core` or `ppn` value equal to the number of nodes you want to train the model on.  
+
+## Test CLI
+
+The `test_model` command is used to evaluate the performance of a trained model on specified datasets. The command supports various arguments to customize the testing process. Below is a detailed description of the arguments and their usage.
+
+## Test Command
+
+The `test` command is used to evaluate the performance of a trained model on specified datasets. The command supports various arguments to customize the testing process. Below is a detailed description of the arguments and their usage.
+
+- `-m, --model`: Specifies the model to test. This can be a string representing a registered model or a path to a `.yaml` file if the model is not registered. The expected type is `str`. The default value is `"chambon2018"`.
+
+- `-ck, --checkpoint_path`: Specifies the path to the model checkpoint. The expected type is `str`. The default value is `None`.
+
+- `-d, --datasets`: Specifies the list of datasets on which to test the model. The expected type is `list`. The default value is `["mass"]`.
+
+- `-sc, --selected_channels`: Specifies the channels to use for testing the model. The expected type is `list`. The default value is `["EEG"]`.
+
+- `-sl, --sequence_length`: Specifies the sequence length for the model. The expected type is `int`. The default value is `21`.
+
+- `-l, --loss`: Specifies the loss function to use. The expected type is `str`. The default value is `"cel"` (Cross Entropy Loss).
+
+- `-bs, --batch_size`: Specifies the batch size for testing. The expected type is `int`. The default value is `32`.
+
+- `--data_folder, -df`: Specifies the absolute path of the directory where the PhysioEx datasets are stored. If `None`, the home directory is used. The expected type is `str`. This argument is optional. The default value is `None`.
+
+- `--aggregate, -a`: Aggregates the results of the test. The expected type is `bool`. This argument is optional. The default value is `False`.
+
+- `--hpc, -hpc`: Indicates whether to use high-performance computing setups. This should be called when datasets have been compressed into `.h5` format with the `compress_datasets` command. The expected type is `bool`. This argument is optional. The default value is `False`.
+
+- `--num_nodes, -nn`: Specifies the number of nodes to be used for distributed testing. This is only used when `hpc` is `True`. Note that in `slurm`, this value needs to be coherent with `--ntasks-per-node` or `ppn` in `torque`. The expected type is `int`. The default value is `1`.
+
+- `--config, -c`: Specifies the path to the configuration file where the options to test the model are stored. The expected type is `str`. The default value is `None`.
+
+## Finetune CLI
+
+
+The `finetune` command is used to further train a pre-trained model on specified datasets. This command supports various arguments to customize the finetuning process. Below is a detailed description of the arguments and their usage.
+
+- `-m, --model`: Specifies the model to finetune. This can be a string representing a registered model or a path to a `.yaml` file if the model is not registered. The expected type is `str`. The default value is `"chambon2018"`.
+
+- `-lr, --learning_rate`: Specifies the learning rate for the model. The expected type is `float`. The default value is `1e-7`.
+
+- `-ck, --checkpoint_path`: Specifies the path to the model checkpoint. If `None`, PhysioEx searches among its pre-trained models. The expected type is `str`. The default value is `None`.
+
+- `-ck_dir, --checkpoint_dir`: Specifies the directory where the new finetuned model checkpoints will be stored. The expected type is `str`. The default value is `None`.
+
+- `-d, --datasets`: Specifies the list of datasets on which to finetune the model. The expected type is `list`. The default value is `["mass"]`.
+
+- `-sc, --selected_channels`: Specifies the channels to use for finetuning the model. The expected type is `list`. The default value is `["EEG"]`.
+
+- `-sl, --sequence_length`: Specifies the sequence length for the model. The expected type is `int`. The default value is `21`.
+
+- `-l, --loss`: Specifies the loss function to use. The expected type is `str`. The default value is `"cel"` (Cross Entropy Loss).
+
+- `-me, --max_epoch`: Specifies the maximum number of epochs for finetuning. The expected type is `int`. The default value is `20`.
+
+- `-nv, --num_validations`: Specifies the number of validation steps to be performed in each epoch. The expected type is `int`. The default value is `10`.
+
+- `-bs, --batch_size`: Specifies the batch size for finetuning. The expected type is `int`. The default value is `32`.
+
+- `--data_folder, -df`: Specifies the absolute path of the directory where the PhysioEx datasets are stored. If `None`, the home directory is used. The expected type is `str`. This argument is optional. The default value is `None`.
+
+- `--test, -t`: Tests the model after finetuning. The expected type is `bool`. This argument is optional. The default value is `False`.
+
+- `--aggregate, -a`: Aggregates the results of the test. The expected type is `bool`. This argument is optional. The default value is `False`.
+
+- `--hpc, -hpc`: Indicates whether to use high-performance computing setups. This should be called when datasets have been compressed into `.h5` format with the `compress_datasets` command. The expected type is `bool`. This argument is optional. The default value is `False`.
+
+- `--num_nodes, -nn`: Specifies the number of nodes to be used for distributed finetuning. This is only used when `hpc` is `True`. Note that in `slurm`, this value needs to be coherent with `--ntasks-per-node` or `ppn` in `torque`. The expected type is `int`. The default value is `1`.
+
+- `--config, -c`: Specifies the path to the configuration file where the options to finetune the model are stored. The expected type is `str`. The default value is `None`.
+
