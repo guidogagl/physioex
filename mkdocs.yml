@@ -7,7 +7,7 @@ nav:
       - Preprocessor API: unavailable.md
     - Data Module: unavailable.md
     - Train Module: 
-      - Train CLI: train.md
+      - Train CLI: train/CLI.md
       - Train API: unavailable.md
       - Networks API: 
         - Chambon 2018: train/networks/chambon2018.md
