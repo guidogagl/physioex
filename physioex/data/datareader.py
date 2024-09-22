@@ -11,6 +11,8 @@ import torch
 from abc import ABC, abstractmethod
 from loguru import logger
 
+import time
+
 class Reader(ABC):
     @abstractmethod
     def __len__(self):
@@ -106,15 +108,16 @@ class H5Reader(Reader):
         self.channels_index = channels_index
         self.offset = offset
         self.preprocessing = preprocessing
+        self.file_path = os.path.join( data_folder, dataset + ".h5" )
+        file = h5.File( self.file_path, "r" )
         
-        self.file = h5.File( os.path.join( data_folder, dataset + ".h5" ), "r" )
+        self.mean = torch.tensor( file[preprocessing]["mean"][channels_index][()] ).float()
+        self.std = torch.tensor( file[preprocessing]["std"][ channels_index][()] ).float()
         
-        self.mean = torch.tensor( self.file[preprocessing]["mean"][channels_index][()] ).float()
-        self.std = torch.tensor( self.file[preprocessing]["std"][ channels_index][()] ).float()
-        
-        num_windows = self.file["num_windows"][()]
-        subjects_id = self.file["subject_id"][()]        
-        
+        num_windows = file["num_windows"][()]
+        subjects_id = file["subject_id"][()]        
+        file.close()
+
         self.len = int(np.sum( num_windows - self.L + 1))
         
         self.subject_idx, self.relative_idx, _ = build_index( num_windows, subjects_id, self.L )
@@ -122,24 +125,23 @@ class H5Reader(Reader):
         self.input_shape = None
         self.windows_index = None
         
-    def __del__(self):
-        if hasattr(self, "file"):
-            self.file.close()
-        
     def __len__(self):
         return self.len
     
     def get_table(self):
         
         table = pd.DataFrame([])
-         
-        table["subject_id"] = self.file["subject_id"][()]
-        table["num_windows"] = self.file["num_windows"][()]
-        
-        keys = list(self.file.keys())
-        for key in keys:
-            if "fold_" in key:
-                table[key] = self.file[key][()].astype(int)
+
+        with h5.File( self.file_path, "r" ) as file:
+            table["subject_id"] = file["subject_id"][()]
+            table["num_windows"] = file["num_windows"][()]
+            
+            keys = list(file.keys())
+            for key in keys:
+                if "fold_" in key:
+                    table[key] = file[key][()].astype(int)
+                    table[key] = table[key].map({0: "train", 1: "valid", 2: "test"})
+
         return table
     
     def __getitem__(self, idx):
@@ -148,10 +150,12 @@ class H5Reader(Reader):
         
         relative_id = self.relative_idx[idx]
         subject_id = self.subject_idx[idx]
-        
-        X = self.file[self.preprocessing][str(subject_id)][relative_id : relative_id + self.L, self.channels_index][()]
-        y = self.file["labels"][str(subject_id)][relative_id : relative_id + self.L][()]
 
+        with h5.File( self.file_path, "r" ) as file:
+            X = file[self.preprocessing][str(subject_id)][relative_id : relative_id + self.L, self.channels_index][()]
+            y = file["labels"][str(subject_id)][relative_id : relative_id + self.L][()]
+        
+        
         X = (torch.tensor(X).float() - self.mean) / self. std
         y = torch.tensor(y).long()
         

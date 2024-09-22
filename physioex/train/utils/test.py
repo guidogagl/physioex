@@ -76,6 +76,7 @@ def test(
     datamodule_kwargs["batch_size"] = batch_size
     datamodule_kwargs["hpc"] = hpc
     datamodule_kwargs["folds"] = fold
+    datamodule_kwargs["num_nodes"] = num_nodes
     
     ##### DataModule Setup #####
     if isinstance(datasets, PhysioExDataModule):
@@ -108,7 +109,7 @@ def test(
         model = model_class.load_from_checkpoint(checkpoint_path, module_config=model_config)
     
     ########### Callbacks ############    
-    progress_bar_callback = RichProgressBar()    
+    #progress_bar_callback = RichProgressBar()    
     
     ########### Trainer Setup ############
 
@@ -116,7 +117,7 @@ def test(
         devices="auto",
         strategy="ddp" if hpc and num_nodes > 1 else "auto",
         num_nodes=num_nodes if hpc else 1,
-        callbacks=[progress_bar_callback],
+        #callbacks=[progress_bar_callback],
         deterministic=True,
     )
     results =[]

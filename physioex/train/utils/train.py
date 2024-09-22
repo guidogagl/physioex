@@ -13,6 +13,7 @@ from physioex.data import PhysioExDataModule
 from physioex.train.networks.base import SleepModule
 
 import pandas as pd 
+from loguru import logger
 
 def train(
     datasets : Union[ List[str], str, PhysioExDataModule],
@@ -83,6 +84,7 @@ def train(
     datamodule_kwargs["batch_size"] = batch_size
     datamodule_kwargs["hpc"] = hpc
     datamodule_kwargs["folds"] = fold
+    datamodule_kwargs["num_nodes"] = num_nodes
     
     if checkpoint_path is None:
         checkpoint_path = "models/" + str(uuid.uuid4())
@@ -143,12 +145,13 @@ def train(
         filename="fold=%d{epoch}-{step}-{val_acc:.2f}" % fold,
         save_weights_only=False,
     )
-    progress_bar_callback = RichProgressBar()
+    #progress_bar_callback = RichProgressBar()
     my_logger = CSVLogger(save_dir=checkpoint_path)
     
     
     ########### Trainer Setup ############
-    num_steps = datamodule.dataset.__len__() * 0.7 // batch_size
+    effective_batch_size = batch_size if not hpc else batch_size * num_nodes * torch.cuda.device_count()
+    num_steps = datamodule.dataset.__len__() * 0.7 // effective_batch_size
     val_check_interval = max(1, num_steps // num_validations)
     
     trainer = Trainer(
@@ -157,7 +160,7 @@ def train(
         num_nodes=num_nodes if hpc else 1,
         max_epochs=max_epochs,
         val_check_interval=val_check_interval,
-        callbacks=[checkpoint_callback, progress_bar_callback],
+        callbacks=[checkpoint_callback], # , progress_bar_callback],
         deterministic=True,
         logger=my_logger,
     )
