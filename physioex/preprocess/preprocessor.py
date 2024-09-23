@@ -25,7 +25,6 @@ class Preprocessor:
         preprocessors: List[Callable],
         preprocessors_shape: List[List[int]],
         data_folder: str = None,
-        batch_size: int = 1000,
     ):
 
         assert (
@@ -49,7 +48,6 @@ class Preprocessor:
         self.preprocessors_name = preprocessors_name
         self.preprocessors = preprocessors
         self.preprocessors_shape = preprocessors_shape
-        self.batch_size = batch_size
 
     @logger.catch
     def download_dataset(self) -> None:

@@ -1,8 +1,8 @@
-<div style = "text-align: center;">
-<img src="docs/assets/images/logo.svg" width = "250px", alt="PhysioEx Logo">
+<p align="center">
+<img src="assets/images/logo.svg" width = "250px", alt="PhysioEx Logo">
 
-<h1> PhysioEx </h1>
-</div>
+<h1>PhysioEx</h1>
+</p>
 
 ![Python Version](https://img.shields.io/badge/python-3.7%2B-blue)
 ![PyPI Version](https://badge.fury.io/py/physioex.svg)
