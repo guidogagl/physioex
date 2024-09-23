@@ -13,9 +13,6 @@ nav:
         - Chambon 2018: train/networks/chambon2018.md
         - SeqSleepNet: unavailable.md
         - TinySleepNet: unavailable.md
-    - Explain: unavailable.md
-    - Examples: 
-      - Visualize Latent Space: examples/latent_space_visualization.md
     - Contribute: contribute.md
 theme:
   name: material
