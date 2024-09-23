@@ -42,8 +42,6 @@ class Preprocessor:
                 A list of shapes corresponding to the output of each preprocessing function.
             data_folder (str, optional): 
                 The folder where the dataset is stored. If None, the default data folder is used.
-            batch_size (int, optional): 
-                The batch size for processing the data. Default is 1000.
         """
 
         assert (
@@ -89,21 +87,46 @@ class Preprocessor:
 
     @logger.catch
     def read_subject_record(self, record: str) -> Tuple[np.array, np.array]:
-        # this method should be provided by the user
-        # the method should return a tuple signal, label with shape [ n_windows, n_channels, n_timestamps ], [ n_windows ]
-        # if the record should be skipped the function should return None, None
+        """
+        Reads a subject's record and returns a tuple containing the signal and labels.
+
+        (Required) Method should be provided by the user.
+
+        Parameters:
+            record (str): The path to the subject's record.
+
+        Returns:
+            Tuple[np.array, np.array]: A tuple containing the signal and labels with shapes 
+            [n_windows, n_channels, n_timestamps] and [n_windows], respectively. If the record 
+            should be skipped, the function should return None, None.
+        """
         pass
 
     @logger.catch
     def customize_table(self, table) -> pd.DataFrame:
-        # this method should be provided by the user
-        # the method should return a customized version of the dataset table before saving it
+        """
+        Customizes the dataset table before saving it.
+
+        (Optional) Method to be provided by the user.
+
+        Parameters:
+            table (pd.DataFrame): The dataset table to be customized.
+
+        Returns:
+            pd.DataFrame: The customized dataset table.
+        """
         return table
 
     @logger.catch
     def get_sets(self) -> Tuple[List, List, List]:
-        # this method should be provided by the user
-        # the method should return the train valid and test subjects,
+        """
+        Returns the train, validation, and test subjects.
+
+        (Optional) Method to be provided by the user. By default, the method splits the subjects randomly with 70% for training, 15% for validation, and 15% for testing.
+
+        Returns:
+            Tuple[List, List, List]: A tuple containing the train, validation, and test subjects.
+        """
 
         np.random.seed(42)
 

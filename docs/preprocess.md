@@ -48,7 +48,7 @@ signal.shape # will be [21 (default sequence lenght), 4, 29, 129]
 label.shape # will be [21]
 ```
 
-#### CLI
+### CLI
 
 If you want to use the standard PhysioEx implementation of the preprocessor, which will save the data in the raw format and in the format proposed by [XSleepNet](https://arxiv.org/abs/2007.05492), you can use the CLI tool, once the library is istalled just type:
 
@@ -70,6 +70,136 @@ Note that for the HMC and DCSM dataset the library will take care to download th
 ### Extending the Preprocessor Class
 
 To build you own defined preprocessor you should extend the Preprocessor class.
+
+For instance lets consider how we extended the Preprocesor class to preprocess the HMC dataset
+```python
+from physioex.preprocess.preprocessor import Preprocessor
+
+class HMCPreprocessor(Preprocessor):
+    def __init__(self, 
+            preprocessors_name: List[str] = ["xsleepnet"],
+            preprocessors = [xsleepnet_preprocessing],
+            preprocessor_shape = [[4, 29, 129]],
+            data_folder: str = None
+            ):
+
+        # calls the Preprocessor constructor, required at the end of your custom setup
+        super().__init__(
+            dataset_name="hmc",     # this is the name of the dataset PhysioEx will use 
+                                    # as PhysioExDataset( dataset=[dataset_name] )
+            signal_shape=[4, 3000], # PhysioEx reads sleep epochs of 30 seconds sampled at 100Hz. 
+                                    # 4 Is the total amount of channel available in the dataset
+            preprocessors_name=preprocessors_name,
+            preprocessors=preprocessors,
+            preprocessors_shape=preprocessor_shape,
+            data_folder=data_folder,
+        )
+
+    @logger.catch
+    def download_dataset(self) -> None: 
+        # download the dataset into the data_folder/download/hmc_dataset.zip
+        # extract the zip 
+
+        download_dir = os.path.join(self.dataset_folder, "download")
+
+        if not os.path.exists(download_dir):
+            os.makedirs(download_dir, exist_ok=True)
+
+            zip_file = os.path.join(self.dataset_folder, "hmc_dataset.zip")
+
+            if not os.path.exists(zip_file):
+                download_file(
+                    "https://physionet.org/static/published-projects/hmc-sleep-staging/haaglanden-medisch-centrum-sleep-staging-database-1.1.zip",
+                    zip_file,
+                )
+
+            extract_large_zip(zip_file, download_dir)
+
+    @logger.catch
+    def get_subjects_records(self) -> List[str]:
+        # read the RECORDS file into the extracted directory and returns the list of the available records
+        subjects_dir = os.path.join(
+            self.dataset_folder,
+            "download",
+            "haaglanden-medisch-centrum-sleep-staging-database-1.1",
+        )
+
+        records_file = os.path.join(subjects_dir, "RECORDS")
+
+        with open(records_file, "r") as file:
+            records = file.readlines()
+
+        records = [record.rstrip("\n") for record in records]
+
+        return records
+
+    @logger.catch
+    def read_subject_record(self, record: str) -> Tuple[np.array, np.array]:
+        # read each RECORD ( which is an .edf file ) and return its signal and labels
+        return read_edf(
+            os.path.join(
+                self.dataset_folder,
+                "download",
+                "haaglanden-medisch-centrum-sleep-staging-database-1.1",
+                record,
+            )
+        )
+
+# an example of a read_edf method
+
+def read_edf(file_path):
+
+    stages_path = file_path[:-4] + "_sleepscoring.edf"
+    f = pyedflib.EdfReader(stages_path)
+    _, _, annt = f.readAnnotations()
+    f._close()
+
+    annotations = []
+    for a in annt:
+        if a in stages_map:
+            annotations.append(stages_map.index(a))
+
+    labels = np.reshape(np.array(annotations).astype(int), (-1))
+
+    num_windows = labels.shape[0]
+
+    f = pyedflib.EdfReader(file_path)
+    buffer = []
+
+    for indx, modality in enumerate(["EEG C3-M2", "EOG", "EMG chin", "ECG"]):
+        if modality == "EOG":
+
+            left = f.getSignalLabels().index("EOG E1-M2")
+            right = f.getSignalLabels().index("EOG E2-M2")
+
+            signal = (f.readSignal(left) + f.readSignal(right)).reshape(-1, fs)
+
+        else:
+
+            i = f.getSignalLabels().index(modality)
+            fs = int(f.getSampleFrequency(i))
+            signal = f.readSignal(i).reshape(-1, fs)
+
+        signal = signal[: num_windows * 30]
+        signal = signal.reshape(-1, 30 * fs)
+
+        # NOTE: THE USER IS IN CHARGE TO DO THE RESAMPLING AND BANDPASS filtering on its datasets!
+        # resample the signal at 100Hz
+        signal = resample(signal, num=30 * 100, axis=1)
+        # pass band the signal between 0.3 and 40 Hz
+        signal = bandpass_filter(signal, 0.3, 40, 100)
+
+        buffer.append(signal)
+    f._close()
+
+    buffer = np.array(buffer)
+    buffer = np.transpose(buffer, (1, 0, 2))
+
+    return buffer, labels
+
+```
+
+
 The list of the methods that the user need to reimplement to extend the Preprocessor class is:
 
 ::: physioex.preprocess.preprocessor.Preprocessor
