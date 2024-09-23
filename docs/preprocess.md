@@ -1,12 +1,12 @@
 # Preprocess Module
 
-The preprocess module implements a standard API to import custom or benchmark sleep staging datasets into PhysioEx and let them serializable into a `PhysioExDataset`. This functionality is provided by the `physioex.preprocess.preprocessor:Preprocessor` class.
+The preprocess module implements a standard API to import custom or benchmark sleep staging datasets into PhysioEx and let them serializable into a `PhysioExDataset`. This functionality is provided by the `physioex.preprocess.preprocessor.Preprocessor` class.
 
 The `Preprocessor` class is designed to facilitate the preprocessing of physiological datasets. This class provides methods for downloading datasets, reading subject records, applying preprocessing functions, and organizing the data into a structured format suitable for machine learning tasks.
 
 ### Example Usage
 
-If you want to preprocess a dataset using a preprocessing function `preprocess_fn`
+If you want to preprocess a dataset using a preprocessing function
 
 ```python
 # Preprocessor is an abstract class, you need an implementation of it to use it. 
