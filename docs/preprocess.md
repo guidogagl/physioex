@@ -72,7 +72,7 @@ Note that for the HMC and DCSM dataset the library will take care to download th
 To build you own defined preprocessor you should extend the Preprocessor class.
 The list of the methods that the user need to reimplement to extend the Preprocessor class is:
 
-::: physioex.preprocessor.preprocess:Preprocessor
+::: physioex.preprocess.preprocessor:Preprocessor
     handler: python
     options:
       members:
