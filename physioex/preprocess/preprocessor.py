@@ -73,16 +73,19 @@ class Preprocessor:
         Downloads the dataset if it is not already present on disk.
         (Optional) Method to be implemented by the user. 
         """
-        # this method should be provided by the user
-        # the method should take care of checking if the dataset is already on disk
         pass
 
     @logger.catch
     def get_subjects_records(self) -> List[str]:
-        # this method should be provided by the user
-        # the method should return a list containing the path of each subject record
-        # each path is needed to be passed as argument to the function read_subject_record(self, record)
-
+        """
+        Returns a list containing the paths to each subject's record.
+        (Required) Method to be implemented by the user.
+        
+        Returns
+        -------
+        List[str]
+            A list of paths to each subject's record.
+        """
         pass
 
     @logger.catch

@@ -82,5 +82,4 @@ The list of the methods that the user need to reimplement to extend the Preproce
         - read_subject_record
         - customize_table
         - get_sets
-      show_root_heading: true
-      show_source: true
+      
