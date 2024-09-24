@@ -58,8 +58,8 @@ extra:
 
 extra_javascript:
   - javascripts/extra.js
-#extra_css:
-#  - css/custom.css 
+extra_css:
+  - css/custom.css 
 
 markdown_extensions:
   - pymdownx.highlight:
