@@ -3,7 +3,7 @@ site_url: https://guidogagl.github.io/physioex/
 nav:
     - Home: index.md
     - Preprocess Module: preprocess.md
-    - Data Module: unavailable.md
+    - Data Module: data.md
     - Train Module: 
       - Train CLI: train/CLI.md
       - Train API: unavailable.md
