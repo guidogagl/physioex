@@ -4,7 +4,8 @@ nav:
     - Home: index.md
     - Preprocess Module: preprocess.md
     - Data Module: data.md
-    - Train Module: train.md
+    - Train Module:
+        - Overview: train.md
         - Networks: networks.md
     - Explain Module: unavailable.md
     - Contribute: contribute.md
