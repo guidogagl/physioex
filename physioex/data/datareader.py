@@ -171,25 +171,15 @@ class DataReader(Reader ):
         offset : int,
         hpc : bool,
         ):
-        self.HPC = hpc
-        if not hpc:
-            self.reader = MemmapReader(
-                data_folder = data_folder,
-                dataset = dataset,
-                preprocessing = preprocessing,
-                sequence_length = sequence_length,
-                channels_index = channels_index,
-                offset = offset,
-            )
-        else:
-            self.reader = H5Reader(
-                data_folder = data_folder,
-                dataset = dataset,
-                preprocessing = preprocessing,
-                sequence_length = sequence_length,
-                channels_index = channels_index,
-                offset = offset,
-            )
+
+        self.reader = MemmapReader(
+            data_folder = data_folder,
+            dataset = dataset,
+            preprocessing = preprocessing,
+            sequence_length = sequence_length,
+            channels_index = channels_index,
+            offset = offset,
+        )
         
     def __len__(self):
         return self.reader.__len__()
