@@ -1,22 +1,22 @@
 ## Documentation
 
-### train
 ::: physioex.train.utils.train
     handler: python
     options:
       show_root_heading: false
-      show_source: true
+      show_source: false
+      heading_level: 3
 
-### test
 ::: physioex.train.utils.test
     handler: python
     options:
       show_root_heading: false
-      show_source: true
+      show_source: false
+      heading_level: 3
 
-### finetune
 ::: physioex.train.utils.finetune
     handler: python
     options:
       show_root_heading: false
-      show_source: true
+      show_source: false
+      heading_level: 3
