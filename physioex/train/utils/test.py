@@ -12,6 +12,10 @@ from physioex.train.networks.base import SleepModule
 
 import pandas as pd
 
+from torch import set_float32_matmul_precision
+from lightning.pytorch import seed_everything
+
+
 def test(
     datasets : Union[ List[str], str, PhysioExDataModule],
     datamodule_kwargs : dict = {},
@@ -73,6 +77,10 @@ def test(
     - The function returns a DataFrame containing the test results for each dataset.
     - If `results_path` is provided, the results are saved as a CSV file in the specified path.
     """
+    from torch import set_float32_matmul_precision
+    from lightning.pytorch import seed_everything
+
+    
     datamodule_kwargs["batch_size"] = batch_size
     datamodule_kwargs["hpc"] = hpc
     datamodule_kwargs["folds"] = fold
