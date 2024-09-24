@@ -105,7 +105,7 @@ results = trainer.test( model, datamodule = datamodule)
 ```
 
 ## Documentation
-
+### PhysioExDataset
 ::: physioex.data.dataset.PhysioExDataset
     handler: python
     options:
@@ -118,7 +118,8 @@ results = trainer.test( model, datamodule = datamodule)
         - get_sets
       show_root_heading: false
       show_source: false
-
+      
+### PhysioExDataModule
 ::: physioex.data.dataset.PhysioExDataModule
     handler: python
     options:
