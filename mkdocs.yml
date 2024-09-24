@@ -24,10 +24,8 @@ theme:
         name: Switch to light mode    
       primary: teal
       accent: lime
-  
   favicon: assets/images/logo_bar.svg
   logo: assets/images/logo_bar.svg
-  
   features:
     - navigation.path
     - navigation.top
@@ -45,7 +43,7 @@ plugins:
   - search
   - social
   - mkdocstrings
-  - mknotebooks
+  - mknotebooks:
       execute: false
       timeout: 100
       allow_errors: false
