@@ -6,6 +6,7 @@
 }
 
 .md-typeset table th {
-    background-color: rgb(80, 128, 128);
-    color: #333;
+    background-color: rgb(70, 127, 127);
+    /*color: #333;*/
+    color: rgb(229, 226, 226)
 }
