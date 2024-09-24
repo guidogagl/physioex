@@ -5,8 +5,9 @@ nav:
     - Preprocess Module: preprocess.md
     - Data Module: data.md
     - Train Module:
-        - Overview: train.md
-        - Networks: networks.md
+        - Overview: train/train.md
+        - CLI : train/cli.md
+        - Networks: train/networks.md
     - Explain Module: unavailable.md
     - Contribute: contribute.md
 theme:
