@@ -262,9 +262,10 @@ def read_edf(file_path):
     return signal, stages
 ```
 
-
+## Documentation
 The list of the methods that the user need to reimplement to extend the Preprocessor class is:
 
+### Preprocessor
 ::: physioex.preprocess.preprocessor.Preprocessor
     handler: python
     options:

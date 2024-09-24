@@ -5,7 +5,7 @@ nav:
     - Preprocess Module: preprocess.md
     - Data Module: data.md
     - Train Module: train.md
-      - Networks: networks.md
+        - Networks: networks.md
     - Explain Module: unavailable.md
     - Contribute: contribute.md
 theme:
