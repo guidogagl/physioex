@@ -21,5 +21,6 @@ jobs:
       - run: pip install mkdocs-material
       - run: pip install 'mkdocstrings[python]'
       - run: pip install Pygments
+      - run: pip install mknotebooks
       - run: pip install pillow cairosvg
       - run: mkdocs gh-deploy --force
