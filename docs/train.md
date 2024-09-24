@@ -1,6 +1,6 @@
 ## Documentation
 
-::: physioex.train.utils.train.train
+::: physioex.train.utils.train
     handler: python
     options:
       show_root_heading: true
