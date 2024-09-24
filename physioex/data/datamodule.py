@@ -17,14 +17,14 @@ class PhysioExDataModule(pl.LightningDataModule):
         target_transform: Callable = None,
         folds: Union[int, List[int]] = -1,
         data_folder: str = None,
-        hpc: bool = False,
         num_nodes : int = 1,
         num_workers : int = os.cpu_count(),
     ):
         super().__init__()
 
         self.datasets_id = datasets
-        self.num_workers = num_workers // 2 if (preprocessing == "xsleepnet") and (len(selected_channels) > 1 ) else num_workers
+        self.num_workers = num_workers
+
         self.dataset = PhysioExDataset(
             datasets=datasets,
             preprocessing=preprocessing,
@@ -36,9 +36,8 @@ class PhysioExDataModule(pl.LightningDataModule):
         )
 
         self.batch_size = batch_size
-        self.hpc = ( hpc == True ) and ( num_nodes > 1 )
-        self.num_nodes = num_nodes 
-        # if fold is an int
+        self.hpc = ( num_nodes > 1 )
+        
         if isinstance(folds, int):
             self.dataset.split(folds)
         else:

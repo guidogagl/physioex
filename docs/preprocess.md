@@ -35,8 +35,10 @@ from physioex.data import PhysioExDataset
 
 data = PhysioExDataset(
     datasets = ["hmc"],
-    preprocessing = "xsleepnet", # can be "raw" also because the Preprocessor will always save also the raw data
-    selected_channels = ["EEG", "EOG", "EMG", "ECG"], # in case you want to read all the channels available
+    preprocessing = "xsleepnet",    # can be "raw" also because the Preprocessor 
+                                    # will always save also the raw data
+    selected_channels = ["EEG", "EOG", "EMG", "ECG"], # in case you want to read 
+                                                      # all the channels available
     data_folder = "/your/data/path/",
 )
 
@@ -144,59 +146,120 @@ class HMCPreprocessor(Preprocessor):
                 record,
             )
         )
+```
 
+Here there is the pseudocode for a possible implementation of the read_edf method using `pyedflib`
+
+```python
 # an example of a read_edf method
+# Note: if you use a dataset from NSRR you can directly use 
+# physioex.preprocess.utils.sleepdata:process_sleepdata_file
+#       
+# if you want to read different channels you can choose them here
+#
+stages_map = [  # used to map each stage in the annotation file
+                # to an identifier ( the index of the list )
+    "Sleep stage W",
+    "Sleep stage N1",
+    "Sleep stage N2",
+    "Sleep stage N3",
+    "Sleep stage R",
+]
+
+fs = 256    # sampling frequency of the signal readed
+            # can be readed directly from the .edf file if you have
+            # different sampling frequencies for different channels
+
+# the channels you want to read and preprocess in your dataset
+AVAILABLE_CHANNELS = ["EEG C3-M2", "EOG", "EMG"]
 
 def read_edf(file_path):
 
-    stages_path = file_path[:-4] + "_sleepscoring.edf"
+    # read the annotatations
+    # Note: tipycally record and annotation files have the same name.
+    #       a best practice could be to store them as:
+    #       filepath_stages.edf
+    #       filepath_signal.edf
+    #       in the same directory, 
+    #       if this is not the case in your dataset consider returning a tuple
+    #       in the get_subjects_records method : 
+    #       file_path = ( signal_path, annotation_path )
+
+    stages_path = file_path + "_stages.edf" 
+    signal_path = file_path + "_signal.edf"
+    
     f = pyedflib.EdfReader(stages_path)
     _, _, annt = f.readAnnotations()
     f._close()
 
-    annotations = []
+    # convert the annotations from string to the index of stages_map
+    stages = []
     for a in annt:
         if a in stages_map:
-            annotations.append(stages_map.index(a))
+            stages.append(stages_map.index(a))
 
-    labels = np.reshape(np.array(annotations).astype(int), (-1))
+    # convert it to a numpy array 
+    stages = np.reshape(np.array(stages).astype(int), (-1))
 
-    num_windows = labels.shape[0]
-
-    f = pyedflib.EdfReader(file_path)
+    # read the signal
+    f = pyedflib.EdfReader(signal_path)
     buffer = []
+    for indx, modality in enumerate(AVAILABLE_CHANNELS):
 
-    for indx, modality in enumerate(["EEG C3-M2", "EOG", "EMG chin", "ECG"]):
-        if modality == "EOG":
+        signal = f.readSignal( modality ).reshape( -1 )
 
-            left = f.getSignalLabels().index("EOG E1-M2")
-            right = f.getSignalLabels().index("EOG E2-M2")
-
-            signal = (f.readSignal(left) + f.readSignal(right)).reshape(-1, fs)
-
-        else:
-
-            i = f.getSignalLabels().index(modality)
-            fs = int(f.getSampleFrequency(i))
-            signal = f.readSignal(i).reshape(-1, fs)
-
-        signal = signal[: num_windows * 30]
-        signal = signal.reshape(-1, 30 * fs)
-
-        # NOTE: THE USER IS IN CHARGE TO DO THE RESAMPLING AND BANDPASS filtering on its datasets!
-        # resample the signal at 100Hz
-        signal = resample(signal, num=30 * 100, axis=1)
+        # filtering
         # pass band the signal between 0.3 and 40 Hz
-        signal = bandpass_filter(signal, 0.3, 40, 100)
+        # you can use physioex.preprocess.utils.signal:bandpass_filter
+        if modality != "EMG":
+            signal = bandpass_filter(signal, 0.3, 40, fs)
+        else:
+            # if EMG signal filter at 10Hz
+            b_band = firwin(101, 10, pass_zero=False, fs=fs)
+            signal = filtfilt(b_band, 1, signal)
 
+        # resampling
+        # 100 Hz * 30 sec * num_epochs ( annotations.shape[0] )
+        # you can use scipy.signal.resample
+        signal = resample(signal, num= 30 * 100 * annotations.shape[0])
+
+        # windowing
+        signal = signal.reshape(-1, 3000)
         buffer.append(signal)
     f._close()
 
-    buffer = np.array(buffer)
-    buffer = np.transpose(buffer, (1, 0, 2))
+    buffer = np.array(buffer) # shape is len(AVAILABLE_CHANNELS), num_epochs, 3000
+    signal = np.transpose(buffer, (1, 0, 2)) #  num_epochs, len(AVAILABLE_CHANNELS), 3000
+    del buffer
 
-    return buffer, labels
+    # now you should check if Wake is the biggest class for your subject
+    count_stage = np.bincount(stages)
+    if count_stage[0] > max(count_stage[1:]):  # Wake is the biggest class
+        second_largest = max(count_stage[1:])
 
+        W_ind = stages == 0  # W indices
+        last_evening_W_index = np.where(np.diff(W_ind) != 0)[0][0] + 1
+        if stages[0] == 0:  # only true if the first epoch is W
+            num_evening_W = last_evening_W_index
+        else:
+            num_evening_W = 0
+
+        first_morning_W_index = np.where(np.diff(W_ind) != 0)[0][-1] + 1
+        num_morning_W = len(stages) - first_morning_W_index + 1
+
+        nb_pre_post_sleep_wake_eps = num_evening_W + num_morning_W
+        if nb_pre_post_sleep_wake_eps > second_largest:
+            total_W_to_remove = nb_pre_post_sleep_wake_eps - second_largest
+            if num_evening_W > total_W_to_remove:
+                stages = stages[total_W_to_remove:]
+                signal = signal[total_W_to_remove:]
+            else:
+                evening_W_to_remove = num_evening_W
+                morning_W_to_remove = total_W_to_remove - evening_W_to_remove
+                stages = stages[evening_W_to_remove : len(stages) - morning_W_to_remove]
+                signal = signal[evening_W_to_remove : len(signal) - morning_W_to_remove]
+
+    return signal, stages
 ```
 
 
