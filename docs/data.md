@@ -1,10 +1,13 @@
 # Data Module 
 
 The `physioex.data` module provides the API to read the data from the disk once the raw datasets have been processed by the `Preprocess` module. It consists of two classes: 
+
 - `physioex.data.PhysioExDataset` which serialize the disk processed version of the dataset into a `PyTorch Dataset`
 - `physioex.data.PhysioExDataModule` which transforms the datasets to `PyTorch DataLoaders` ready for training. 
 
 ### Example of Usage
+
+#### PhysioExDataset
 
 The `PhysioExDataset` class is automatically handled by the `PhysioExDataModule` class when you need to use it for training or testing purposes. In most of the cases you don't need to interact with the `PhysioExDataset` class.
 
@@ -28,6 +31,8 @@ signal, label = data[0]
 signal.shape # will be [21 (default sequence lenght), 3, 3000]
 label.shape # will be [21]
 ```
+
+Then you can use a python plotting library to plot visualize the data
 
 ```python
 import seaborn as sns
@@ -55,6 +60,50 @@ plt.tight_layout()
 ![png](assets/images/data/sequence_viz.png)
 
 
+#### PhysioExDataModule
+
+The `PhysioExDataModule` class is designed to transform datasets into `PyTorch DataLoaders` ready for training. It handles the batching, shuffling, and splitting of the data into training, validation, and test sets.
+
+To use the `PhysioExDataModule`, you need to instantiate it with the required parameters:
+
+```python
+from physioex.data import PhysioExDataModule
+
+datamodule = PhysioExDataModule(
+    datasets=["hmc", "mass"],  # list of datasets to be used
+    batch_size=64,             # batch size for the DataLoader
+    preprocessing="raw",       # preprocessing method
+    selected_channels=["EEG", "EOG", "EMG"],  # channels to be selected
+    sequence_length=21,        # length of the sequence
+    data_folder="/your/data/path/",  # path to the data folder
+)
+
+# get the DataLoaders
+train_loader = datamodule.train_dataloader()
+val_loader = datamodule.val_dataloader()
+test_loader = datamodule.test_dataloader()
+```
+
+PhysiEx is built on `pytorch_lightning` for model training and testig, hence you can use `PhysioExDataModule` in combination with `pl.Trainer`
+
+```python
+from pytorch_lightning import Trainer
+
+model = SomePytorchModel()
+
+trainer = Trainer(
+    devices="auto"
+    max_epochs=10,
+    deterministic=True,
+)
+    
+# setup the model in training mode if needed
+model = model.train()
+# Start training
+trainer.fit(model, datamodule=datamodule)
+results = trainer.test( model, datamodule = datamodule)
+```
+
 ## Documentation
 
 ::: physioex.data.dataset.PhysioExDataset
@@ -67,5 +116,16 @@ plt.tight_layout()
         - split
         - get_num_folds
         - get_sets
+      show_root_heading: false
+      show_source: false
+
+::: physioex.data.dataset.PhysioExDataModule
+    handler: python
+    options:
+      members:
+        - __init__
+        - train_dataloader
+        - valid_dataloader
+        - test_dataloader
       show_root_heading: false
       show_source: false

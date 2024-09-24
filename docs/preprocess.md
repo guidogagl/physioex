@@ -270,9 +270,9 @@ The list of the methods that the user need to reimplement to extend the Preproce
     options:
       members:
         - __init__
-        - download_dataset
         - get_subjets_records
         - read_subject_record
+        - download_dataset
         - customize_table
         - get_sets
       show_root_heading: false
