@@ -2,7 +2,7 @@
 
 /* Stili per il tema chiaro */
 .md-typeset table {
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
 }
 
 .md-typeset table th {
@@ -10,14 +10,13 @@
     color: #333;
 }
 
-/* Stili per il tema scuro */
 @media (prefers-color-scheme: dark) {
     .md-typeset table {
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
     }
 
     .md-typeset table th {
-        background-color: #333;
+        background-color: #222;
         color: #f5f5f5;
     }
 }
