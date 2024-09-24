@@ -28,41 +28,27 @@ def finetune(
     train_kwargs: Dict = {},
     ) -> str:
     """
-        Fine-tunes a pre-trained model or a model loaded from a checkpoint.
+    Fine-tunes a pre-trained model using the provided datasets and configuration.
 
-        Parameters
-        ----------
-        model : Union[SleepModule, Dict], optional
-            The model to be fine-tuned. If provided, `model_class`, `model_config`, and `model_checkpoint` are ignored.
-            - If a dictionary is provided, it should contain the parameters to load a pre-trained model from `physioex.models.load_pretrained_module`.
-            - If a `SleepModule` is provided, it will be used directly.
-        model_class : Type[SleepModule], optional
-            The class of the model to be fine-tuned. Required if `model` is not provided.
-        model_config : Dict, optional
-            The configuration dictionary for the model. Required if `model` is not provided.
-        model_checkpoint : str, optional
-            The path to the checkpoint from which to load the model. Required if `model` is not provided.
-        learning_rate : float, optional
-            The learning rate to be set for fine-tuning. If `None`, the learning rate is not updated. Default is 1e-7.
-        weight_decay : Union[str, float], optional
-            The weight decay to be set for fine-tuning. If `None`, the weight decay is not updated. If "auto", it is set to 10% of the learning rate. Default is "auto".
-        train_kwargs : Dict, optional
-            Additional keyword arguments to be passed to the `train` function.
+    Args:
+        datasets (Union[List[str], str, PhysioExDataModule]): The datasets to be used for fine-tuning. Can be a list of dataset names, a single dataset name, or a PhysioExDataModule instance.
+        datamodule_kwargs (dict, optional): Additional keyword arguments to be passed to the PhysioExDataModule. Defaults to {}.
+        model (Union[dict, SleepModule], optional): The model to be fine-tuned. If provided, `model_class`, `model_config`, and `model_checkpoint` are ignored. Defaults to None.
+        model_class (type, optional): The class of the model to be fine-tuned. Required if `model` is not provided. Defaults to None.
+        model_config (dict, optional): The configuration dictionary for the model. Required if `model` is not provided. Defaults to None.
+        model_checkpoint (str, optional): The path to the checkpoint from which to load the model. Required if `model` is not provided. Defaults to None.
+        learning_rate (float, optional): The learning rate to be set for fine-tuning. If `None`, the learning rate is not updated. Default is 1e-7.
+        weight_decay (Union[str, float], optional): The weight decay to be set for fine-tuning. If `None`, the weight decay is not updated. If "auto", it is set to 10% of the learning rate. Default is "auto".
+        train_kwargs (Dict, optional): Additional keyword arguments to be passed to the `train` function. Defaults to {}.
 
-        Returns
-        -------
-            String
-            The path of the best model checkpoint.
+    Returns:
+        str: The path of the best model checkpoint.
 
+    Raises:
+        ValueError: If `model` is `None` and any of `model_class`, `model_config`, or `model_checkpoint` are also `None`.
+        ValueError: If `model` is not a dictionary or a `SleepModule`.
 
-        Raises
-        ------
-        ValueError
-            If `model` is `None` and any of `model_class`, `model_config`, or `model_checkpoint` are also `None`.
-            If `model` is not a dictionary or a `SleepModule`.
-
-        Notes
-        -----
+    Notes:
         - Models cannot be fine-tuned from scratch; they must be loaded from a checkpoint or be a pre-trained model from `physioex.models`.
         - Typically, when fine-tuning a model, you want to set up the learning rate.
     """
