@@ -106,7 +106,7 @@ results = trainer.test( model, datamodule = datamodule)
 
 ## Documentation
 ### PhysioExDataset
-::: physioex.data.dataset.PhysioExDataset
+::: data.PhysioExDataset
     handler: python
     options:
       members:
@@ -120,7 +120,7 @@ results = trainer.test( model, datamodule = datamodule)
       show_source: false
       
 ### PhysioExDataModule
-::: physioex.data.datamodule.PhysioExDataModule
+::: data.PhysioExDataModule
     handler: python
     options:
       members:

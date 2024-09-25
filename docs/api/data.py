@@ -1,4 +1,5 @@
 import torch
+import pytorch_lightning as pl
 
 class PhysioExDataset(torch.utils.data.Dataset):
     """
@@ -86,5 +87,74 @@ class PhysioExDataset(torch.utils.data.Dataset):
 
         Returns:
             tuple: Indices for the train, validation, and test sets.
+        """
+        pass
+
+
+class PhysioExDataModule(pl.LightningDataModule):
+    """
+    A PyTorch Lightning DataModule for handling physiological data from multiple datasets.
+
+    Attributes:
+        datasets_id (List[str]): List of dataset names.
+        num_workers (int): Number of workers for data loading.
+        dataset (PhysioExDataset): The dataset object.
+        batch_size (int): Batch size for the DataLoader.
+        hpc (bool): Flag indicating whether to use high-performance computing.
+        train_dataset (Union[PhysioExDataset, Subset]): Training dataset.
+        valid_dataset (Union[PhysioExDataset, Subset]): Validation dataset.
+        test_dataset (Union[PhysioExDataset, Subset]): Test dataset.
+        train_sampler (Union[SubsetRandomSampler, Subset]): Sampler for the training dataset.
+        valid_sampler (Union[SubsetRandomSampler, Subset]): Sampler for the validation dataset.
+        test_sampler (Union[SubsetRandomSampler, Subset]): Sampler for the test dataset.
+
+    Methods:
+        setup(stage: str): Sets up the datasets for different stages.
+        train_dataloader(): Returns the DataLoader for the training dataset.
+        val_dataloader(): Returns the DataLoader for the validation dataset.
+        test_dataloader(): Returns the DataLoader for the test dataset.
+    """
+    def __init__(self):
+        """
+        Initializes the PhysioExDataModule.
+
+        Args:
+            datasets (List[str]): List of dataset names.
+            batch_size (int, optional): Batch size for the DataLoader. Defaults to 32.
+            preprocessing (str, optional): Type of preprocessing to apply. Defaults to "raw".
+            selected_channels (List[int], optional): List of selected channels. Defaults to ["EEG"].
+            sequence_length (int, optional): Length of the sequence. Defaults to 21.
+            target_transform (Callable, optional): Optional transform to be applied to the target. Defaults to None.
+            folds (Union[int, List[int]], optional): Fold number(s) for splitting the data. Defaults to -1.
+            data_folder (str, optional): Path to the folder containing the data. Defaults to None.
+            num_nodes (int, optional): Number of nodes for distributed training. Defaults to 1.
+            num_workers (int, optional): Number of workers for data loading. Defaults to os.cpu_count().
+        """
+        pass
+
+    def train_dataloader(self):
+        """
+        Returns the DataLoader for the training dataset.
+
+        Returns:
+            DataLoader: DataLoader for the training dataset.
+        """        
+        pass
+
+    def val_dataloader(self):
+        """
+        Returns the DataLoader for the validation dataset.
+
+        Returns:
+            DataLoader: DataLoader for the validation dataset.
+        """
+        pass
+    
+    def test_dataloader(self):
+        """
+        Returns the DataLoader for the test dataset.
+
+        Returns:
+            DataLoader: DataLoader for the test dataset.
         """
         pass
