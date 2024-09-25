@@ -23,6 +23,7 @@ class Preprocessor:
     def download_dataset(self):
         """
         Downloads the dataset if it is not already present on disk.
+        
         (Optional) Method to be implemented by the user. 
         """
         pass
@@ -30,6 +31,7 @@ class Preprocessor:
     def get_subjects_records(self):
         """
         Returns a list containing the paths to each subject's record.
+        
         (Required) Method to be implemented by the user.
         
         Returns:
@@ -47,9 +49,7 @@ class Preprocessor:
             record (str): The path to the subject's record.
 
         Returns:
-            Tuple[np.array, np.array]: A tuple containing the signal and labels with shapes 
-            [n_windows, n_channels, n_timestamps] and [n_windows], respectively. If the record 
-            should be skipped, the function should return None, None.
+            Tuple[np.array, np.array]: A tuple containing the signal and labels with shapes [n_windows, n_channels, n_timestamps] and [n_windows], respectively. If the record should be skipped, the function should return None, None.
         """
         pass
 

@@ -50,10 +50,12 @@ class PhysioExDataset(torch.utils.data.Dataset):
     def split(self, fold: int = -1, dataset_idx: int = -1):
         """
         Splits the data into train, validation, and test sets.
+        
         if fold is -1, and dataset_idx is -1 : set the split to a random fold for each dataset 
         if fold is -1, and dataset_idx is not -1 : set the split to a random fold for the selected dataset
         if fold is not -1, and dataset_idx is -1 : set the split to the selected fold for each dataset
         if fold is not -1, and dataset_idx is not -1 : set the split to the selected fold for the selected dataset 
+        
         Args:
             fold (int, optional): Fold number to use for splitting. Defaults to -1.
             dataset_idx (int, optional): Index of the dataset to split. Defaults to -1.
