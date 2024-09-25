@@ -30,38 +30,9 @@ def test(
     num_nodes : int = 1,
     aggregate_datasets : bool = False,
     ) -> pd.DataFrame:
-    """
-    Tests a model using the provided datasets and configuration.
-
-    Args:
-        datasets (Union[List[str], str, PhysioExDataModule]): The datasets to be used for testing. Can be a list of dataset names, a single dataset name, or a PhysioExDataModule instance.
-        datamodule_kwargs (dict, optional): Additional keyword arguments to be passed to the PhysioExDataModule. Defaults to {}.
-        model (SleepModule, optional): The model to be tested. If provided, `model_class`, `model_config`, and `resume` are ignored. Defaults to None.
-        model_class (type, optional): The class of the model to be tested. Required if `model` is not provided. Defaults to None.
-        model_config (dict, optional): The configuration dictionary for the model. Required if `model` is not provided. Defaults to None.
-        batch_size (int, optional): The batch size to be used for testing. Defaults to 128.
-        fold (int, optional): The fold index for cross-validation. Defaults to -1.
-        hpc (bool, optional): Whether to use high-performance computing (HPC) settings. Defaults to False.
-        checkpoint_path (str, optional): The path to the checkpoint from which to load the model. Required if `model` is not provided. Defaults to None.
-        results_path (str, optional): The path to save the test results. If None, results are not saved. Defaults to None.
-        num_nodes (int, optional): The number of nodes to be used for distributed testing. Defaults to 1.
-        aggregate_datasets (bool, optional): Whether to aggregate the datasets for testing. Defaults to False.
-
-    Returns:
-        pd.DataFrame: A DataFrame containing the test results.
-
-    Raises:
-        ValueError: If `datasets` is not a list, a string, or a PhysioExDataModule instance.
-        ValueError: If `model` is None and any of `model_class` or `model_config` are also None.
-
-    Notes:
-        - The function sets up the data module, model, and trainer, and then starts the testing process.
-        - The function returns a DataFrame containing the test results for each dataset.
-        - If `results_path` is provided, the results are saved as a CSV file in the specified path.
-    """
-    from torch import set_float32_matmul_precision
-    from lightning.pytorch import seed_everything
-
+    
+    seed_everything(42, workers=True)
+    set_float32_matmul_precision("medium")
     
     datamodule_kwargs["batch_size"] = batch_size
     datamodule_kwargs["hpc"] = hpc

@@ -33,31 +33,32 @@ label.shape # will be [21]
 ```
 
 Then you can use a python plotting library to plot visualize the data
+
 !!! example
-  ```python
-  import seaborn as sns
-  import numpy as np 
+	```python
+	import seaborn as sns
+	import numpy as np 
 
-  hypnogram = np.ones((21, 3000)) * label.numpy().reshape(-1, 1)
+	hypnogram = np.ones((21, 3000)) * label.numpy().reshape(-1, 1)
 
-  # plot a subfigure with one column for each element of the sequence (21)
-  fig, ax = plt.subplots(4, 1, figsize = (21, 8), sharex="col", sharey="row")
+	# plot a subfigure with one column for each element of the sequence (21)
+	fig, ax = plt.subplots(4, 1, figsize = (21, 8), sharex="col", sharey="row")
 
-  hypnogram = hypnogram.reshape( -1 )
-  signals = signal.numpy().transpose(1, 0, 2).reshape(3, -1)
+	hypnogram = hypnogram.reshape( -1 )
+	signals = signal.numpy().transpose(1, 0, 2).reshape(3, -1)
 
-  # set tytle for each subplot
-  sns.lineplot( x = range(3000*21), y = hypnogram, ax = ax[0], color = "blue")
-  # then the channels:
-  sns.lineplot( x = range(3000*21), y = signals[ 0], ax = ax[1], color = "red")
-  sns.lineplot( x = range(3000*21), y = signals[ 1], ax = ax[2], color = "green")
-  sns.lineplot( x = range(3000*21), y = signals[ 2], ax = ax[3], color = "purple")    
+	# set tytle for each subplot
+	sns.lineplot( x = range(3000*21), y = hypnogram, ax = ax[0], color = "blue")
+	# then the channels:
+	sns.lineplot( x = range(3000*21), y = signals[ 0], ax = ax[1], color = "red")
+	sns.lineplot( x = range(3000*21), y = signals[ 1], ax = ax[2], color = "green")
+	sns.lineplot( x = range(3000*21), y = signals[ 2], ax = ax[3], color = "purple")    
 
-  # check the examples notebook "visualize_data.ipynb" to see how to customize the plot properly
+	# check the examples notebook "visualize_data.ipynb" to see how to customize the plot properly
 
-  plt.tight_layout()
-  ```
-  ![png](assets/images/data/sequence_viz.png)
+	plt.tight_layout()
+	```
+	![png](assets/images/data/sequence_viz.png)
 
 
 #### PhysioExDataModule

@@ -27,31 +27,7 @@ def finetune(
     weight_decay: Union[str, float] = "auto", # if None not updated
     train_kwargs: Dict = {},
     ) -> str:
-    """
-    Fine-tunes a pre-trained model using the provided datasets and configuration.
 
-    Args:
-        datasets (Union[List[str], str, PhysioExDataModule]): The datasets to be used for fine-tuning. Can be a list of dataset names, a single dataset name, or a PhysioExDataModule instance.
-        datamodule_kwargs (dict, optional): Additional keyword arguments to be passed to the PhysioExDataModule. Defaults to {}.
-        model (Union[dict, SleepModule], optional): The model to be fine-tuned. If provided, `model_class`, `model_config`, and `model_checkpoint` are ignored. Defaults to None.
-        model_class (type, optional): The class of the model to be fine-tuned. Required if `model` is not provided. Defaults to None.
-        model_config (dict, optional): The configuration dictionary for the model. Required if `model` is not provided. Defaults to None.
-        model_checkpoint (str, optional): The path to the checkpoint from which to load the model. Required if `model` is not provided. Defaults to None.
-        learning_rate (float, optional): The learning rate to be set for fine-tuning. If `None`, the learning rate is not updated. Default is 1e-7.
-        weight_decay (Union[str, float], optional): The weight decay to be set for fine-tuning. If `None`, the weight decay is not updated. If "auto", it is set to 10% of the learning rate. Default is "auto".
-        train_kwargs (Dict, optional): Additional keyword arguments to be passed to the `train` function. Defaults to {}.
-
-    Returns:
-        str: The path of the best model checkpoint.
-
-    Raises:
-        ValueError: If `model` is `None` and any of `model_class`, `model_config`, or `model_checkpoint` are also `None`.
-        ValueError: If `model` is not a dictionary or a `SleepModule`.
-
-    Notes:
-        - Models cannot be fine-tuned from scratch; they must be loaded from a checkpoint or be a pre-trained model from `physioex.models`.
-        - Typically, when fine-tuning a model, you want to set up the learning rate.
-    """
     if model is None:
         # if model is None, model_class and model_config must be passed
         if model_class is None or model_config is None or model_checkpoint is None:
