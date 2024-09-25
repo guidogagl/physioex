@@ -61,3 +61,19 @@ By extending the module you can implement your own custom sleep staging deep lea
 
 The SleepModule needs to know the `n_classes` ( for sleep staging this is tipycally 5 ) and the loss to be computed during training. By default the loss function in PhysioEx ( check `physioex.train.networks.utils.loss` ) take a python `dict` in its constructor, so you should always specify in your module_config the `n_classes` value, `loss_call` and `loss_params`.
 
+`SleepModule`
+::: network.SleepModule
+    handler: python
+    options:
+      members:
+        - __init__
+        - configure_optimizers
+        - forward
+        - encode
+        - compute_loss
+        - training_step
+        - validation_step
+        - test_step
+      show_root_heading: false
+      show_source: false
+	  heading_level: 3
