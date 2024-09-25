@@ -18,9 +18,10 @@ def finetune_script():
     This script allows you to fine-tune a pre-trained model using specified configurations and parameters.
 
     Usage:
-        $ finetune [OPTIONS]
-
-    Options:
+       ```bash
+        $ finetune [PARAMETERS]
+        ```
+    Parameters:
         -m, --model
             Specify the model to train, can be a .yaml file if the model is not registered.
             Expected type: str. Default: "chambon2018"
@@ -108,9 +109,9 @@ def finetune_script():
 
     Example Usage:
         ```bash
-        finetune --model tinysleepnet --loss cel --sequence_length 21 --selected_channels EEG --checkpoint_path /path/to/checkpoint
+        $ finetune --model tinysleepnet --loss cel --sequence_length 21 --selected_channels EEG --checkpoint_path /path/to/checkpoint
         ```
-    This command fine-tunes the `tinysleepnet` model using the CrossEntropy Loss (`cel`), with a sequence length of 21 and the `EEG` channel, starting from the specified checkpoint.
+        This command fine-tunes the `tinysleepnet` model using the CrossEntropy Loss (`cel`), with a sequence length of 21 and the `EEG` channel, starting from the specified checkpoint.
 
     Notes:
         - Ensure that the datasets are properly formatted and stored in the specified data folder using the preprocess script.
