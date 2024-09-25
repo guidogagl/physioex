@@ -2,14 +2,14 @@ site_name: PhysioEx
 site_url: https://guidogagl.github.io/physioex/
 nav:
     - Home: index.md
-    - Preprocess Module: preprocess.md
-    - Data Module: data.md
+    - Preprocess Module: pages/preprocess.md
+    - Data Module: pages/data.md
     - Train Module:
-        - Overview: train/train.md
-        - CLI : train/cli.md
-        - Networks: train/networks.md
-    - Explain Module: unavailable.md
-    - Contribute: contribute.md
+        - Overview: pages/train/train.md
+        - CLI : pages/train/cli.md
+        - Networks: pages/train/networks.md
+    - Explain Module: pages/unavailable.md
+    - Contribute: pages/contribute.md
 theme:
   name: material
   palette:
@@ -44,6 +44,13 @@ plugins:
   - search
   - social
   - mkdocstrings
+      handlers:
+        python:
+          paths: ["docs/api", "./"]
+          options:
+            show_root_heading: false
+            show_source: false
+            heading_level: 4
   - mknotebooks:
       execute: false
       timeout: 100

@@ -67,10 +67,10 @@ def train_script():
             model_package: physioex.train.networks.seqsleepnet
             model_class: SeqSleepNet
             module_config:
-            seq_len: 21
-            in_channels: 1
-            loss_call: cel # in this case you can pass the loss call as a string
-            loss_params: {}
+                seq_len: 21
+                in_channels: 1
+                loss_call: cel # in this case you can pass the loss call as a string
+                loss_params: {}
             preprocessing: xsleepnet
             target_transform: get_mid_label
             # check the train documentaion for more details
