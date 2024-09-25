@@ -21,23 +21,40 @@ def finetune_script():
        `$ finetune [Args]`
        
     Args:
-        `--model` (str, optional): Specify the model to train, can be a yaml file if the model is not registered. Defaults to "chambon2018". If a yaml file is provided, it should contain the model configuration details.
-        `-lr, --learning_rate` (float, default: 1e-7): Specify the learning rate for the model. Note: A smaller learning rate is often used for fine-tuning to avoid large updates that could disrupt the pre-trained weights.
-        `-ck, --checkpoint_path` (str, default: None): Specify the model checkpoint, if None physioex searches into its pretrained models. Note: Provide the path to a specific checkpoint file to resume training from a saved state.
-        `-ck_dir, --checkpoint_dir` (str, default: None): Specify the checkpoint directory where to store the new finetuned model checkpoints. Note: This directory will be used to save checkpoints during training.
-        `-d, --datasets` (list, default: ['mass']): Specify the datasets list to train the model on. Note: Provide a list of dataset names to be used for training.
-        `-sc, --selected_channels` (list, default: ['EEG']): Specify the channels to train the model. Note: Channels refer to the data modalities (e.g., EEG, EOG) used for training.
-        `-sl, --sequence_length` (int, default: 21): Specify the sequence length for the model. Note: Sequence length refers to the number of time steps in each input sequence.
-        `-l, --loss` (str, default: "cel"): Specify the loss function to use. Note: The loss function determines how the model's performance is measured during training.
-        `-me, --max_epoch` (int, default: 20): Specify the maximum number of epochs for training. Note: An epoch is one complete pass through the training dataset.
-        `-nv, --num_validations` (int, default: 10): Specify the number of validations steps to be done in each epoch. Note: Validation steps are used to evaluate the model's performance on a validation set during training.
-        `-bs, --batch_size` (int, default: 32): Specify the batch size for training. Note: Batch size refers to the number of samples processed before the model's weights are updated.
-        `--data_folder, -df` (str, optional, default: None): The absolute path of the directory where the physioex dataset are stored, if None the home directory is used. Note: Provide the path to the directory containing the datasets.
-        `--test, -t` (bool, optional, default: False): Test the model after training. Note: If specified, the model will be tested on the validation set after training.
-        `--aggregate, -a` (bool, optional, default: False): Aggregate the results of the test. Note: If specified, the test results will be aggregated across multiple datasets.
-        `--hpc, -hpc` (bool, optional, default: False): Using high performance computing setups or not, need to be called when datasets have been compressed into .h5 format with the compress_datasets command. Note: Use this option if you are running the script on a high-performance computing cluster.
-        `--num_nodes, -nn` (int, default: 1): Specify the number of nodes to be used for distributed training, only used when hpc is True, note: in slurm this value needs to be coherent with '--ntasks-per-node' or 'ppn' in torque. Note: This option is relevant for distributed training setups.
-        `--config, -c` (str, default: None): Specify the path to the configuration file where to store the options to train the model with. Note: The configuration file can override command line arguments.
+        `--model` (str, optional): Specify the model to train, can be a yaml file if the model is not registered. Defaults to "chambon2018".
+            If a yaml file is provided, it should contain the model configuration details.
+        `--learning_rate` (float, default: 1e-7): Specify the learning rate for the model.
+            Note: A smaller learning rate is often used for fine-tuning to avoid large updates that could disrupt the pre-trained weights.
+        `--checkpoint_path` (str, default: None): Specify the model checkpoint, if None physioex searches into its pretrained models.
+            Note: Provide the path to a specific checkpoint file to resume training from a saved state.
+        `--checkpoint_dir` (str, default: None): Specify the checkpoint directory where to store the new finetuned model checkpoints.
+            Note: This directory will be used to save checkpoints during training.
+        `--datasets` (list, default: ['mass']): Specify the datasets list to train the model on.
+            Note: Provide a list of dataset names to be used for training.
+        `--selected_channels` (list, default: ['EEG']): Specify the channels to train the model.
+            Note: Channels refer to the data modalities (e.g., EEG, EOG) used for training.
+        `--sequence_length` (int, default: 21): Specify the sequence length for the model.
+            Note: Sequence length refers to the number of time steps in each input sequence.
+        `--loss` (str, default: "cel"): Specify the loss function to use.
+            Note: The loss function determines how the model's performance is measured during training.
+        `--max_epoch` (int, default: 20): Specify the maximum number of epochs for training.
+            Note: An epoch is one complete pass through the training dataset.
+        `--num_validations` (int, default: 10): Specify the number of validations steps to be done in each epoch.
+            Note: Validation steps are used to evaluate the model's performance on a validation set during training.
+        `--batch_size` (int, default: 32): Specify the batch size for training.
+            Note: Batch size refers to the number of samples processed before the model's weights are updated.
+        `--data_folder` (str, optional, default: None): The absolute path of the directory where the physioex dataset are stored, if None the home directory is used.
+            Note: Provide the path to the directory containing the datasets.
+        `--test` (bool, optional, default: False): Test the model after training.
+            Note: If specified, the model will be tested on the validation set after training.
+        `--aggregate` (bool, optional, default: False): Aggregate the results of the test.
+            Note: If specified, the test results will be aggregated across multiple datasets.
+        `--hpc` (bool, optional, default: False): Using high performance computing setups or not, need to be called when datasets have been compressed into .h5 format with the compress_datasets command.
+            Note: Use this option if you are running the script on a high-performance computing cluster.
+        `--num_nodes` (int, default: 1): Specify the number of nodes to be used for distributed training, only used when hpc is True.
+            Note: In slurm this value needs to be coherent with '--ntasks-per-node' or 'ppn' in torque. This option is relevant for distributed training setups.
+        `--config` (str, default: None): Specify the path to the configuration file where to store the options to train the model with.
+            Note: The configuration file can override command line arguments.
 
     Example:
         ```bash
