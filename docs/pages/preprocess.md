@@ -265,8 +265,7 @@ def read_edf(file_path):
 ## Documentation
 The list of the methods that the user need to reimplement to extend the Preprocessor class is:
 
-### Preprocessor
-::: physioex.preprocess.preprocessor.Preprocessor
+::: bin.preprocessor.Preprocessor
     handler: python
     options:
       members:
@@ -278,3 +277,4 @@ The list of the methods that the user need to reimplement to extend the Preproce
         - get_sets
       show_root_heading: false
       show_source: false
+      heading_level: 3

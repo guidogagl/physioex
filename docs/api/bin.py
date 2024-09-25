@@ -82,6 +82,10 @@ def test():
 
     This script allows you to test a pre-trained model using specified configurations and parameters.
 
+    Usage:
+       `$ test_model [PARAMS]`
+        You can use the `test_model -h, --help` command to access the command documentation.
+        
     Args:
         `--model` (str, optional): Specify the model to test, can be a yaml file if the model is not registered. Defaults to "chambon2018".
             If a yaml file is provided, it should contain the model configuration details.
@@ -110,7 +114,7 @@ def test():
 
     Example:
         ```bash
-        $ test_script --model tinysleepnet --loss cel --sequence_length 21 --selected_channels EEG --checkpoint_path /path/to/checkpoint
+        $ test_model --model tinysleepnet --loss cel --sequence_length 21 --selected_channels EEG --checkpoint_path /path/to/checkpoint
         ```
         
         This command tests the `tinysleepnet` model using the CrossEntropy Loss 
