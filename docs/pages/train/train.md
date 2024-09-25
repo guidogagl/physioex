@@ -145,21 +145,21 @@ new_best_checkpoint = finetune(
 
 ## Documentation
 
-::: physioex.train.utils.train
+::: train.train
     handler: python
     options:
       show_root_heading: false
       show_source: false
       heading_level: 3
 
-::: physioex.train.utils.test
+::: train.test
     handler: python
     options:
       show_root_heading: false
       show_source: false
       heading_level: 3
 
-::: physioex.train.utils.finetune
+::: train.finetune
     handler: python
     options:
       show_root_heading: false
