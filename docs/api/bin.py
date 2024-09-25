@@ -76,6 +76,52 @@ def train():
     pass
 
 
+def test():
+    """
+    Testing script for evaluating a model.
+
+    This script allows you to test a pre-trained model using specified configurations and parameters.
+
+    Args:
+        `--model` (str, optional): Specify the model to test, can be a yaml file if the model is not registered. Defaults to "chambon2018".
+            If a yaml file is provided, it should contain the model configuration details.
+        `--checkpoint_path` (str, optional): Specify the model checkpoint. Defaults to None.
+            Note: Provide the path to a specific checkpoint file to load the model state.
+        `--datasets` (list, optional): Specify the datasets list to test the model on. Defaults to ['mass'].
+            Note: Provide a list of dataset names to be used for testing.
+        `--selected_channels` (list, optional): Specify the channels to test the model. Defaults to ['EEG'].
+            Note: Channels refer to the data modalities (e.g., EEG, EOG) used for testing.
+        `--sequence_length` (int, optional): Specify the sequence length for the model. Defaults to 21.
+            Note: Sequence length refers to the number of time steps in each input sequence.
+        `--loss` (str, optional): Specify the loss function to use. Defaults to "cel".
+            Note: The loss function determines how the model's performance is measured during testing.
+        `--batch_size` (int, optional): Specify the batch size for testing. Defaults to 32.
+            Note: Batch size refers to the number of samples processed before the model's weights are updated.
+        `--data_folder` (str, optional): The absolute path of the directory where the physioex dataset are stored, if None the home directory is used. Defaults to None.
+            Note: Provide the path to the directory containing the datasets.
+        `--aggregate` (bool, optional): Aggregate the results of the test. Defaults to False.
+            Note: If specified, the test results will be aggregated across multiple datasets.
+        `--hpc` (bool, optional): Using high performance computing setups or not, need to be called when datasets have been compressed into .h5 format with the compress_datasets command. Defaults to False.
+            Note: Use this option if you are running the script on a high-performance computing cluster.
+        `--num_nodes` (int, optional): Specify the number of nodes to be used for distributed testing, only used when hpc is True. Defaults to 1.
+            Note: In slurm this value needs to be coherent with '--ntasks-per-node' or 'ppn' in torque. This option is relevant for distributed testing setups.
+        `--config` (str, optional): Specify the path to the configuration file where to store the options to test the model with. Defaults to None.
+            Note: The configuration file can override command line arguments.
+
+    Example:
+        ```bash
+        $ test_script --model tinysleepnet --loss cel --sequence_length 21 --selected_channels EEG --checkpoint_path /path/to/checkpoint
+        ```
+        
+        This command tests the `tinysleepnet` model using the CrossEntropy Loss 
+
+    Notes:
+        - Ensure that the datasets are properly formatted and stored in the specified data folder using the preprocess script.
+        - The script supports both single-node and multi-node testing setups.
+        - The configuration file, if provided, should be in YAML format and contain valid key-value pairs for the script options.
+    """
+    pass
+
 def finetune():
     """
     Finetuning script for training and testing a model.
