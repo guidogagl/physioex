@@ -265,7 +265,7 @@ def read_edf(file_path):
 ## Documentation
 The list of the methods that the user need to reimplement to extend the Preprocessor class is:
 
-::: bin.preprocessor.Preprocessor
+::: preprocessor.Preprocessor
     handler: python
     options:
       members:

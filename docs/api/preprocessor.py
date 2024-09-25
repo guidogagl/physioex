@@ -1,6 +1,5 @@
 
 class Preprocessor:
-
     def __init__(self):
         """
         Initializes the Preprocessor class.
