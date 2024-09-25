@@ -21,7 +21,7 @@ def finetune_script():
        `$ finetune [Args]`
        
     Args:
-        `-m, --model` (str, default: "chambon2018"): Specify the model to train, can be a .yaml file if the model is not registered. Note: If a .yaml file is provided, it should contain the model configuration details.
+        `-m, --model` (str): Specify the model to train, can be a .yaml file if the model is not registered. Note: If a .yaml file is provided, it should contain the model configuration details. Defaults to "chambon2018".
         `-lr, --learning_rate` (float, default: 1e-7): Specify the learning rate for the model. Note: A smaller learning rate is often used for fine-tuning to avoid large updates that could disrupt the pre-trained weights.
         `-ck, --checkpoint_path` (str, default: None): Specify the model checkpoint, if None physioex searches into its pretrained models. Note: Provide the path to a specific checkpoint file to resume training from a saved state.
         `-ck_dir, --checkpoint_dir` (str, default: None): Specify the checkpoint directory where to store the new finetuned model checkpoints. Note: This directory will be used to save checkpoints during training.
@@ -38,7 +38,6 @@ def finetune_script():
         `--hpc, -hpc` (bool, optional, default: False): Using high performance computing setups or not, need to be called when datasets have been compressed into .h5 format with the compress_datasets command. Note: Use this option if you are running the script on a high-performance computing cluster.
         `--num_nodes, -nn` (int, default: 1): Specify the number of nodes to be used for distributed training, only used when hpc is True, note: in slurm this value needs to be coherent with '--ntasks-per-node' or 'ppn' in torque. Note: This option is relevant for distributed training setups.
         `--config, -c` (str, default: None): Specify the path to the configuration file where to store the options to train the model with. Note: The configuration file can override command line arguments.
-
 
     Example Usage:
         ```bash
