@@ -21,7 +21,7 @@ def finetune_script():
        `$ finetune [Args]`
        
     Args:
-        `--model` (str, optional): Specify the model to train, can be a yaml file if the model is not registered."chambon2018". If a .yaml file is provided, it should contain the model configuration details.
+        `--model` (str, optional): Specify the model to train, can be a yaml file if the model is not registered."chambon2018". If a yaml file is provided, it should contain the model configuration details.
         `-lr, --learning_rate` (float, default: 1e-7): Specify the learning rate for the model. Note: A smaller learning rate is often used for fine-tuning to avoid large updates that could disrupt the pre-trained weights.
         `-ck, --checkpoint_path` (str, default: None): Specify the model checkpoint, if None physioex searches into its pretrained models. Note: Provide the path to a specific checkpoint file to resume training from a saved state.
         `-ck_dir, --checkpoint_dir` (str, default: None): Specify the checkpoint directory where to store the new finetuned model checkpoints. Note: This directory will be used to save checkpoints during training.
