@@ -26,37 +26,38 @@ All the models compatible with PhysioEx are Pytorch Lightning Modules which exte
 
 By extending the module you can implement your own custom sleep staging deep learning network. When extending the module use a dictionary `module_config: dict` as the argument to the construct to allow compatibility with all the library. Second define your custom `torch.nn.Module` and use  `module_config: dict` as its constructor argument too.
 
-```python
-import torch
-from physioex.train.networks.base import SleepModule
+!!! example
+    ```python
+    import torch
+    from physioex.train.networks.base import SleepModule
 
-class CustomNet( torch.nn.Module ):
-    def __init__(self, module_config: dict):
+    class CustomNet( torch.nn.Module ):
+        def __init__(self, module_config: dict):
 
-        # tipycally here you have an epoch_encoder and a sequence_encoder
-        self.epoch_encoder = ...
-        self.sequence_encoder = ...
+            # tipycally here you have an epoch_encoder and a sequence_encoder
+            self.epoch_encoder = ...
+            self.sequence_encoder = ...
 
-        pass
+            pass
 
-    def forward(self, x : torch.Tensor):
-        encoding, preds = self.encode(x)
-        return preds
+        def forward(self, x : torch.Tensor):
+            encoding, preds = self.encode(x)
+            return preds
 
-    def encode(self, x : torch.Tensor):
-        # get your latent-space encodings
-        encodings = ...
+        def encode(self, x : torch.Tensor):
+            # get your latent-space encodings
+            encodings = ...
 
-        # get your predictions out of the encodings
-        preds = ...
+            # get your predictions out of the encodings
+            preds = ...
 
-        return econdings, preds
+            return econdings, preds
 
-class CustomModule(SleepModule):
-    def __init__(self, module_config: dict):
-        super(CustomNet, self).__init__(Net(module_config), module_config)
+    class CustomModule(SleepModule):
+        def __init__(self, module_config: dict):
+            super(CustomNet, self).__init__(CustomNet(module_config), module_config)
 
-```
+    ```
 
-The SleepModule needs to know the `n_classes` ( for sleep staging this is tipycally 5) and the loss to be computed during training. By default the loss function in PhysioEx ( check `physioex.train.networks.utils.loss` ) take a python `dict` in its constructor, so you should always specify in your module_config the `n_classes` value, `loss_call` and `loss_params`.
+The SleepModule needs to know the `n_classes` ( for sleep staging this is tipycally 5 ) and the loss to be computed during training. By default the loss function in PhysioEx ( check `physioex.train.networks.utils.loss` ) take a python `dict` in its constructor, so you should always specify in your module_config the `n_classes` value, `loss_call` and `loss_params`.
 

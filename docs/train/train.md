@@ -34,51 +34,52 @@ your_model_config["in_channels"] = 1 # needs to be the same as the DataModule
 
 Here we loaded che configuration setup to train a `physioex.train.networks.TinySleepNet` model. Best practices is to have a .yaml file where to store the model configuration, both in case you are using a custom  `SleepModule` or in case you are using one of the models provided by PhysioEx. 
 
-Here is an example of a possible .yaml configuration file:
+Here is an example of a possible .yaml configuration file and how to read it properly:
 
-```yaml
-module_config: 
-    loss_call : physioex.train.networks.utils.loss:CrossEntropyLoss
-    loss_params : {}
-    seq_len : 21
-    in_channels : 1
-    n_classes : 5
-    ... # your additional model configuration parameters should be provided here
-module: physioex.train.networks:TinySleepNet # can be any model extends SleepModule
-model_name: "tinysleepnet" # can be avoided if loading your custom SleepModule
-input_transform: "raw"
-target_transform: null
-checkpoint_path : "/path/to/your/checkpoint/dir/"
-```
-And how to read it properly
+!!! example
+    === "&#x1F4C4; .yaml"
+        ```yaml title="my_network_config.yaml"
+        module_config: 
+            loss_call : physioex.train.networks.utils.loss:CrossEntropyLoss
+            loss_params : {}
+            seq_len : 21
+            in_channels : 1
+            n_classes : 5
+            ... # your additional model configuration parameters should be provided here
+        module: physioex.train.networks:TinySleepNet # can be any model extends SleepModule
+        model_name: "tinysleepnet" # can be avoided if loading your custom SleepModule
+        input_transform: "raw"
+        target_transform: null
+        checkpoint_path : "/path/to/your/checkpoint/dir/"
+        ```
+    === "&#x1F4C4; .py"
+        ```python
+        import yaml
 
-```python
-import yaml
+        with open( "my_network_config.yaml", "r") as file:
+            config = yaml.safe_load( file )
 
-with open( "my_network_config.yaml", "r") as file:
-    config = yaml.safe_load( file )
+        your_module_config = config["module_config"]
 
-your_module_config = config["module_config"]
+        # load the loss function 
+        import importlib
+        loss_package, loss_class = your_module_config["loss_call"].split(":")
+        your_model_config = getattr(importlib.import_module(loss_package), loss_class)
 
-# load the loss function 
-import importlib
-loss_package, loss_class = your_module_config["loss_call"].split(":")
-your_model_config = getattr(importlib.import_module(loss_package), loss_class)
+        # in case your provide model_name the system load the additional model parameters from the library
+        if "model_name" in config:
+            model_name = config["model_name"]
+            module_config = networks_config[model_name]["module_config"]
+            your_model_config.update(module_config)
 
-# in case your provide model_name the system load the additional model parameters from the library
-if "model_name" in config:
-    model_name = config["model_name"]
-    module_config = networks_config[model_name]["module_config"]
-    your_model_config.update(module_config)
+            # Note: in this case "input_transform" and "target_trasnform" can be loaded from the network_config too
+            config["input_transform"] = networks_config[model_name]["input_transform"]
+            config["target_transform"] = networks_config[model_name]["target_transform"]
 
-    # Note: in this case "input_transform" and "target_trasnform" can be loaded from the network_config too
-    config["input_transform"] = networks_config[model_name]["input_transform"]
-    config["target_transform"] = networks_config[model_name]["target_transform"]
-
-# load the model class
-model_package, model_class = config["module"].split(":")
-model_class = getattr(importlib.import_module(model_package), model_class)
-```
+        # load the model class
+        model_package, model_class = config["module"].split(":")
+        model_class = getattr(importlib.import_module(model_package), model_class)
+        ```
 
 Now we need to setup the datamodule arguments and we can start training the model
 

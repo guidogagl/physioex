@@ -5,10 +5,6 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import torchmetrics as tm
-from pytorch_metric_learning import losses, miners
-from pytorch_metric_learning.distances import CosineSimilarity
-from pytorch_metric_learning.reducers import ThresholdReducer
-from pytorch_metric_learning.regularizers import LpRegularizer
 
 
 class SleepModule(pl.LightningModule):
