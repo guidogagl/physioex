@@ -43,7 +43,7 @@ repo_url: https://github.com/guidogagl/physioex
 plugins:
   - search
   - social
-  - mkdocstrings
+  - mkdocstrings:
       handlers:
         python:
           paths: ["docs/api", "./"]
