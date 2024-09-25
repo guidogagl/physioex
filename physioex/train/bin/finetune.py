@@ -19,9 +19,9 @@ def finetune_script():
 
     Usage:
        ```bash
-        $ finetune [PARAMETERS]
+        $ finetune [Args]
         ```
-    Parameters:
+    Args:
         -m, --model
             Specify the model to train, can be a .yaml file if the model is not registered.
             Expected type: str. Default: "chambon2018"
