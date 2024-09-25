@@ -107,6 +107,7 @@ results = trainer.test( model, datamodule = datamodule)
 ```
 
 ## Documentation
+`PhysioExDataset` 
 ::: data.PhysioExDataset
     handler: python
     options:
@@ -123,6 +124,7 @@ results = trainer.test( model, datamodule = datamodule)
 
 ---
 
+`PhysioExDataModule`
 ::: data.PhysioExDataModule
     handler: python
     options:

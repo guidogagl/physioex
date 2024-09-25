@@ -144,7 +144,7 @@ new_best_checkpoint = finetune(
 ```
 
 ## Documentation
-
+`train` 
 ::: train.train
     handler: python
     options:
@@ -152,6 +152,8 @@ new_best_checkpoint = finetune(
       show_source: false
       heading_level: 3
 
+---
+`test` 
 ::: train.test
     handler: python
     options:
@@ -159,6 +161,8 @@ new_best_checkpoint = finetune(
       show_source: false
       heading_level: 3
 
+---
+`finetune` 
 ::: train.finetune
     handler: python
     options:
