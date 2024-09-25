@@ -19,7 +19,8 @@ def train_script():
 
     Usage:
        `$ train [PARAMS]`
-        You can use the `train -h --help` command to access the command documentation.
+        You can use the `train -h, --help` command to access the command documentation.
+        
     Args:
         --model (str, optional): Specify the model to train, can be a yaml file if the model is not registered. Defaults to "chambon2018".
             If a yaml file is provided, it should contain the model configuration details.
@@ -54,11 +55,13 @@ def train_script():
 
     Example:
         The basic usage is as follows:
+        
         ```bash
         train --model chambon2018 --datasets mass --checkpoint_dir ./checkpoints --max_epoch 20 --batch_size 32
         ```
         
         or you can specify a yaml file containing the configuration details:
+        
         === .yaml
             ```yaml
             model_package: physioex.train.networks.seqsleepnet
