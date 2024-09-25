@@ -58,7 +58,7 @@ Then you can use a python plotting library to plot visualize the data
 
 	plt.tight_layout()
 	```
-	
+
 	![png](assets/images/data/sequence_viz.png)
 
 
@@ -107,7 +107,6 @@ results = trainer.test( model, datamodule = datamodule)
 ```
 
 ## Documentation
-### PhysioExDataset
 ::: data.PhysioExDataset
     handler: python
     options:
@@ -120,8 +119,10 @@ results = trainer.test( model, datamodule = datamodule)
         - get_sets
       show_root_heading: false
       show_source: false
-      
-### PhysioExDataModule
+	  heading_level: 3
+
+---
+
 ::: data.PhysioExDataModule
     handler: python
     options:
@@ -132,3 +133,4 @@ results = trainer.test( model, datamodule = datamodule)
         - test_dataloader
       show_root_heading: false
       show_source: false
+	  heading_level: 3
