@@ -12,6 +12,111 @@ from physioex.train.networks import config as networks_config
 from physioex.train.networks.utils.loss import config as loss_config
 
 def finetune_script():
+    """
+    Finetuning script for training and testing a model.
+
+    This script allows you to fine-tune a pre-trained model using specified configurations and parameters.
+
+    Usage:
+        $ finetune [OPTIONS]
+
+    Options:
+        -m, --model
+            Specify the model to train, can be a .yaml file if the model is not registered.
+            Expected type: str. Default: "chambon2018"
+            Note: If a .yaml file is provided, it should contain the model configuration details.
+
+        -lr, --learning_rate
+            Specify the learning rate for the model.
+            Expected type: float. Default: 1e-7
+            Note: A smaller learning rate is often used for fine-tuning to avoid large updates that could disrupt the pre-trained weights.
+
+        -ck, --checkpoint_path
+            Specify the model checkpoint, if None physioex searches into its pretrained models.
+            Expected type: str. Default: None
+            Note: Provide the path to a specific checkpoint file to resume training from a saved state.
+
+        -ck_dir, --checkpoint_dir
+            Specify the checkpoint directory where to store the new finetuned model checkpoints.
+            Expected type: str. Default: None
+            Note: This directory will be used to save checkpoints during training.
+
+        -d, --datasets
+            Specify the datasets list to train the model on.
+            Expected type: list. Default: ['mass']
+            Note: Provide a list of dataset names to be used for training.
+
+        -sc, --selected_channels
+            Specify the channels to train the model.
+            Expected type: list. Default: ['EEG']
+            Note: Channels refer to the data modalities (e.g., EEG, EOG) used for training.
+
+        -sl, --sequence_length
+            Specify the sequence length for the model.
+            Expected type: int. Default: 21
+            Note: Sequence length refers to the number of time steps in each input sequence.
+
+        -l, --loss
+            Specify the loss function to use.
+            Expected type: str. Default: "cel" (Cross Entropy Loss)
+            Note: The loss function determines how the model's performance is measured during training.
+
+        -me, --max_epoch
+            Specify the maximum number of epochs for training.
+            Expected type: int. Default: 20
+            Note: An epoch is one complete pass through the training dataset.
+
+        -nv, --num_validations
+            Specify the number of validations steps to be done in each epoch.
+            Expected type: int. Default: 10
+            Note: Validation steps are used to evaluate the model's performance on a validation set during training.
+
+        -bs, --batch_size
+            Specify the batch size for training.
+            Expected type: int. Default: 32
+            Note: Batch size refers to the number of samples processed before the model's weights are updated.
+
+        --data_folder, -df
+            The absolute path of the directory where the physioex dataset are stored, if None the home directory is used.
+            Expected type: str. Optional. Default: None
+            Note: Provide the path to the directory containing the datasets.
+
+        --test, -t
+            Test the model after training.
+            Expected type: bool. Optional. Default: False
+            Note: If specified, the model will be tested on the validation set after training.
+
+        --aggregate, -a
+            Aggregate the results of the test.
+            Expected type: bool. Optional. Default: False
+            Note: If specified, the test results will be aggregated across multiple datasets.
+
+        --hpc, -hpc
+            Using high performance computing setups or not, need to be called when datasets have been compressed into .h5 format with the compress_datasets command.
+            Expected type: bool. Optional. Default: False
+            Note: Use this option if you are running the script on a high-performance computing cluster.
+
+        --num_nodes, -nn
+            Specify the number of nodes to be used for distributed training, only used when hpc is True, note: in slurm this value needs to be coherent with '--ntasks-per-node' or 'ppn' in torque.
+            Expected type: int. Default: 1
+            Note: This option is relevant for distributed training setups.
+
+        --config, -c
+            Specify the path to the configuration file where to store the options to train the model with.
+            Expected type: str. Default: None
+            Note: The configuration file can override command line arguments.
+
+    Example Usage:
+        ```bash
+        finetune --model tinysleepnet --loss cel --sequence_length 21 --selected_channels EEG --checkpoint_path /path/to/checkpoint
+        ```
+    This command fine-tunes the `tinysleepnet` model using the CrossEntropy Loss (`cel`), with a sequence length of 21 and the `EEG` channel, starting from the specified checkpoint.
+
+    Notes:
+        - Ensure that the datasets are properly formatted and stored in the specified data folder using the preprocess script.
+        - The script supports both single-node and multi-node training setups.
+        - The configuration file, if provided, should be in YAML format and contain valid key-value pairs for the script options.
+    """
     parser = argparse.ArgumentParser(description="Finetuning script")
 
     parser.add_argument(

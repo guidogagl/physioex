@@ -48,6 +48,7 @@ plugins:
       execute: false
       timeout: 100
       allow_errors: false
+
 extra:
   social:
     - icon: fontawesome/brands/github-alt

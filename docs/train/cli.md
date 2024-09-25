@@ -2,28 +2,12 @@
 
 PhysioEx provides a fast and customizable way to train, evaluate and save state-of-the-art models for different physiological signal analysis tasks with different physiological signal datasets. This functionality is provided by the `train`, `test_model` and `finetune` commands provided by this repository.
 
-## Setup
-
-Before using the `train` command, you need to set up a virtual environment and install the package in development mode. Here are the steps:
-
-1. Make sure to have anaconda or miniconda correctly installed in your machine, then start installing a new virtual enviroment, in this case the new venv will be called `physioex`
-```bash
-    conda create -n physioex python==3.12
-```    
-
-2. Now jump into the enviroment and upgrade pip
-```bash
-    conda activate myenv
-    conda install pip
-    pip install --upgrade pip
-```
-
-3. Last but not least install PhysioEx in development mode
-```bash
-    git clone https://github.com/guidogagl/physioex.git
-    cd physioex
-    pip install -e .
-```    
+::: physioex.train.bin.finetune
+    handler: python
+    options:
+      show_root_heading: false
+      show_source: false
+      heading_level: 3
 
 ## Train CLI
 
