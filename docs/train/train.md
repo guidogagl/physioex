@@ -37,7 +37,7 @@ Here we loaded che configuration setup to train a `physioex.train.networks.TinyS
 Here is an example of a possible .yaml configuration file and how to read it properly:
 
 
-=== "&#x1F4C4; .yaml"
+=== ":fontawesome-solid-file-code: .yaml"
     ```yaml
     module_config: 
         loss_call : physioex.train.networks.utils.loss:CrossEntropyLoss
