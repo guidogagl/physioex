@@ -18,11 +18,10 @@ def finetune_script():
     This script allows you to fine-tune a pre-trained model using specified configurations and parameters.
 
     Usage:
-       `$ finetune [Args]`
+       `$ finetune [PARAMS]`
        
     Args:
-        `--model` (str, optional): Specify the model to train, can be a yaml file if the model is not registered. Defaults to "chambon2018".
-            If a yaml file is provided, it should contain the model configuration details.
+        --model (str, optional): Specify the model to train, can be a yaml file if the model is not registered. Defaults to "chambon2018". If a yaml file is provided, it should contain the model configuration details.
         `--learning_rate` (float, default: 1e-7): Specify the learning rate for the model.
             Note: A smaller learning rate is often used for fine-tuning to avoid large updates that could disrupt the pre-trained weights.
         `--checkpoint_path` (str, default: None): Specify the model checkpoint, if None physioex searches into its pretrained models.
