@@ -19,6 +19,7 @@ def finetune_script():
 
     Usage:
        `$ finetune [PARAMS]`
+       You can use the `finetune -h --help` command to access the command documentation.
        
     Args:
         --model (str, optional): Specify the model to train, can be a yaml file if the model is not registered. Defaults to "chambon2018".
