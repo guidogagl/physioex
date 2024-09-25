@@ -49,7 +49,7 @@ def train():
         
         or you can specify a yaml file containing the configuration details:
         
-        === .yaml
+        === ".yaml"
             ```yaml
             model_package: physioex.train.networks.seqsleepnet
             model_class: SeqSleepNet
@@ -62,7 +62,7 @@ def train():
             target_transform: get_mid_label
             # check the train documentaion for more details
             ```
-        === bash
+        === "bash"
             ```bash
             train --model my_model_config.yaml --datasets mass hmc --checkpoint_dir ./checkpoints --max_epoch 20 --batch_size 32
             ```
