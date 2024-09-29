@@ -1,11 +1,13 @@
 [build-system]
-requires = ["setuptools>=64", "wheel"]
+requires = ["setuptools>=42", "wheel", "setuptools_scm[toml]>=6.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "physioex"
 version = "1.0.0"
 description = "A python package for explainable sleep staging via deep learning"
+readme = "README.md"
+readme-content-type = "text/markdown"
 authors = [
     { name = "Guido Gagliardi", email = "guido.gagliardi@phd.unipi.it" }
 ]
@@ -44,6 +46,9 @@ dependencies = [
     "tqdm==4.66.5",
     "wfdb==4.1.2"
 ]
+
+[tool.setuptools]
+packages = { find = { where = ["."], include = ["physioex*"] } }
 
 [project.scripts]
 train = "physioex.train.bin.train:train_script"
