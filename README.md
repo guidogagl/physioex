@@ -1,5 +1,5 @@
 <div style = "text-align: center;">
-<img src="docs/assets/images/logo.svg" width = "250px", alt="PhysioEx Logo">
+<img src="https://raw.githubusercontent.com/guidogagl/physioex/refs/heads/main/docs/assets/images/logo.svg" width = "250px", alt="PhysioEx Logo">
 
 <h1> PhysioEx </h1>
 </div>

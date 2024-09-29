@@ -4,10 +4,9 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "physioex"
-version = "1.0.0"
+version = "1.0.0.dev1"
 description = "A python package for explainable sleep staging via deep learning"
-readme = "README.md"
-readme-content-type = "text/markdown"
+readme = { file = "README.md", content-type = "text/markdown" }
 authors = [
     { name = "Guido Gagliardi", email = "guido.gagliardi@phd.unipi.it" }
 ]
@@ -46,6 +45,11 @@ dependencies = [
     "tqdm==4.66.5",
     "wfdb==4.1.2"
 ]
+
+urls = { 
+    "Homepage" = "https://github.com/guidogagl/physioex",
+    "Documentation" = "https://guidogagl.github.io/physioex"
+}
 
 [tool.setuptools]
 packages = { find = { where = ["."], include = ["physioex*"] } }
