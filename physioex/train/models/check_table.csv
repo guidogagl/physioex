@@ -1,0 +1,7 @@
+module,name,sequence_length,in_channels,loss,checkpoint,
+physioex.train.networks.seqsleepnet:SeqSleepNet,seqsleepnet,21,1,cel,seqsleepnet-EEG-L=21-test_acc=0.864.ckpt,
+physioex.train.networks.seqsleepnet:SeqSleepNet,seqsleepnet,21,3,cel,seqsleepnet-EEG-EOG-EMG-L=21-test_acc=0.877.ckpt,
+physioex.train.networks.chambon2018:Chambon2018Net,chambon2018,21,1,cel,chambon-EEG-L=21-test_acc=0.843.ckpt,
+physioex.train.networks.chambon2018:Chambon2018Net,chambon2018,21,3,cel,chambon-EEG-EOG-EMG-L=21-test_acc=0.867.ckpt,
+physioex.train.networks.tinysleepnet:TinySleepNet,tinysleepnet,21,1,cel,tiny-EEG-L=21-test_acc=0.871.ckpt,
+physioex.train.networks.tinysleepnet:TinySleepNet,tinysleepnet,21,3,cel,tiny-EEG-EOG-EMG-L=21-test_acc=0.885.ckpt,

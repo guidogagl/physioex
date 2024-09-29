@@ -1,7 +1,0 @@
-name,sequence_length,in_channels,loss,checkpoint,
-seqsleepnet,21,1,cel,seqsleepnet-EEG-L=21-test_acc=0.864.ckpt,
-seqsleepnet,21,3,cel,seqsleepnet-EEG-EOG-EMG-L=21-test_acc=0.877.ckpt,
-chambon2018,21,1,cel,chambon-EEG-L=21-test_acc=0.843.ckpt,
-tinysleepnet,21,1,cel,tiny-EEG-L=21-test_acc=0.871.ckpt,
-chambon2018,21,3,cel,chambon-EEG-EOG-EMG-L=21-test_acc=0.867.ckpt,
-tinysleepnet,21,3,cel,tiny-EEG-EOG-EMG-L=21-test_acc=0.885.ckpt,

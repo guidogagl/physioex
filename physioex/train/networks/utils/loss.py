@@ -17,12 +17,11 @@ class PhysioExLoss(ABC):
 
 
 class SimilarityCombinedLoss(nn.Module, PhysioExLoss):
-    def __init__(self, params: Dict):
+    def __init__(self):
         super(SimilarityCombinedLoss, self).__init__()
         self.miner = miners.MultiSimilarityMiner()
         self.contr_loss = losses.TripletMarginLoss(
             distance=CosineSimilarity(),
-            reducer=ClassWeightedReducer(weights=params["class_weights"]),
             embedding_regularizer=LpRegularizer(),
         )
 
@@ -36,22 +35,18 @@ class SimilarityCombinedLoss(nn.Module, PhysioExLoss):
 
 
 class CrossEntropyLoss(nn.Module, PhysioExLoss):
-    def __init__(self, params: Dict = None):
+    def __init__(self):
         super(CrossEntropyLoss, self).__init__()
-
-        # check if class weights are provided in params
-        weights = params.get("class_weights") if params is not None else None
-        self.ce_loss = nn.CrossEntropyLoss(weight=weights)
+        self.ce_loss = nn.CrossEntropyLoss()
 
     def forward(self, emb, preds, targets):
         return self.ce_loss(preds, targets)
 
 
 class RegressionLoss(nn.Module):
-    def __init__(self, params: Dict = None):
+    def __init__(self):
         super(RegressionLoss, self).__init__()
         self.mae_loss = nn.L1Loss()
-        self.params = params
 
     def forward(self, emb, preds, targets):
         mae = self.mae_loss(preds, targets)

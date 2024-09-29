@@ -1,14 +1,11 @@
-import re
-import os
 import math
-import pyedflib
-
-from scipy.signal import resample
-from scipy.signal import firwin, filtfilt
+import os
+import re
+import xml.etree.ElementTree as ET
 
 import numpy as np
-
-import xml.etree.ElementTree as ET
+import pyedflib
+from scipy.signal import filtfilt, firwin, resample
 
 
 def read_edfrecords(filename, channel):

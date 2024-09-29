@@ -105,12 +105,13 @@ def read_edf(file_path):
 
 class HMCPreprocessor(Preprocessor):
 
-    def __init__(self, 
-            preprocessors_name: List[str] = ["xsleepnet"],
-            preprocessors = [xsleepnet_preprocessing],
-            preprocessor_shape = [[4, 29, 129]],
-            data_folder: str = None
-            ):
+    def __init__(
+        self,
+        preprocessors_name: List[str] = ["xsleepnet"],
+        preprocessors=[xsleepnet_preprocessing],
+        preprocessor_shape=[[4, 29, 129]],
+        data_folder: str = None,
+    ):
 
         super().__init__(
             dataset_name="hmc",

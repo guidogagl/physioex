@@ -185,3 +185,67 @@ def finetune():
         - The configuration file, if provided, should be in YAML format and contain valid key-value pairs for the script options.
     """
     pass
+
+
+def preprocess():
+    """
+    Preprocessing script for preparing datasets.
+
+    This script allows you to preprocess datasets for training and testing models.
+
+    Usage:
+       `$ preprocess [PARAMS]`
+       You can use the `preprocess -h --help` command to access the command documentation.
+       
+    Args:
+        --dataset (str, optional): The name of the dataset to preprocess. Defaults to "hmc".
+            Note: The dataset name should be one of the supported datasets (e.g., "hmc", "mass", "shhs", "mesa", "mros", "dcsm"). If a custom dataset is used use the `preprocessor` argument.
+        --data_folder (str, optional): The absolute path of the directory where the physioex dataset are stored, if None the home directory is used. Defaults to None.
+            Note: Provide the path to the directory containing the datasets.
+        --preprocessor (str, optional): The name of the preprocessor in case of a custom Preprocessor. Defaults to None.
+            Note: The preprocessor should extend `physioex.preprocess.proprocessor:Preprocessor` and be passed as a string in the format `path.to.preprocessor.module:PreprocessorClass`.
+        --config (str, optional): Specify the path to the configuration .yaml file where to store the options to preprocess the dataset with. Defaults to None.
+            Note: The configuration file can override command line arguments. You can specify also the preprocessor_kwargs in the configuration file.
+
+    Example:
+        ```bash
+        $ preprocess --dataset mass --data_folder /path/to/datasets
+        ```
+        This command preprocesses the `mass` dataset using the `MASSPreprocessor` preprocessor.
+
+        For HMC and DCSM datasets, PhysioEx will automatically download the datasets.
+        The other datasets needs to be obtained first, most of them are easily accessible from sleepdata.org.
+        
+        The SHHS and MASS dataset needs to be further processed after download with the script in:
+            
+            - MASS: https://github.com/pquochuy/xsleepnet/tree/master/mass
+            - SHHS: https://github.com/pquochuy/SleepTransformer/tree/main/shhs
+            
+        Once you obtain the mat/ folder using this processing scripts place them into data_folder/dataset_name/mat/ and run the preprocess command.
+        
+        The command can use a .yaml configuration file to specify the preprocessor_kwargs:
+        
+        ```yaml
+            dataset: null
+            data_folder : /path/to/your/data
+            preprocessor : physioex.preprocess.hmc:HMCPreprocessor # can be also your custom preprocessor
+            preprocessor_kwargs:
+                # signal_shape: [4, 3000]
+                preprocessors_name:
+                    - "your_preprocessor"
+                    - "xsleepnet"
+                preprocessors:
+                    - path.to.your.module:your_preprocessor
+                    - physioex.preprocess.utils.signal:xsleepnet_preprocessing
+                preprocessors_shape:
+                    - [4, 3000]
+                    - [4, 3000]            
+                    - [4, 29, 129]
+            
+        ```
+                
+    Notes:
+        - Ensure that the datasets are properly formatted and stored in the specified data folder using the preprocess script.
+        - The configuration file, if provided, should be in YAML format and contain valid key-value pairs for the script options.
+    """
+    pass

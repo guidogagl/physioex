@@ -11,11 +11,8 @@ from loguru import logger
 from scipy.signal import resample
 from tqdm import tqdm
 
-from physioex.data.preprocessor import (
-    Preprocessor,
-    bandpass_filter,
-    xsleepnet_preprocessing,
-)
+from physioex.data.preprocessor import (Preprocessor, bandpass_filter,
+                                        xsleepnet_preprocessing)
 
 
 def download_file(url, destination):

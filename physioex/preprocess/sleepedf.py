@@ -112,17 +112,23 @@ mapping = {
 
 class SLEEPEDFPreprocessor(Preprocessor):
 
-    def __init__(self, data_folder: str = None):
+    def __init__(
+        self,
+        preprocessors_name: List[str] = ["xsleepnet"],
+        preprocessors=[xsleepnet_preprocessing],
+        preprocessor_shape=[[3, 29, 129]],
+        data_folder: str = None,
+    ):
+        warnings.filterwarnings("ignore")
 
         super().__init__(
             dataset_name="sleepedf",
             signal_shape=[3, 3000],
-            preprocessors_name=["xsleepnet"],
-            preprocessors=[xsleepnet_preprocessing],
-            preprocessors_shape=[[3, 29, 129]],
+            preprocessors_name=preprocessors_name,
+            preprocessors=preprocessors,
+            preprocessors_shape=preprocessor_shape,
             data_folder=data_folder,
         )
-        warnings.filterwarnings("ignore")
 
     @logger.catch
     def download_dataset(self) -> None:

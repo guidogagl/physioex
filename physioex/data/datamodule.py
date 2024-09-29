@@ -2,7 +2,8 @@ import os
 from typing import Callable, List, Union
 
 import pytorch_lightning as pl
-from torch.utils.data import DataLoader, SubsetRandomSampler, DistributedSampler, Subset
+from torch.utils.data import DataLoader, DistributedSampler, Subset, SubsetRandomSampler
+
 from physioex.data.dataset import PhysioExDataset
 
 
@@ -17,8 +18,8 @@ class PhysioExDataModule(pl.LightningDataModule):
         target_transform: Callable = None,
         folds: Union[int, List[int]] = -1,
         data_folder: str = None,
-        num_nodes : int = 1,
-        num_workers : int = os.cpu_count(),
+        num_nodes: int = 1,
+        num_workers: int = os.cpu_count(),
     ):
         super().__init__()
 
@@ -35,8 +36,8 @@ class PhysioExDataModule(pl.LightningDataModule):
         )
 
         self.batch_size = batch_size
-        self.hpc = ( num_nodes > 1 )
-        
+        self.hpc = num_nodes > 1
+
         if isinstance(folds, int):
             self.dataset.split(folds)
         else:
@@ -52,7 +53,7 @@ class PhysioExDataModule(pl.LightningDataModule):
             self.train_dataset = self.dataset
             self.valid_dataset = self.dataset
             self.test_dataset = self.dataset
-            
+
             self.train_sampler = SubsetRandomSampler(train_idx)
             self.valid_sampler = SubsetRandomSampler(valid_idx)
             self.test_sampler = SubsetRandomSampler(test_idx)
@@ -60,7 +61,7 @@ class PhysioExDataModule(pl.LightningDataModule):
             self.train_dataset = Subset(self.dataset, train_idx)
             self.valid_dataset = Subset(self.dataset, valid_idx)
             self.test_dataset = Subset(self.dataset, test_idx)
-            
+
             self.train_sampler = self.train_dataset
             self.valid_sampler = self.valid_dataset
             self.test_sampler = self.test_dataset
@@ -71,11 +72,15 @@ class PhysioExDataModule(pl.LightningDataModule):
 
         Returns:
             DataLoader: DataLoader for the training dataset.
-        """        
-        return  DataLoader(
+        """
+        return DataLoader(
             self.train_dataset,
             batch_size=self.batch_size,
-            sampler=DistributedSampler(self.train_sampler) if self.hpc else self.train_sampler,
+            sampler=(
+                DistributedSampler(self.train_sampler)
+                if self.hpc
+                else self.train_sampler
+            ),
             num_workers=self.num_workers,
         )
 
@@ -84,13 +89,20 @@ class PhysioExDataModule(pl.LightningDataModule):
         return DataLoader(
             self.valid_dataset,
             batch_size=self.batch_size,
-            sampler=DistributedSampler(self.valid_sampler) if self.hpc else self.valid_sampler,
+            sampler=(
+                DistributedSampler(self.valid_sampler)
+                if self.hpc
+                else self.valid_sampler
+            ),
             num_workers=self.num_workers,
         )
+
     def test_dataloader(self):
         return DataLoader(
             self.test_dataset,
             batch_size=self.batch_size,
-            sampler=DistributedSampler(self.test_sampler) if self.hpc else self.test_sampler,
+            sampler=(
+                DistributedSampler(self.test_sampler) if self.hpc else self.test_sampler
+            ),
             num_workers=self.num_workers,
         )

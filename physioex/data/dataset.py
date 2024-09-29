@@ -6,10 +6,10 @@ import numpy as np
 import pandas as pd
 import pytorch_lightning as pl
 import torch
-
-from physioex.utils import get_data_folder
-from physioex.data.datareader import DataReader
 from loguru import logger
+
+from physioex.data.datareader import DataReader
+
 
 class PhysioExDataset(torch.utils.data.Dataset):
     def __init__(
@@ -20,36 +20,36 @@ class PhysioExDataset(torch.utils.data.Dataset):
         selected_channels: List[int] = ["EEG"],
         sequence_length: int = 21,
         target_transform: Callable = None,
-        hpc : bool = False,
-        indexed_channels : List[int] = ["EEG", "EOG", "EMG", "ECG"],
+        hpc: bool = False,
+        indexed_channels: List[int] = ["EEG", "EOG", "EMG", "ECG"],
     ):
         self.datasets = datasets
         self.L = sequence_length
-        self.channels_index = [ indexed_channels.index( ch ) for ch in selected_channels ]
-        
+        self.channels_index = [indexed_channels.index(ch) for ch in selected_channels]
+
         self.readers = []
         self.tables = []
         self.dataset_idx = []
-        
+
         offset = 0
         for i, dataset in enumerate(datasets):
             reader = DataReader(
-                data_folder = data_folder,
-                dataset = dataset,
-                preprocessing = preprocessing,
-                sequence_length = sequence_length,
-                channels_index = self.channels_index,
-                offset = offset,
-                hpc = hpc,
+                data_folder=data_folder,
+                dataset=dataset,
+                preprocessing=preprocessing,
+                sequence_length=sequence_length,
+                channels_index=self.channels_index,
+                offset=offset,
+                hpc=hpc,
             )
             offset += len(reader)
 
-            self.dataset_idx += list( np.ones( len(reader) ) * i ) 
+            self.dataset_idx += list(np.ones(len(reader)) * i)
 
-            self.tables.append( reader.get_table() )
+            self.tables.append(reader.get_table())
             self.readers += [reader]
-            
-        self.dataset_idx = np.array( self.dataset_idx, dtype=np.uint8 )
+
+        self.dataset_idx = np.array(self.dataset_idx, dtype=np.uint8)
         # set the table fold to the 0 fold by default
         self.split()
         self.target_transform = target_transform
@@ -103,9 +103,9 @@ class PhysioExDataset(torch.utils.data.Dataset):
 
     def __getitem__(self, idx):
         dataset_idx = int(self.dataset_idx[idx])
-        
+
         X, y = self.readers[dataset_idx][idx]
-        
+
         if self.target_transform is not None:
             y = self.target_transform(y)
 
@@ -137,9 +137,11 @@ class PhysioExDataset(torch.utils.data.Dataset):
                 elif row["split"] == 2:
                     test_idx.append(indices)
                 else:
-                    error_string  = "ERR: split should be 0, 1 or 2. Not " + str(row["split"])
-                    logger.error( error_string )
-                    raise ValueError( "ERR: split should be 0, 1 or 2")
+                    error_string = "ERR: split should be 0, 1 or 2. Not " + str(
+                        row["split"]
+                    )
+                    logger.error(error_string)
+                    raise ValueError("ERR: split should be 0, 1 or 2")
 
         train_idx = np.concatenate(train_idx)
         valid_idx = np.concatenate(valid_idx)

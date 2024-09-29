@@ -28,14 +28,14 @@ class Net(nn.Module):
         print(module_config["in_channels"])
         self.epoch_encoder = SleepStagerChambon2018(
             n_chans=module_config["in_channels"],
-            sfreq=module_config["sfreq"],
+            sfreq=module_config["sf"],
             n_outputs=module_config["n_classes"],
             n_times=module_config["n_times"],
             return_feats=True,
         )
 
         self.clf = nn.Linear(
-            self.epoch_encoder.len_last_layer * module_config["seq_len"],
+            self.epoch_encoder.len_last_layer * module_config["sequence_length"],
             module_config["n_classes"],
         )
 
@@ -89,6 +89,8 @@ class Chambon2018Net(SleepModule):
         Attributes:
             all the attributes are from `SleepModule`
         """
+
+        module_config["n_times"] = 3000
         super(Chambon2018Net, self).__init__(Net(module_config), module_config)
 
     def compute_loss(

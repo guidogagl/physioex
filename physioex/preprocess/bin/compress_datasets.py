@@ -1,11 +1,13 @@
-import h5py
 import argparse
-from pathlib import Path
 import os
-import pandas as pd
+from pathlib import Path
+
+import h5py
 import numpy as np
-from tqdm import tqdm
+import pandas as pd
 from joblib import Parallel, delayed
+from tqdm import tqdm
+
 
 def read_subject_record(data_folder, dataset_name, subject, num_windows, n_channels):
     subject = str(subject)
@@ -33,6 +35,7 @@ def read_subject_record(data_folder, dataset_name, subject, num_windows, n_chann
     )[:]
 
     return subject, raw, xsleep, labels
+
 
 if __name__ == "__main__":
     # Parse arguments
@@ -99,14 +102,20 @@ if __name__ == "__main__":
                 if column in ["raw", "xsleepnet", "labels"]:  # string columns to skip
                     continue
 
-                if "fold" in column:  # the fold columns needs to be converted to int columns
-                    table[column] = table[column].map({"train": 0, "valid": 1, "test": 2}).astype(int)
+                if (
+                    "fold" in column
+                ):  # the fold columns needs to be converted to int columns
+                    table[column] = (
+                        table[column]
+                        .map({"train": 0, "valid": 1, "test": 2})
+                        .astype(int)
+                    )
 
                 # create the dataset without compression
                 file.create_dataset(
                     column,
                     data=np.reshape(table[column].astype(int).values, (-1)),
-                    chunks=True
+                    chunks=True,
                 )
 
             # read and save the scaling information
@@ -114,7 +123,9 @@ if __name__ == "__main__":
             file["raw"].create_dataset("mean", data=data["mean"], chunks=True)
             file["raw"].create_dataset("std", data=data["std"], chunks=True)
 
-            data = np.load(os.path.join(args.data_folder, name, "xsleepnet", "scaling.npz"))
+            data = np.load(
+                os.path.join(args.data_folder, name, "xsleepnet", "scaling.npz")
+            )
             file["xsleepnet"].create_dataset("mean", data=data["mean"], chunks=True)
             file["xsleepnet"].create_dataset("std", data=data["std"], chunks=True)
 

@@ -69,6 +69,14 @@ The list of available dataset is:
 
 Note that for the HMC and DCSM dataset the library will take care to download the dataset if not available into `/your/data/path/`.
 
+`preprocess`
+::: bin.preprocess
+    handler: python
+    options:
+      show_root_heading: false
+      show_source: false
+      heading_level: 4
+
 ### Extending the Preprocessor Class
 
 To build you own defined preprocessor you should extend the Preprocessor class.

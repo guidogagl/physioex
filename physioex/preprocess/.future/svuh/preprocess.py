@@ -10,17 +10,10 @@ from loguru import logger
 from scipy.signal import resample
 from tqdm import tqdm
 
-from physioex.data.preprocessor import (
-    Preprocessor,
-    bandpass_filter,
-    xsleepnet_preprocessing,
-)
-from physioex.data.svuh.constant import (
-    SVUH_NUM_WINDOWS,
-    signal_shape,
-    url,
-    xsleepnet_shape,
-)
+from physioex.data.preprocessor import (Preprocessor, bandpass_filter,
+                                        xsleepnet_preprocessing)
+from physioex.data.svuh.constant import (SVUH_NUM_WINDOWS, signal_shape, url,
+                                         xsleepnet_shape)
 
 
 def download_file(url, destination):

@@ -16,18 +16,11 @@ from scipy.io import loadmat
 from scipy.signal import resample
 from tqdm import tqdm
 
-from physioex.data.preprocessor import (
-    Preprocessor,
-    bandpass_filter,
-    xsleepnet_preprocessing,
-)
-from physioex.data.sleep_edf.constant import (
-    TOT_SLEEPEDF_NUM_WINDOWS,
-    mapping,
-    shape_raw,
-    shape_xsleepnet,
-    subjects,
-)
+from physioex.data.preprocessor import (Preprocessor, bandpass_filter,
+                                        xsleepnet_preprocessing)
+from physioex.data.sleep_edf.constant import (TOT_SLEEPEDF_NUM_WINDOWS,
+                                              mapping, shape_raw,
+                                              shape_xsleepnet, subjects)
 
 
 class SLEEPEDFPreprocessor(Preprocessor):

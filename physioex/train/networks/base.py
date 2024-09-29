@@ -1,3 +1,4 @@
+import importlib
 from typing import Dict
 
 import pytorch_lightning as pl
@@ -10,7 +11,7 @@ import torchmetrics as tm
 class SleepModule(pl.LightningModule):
     def __init__(self, nn: nn.Module, config: Dict):
         super(SleepModule, self).__init__()
-        self.save_hyperparameters(ignore=['nn'])
+        self.save_hyperparameters(ignore=["nn"])
         self.nn = nn
 
         self.n_classes = config["n_classes"]
@@ -43,15 +44,17 @@ class SleepModule(pl.LightningModule):
             self.r2 = tm.R2Score()
 
         # loss
-        self.loss = config["loss_call"](config["loss_params"])
+        loss_module, loss_class = config["loss"].split(":")
+        self.loss = getattr(importlib.import_module(loss_module), loss_class)(
+            **config["loss_kwargs"]
+        )
         self.module_config = config
 
         # learning rate
-        
-        self.learning_rate = 1e-4
-        self.weight_decay = 1e-6
 
-        self.val_loss = float('inf')
+        self.learning_rate = config["learning_rate"]
+        self.weight_decay = config["weight_decay"]
+
     def configure_optimizers(self):
         # Definisci il tuo ottimizzatore
         self.opt = optim.Adam(
@@ -128,12 +131,12 @@ class SleepModule(pl.LightningModule):
                 self.log(f"{log}_macc", self.macc(outputs, targets))
                 self.log(f"{log}_mf1", self.mf1(outputs, targets))
         return loss
-    
+
     def training_step(self, batch, batch_idx):
         # get the logged metrics
         if "val_loss" not in self.trainer.logged_metrics:
-            self.log("val_loss", float('inf'))
-            
+            self.log("val_loss", float("inf"))
+
         # Logica di training
         inputs, targets = batch
         embeddings, outputs = self.encode(inputs)

@@ -11,7 +11,6 @@ from loguru import logger
 from tqdm import tqdm
 
 from physioex.preprocess.utils.signal import OnlineVariance
-
 from physioex.utils import get_data_folder, set_data_folder
 
 
@@ -30,17 +29,17 @@ class Preprocessor:
         Initializes the Preprocessor class.
 
         Parameters:
-            dataset_name (str): 
+            dataset_name (str):
                 The name of the dataset to be processed.
-            signal_shape (List[int]): 
+            signal_shape (List[int]):
                 A list containing two elements representing the number of channels and the number of timestamps in the signal.
-            preprocessors_name (List[str]): 
+            preprocessors_name (List[str]):
                 A list of names for the preprocessing functions.
-            preprocessors (List[Callable]): 
+            preprocessors (List[Callable]):
                 A list of callable preprocessing functions to be applied to the signals.
-            preprocessors_shape (List[List[int]]): 
+            preprocessors_shape (List[List[int]]):
                 A list of shapes corresponding to the output of each preprocessing function.
-            data_folder (str, optional): 
+            data_folder (str, optional):
                 The folder where the dataset is stored. If None, the default data folder is used.
         """
 
@@ -70,7 +69,7 @@ class Preprocessor:
     def download_dataset(self) -> None:
         """
         Downloads the dataset if it is not already present on disk.
-        (Optional) Method to be implemented by the user. 
+        (Optional) Method to be implemented by the user.
         """
         pass
 
@@ -79,7 +78,7 @@ class Preprocessor:
         """
         Returns a list containing the paths to each subject's record.
         (Required) Method to be implemented by the user.
-        
+
         Returns:
             List[str] : A list of paths to each subject's record.
         """
@@ -96,8 +95,8 @@ class Preprocessor:
             record (str): The path to the subject's record.
 
         Returns:
-            Tuple[np.array, np.array]: A tuple containing the signal and labels with shapes 
-            [n_windows, n_channels, n_timestamps] and [n_windows], respectively. If the record 
+            Tuple[np.array, np.array]: A tuple containing the signal and labels with shapes
+            [n_windows, n_channels, n_timestamps] and [n_windows], respectively. If the record
             should be skipped, the function should return None, None.
         """
         pass

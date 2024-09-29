@@ -20,8 +20,8 @@ class FeatureExtractor(nn.Module):
             "conv2": (3, 4),
             "max_pool2": (0, 1),
         }
-        first_filter_size = int(self.config["sampling_rate"] / 2.0)
-        first_filter_stride = int(self.config["sampling_rate"] / 16.0)
+        first_filter_size = int(self.config["sf"] / 2.0)
+        first_filter_stride = int(self.config["sf"] / 16.0)
 
         self.cnn = nn.Sequential(
             self._conv_block(
@@ -71,19 +71,19 @@ class Classifier(nn.Module):
     def forward(self, x):
         x = self.encode(x)
 
-        batch_size, seq_len, latent_dim = x.size()
-        x = x.reshape(batch_size * seq_len, latent_dim)
+        batch_size, sequence_length, latent_dim = x.size()
+        x = x.reshape(batch_size * sequence_length, latent_dim)
 
         x = self.clf(x)
-        return x.reshape(batch_size, seq_len, -1)
+        return x.reshape(batch_size, sequence_length, -1)
 
     def encode(self, x):
-        batch_size, seq_len, feature_size = x.size()
+        batch_size, sequence_length, feature_size = x.size()
         x, _ = self.rnn(x)
         x = x.reshape(-1, self.config["n_rnn_units"])
 
         x = self.rnn_dropout(x)
-        return x.reshape(batch_size, seq_len, -1)
+        return x.reshape(batch_size, sequence_length, -1)
 
 
 class Net(nn.Module):
@@ -104,11 +104,11 @@ class Net(nn.Module):
 
         x = self.clf.encode(x)
 
-        batch_size, seq_len, rnn_units = x.size()
-        y = x.reshape(batch_size * seq_len, rnn_units)
+        batch_size, sequence_length, rnn_units = x.size()
+        y = x.reshape(batch_size * sequence_length, rnn_units)
 
         y = self.clf.clf(y)
-        y = y.reshape(batch_size, seq_len, -1)
+        y = y.reshape(batch_size, sequence_length, -1)
         return x, y
 
     def forward(self, x):
@@ -119,6 +119,10 @@ class Net(nn.Module):
 
 class TinySleepNet(SleepModule):
     def __init__(self, module_config=module_config):
+
+        module_config["n_rnn_units"] = 128
+        module_config["n_rnn_layers"] = 1
+
         super(TinySleepNet, self).__init__(
             Net(module_config=module_config),
             module_config,

@@ -13,7 +13,7 @@ setup(
             "train=physioex.train.bin.train:train_script",
             "finetune=physioex.train.bin.finetune:finetune_script",
             "test_model=physioex.train.bin.test:test_script",
-            "preprocess=physioex.preprocess.main:main"
+            "preprocess=physioex.preprocess.bin.main:main"
         ],
     },
 )

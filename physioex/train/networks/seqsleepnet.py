@@ -12,6 +12,23 @@ module_config = dict()
 
 class SeqSleepNet(SleepModule):
     def __init__(self, module_config=module_config):
+
+        module_config.update(
+            {
+                "T": 29,
+                "F": 129,
+                "D": 32,
+                "nfft": 256,
+                "lowfreq": 0,
+                "highfreq": 50,
+                "seqnhidden1": 64,
+                "seqnlayer1": 1,
+                "attentionsize1": 32,
+                "seqnhidden2": 64,
+                "seqnlayer2": 1,
+            }
+        )
+
         super(SeqSleepNet, self).__init__(Net(module_config), module_config)
 
 
@@ -51,7 +68,7 @@ class EpochEncoder(nn.Module):
             module_config["F"],
             module_config["D"],
             module_config["nfft"],
-            module_config["samplerate"],
+            module_config["sf"],
             module_config["lowfreq"],
             module_config["highfreq"],
         )
@@ -170,7 +187,7 @@ class LearnableFilterbank(nn.Module):
         F: int = 129,
         nfilt: int = 32,
         nfft: int = 256,
-        samplerate: int = 100,
+        sf: int = 100,
         lowfreq: int = 0,
         highfreq: int = 50,
     ):
@@ -180,7 +197,7 @@ class LearnableFilterbank(nn.Module):
         S = torch.zeros((in_chan, F, nfilt), dtype=torch.float32)
 
         for i in range(in_chan):
-            S[i] = self.lin_tri_filter_shape(nfilt, nfft, samplerate, lowfreq, highfreq)
+            S[i] = self.lin_tri_filter_shape(nfilt, nfft, sf, lowfreq, highfreq)
 
         W = torch.zeros((in_chan, F, nfilt), dtype=torch.float32)
 
@@ -195,13 +212,13 @@ class LearnableFilterbank(nn.Module):
         return torch.matmul(x, Wfb)
 
     def lin_tri_filter_shape(
-        self, nfilt=20, nfft=512, samplerate=16000, lowfreq=0, highfreq=None
+        self, nfilt=20, nfft=512, sf=16000, lowfreq=0, highfreq=None
     ):
-        highfreq = highfreq or samplerate / 2
-        assert highfreq <= samplerate / 2, "highfreq is greater than samplerate/2"
+        highfreq = highfreq or sf / 2
+        assert highfreq <= sf / 2, "highfreq is greater than sf/2"
 
         hzpoints = torch.linspace(lowfreq, highfreq, nfilt + 2)
-        bin = torch.floor((nfft + 1) * hzpoints / samplerate)
+        bin = torch.floor((nfft + 1) * hzpoints / sf)
 
         fbank = torch.zeros([nfilt, nfft // 2 + 1])
         for j in range(0, nfilt):

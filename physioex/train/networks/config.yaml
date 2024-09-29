@@ -1,0 +1,34 @@
+chambon2018:
+  model: physioex.train.networks.chambon2018:Chambon2018Net
+  preprocessing : raw
+  target_transform: physioex.train.networks.utils.target_transform:get_mid_label
+
+seqsleepnet:
+  model: physioex.train.networks.seqsleepnet:SeqSleepNet
+  preprocessing : xsleepnet
+  target_transform: null
+
+tinysleepnet:
+  model: physioex.train.networks.tinysleepnet:TinySleepNet
+  preprocessing : raw
+  target_transform: null
+
+default:
+  model : null
+
+  model_kwargs : 
+    n_classes: 5
+    sf : 100
+    n_channels: null
+    sequence_length : null
+  
+    loss: physioex.train.networks.utils.loss:CrossEntropyLoss
+    loss_kwargs: {}
+
+    learning_rate : .0001
+    weight_decay :  .000001
+  
+  preprocessing : null
+  target_transform : null
+
+
