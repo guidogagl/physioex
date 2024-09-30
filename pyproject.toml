@@ -4,55 +4,55 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "physioex"
-version = "1.0.0.dev1"
+version = "1.0.0.dev3"
 description = "A python package for explainable sleep staging via deep learning"
 readme = { file = "README.md", content-type = "text/markdown" }
 authors = [
     { name = "Guido Gagliardi", email = "guido.gagliardi@phd.unipi.it" }
 ]
+license = {file = "LICENSE"}
 dependencies = [
-    "pyyaml==6.0.2",
-    "argparse",
-    "loguru==0.7.2",
-    "pkg_resources",
-    "some_other_dependency",
-    "boto3==1.35.3",
-    "botocore==1.35.3",
-    "braindecode==0.8.1",
-    "captum==0.7.0",
-    "dirhash==0.5.0",
-    "h5py==3.11.0",
-    "joblib==1.4.2",
-    "lightning==2.4.0",
-    "matplotlib==3.9.2",
-    "npy_append_array==0.9.16",
-    "numpy==2.1.1",
-    "pandas==2.2.3",
-    "paramiko==3.5.0",
-    "psg_utils==0.1.6",
-    "pyEDFlib==0.1.38",
-    "pytorch_lightning==2.4.0",
-    "pytorch_metric_learning==2.6.0",
-    "pyunpack==0.3",
-    "rarfile==4.2",
-    "requests==2.32.3",
-    "scikit_learn==1.5.2",
-    "scipy==1.14.1",
-    "seaborn==0.13.2",
-    "setuptools==72.1.0",
-    "torch==2.4.0",
-    "torchmetrics==1.4.1",
-    "tqdm==4.66.5",
-    "wfdb==4.1.2"
+    "boto3",
+    "botocore",
+    "braindecode",
+    "captum",
+    "dirhash",
+    "h5py",
+    "joblib",
+    "lightning",
+    "loguru",
+    "matplotlib",
+    "npy_append_array",
+    "numpy",
+    "pandas",
+    "paramiko",
+    "psg_utils",
+    "pyEDFlib",
+    "pytorch_lightning",
+    "pytorch_metric_learning",
+    "pyunpack",
+    "PyYAML",
+    "rarfile",
+    "requests",
+    "scikit_learn",
+    "scipy",
+    "seaborn",
+    "setuptools",
+    "torch",
+    "torchmetrics",
+    "tqdm",
+    "wfdb"
 ]
 
-urls = { 
-    "Homepage" = "https://github.com/guidogagl/physioex",
-    "Documentation" = "https://guidogagl.github.io/physioex"
-}
+[project.urls]
+Homepage = "https://github.com/guidogagl/physioex"
+Documentation = "https://guidogagl.github.io/physioex"
+Repository = "https://github.com/guidogagl/physioex"
+Issues = "https://github.com/guidogagl/physioex/issues"
 
-[tool.setuptools]
-packages = { find = { where = ["."], include = ["physioex*"] } }
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["physioex*"]
 
 [project.scripts]
 train = "physioex.train.bin.train:train_script"

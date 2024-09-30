@@ -40,8 +40,6 @@ def parse_model(parser: dict) -> dict:
 
     default_config.update(config)
     config = default_config
-    print("Model config:")
-    print(config)
 
     config["model_kwargs"]["in_channels"] = len(parser["selected_channels"])
     config["model_kwargs"]["sequence_length"] = parser["sequence_length"]
@@ -198,13 +196,6 @@ class PhysioExParser:
             default=10,
             type=int,
             help="Specify the number of validations steps to be done in each epoch. Expected type: int. Default: 10",
-        )
-
-        cls.parser.add_argument(
-            "--test",
-            "-t",
-            action="store_true",
-            help="Test the model after training. Expected type: bool. Optional. Default: False",
         )
 
         parser = cls.parser.parse_args()
