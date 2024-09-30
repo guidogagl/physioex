@@ -32,19 +32,29 @@ For the public available datasets ( DCSM, HMC ) PhysioEx takes care of automatic
 
 ## Installation guidelines
 
-1. **Clone the Repository:**
-```bash
-   git clone https://github.com/guidogagl/physioex.git
-   cd physioex
-```
-2. **Create a Virtual Environment (Optional but Recommended)**
+### Create a Virtual Environment (Optional but Recommended)
+
 ```bash
     conda create -n physioex python==3.10
     conda activate physioex
     conda install pip
     pip install --upgrade pip  # On Windows, use `venv\Scripts\activate`
 ```
-3. **Install Dependencies and Package in Development Mode**
+### Install via pip
+
+1. **Install PhysioEx from PyPI:**
+```bash
+pip install physioex
+```
+
+### Install from source
+1. **Clone the Repository:**
+```bash
+   git clone https://github.com/guidogagl/physioex.git
+   cd physioex
+```
+
+2. **Install Dependencies and Package in Development Mode**
 ```bash
     pip install -e .
 ```
