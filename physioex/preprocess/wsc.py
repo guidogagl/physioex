@@ -73,11 +73,6 @@ class WSCPreprocessor(Preprocessor):
             return None, None
 
         signal = read_edf_file(edf_path)
-
-        if True:
-            return None, None
-        else:
-            pass
         
         if len(stages) - len(signal) == 1:
             stages = stages[:-1]
@@ -243,7 +238,7 @@ def read_edf_file(edf_file_path: str):
     except IndexError:
         logger.error(f"Error: no EEG channel found in {edf_file_path}")
         print(labels)
-        return None
+        exit()
 
     eeg = f.readSignal(eeg_index)
 
@@ -263,7 +258,7 @@ def read_edf_file(edf_file_path: str):
     except IndexError:
         logger.error(f"Error: no EOG channel found in {edf_file_path}")
         print(labels)
-        return None
+        exit()
         
     eog = f.readSignal( eog_index )
 
@@ -280,9 +275,7 @@ def read_edf_file(edf_file_path: str):
     except IndexError:
         logger.error(f"Error: no EMG channel found in {edf_file_path}")
         print(labels)
-        return None
-
-    return None
+        exit()
 
     emg = f.readSignal(chinindex)
 

@@ -174,9 +174,9 @@ class Preprocessor:
             signal, labels = self.read_subject_record(subject_records)
 
             if signal is None and labels is None:
-                #logger.warning(
-                #    f"subject record - {subject_records} - is being discarded"
-                #)
+                logger.warning(
+                    f"subject record - {subject_records} - is being discarded"
+                )
                 continue
 
             # compute the online mean and variance
