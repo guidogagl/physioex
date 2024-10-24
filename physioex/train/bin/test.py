@@ -11,6 +11,7 @@ def test_script():
         "sequence_length": parser["sequence_length"],
         "target_transform": parser["target_transform"],
         "preprocessing": parser["preprocessing"],
+        "task": parser["model_task"],
         "data_folder": parser["data_folder"],
         "num_workers": parser["num_workers"],
     }

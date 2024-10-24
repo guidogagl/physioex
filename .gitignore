@@ -12,7 +12,7 @@ wandb
 
 physioex/train/old/
 hpc/
-/papers
+/papers/
 /models/
 /hpc
 /mlp

@@ -12,6 +12,7 @@ authors = [
 ]
 license = {file = "LICENSE"}
 dependencies = [
+    "tensorboard",
     "boto3",
     "botocore",
     "braindecode",

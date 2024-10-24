@@ -14,7 +14,6 @@ from physioex.preprocess.utils.sleepdata import process_sleepdata_file
 
 class MESAPreprocessor(Preprocessor):
 
-
     def __init__(
         self,
         preprocessors_name: List[str] = ["xsleepnet"],

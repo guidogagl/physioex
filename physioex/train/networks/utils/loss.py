@@ -43,19 +43,25 @@ class CrossEntropyLoss(nn.Module, PhysioExLoss):
         return self.ce_loss(preds, targets)
 
 
+class HuberLoss(nn.Module):
+    def __init__(self):
+        super(RegressionLoss, self).__init__()
+
+        self.loss = nn.HuberLoss(delta=5)
+
+    def forward(self, emb, preds, targets):
+        return self.loss(preds, targets) / 112.5
+
+
 class RegressionLoss(nn.Module):
     def __init__(self):
         super(RegressionLoss, self).__init__()
-        self.mae_loss = nn.L1Loss()
+
+        # mse
+        self.loss = nn.MSELoss()
 
     def forward(self, emb, preds, targets):
-        mae = self.mae_loss(preds, targets)
-        ss_tot = torch.sum((targets - torch.mean(targets)) ** 2)
-        ss_res = torch.sum((targets - preds) ** 2)
-        r2_score = 1 - ss_res / ss_tot
-
-        combined_loss = 0.5 * mae + 0.5 * (1 - r2_score)
-        return combined_loss
+        return self.loss(preds, targets)
 
 
 config = {"cel": CrossEntropyLoss, "scl": SimilarityCombinedLoss, "reg": RegressionLoss}

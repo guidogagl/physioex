@@ -1,39 +1,38 @@
-
 class Preprocessor:
     def __init__(self):
         """
         Initializes the Preprocessor class.
 
         Parameters:
-            dataset_name (str): 
+            dataset_name (str):
                 The name of the dataset to be processed.
-            signal_shape (List[int]): 
+            signal_shape (List[int]):
                 A list containing two elements representing the number of channels and the number of timestamps in the signal.
-            preprocessors_name (List[str]): 
+            preprocessors_name (List[str]):
                 A list of names for the preprocessing functions.
-            preprocessors (List[Callable]): 
+            preprocessors (List[Callable]):
                 A list of callable preprocessing functions to be applied to the signals.
-            preprocessors_shape (List[List[int]]): 
+            preprocessors_shape (List[List[int]]):
                 A list of shapes corresponding to the output of each preprocessing function.
-            data_folder (str, optional): 
+            data_folder (str, optional):
                 The folder where the dataset is stored. If None, the default data folder is used.
         """
         pass
-    
+
     def download_dataset(self):
         """
         Downloads the dataset if it is not already present on disk.
-        
-        (Optional) Method to be implemented by the user. 
+
+        (Optional) Method to be implemented by the user.
         """
         pass
 
     def get_subjects_records(self):
         """
         Returns a list containing the paths to each subject's record.
-        
+
         (Required) Method to be implemented by the user.
-        
+
         Returns:
             List[str] : A list of paths to each subject's record.
         """
@@ -77,4 +76,3 @@ class Preprocessor:
             Tuple[List, List, List]: A tuple containing the train, validation, and test subjects.
         """
         pass
-

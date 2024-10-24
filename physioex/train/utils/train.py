@@ -9,7 +9,7 @@ from lightning.pytorch import seed_everything
 from loguru import logger
 from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import ModelCheckpoint, RichProgressBar
-from pytorch_lightning.loggers import CSVLogger
+from pytorch_lightning.loggers import CSVLogger, TensorBoardLogger
 from torch import set_float32_matmul_precision
 
 from physioex.data import PhysioExDataModule
@@ -30,6 +30,8 @@ def train(
     max_epochs: int = 10,
     num_nodes: int = 1,
     resume: bool = True,
+    monitor: str = "val_acc",
+    mode: str = "max",
 ) -> str:
 
     seed_everything(42, workers=True)
@@ -92,15 +94,18 @@ def train(
 
     ########### Callbacks ############
     checkpoint_callback = ModelCheckpoint(
-        monitor="val_acc",
+        monitor=monitor,
         save_top_k=1,
-        mode="max",
+        mode=mode,
         dirpath=checkpoint_path,
-        filename="fold=%d{epoch}-{step}-{val_acc:.2f}" % fold,
+        filename="fold=%d-{epoch}-{step}-{val_loss:.2f}" % fold,
         save_weights_only=False,
     )
     # progress_bar_callback = RichProgressBar()
-    my_logger = CSVLogger(save_dir=checkpoint_path)
+    my_logger = [
+        TensorBoardLogger(save_dir=checkpoint_path),
+        CSVLogger(save_dir=checkpoint_path),
+    ]
 
     ########### Trainer Setup ############
     effective_batch_size = (

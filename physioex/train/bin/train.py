@@ -15,6 +15,7 @@ def train_script():
         "sequence_length": parser["sequence_length"],
         "target_transform": parser["target_transform"],
         "preprocessing": parser["preprocessing"],
+        "task": parser["model_task"],
         "data_folder": parser["data_folder"],
         "num_workers": parser["num_workers"],
     }
@@ -37,6 +38,8 @@ def train_script():
         "max_epochs": parser["max_epoch"],
         "num_nodes": parser["num_nodes"],
         "resume": True,
+        "monitor": parser["monitor"],
+        "mode": parser["mode"],
     }
 
     best_checkpoint = train(**train_kwargs)

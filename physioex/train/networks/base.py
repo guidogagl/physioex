@@ -117,19 +117,17 @@ class SleepModule(pl.LightningModule):
             loss = self.loss(embeddings, outputs, targets)
 
             self.log(f"{log}_loss", loss, prog_bar=True)
+
+            self.log(f"{log}_r2", self.r2(outputs, targets), prog_bar=True)
             self.log(f"{log}_mae", self.mae(outputs, targets), prog_bar=True)
             self.log(f"{log}_mse", self.mse(outputs, targets), prog_bar=True)
-            self.log(f"{log}_r2", self.r2(outputs, targets), prog_bar=True)
 
-            self.log(f"{log}_acc", 1 / (loss + 1e-8), prog_bar=False)
-
-        if log_metrics:
-            if self.n_classes > 1:
-                self.log(f"{log}_ck", self.ck(outputs, targets))
-                self.log(f"{log}_pr", self.pr(outputs, targets))
-                self.log(f"{log}_rc", self.rc(outputs, targets))
-                self.log(f"{log}_macc", self.macc(outputs, targets))
-                self.log(f"{log}_mf1", self.mf1(outputs, targets))
+        if log_metrics and self.n_classes > 1:
+            self.log(f"{log}_ck", self.ck(outputs, targets))
+            self.log(f"{log}_pr", self.pr(outputs, targets))
+            self.log(f"{log}_rc", self.rc(outputs, targets))
+            self.log(f"{log}_macc", self.macc(outputs, targets))
+            self.log(f"{log}_mf1", self.mf1(outputs, targets))
         return loss
 
     def training_step(self, batch, batch_idx):

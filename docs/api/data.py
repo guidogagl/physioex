@@ -1,6 +1,7 @@
 import torch
 import pytorch_lightning as pl
 
+
 class PhysioExDataset(torch.utils.data.Dataset):
     """
     A PyTorch Dataset class for handling physiological data from multiple datasets.
@@ -22,6 +23,7 @@ class PhysioExDataset(torch.utils.data.Dataset):
         __getitem__(idx): Returns the input and target for a given index.
         get_sets(): Returns the indices for the train, validation, and test sets.
     """
+
     def __init__(self):
         """
         Initializes the PhysioExDataset.
@@ -50,18 +52,18 @@ class PhysioExDataset(torch.utils.data.Dataset):
     def split(self, fold: int = -1, dataset_idx: int = -1):
         """
         Splits the data into train, validation, and test sets.
-        
-        if fold is -1, and dataset_idx is -1 : set the split to a random fold for each dataset 
+
+        if fold is -1, and dataset_idx is -1 : set the split to a random fold for each dataset
         if fold is -1, and dataset_idx is not -1 : set the split to a random fold for the selected dataset
         if fold is not -1, and dataset_idx is -1 : set the split to the selected fold for each dataset
-        if fold is not -1, and dataset_idx is not -1 : set the split to the selected fold for the selected dataset 
-        
+        if fold is not -1, and dataset_idx is not -1 : set the split to the selected fold for the selected dataset
+
         Args:
             fold (int, optional): Fold number to use for splitting. Defaults to -1.
             dataset_idx (int, optional): Index of the dataset to split. Defaults to -1.
         """
         pass
-    
+
     def get_num_folds(self):
         """
         Returns the minimum number of folds across all datasets.
@@ -116,6 +118,7 @@ class PhysioExDataModule(pl.LightningDataModule):
         val_dataloader(): Returns the DataLoader for the validation dataset.
         test_dataloader(): Returns the DataLoader for the test dataset.
     """
+
     def __init__(self):
         """
         Initializes the PhysioExDataModule.
@@ -140,7 +143,7 @@ class PhysioExDataModule(pl.LightningDataModule):
 
         Returns:
             DataLoader: DataLoader for the training dataset.
-        """        
+        """
         pass
 
     def val_dataloader(self):
@@ -151,7 +154,7 @@ class PhysioExDataModule(pl.LightningDataModule):
             DataLoader: DataLoader for the validation dataset.
         """
         pass
-    
+
     def test_dataloader(self):
         """
         Returns the DataLoader for the test dataset.

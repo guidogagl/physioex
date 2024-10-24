@@ -1,5 +1,6 @@
 import pytorch_lightning as pl
 
+
 class SleepModule(pl.LightningModule):
     """
     A PyTorch Lightning module for sleep stage classification and regression tasks.
@@ -76,7 +77,9 @@ class SleepModule(pl.LightningModule):
         """
         pass
 
-    def compute_loss(self,):
+    def compute_loss(
+        self,
+    ):
         """
         Computes the loss and logs metrics.
 

@@ -7,7 +7,7 @@ def train():
     Usage:
        `$ train [PARAMS]`
         You can use the `train -h, --help` command to access the command documentation.
-        
+
     Args:
         --model (str, optional): Specify the model to train, can be a yaml file if the model is not registered. Defaults to "chambon2018".
             If a yaml file is provided, it should contain the model configuration details.
@@ -42,13 +42,13 @@ def train():
 
     Example:
         The basic usage is as follows:
-        
+
         ```bash
         train --model chambon2018 --datasets mass --checkpoint_dir ./checkpoints --max_epoch 20 --batch_size 32
         ```
-        
+
         or you can specify a yaml file containing the configuration details:
-        
+
         === ".yaml"
             ```yaml
             model_package: physioex.train.networks.seqsleepnet
@@ -71,7 +71,7 @@ def train():
         - Ensure that the datasets are properly formatted and stored in the specified data folder using the preprocess script.
         - The script supports both single-node and multi-node training setups.
         - The configuration file, if provided, should be in YAML format and contain valid key-value pairs for the script options.
- 
+
     """
     pass
 
@@ -85,7 +85,7 @@ def test():
     Usage:
        `$ test_model [PARAMS]`
         You can use the `test_model -h, --help` command to access the command documentation.
-        
+
     Args:
         `--model` (str, optional): Specify the model to test, can be a yaml file if the model is not registered. Defaults to "chambon2018".
             If a yaml file is provided, it should contain the model configuration details.
@@ -116,8 +116,8 @@ def test():
         ```bash
         $ test_model --model tinysleepnet --loss cel --sequence_length 21 --selected_channels EEG --checkpoint_path /path/to/checkpoint
         ```
-        
-        This command tests the `tinysleepnet` model using the CrossEntropy Loss 
+
+        This command tests the `tinysleepnet` model using the CrossEntropy Loss
 
     Notes:
         - Ensure that the datasets are properly formatted and stored in the specified data folder using the preprocess script.
@@ -125,6 +125,7 @@ def test():
         - The configuration file, if provided, should be in YAML format and contain valid key-value pairs for the script options.
     """
     pass
+
 
 def finetune():
     """
@@ -135,7 +136,7 @@ def finetune():
     Usage:
        `$ finetune [PARAMS]`
        You can use the `finetune -h --help` command to access the command documentation.
-       
+
     Args:
         --model (str, optional): Specify the model to train, can be a yaml file if the model is not registered. Defaults to "chambon2018".
             If a yaml file is provided, it should contain the model configuration details.
@@ -171,7 +172,7 @@ def finetune():
             Note: In slurm this value needs to be coherent with '--ntasks-per-node' or 'ppn' in torque. This option is relevant for distributed training setups.
         --config (str, optional): Specify the path to the configuration file where to store the options to train the model with. Defaults to None.
             Note: The configuration file can override command line arguments.
- 
+
 
     Example:
         ```bash
@@ -196,7 +197,7 @@ def preprocess():
     Usage:
        `$ preprocess [PARAMS]`
        You can use the `preprocess -h --help` command to access the command documentation.
-       
+
     Args:
         --dataset (str, optional): The name of the dataset to preprocess. Defaults to "hmc".
             Note: The dataset name should be one of the supported datasets (e.g., "hmc", "mass", "shhs", "mesa", "mros", "dcsm"). If a custom dataset is used use the `preprocessor` argument.
@@ -215,16 +216,16 @@ def preprocess():
 
         For HMC and DCSM datasets, PhysioEx will automatically download the datasets.
         The other datasets needs to be obtained first, most of them are easily accessible from sleepdata.org.
-        
+
         The SHHS and MASS dataset needs to be further processed after download with the script in:
-            
+
             - MASS: https://github.com/pquochuy/xsleepnet/tree/master/mass
             - SHHS: https://github.com/pquochuy/SleepTransformer/tree/main/shhs
-            
+
         Once you obtain the mat/ folder using this processing scripts place them into data_folder/dataset_name/mat/ and run the preprocess command.
-        
+
         The command can use a .yaml configuration file to specify the preprocessor_kwargs:
-        
+
         ```yaml
             dataset: null
             data_folder : /path/to/your/data
@@ -239,11 +240,11 @@ def preprocess():
                     - physioex.preprocess.utils.signal:xsleepnet_preprocessing
                 preprocessors_shape:
                     - [4, 3000]
-                    - [4, 3000]            
+                    - [4, 3000]
                     - [4, 29, 129]
-            
+
         ```
-                
+
     Notes:
         - Ensure that the datasets are properly formatted and stored in the specified data folder using the preprocess script.
         - The configuration file, if provided, should be in YAML format and contain valid key-value pairs for the script options.

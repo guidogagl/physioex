@@ -5,12 +5,13 @@ from argparse import ArgumentParser
 import yaml
 
 from physioex.train.networks import config as network_config
+from typing import Union
 
 
 def read_config(args: ArgumentParser) -> dict:
 
     args = vars(args)
-    
+
     if args["config"] is not None:
         with open(args.config, "r") as file:
             config = yaml.safe_load(file)
@@ -18,6 +19,17 @@ def read_config(args: ArgumentParser) -> dict:
         args.update(config)
 
     return args
+
+
+def deep_update(dict1, dict2):
+    """
+    Aggiorna dict1 con i valori di dict2 ricorsivamente.
+    """
+    for key, value in dict2.items():
+        if isinstance(value, dict) and key in dict1 and isinstance(dict1[key], dict):
+            deep_update(dict1[key], value)
+        else:
+            dict1[key] = value
 
 
 def parse_model(parser: dict) -> dict:
@@ -38,7 +50,7 @@ def parse_model(parser: dict) -> dict:
             f"Model {model} not found in the registered models or not a .yaml file"
         )
 
-    default_config.update(config)
+    deep_update(default_config, config)
     config = default_config
 
     config["model_kwargs"]["in_channels"] = len(parser["selected_channels"])
@@ -56,7 +68,7 @@ def parse_model(parser: dict) -> dict:
             importlib.import_module(target_transform_package), target_transform_class
         )
 
-    parser.update(config)
+    deep_update(parser, config)
 
     return parser
 
@@ -103,8 +115,16 @@ class PhysioExParser:
         "-sl",
         "--sequence_length",
         default=21,
-        type=int,
         help="Specify the sequence length for the model. Expected type: int. Default: 21",
+    )
+
+    parser.add_argument(
+        "--model_task",
+        "-mt",
+        type=str,
+        default="sleep",
+        required=False,
+        help="The task to be performed by the model can be either 'sleep' for sleep staging or 'sex' for sex classification. Expected type: str. Optional. Default: 'sleep'",
     )
 
     parser.add_argument(
@@ -171,6 +191,22 @@ class PhysioExParser:
         help="Specify the path where to store the results. Expected type: str. Default: None",
     )
 
+    parser.add_argument(
+        "--monitor",
+        "-mon",
+        default="val_acc",
+        type=str,
+        help="Specify the metric to monitor for the checkpoint callaback. Expected type: str. Default: 'val_acc'",
+    )
+
+    parser.add_argument(
+        "--mode",
+        "-mod",
+        default="max",
+        type=str,
+        help="Specify the mode for the checkpoint callback. Expected type: str. Default: 'max'",
+    )
+
     @classmethod
     def train_parser(cls) -> dict:
 
@@ -200,6 +236,13 @@ class PhysioExParser:
 
         parser = cls.parser.parse_args()
         parser = read_config(parser)
+
+        if parser["sequence_length"] == "max":
+            parser["sequence_length"] = float("inf")
+        else:
+            parser["sequence_length"] = int(parser["sequence_length"])
+
+        print(parser["sequence_length"])
         parser = parse_model(parser)
 
         return parser

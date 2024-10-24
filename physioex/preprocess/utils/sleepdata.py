@@ -120,7 +120,7 @@ def process_sleepdata_file(edf_path, xml_path):
     Nfir = 100
 
     # Creazione del filtro FIR bandpass
-    b_band = firwin(Nfir + 1, [0.3, 40], pass_zero=False, fs=fs)
+    b_band = firwin(Nfir + 1, [0.3, 40], pass_zero=False, fs=old_fs)
 
     # Applicazione del filtro al segnale EEG
     eeg = filtfilt(b_band, 1, eeg)
@@ -151,7 +151,7 @@ def process_sleepdata_file(edf_path, xml_path):
         emg, old_fs = read_channel_signal(edf_path, emg_channel)
 
     # filtering and resampling
-    b_band = firwin(Nfir + 1, 10, pass_zero=False, fs=fs)
+    b_band = firwin(Nfir + 1, 10, pass_zero=False, fs=old_fs)
     emg = filtfilt(b_band, 1, emg)
 
     if fs != old_fs:
