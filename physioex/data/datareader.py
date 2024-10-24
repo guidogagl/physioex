@@ -128,8 +128,8 @@ class MemmapReader(Reader):
             y = y[relative_id:]
             
             remainer = self.L - len(y)
-            # repeat the last label to fill the array
-            y = np.concatenate([y, np.repeat(y[-1], remainer)], axis=0)        
+            # associate the padded values to the class 6
+            y = np.concatenate([y, np.ones(remainer) * 6 ], axis=0)        
         else:
             y = y[relative_id : relative_id + self.L]
 
