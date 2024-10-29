@@ -114,6 +114,7 @@ class PhysioExParser:
     parser.add_argument(
         "-sl",
         "--sequence_length",
+        type=int,
         default=21,
         help="Specify the sequence length for the model. Expected type: int. Default: 21",
     )
@@ -236,13 +237,6 @@ class PhysioExParser:
 
         parser = cls.parser.parse_args()
         parser = read_config(parser)
-
-        if parser["sequence_length"] == "max":
-            parser["sequence_length"] = float("inf")
-        else:
-            parser["sequence_length"] = int(parser["sequence_length"])
-
-        print(parser["sequence_length"])
         parser = parse_model(parser)
 
         return parser

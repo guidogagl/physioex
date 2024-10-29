@@ -64,10 +64,10 @@ class WSCPreprocessor(Preprocessor):
 
         if os.path.exists(all_score_path):
             pass
-            #stages = read_allscore_file(all_score_path)
+            stages = read_allscore_file(all_score_path)
         elif os.path.exists(stg_path):
             pass
-            #stages = read_stg_file(stg_path)
+            stages = read_stg_file(stg_path)
         else:
             logger.error(f"Error: no stage file found for {record}")
             return None, None
@@ -111,6 +111,7 @@ map_stages = {
     "3": 3,
     "4": 3,
     "5": 4,
+    "6": -1,
     "7": -1,
 }
 
@@ -182,7 +183,7 @@ def read_allscore_file(all_score_path: str):
                 new_stage = 3
             elif new_stage == "R":
                 new_stage = 4
-            elif new_stage == "NO STAGE":
+            elif new_stage == "NO STAGE" or new_stage == "MVT":
                 new_stage = -1
             else:
                 logger.error(f"Error: stage {new_stage} not recognized")
@@ -232,7 +233,7 @@ def read_edf_file(edf_file_path: str):
     # get all the channels available
     labels = f.getSignalLabels()
 
-    eeg_label = [ "C3_M2", "C3_M1"]
+    eeg_label = [ "C3_M2", "C3_M1", "C4_M1", 'Fz_AVG', 'C3_AVG']
     try:
         eeg_index = [labels.index(l) for l in eeg_label if l in labels][0]
     except IndexError:
@@ -252,15 +253,8 @@ def read_edf_file(edf_file_path: str):
     if fs != old_fs:
         eeg = resample(eeg, int(len(eeg) * fs / old_fs))
 
-    eog_label = ["O1_M2", "O1_M1",'O2_M1']
-    try:
-        eog_index = [labels.index(l) for l in eog_label if l in labels][0]
-    except IndexError:
-        logger.error(f"Error: no EOG channel found in {edf_file_path}")
-        print(labels)
-        exit()
         
-    eog = f.readSignal( eog_index )
+    eog = f.readSignal( labels.index("E1") ) - f.readSignal( labels.index("E2") )
 
     # filtering and resampling
     eog = filtfilt(b_band, 1, eog)
@@ -268,7 +262,7 @@ def read_edf_file(edf_file_path: str):
     if fs != old_fs:
         eog = resample(eog, int(len(eog) * fs / old_fs))
 
-    chinlabel = ["chin", "cchin_l"]
+    chinlabel = ["chin", "cchin_l", 'cchin_r', 'rchin_l']
 
     try:
         chinindex = [labels.index(l) for l in chinlabel if l in labels][0]
@@ -308,6 +302,6 @@ def read_edf_file(edf_file_path: str):
 
 if __name__ == "__main__":
 
-    WSCPreprocessor(visit=1, data_folder="/mnt/guido-data/").run()
-    WSCPreprocessor(visit=2, data_folder="/mnt/guido-data/").run()
+    #WSCPreprocessor(visit=1, data_folder="/mnt/guido-data/").run()
+    #WSCPreprocessor(visit=2, data_folder="/mnt/guido-data/").run()
     WSCPreprocessor(visit=3, data_folder="/mnt/guido-data/").run()
