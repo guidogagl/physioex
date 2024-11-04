@@ -32,6 +32,15 @@ seqagenet:
     n_classes: 1
     loss : physioex.train.networks.utils.loss:RegressionLoss
 
+protosleepnet:
+  model: physioex.train.networks.prototype:ProtoSleepNet
+  preprocessing : raw
+  target_transform: null
+  model_kwargs:
+    proto_lenght : 5
+    N : 1
+    n_prototypes : 25
+
 
 wholeagenet:
   model: physioex.train.networks.seqsexnet:WholeNightAgeNet

@@ -60,12 +60,12 @@ preprocess --dataset hmc --data_folder  "/your/data/path/"
 
 The list of available dataset is:
 
-- [SHHS (Sleep Heart Health Study)](https://sleepdata.org/datasets/shhs): A multi-center cohort study designed to investigate the cardiovascular consequences of sleep-disordered breathing.
-- [MROS (MrOS Sleep Study)](https://sleepdata.org/datasets/mros): A study focusing on the outcomes of sleep disorders in older men.
-- [MESA (Multi-Ethnic Study of Atherosclerosis)](https://sleepdata.org/datasets/mesa): A study examining the prevalence, correlates, and progression of subclinical cardiovascular disease.
-- [DCSM (Dreem Challenge Sleep Monitoring)](https://physionet.org/content/dreem/1.0.0/): A dataset from the Dreem Challenge for automatic sleep staging.
-- [MASS (Montreal Archive of Sleep Studies)](https://massdb.herokuapp.com/en/): A comprehensive collection of polysomnographic sleep recordings.
-- [HMC (Home Monitoring of Cardiorespiratory Health)](https://physionet.org/content/hmc-kinematics/1.0.0/): A dataset for the study of cardiorespiratory health using home monitoring devices.
+- [SHHS (Sleep Heart Health Study)](https://sleepdata.org/datasets/shhs)
+- [MASS (Montreal Archive of Sleep Studies)](http://ceams-carsm.ca/mass/)
+- [MESA (Multi-Ethnic Study of Atherosclerosis)](https://sleepdata.org/datasets/mesa)
+- [MrOS (The Osteoporotic Fractures in Men Study)](https://sleepdata.org/datasets/mros)
+- [HMC (Haaglanden Medisch Centrum)](https://physionet.org/content/hmc-sleep-staging/1.1/)
+- [DCSM (Danish Center for Sleep Medicine)](https://erda.ku.dk/public/archives/db553715ecbe1f3ac66c1dc569826eef/published-archive.html)
 
 Note that for the HMC and DCSM dataset the library will take care to download the dataset if not available into `/your/data/path/`.
 
