@@ -149,8 +149,11 @@ class PrototypeLayer( nn.Module ):
 
         self.prototypes = nn.Parameter( torch.zeros( N, hidden_size ), requires_grad=True )
         
-        nn.init.uniform_(self.prototypes, 0, 1)
+        #nn.init.uniform_(self.prototypes, 0, 1)
         
+        # TODO inizilizzare a 0
+        nn.init.constant_(self.prototypes, 0)
+    
     def forward( self, x ):
         # x shape : (batch_size, seq_len, hidden_size)
         batch_size, seq_len, hidden_size = x.size()
@@ -163,8 +166,16 @@ class PrototypeLayer( nn.Module ):
         # dist shape : (batch_size * seq_len, N)
         # select the prototype with the minimum distance with gumbel softmax
         dist = - torch.log( dist )
+        # dist shape : (batch_size * seq_len, N)
+        
+        
         logits = torch.nn.functional.gumbel_softmax(dist, tau=1.0, hard=True)
         
+        dist = dist * logits
+        
+        print( "Dist shape: ", dist.shape)
+        print( "Dist expected shape, " , (batch_size, 1) )
+
         # logits shape : (batch_size * seq_len, N)        
         # select the prototype with the maximum probability for each sample
         proto = torch.einsum( "bn, nh -> bh", logits, self.prototypes ) 
