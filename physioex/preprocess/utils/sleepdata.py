@@ -262,6 +262,7 @@ def get_channel_from_available(available_channels, possible_channels):
 
 
 POSSIBLE_EEG_CHANNELS = [
+    "EEG(sec)",
     "EEG",
     "EEG1",
     ("C4", "M1"),
@@ -273,6 +274,7 @@ POSSIBLE_EEG_CHANNELS = [
 ]
 
 POSSIBLE_EOG_CHANNELS = [
+    ("EOG(L)", "EOG(R)"),
     ("EOGL", "EOGR"),
     ("EOG-L", "EOG-R"),
     ("E1", "E2"),

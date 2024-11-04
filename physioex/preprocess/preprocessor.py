@@ -157,6 +157,7 @@ class Preprocessor:
         # create the folders if they do not exist
         Path(labels_path).mkdir(parents=True, exist_ok=True)
         Path(raw_path).mkdir(parents=True, exist_ok=True)
+        
         for path in prep_path:
             Path(path).mkdir(parents=True, exist_ok=True)
 

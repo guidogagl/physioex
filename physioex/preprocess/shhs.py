@@ -12,6 +12,7 @@ from scipy.io import loadmat
 from physioex.preprocess.preprocessor import Preprocessor
 from physioex.preprocess.utils.signal import xsleepnet_preprocessing
 
+from physioex.preprocess.utils.sleepdata import process_sleepdata_file
 
 class SHHSPreprocessor(Preprocessor):
 
@@ -38,47 +39,53 @@ class SHHSPreprocessor(Preprocessor):
         # the method should return a list containing the path of each subject record
         # each path is needed to be passed as argument to the function read_subject_record(self, record)
 
-        mat_dir = os.path.join(self.dataset_folder, "mat")
+        table = os.path.join(self.dataset_folder, "shhs_raw", "datasets", "shhs-harmonized-dataset-0.21.0.csv" )
+        table = pd.read_csv(table)
 
-        filenames = os.listdir(mat_dir)
+        # take visit 1 only
+        
+        table = table[ table["visitnumber"] == 1 ]
+        
+        nsrrids = list( table["nsrrid"].values.astype(int) )  
+        
+        edf_path = os.path.join(self.dataset_folder, "shhs_raw", "polysomnography", "edfs", "shhs1")
+        ann_path = os.path.join(self.dataset_folder, "shhs_raw", "polysomnography", "annotations-events-nsrr", "shhs1")
 
-        subjects = []
-        for file in filenames:
-            if file.endswith(".mat") and file.startswith("n"):
-                subject_id = file.split("_")[0][1:]
-                if subject_id not in subjects:
-                    subjects.append(subject_id)
+        get_edf_path = lambda nsrrid : os.path.join(edf_path, f"shhs1-{nsrrid}.edf")
+        get_ann_path = lambda nsrrid : os.path.join(ann_path, f"shhs1-{nsrrid}-nsrr.xml")
+        
+        records = [ (nsrrid, get_edf_path(nsrrid), get_ann_path(nsrrid)) for nsrrid in nsrrids ]        
 
-        return subjects
+        return records
 
     @logger.catch
     def read_subject_record(self, record: str) -> Tuple[np.array, np.array]:
 
-        signal = []
-        for modality in ["eeg", "eog", "emg"]:
-            filepath = os.path.join(
-                self.dataset_folder, "mat", f"n{record}_{modality}.mat"
-            )
+        nsrrid, edf_path, ann_path = record
 
-            with h5py.File(filepath, "r") as f:
-                data = {key: f[key][()] for key in f.keys()}
-
-            signal.append(np.transpose(data["X1"], (1, 0)).astype(np.float32))
-
-            if modality == "eeg":
-                labels = np.reshape(data["label"], (-1)).astype(np.int16)
-
-        signal = np.array(signal)
-        signal = np.transpose(signal, (1, 0, 2))
-
-        labels = labels - 1
-
+        signal, labels = process_sleepdata_file(edf_path, ann_path)
+        
         return signal, labels
 
     @logger.catch
     def customize_table(self, table) -> pd.DataFrame:
-        # this method should be provided by the user
-        # the method should return a customized version of the dataset table before saving it
+        table_ = os.path.join(self.dataset_folder, "shhs_raw", "datasets", "shhs-harmonized-dataset-0.21.0.csv" )
+        table_ = pd.read_csv(table_)
+
+        # take visit 1 only
+        table_ = table_[ table_["visitnumber"] == 1 ]
+        table_["nsrrid"] = table_["nsrrid"].astype(int)
+        
+        nsrrids = list( table_["nsrrid"] )  
+        subject_id = [ i for i, _ in enumerate(nsrrids) ]
+
+        table_["subject_id"] = subject_id
+        
+        table_ = table_.set_index( "subject_id" )
+        
+        # join table and table_ on subject_id column
+        table = table.join( table_, on="subject_id" )
+                
         return table
 
     @logger.catch
@@ -106,15 +113,8 @@ class SHHSPreprocessor(Preprocessor):
             test_subjects.reshape(1, -1),
         )
 
-    @logger.catch
-    def get_dataset_num_windows(self) -> int:
-        # this method should be provided by the user
-        # the method should return a int number representing the total number of windows in the dataset. For efficiency the best would be to precompute this value.
-        return 5457206
-
-
 if __name__ == "__main__":
 
-    p = SHHSPreprocessor(data_folder="/home/guidogl/physioex-data/")
+    p = SHHSPreprocessor(data_folder="/mnt/guido-data/")
 
     p.run()

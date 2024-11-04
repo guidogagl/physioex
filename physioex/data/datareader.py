@@ -129,7 +129,7 @@ class MemmapReader(Reader):
             
             remainer = self.L - len(y)
             # associate the padded values to the class 6
-            y = np.concatenate([y, np.ones(remainer) * 6 ], axis=0)        
+            y = np.concatenate([y, np.ones(remainer) * 5 ], axis=0)        
         else:
             y = y[relative_id : relative_id + self.L]
 
