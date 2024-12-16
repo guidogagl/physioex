@@ -37,8 +37,10 @@ class PhysioExDataModule(pl.LightningDataModule):
                 data_folder=data_folder,
                 task=task,
             )
-        else:
+        elif isinstance(datasets, PhysioExDataset):
             self.dataset = datasets
+        else:
+            raise ValueError("ERR: datasets should be a list or a PhysioExDataset")
 
         self.batch_size = batch_size
         self.hpc = num_nodes > 1
