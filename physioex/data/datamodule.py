@@ -10,7 +10,7 @@ from physioex.data.dataset import PhysioExDataset
 class PhysioExDataModule(pl.LightningDataModule):
     def __init__(
         self,
-        datasets: List[str],
+        datasets: Union[List[str], PhysioExDataset],
         batch_size: int = 32,
         preprocessing: str = "raw",
         selected_channels: List[int] = ["EEG"],
@@ -27,15 +27,18 @@ class PhysioExDataModule(pl.LightningDataModule):
         self.datasets_id = datasets
         self.num_workers = num_workers
 
-        self.dataset = PhysioExDataset(
-            datasets=datasets,
-            preprocessing=preprocessing,
-            selected_channels=selected_channels,
-            sequence_length=sequence_length,
-            target_transform=target_transform,
-            data_folder=data_folder,
-            task=task,
-        )
+        if isinstance(datasets, list):
+            self.dataset = PhysioExDataset(
+                datasets=datasets,
+                preprocessing=preprocessing,
+                selected_channels=selected_channels,
+                sequence_length=sequence_length,
+                target_transform=target_transform,
+                data_folder=data_folder,
+                task=task,
+            )
+        else:
+            self.dataset = datasets
 
         self.batch_size = batch_size
         self.hpc = num_nodes > 1

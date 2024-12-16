@@ -14,6 +14,7 @@ from physioex.preprocess.utils.signal import xsleepnet_preprocessing
 
 from physioex.preprocess.utils.sleepdata import process_sleepdata_file
 
+
 class SHHSPreprocessor(Preprocessor):
 
     def __init__(
@@ -39,22 +40,37 @@ class SHHSPreprocessor(Preprocessor):
         # the method should return a list containing the path of each subject record
         # each path is needed to be passed as argument to the function read_subject_record(self, record)
 
-        table = os.path.join(self.dataset_folder, "shhs_raw", "datasets", "shhs-harmonized-dataset-0.21.0.csv" )
+        table = os.path.join(
+            self.dataset_folder,
+            "shhs_raw",
+            "datasets",
+            "shhs-harmonized-dataset-0.21.0.csv",
+        )
         table = pd.read_csv(table)
 
         # take visit 1 only
-        
-        table = table[ table["visitnumber"] == 1 ]
-        
-        nsrrids = list( table["nsrrid"].values.astype(int) )  
-        
-        edf_path = os.path.join(self.dataset_folder, "shhs_raw", "polysomnography", "edfs", "shhs1")
-        ann_path = os.path.join(self.dataset_folder, "shhs_raw", "polysomnography", "annotations-events-nsrr", "shhs1")
 
-        get_edf_path = lambda nsrrid : os.path.join(edf_path, f"shhs1-{nsrrid}.edf")
-        get_ann_path = lambda nsrrid : os.path.join(ann_path, f"shhs1-{nsrrid}-nsrr.xml")
-        
-        records = [ (nsrrid, get_edf_path(nsrrid), get_ann_path(nsrrid)) for nsrrid in nsrrids ]        
+        table = table[table["visitnumber"] == 1]
+
+        nsrrids = list(table["nsrrid"].values.astype(int))
+
+        edf_path = os.path.join(
+            self.dataset_folder, "shhs_raw", "polysomnography", "edfs", "shhs1"
+        )
+        ann_path = os.path.join(
+            self.dataset_folder,
+            "shhs_raw",
+            "polysomnography",
+            "annotations-events-nsrr",
+            "shhs1",
+        )
+
+        get_edf_path = lambda nsrrid: os.path.join(edf_path, f"shhs1-{nsrrid}.edf")
+        get_ann_path = lambda nsrrid: os.path.join(ann_path, f"shhs1-{nsrrid}-nsrr.xml")
+
+        records = [
+            (nsrrid, get_edf_path(nsrrid), get_ann_path(nsrrid)) for nsrrid in nsrrids
+        ]
 
         return records
 
@@ -64,28 +80,33 @@ class SHHSPreprocessor(Preprocessor):
         nsrrid, edf_path, ann_path = record
 
         signal, labels = process_sleepdata_file(edf_path, ann_path)
-        
+
         return signal, labels
 
     @logger.catch
     def customize_table(self, table) -> pd.DataFrame:
-        table_ = os.path.join(self.dataset_folder, "shhs_raw", "datasets", "shhs-harmonized-dataset-0.21.0.csv" )
+        table_ = os.path.join(
+            self.dataset_folder,
+            "shhs_raw",
+            "datasets",
+            "shhs-harmonized-dataset-0.21.0.csv",
+        )
         table_ = pd.read_csv(table_)
 
         # take visit 1 only
-        table_ = table_[ table_["visitnumber"] == 1 ]
+        table_ = table_[table_["visitnumber"] == 1]
         table_["nsrrid"] = table_["nsrrid"].astype(int)
-        
-        nsrrids = list( table_["nsrrid"] )  
-        subject_id = [ i for i, _ in enumerate(nsrrids) ]
+
+        nsrrids = list(table_["nsrrid"])
+        subject_id = [i for i, _ in enumerate(nsrrids)]
 
         table_["subject_id"] = subject_id
-        
-        table_ = table_.set_index( "subject_id" )
-        
+
+        table_ = table_.set_index("subject_id")
+
         # join table and table_ on subject_id column
-        table = table.join( table_, on="subject_id" )
-                
+        table = table.join(table_, on="subject_id")
+
         return table
 
     @logger.catch
@@ -112,6 +133,7 @@ class SHHSPreprocessor(Preprocessor):
             valid_subjects.reshape(1, -1),
             test_subjects.reshape(1, -1),
         )
+
 
 if __name__ == "__main__":
 

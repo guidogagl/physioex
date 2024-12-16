@@ -64,4 +64,24 @@ class RegressionLoss(nn.Module):
         return self.loss(preds, targets)
 
 
+class GradLoss(nn.Module):
+    def __init__(self):
+        super(GradLoss, self).__init__()
+
+        self.ce_loss = nn.CrossEntropyLoss()
+
+    def forward(self, emb, preds, targets):
+
+        # reshape embeddings
+        emb = emb.reshape(-1, 5, 3)  # batch_size, nclass, nchan
+        # consider only the target class
+        emb = emb[:, targets, :]
+
+        # we want to maximize the value of these gradients
+
+        emb_loss = emb.sum(dim=-1).mean()
+
+        return self.loss(preds, targets) - emb_loss
+
+
 config = {"cel": CrossEntropyLoss, "scl": SimilarityCombinedLoss, "reg": RegressionLoss}

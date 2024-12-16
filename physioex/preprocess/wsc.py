@@ -73,7 +73,7 @@ class WSCPreprocessor(Preprocessor):
             return None, None
 
         signal = read_edf_file(edf_path)
-        
+
         if len(stages) - len(signal) == 1:
             stages = stages[:-1]
 
@@ -233,7 +233,7 @@ def read_edf_file(edf_file_path: str):
     # get all the channels available
     labels = f.getSignalLabels()
 
-    eeg_label = [ "C3_M2", "C3_M1", "C4_M1", 'Fz_AVG', 'C3_AVG']
+    eeg_label = ["C3_M2", "C3_M1", "C4_M1", "Fz_AVG", "C3_AVG"]
     try:
         eeg_index = [labels.index(l) for l in eeg_label if l in labels][0]
     except IndexError:
@@ -253,8 +253,7 @@ def read_edf_file(edf_file_path: str):
     if fs != old_fs:
         eeg = resample(eeg, int(len(eeg) * fs / old_fs))
 
-        
-    eog = f.readSignal( labels.index("E1") ) - f.readSignal( labels.index("E2") )
+    eog = f.readSignal(labels.index("E1")) - f.readSignal(labels.index("E2"))
 
     # filtering and resampling
     eog = filtfilt(b_band, 1, eog)
@@ -262,7 +261,7 @@ def read_edf_file(edf_file_path: str):
     if fs != old_fs:
         eog = resample(eog, int(len(eog) * fs / old_fs))
 
-    chinlabel = ["chin", "cchin_l", 'cchin_r', 'rchin_l']
+    chinlabel = ["chin", "cchin_l", "cchin_r", "rchin_l"]
 
     try:
         chinindex = [labels.index(l) for l in chinlabel if l in labels][0]
@@ -285,7 +284,7 @@ def read_edf_file(edf_file_path: str):
 
     if n_pads > 0:
         # add padding at the beginning of the sleep signal
-        #logger.warning(f"Adding {n_pads} padding to the beginning of the signal")
+        # logger.warning(f"Adding {n_pads} padding to the beginning of the signal")
 
         eeg = np.concatenate([np.zeros(n_pads), eeg])
         eog = np.concatenate([np.zeros(n_pads), eog])
@@ -302,6 +301,6 @@ def read_edf_file(edf_file_path: str):
 
 if __name__ == "__main__":
 
-    #WSCPreprocessor(visit=1, data_folder="/mnt/guido-data/").run()
-    #WSCPreprocessor(visit=2, data_folder="/mnt/guido-data/").run()
+    # WSCPreprocessor(visit=1, data_folder="/mnt/guido-data/").run()
+    # WSCPreprocessor(visit=2, data_folder="/mnt/guido-data/").run()
     WSCPreprocessor(visit=3, data_folder="/mnt/guido-data/").run()

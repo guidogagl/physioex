@@ -8,7 +8,7 @@ import torch
 from lightning.pytorch import seed_everything
 from loguru import logger
 from pytorch_lightning import Trainer
-from pytorch_lightning.callbacks import ModelCheckpoint, RichProgressBar
+from pytorch_lightning.callbacks import ModelCheckpoint, RichProgressBar, LearningRateMonitor, DeviceStatsMonitor
 from pytorch_lightning.loggers import CSVLogger, TensorBoardLogger
 from torch import set_float32_matmul_precision
 
@@ -101,6 +101,11 @@ def train(
         filename="fold=%d-{epoch}-{step}-{val_loss:.2f}" % fold,
         save_weights_only=False,
     )
+    
+    lr_callback = LearningRateMonitor(logging_interval="step")
+    
+    dvc_callback = DeviceStatsMonitor()
+    
     # progress_bar_callback = RichProgressBar()
     my_logger = [
         TensorBoardLogger(save_dir=checkpoint_path),
@@ -120,7 +125,7 @@ def train(
         num_nodes=num_nodes if hpc else 1,
         max_epochs=max_epochs,
         val_check_interval=val_check_interval,
-        callbacks=[checkpoint_callback],  # , progress_bar_callback],
+        callbacks=[checkpoint_callback, lr_callback, dvc_callback],  # , progress_bar_callback],
         deterministic=True,
         logger=my_logger,
     )

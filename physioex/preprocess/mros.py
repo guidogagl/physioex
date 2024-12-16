@@ -34,24 +34,43 @@ class MROSPreprocessor(Preprocessor):
     @logger.catch
     def get_subjects_records(self) -> List[str]:
 
-        table = os.path.join(self.dataset_folder, "mros_raw", "datasets", "mros-visit1-harmonized-0.6.0.csv")
+        table = os.path.join(
+            self.dataset_folder,
+            "mros_raw",
+            "datasets",
+            "mros-visit1-harmonized-0.6.0.csv",
+        )
         table = pd.read_csv(table)
 
         # take visit 1 only
-        
-        table = table[ table["visit"] == 1 ]
-        
-        nsrrids = list( table["nsrrid"].values.astype(str) ) 
-        # convert to lowercase
-        nsrrids = [ nsrrid.lower() for nsrrid in nsrrids ]
-        
-        edf_path = os.path.join(self.dataset_folder, "mros_raw", "polysomnography", "edfs", "visit1")
-        ann_path = os.path.join(self.dataset_folder, "mros_raw", "polysomnography", "annotations-events-nsrr", "visit1")
 
-        get_edf_path = lambda nsrrid : os.path.join(edf_path, f"mros-visit1-{nsrrid}.edf")
-        get_ann_path = lambda nsrrid : os.path.join(ann_path, f"mros-visit1-{nsrrid}-nsrr.xml")
-        
-        records = [ (nsrrid, get_edf_path(nsrrid), get_ann_path(nsrrid)) for nsrrid in nsrrids ]        
+        table = table[table["visit"] == 1]
+
+        nsrrids = list(table["nsrrid"].values.astype(str))
+        # convert to lowercase
+        nsrrids = [nsrrid.lower() for nsrrid in nsrrids]
+
+        edf_path = os.path.join(
+            self.dataset_folder, "mros_raw", "polysomnography", "edfs", "visit1"
+        )
+        ann_path = os.path.join(
+            self.dataset_folder,
+            "mros_raw",
+            "polysomnography",
+            "annotations-events-nsrr",
+            "visit1",
+        )
+
+        get_edf_path = lambda nsrrid: os.path.join(
+            edf_path, f"mros-visit1-{nsrrid}.edf"
+        )
+        get_ann_path = lambda nsrrid: os.path.join(
+            ann_path, f"mros-visit1-{nsrrid}-nsrr.xml"
+        )
+
+        records = [
+            (nsrrid, get_edf_path(nsrrid), get_ann_path(nsrrid)) for nsrrid in nsrrids
+        ]
 
         return records
 
@@ -61,29 +80,34 @@ class MROSPreprocessor(Preprocessor):
         nsrrid, edf_path, ann_path = record
 
         signal, labels = process_sleepdata_file(edf_path, ann_path)
-        
+
         return signal, labels
 
     @logger.catch
     def customize_table(self, table) -> pd.DataFrame:
-        table_ = os.path.join(self.dataset_folder, "mros_raw", "datasets", "mros-visit1-harmonized-0.6.0.csv")
+        table_ = os.path.join(
+            self.dataset_folder,
+            "mros_raw",
+            "datasets",
+            "mros-visit1-harmonized-0.6.0.csv",
+        )
         table_ = pd.read_csv(table_)
 
         # take visit 1 only
-        table_ = table_[ table_["visit"] == 1 ]
+        table_ = table_[table_["visit"] == 1]
         nsrrids = table_["nsrrid"].values.astype(str)
-        nsrrids = [ nsrrid.lower() for nsrrid in nsrrids ]
+        nsrrids = [nsrrid.lower() for nsrrid in nsrrids]
         table_["nsrrid"] = nsrrids
-        
-        subject_id = [ i for i, _ in enumerate(nsrrids) ]
+
+        subject_id = [i for i, _ in enumerate(nsrrids)]
 
         table_["subject_id"] = subject_id
-        
-        table_ = table_.set_index( "subject_id" )
-        
+
+        table_ = table_.set_index("subject_id")
+
         # join table and table_ on subject_id column
-        table = table.join( table_, on="subject_id" )
-                
+        table = table.join(table_, on="subject_id")
+
         return table
 
 

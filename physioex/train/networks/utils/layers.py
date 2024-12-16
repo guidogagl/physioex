@@ -3,59 +3,68 @@ import torch.nn as nn
 
 import torch.nn.functional as F
 
+
 class HardAttentionLayer(nn.Module):
-    def __init__(self, 
-            hidden_size : int,
-            attention_size : int, 
-            N : int = 1, # number of elements to select
-            temperature : float = 1.0
-        ):
+    def __init__(
+        self,
+        hidden_size: int,
+        attention_size: int,
+        N: int = 1,  # number of elements to select
+        temperature: float = 1.0,
+    ):
         super(HardAttentionLayer, self).__init__()
-        
+
         self.hidden_size = hidden_size
         self.attention_size = attention_size
         self.temperature = temperature
-        
+
         self.N = N
-        
-        self.LSTM = nn.LSTM( hidden_size, hidden_size, batch_first = True, bidirectional = True )
-        
-        self.W = nn.Linear( 2*hidden_size, attention_size )
-        self.u = nn.Linear( attention_size, self.N, bias = False )
+
+        self.LSTM = nn.LSTM(
+            hidden_size, hidden_size, batch_first=True, bidirectional=True
+        )
+
+        self.W = nn.Linear(2 * hidden_size, attention_size)
+        self.u = nn.Linear(attention_size, self.N, bias=False)
 
     def forward(self, x):
         batch_size, sequence_length, hidden_size = x.size()
 
         # the layer need to choose attention_size elements from the sequence
         # depending on the temperature and the input elements
-        
+
         # first we need to give the weights some sequetial context
         x_seq, _ = self.LSTM(x)
-        
-        x_seq = x_seq.reshape( -1, 2*hidden_size )
-        
-        v = torch.tanh( self.W(x_seq) ) # batch_size * sequence_length, attention_size
-        vu = self.u(v) # batch_size * sequence_length, N
-        vu = torch.exp(vu).reshape( batch_size, sequence_length, self.N )
-        vu = torch.permute( vu, (0, 2, 1) ) # (batch_size, N, sequence_length)
 
-        logits = vu / torch.sum(vu, dim=-1, keepdim=True) # (batch_size, N, sequence_length)
+        x_seq = x_seq.reshape(-1, 2 * hidden_size)
+
+        v = torch.tanh(self.W(x_seq))  # batch_size * sequence_length, attention_size
+        vu = self.u(v)  # batch_size * sequence_length, N
+        vu = torch.exp(vu).reshape(batch_size, sequence_length, self.N)
+        vu = torch.permute(vu, (0, 2, 1))  # (batch_size, N, sequence_length)
+
+        logits = vu / torch.sum(
+            vu, dim=-1, keepdim=True
+        )  # (batch_size, N, sequence_length)
 
         # logits is the probability distribution over the sequence
         # Reshape to apply the Gumbel-Softmax trick
-        logits = logits.reshape( batch_size * self.N, sequence_length )
+        logits = logits.reshape(batch_size * self.N, sequence_length)
 
         # apply the Gumbel-Softmax trick
-        alphas = F.gumbel_softmax(logits, tau=self.temperature, hard=True) # (batch_size * N, sequence_length)
+        alphas = F.gumbel_softmax(
+            logits, tau=self.temperature, hard=True
+        )  # (batch_size * N, sequence_length)
 
         # reshape to obtain the attention mask composed by 0 or 1 values
-        alphas = alphas.reshape( batch_size, self.N, sequence_length )        
-        
+        alphas = alphas.reshape(batch_size, self.N, sequence_length)
+
         # select N elements from the sequence by multiplying the alphas
-        x = torch.bmm( alphas, x ) # (batch_size, N, hidden_size)
-        
+        x = torch.bmm(alphas, x)  # (batch_size, N, hidden_size)
+
         return x
-        
+
+
 class SoftAttentionLayer(nn.Module):
     def __init__(
         self,

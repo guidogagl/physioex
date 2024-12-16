@@ -71,8 +71,7 @@ class MemmapReader(Reader):
             self.len[neg] = 0
 
         self.len = int(np.sum(self.len + 1))
-        print(self.len)
-        
+
         self.subject_idx, self.relative_idx, self.windows_index = build_index(
             num_windows, subjects_id, self.L
         )
@@ -126,10 +125,10 @@ class MemmapReader(Reader):
 
         if relative_id + self.L > num_windows:
             y = y[relative_id:]
-            
+
             remainer = self.L - len(y)
             # associate the padded values to the class 6
-            y = np.concatenate([y, np.ones(remainer) * 5 ], axis=0)        
+            y = np.concatenate([y, np.ones(remainer) * 5], axis=0)
         else:
             y = y[relative_id : relative_id + self.L]
 

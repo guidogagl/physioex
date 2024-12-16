@@ -13,6 +13,7 @@ tinysleepnet:
   preprocessing : raw
   target_transform: null
 
+
 seqsexnet:
   model: physioex.train.networks.seqsexnet:SeqSexNet
   preprocessing : raw
@@ -22,15 +23,6 @@ seqsexnet:
     weight_decay :  .0000001
     n_classes: 2
 
-seqagenet:
-  model: physioex.train.networks.seqsexnet:SeqAgeNet
-  preprocessing : raw
-  target_transform: null
-  model_kwargs:
-    learning_rate : .001
-    weight_decay :  .00001
-    n_classes: 1
-    loss : physioex.train.networks.utils.loss:RegressionLoss
 
 protosleepnet:
   model: physioex.train.networks.prototype:ProtoSleepNet
@@ -42,15 +34,6 @@ protosleepnet:
     n_prototypes : 25
 
 
-wholeagenet:
-  model: physioex.train.networks.seqsexnet:WholeNightAgeNet
-  preprocessing : xsleepnet
-  target_transform: null
-  model_kwargs:
-    learning_rate : .001
-    weight_decay :  .00001
-    n_classes: 1
-    loss : physioex.train.networks.utils.loss:RegressionLoss
 
 default:
   model : null
