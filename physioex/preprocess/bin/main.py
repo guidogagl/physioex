@@ -81,6 +81,9 @@ def main():
     preprocessor_args = {}
     preprocessor_args["data_folder"] = args["data_folder"]
 
+    if "preprocessor_kwargs" not in args.keys():
+        args["preprocessor_kwargs"] = None 
+
     if args["preprocessor_kwargs"] is not None:
 
         # if the user specifies preprocessors in the kwargs they need to be imported
