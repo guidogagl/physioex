@@ -42,7 +42,7 @@ def main():
     parser.add_argument(
         "--preprocessor",
         "-p",
-        "type=str",
+        type=str,
         default=None,
         required=False,
         help="The name of the preprocessor in case of a custom Preprocessor. Needs to extend physioex.preprocess.proprocessor:Preprocessor. Must be passed as a string in the format path.to.preprocessor.module:PreprocessorClass. Expected type: str. Optional. Default: None",
