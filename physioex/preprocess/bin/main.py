@@ -76,7 +76,7 @@ def main():
         module = importlib.import_module(module_path)
         preprocessor = getattr(module, class_name)
     else:
-        preprocessor = preprocessors[args.dataset]
+        preprocessor = preprocessors[args["dataset"]]
 
     preprocessor_args = {}
     preprocessor_args["data_folder"] = args["data_folder"]
