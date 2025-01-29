@@ -233,6 +233,6 @@ class SLEEPEDFPreprocessor(Preprocessor):
 
 if __name__ == "__main__":
 
-    p = SLEEPEDFPreprocessor(data_folder="/mnt/guido-data/")
+    p = SLEEPEDFPreprocessor(data_folder="/mnt/vde/sleep-data/")
 
     p.run()

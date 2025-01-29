@@ -113,6 +113,6 @@ class MROSPreprocessor(Preprocessor):
 
 if __name__ == "__main__":
 
-    p = MROSPreprocessor(data_folder="/mnt/guido-data/")
+    p = MROSPreprocessor(data_folder="/mnt/vde/sleep-data/")
 
     p.run()
