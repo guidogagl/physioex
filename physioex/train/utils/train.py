@@ -98,7 +98,7 @@ def train(
         save_top_k=1,
         mode=mode,
         dirpath=checkpoint_path,
-        filename="fold=%d-{epoch}-{step}-{val_loss:.2f}" % fold,
+        filename="fold=%d-{epoch}-{step}-{val_acc:.2f}" % fold,
         save_weights_only=False,
     )
     
@@ -113,16 +113,22 @@ def train(
     ]
 
     ########### Trainer Setup ############
-    effective_batch_size = (
-        batch_size if not hpc else batch_size * num_nodes * torch.cuda.device_count()
-    )
+    from lightning.pytorch.accelerators import find_usable_cuda_devices
+
+    devices = find_usable_cuda_devices(-1)
+    logger.info( f"Available devices: {devices}")
+    
+    effective_batch_size = batch_size * num_nodes * len(devices)
+
     num_steps = datamodule.dataset.__len__() * 0.7 // effective_batch_size
     val_check_interval = max(1, num_steps // num_validations)
 
+
+    
     trainer = Trainer(
-        devices="auto" if not hpc else -1,
-        strategy="ddp" if hpc and num_nodes > 1 else "auto",
-        num_nodes=num_nodes if hpc else 1,
+        devices=devices,
+        strategy = "ddp" if (num_nodes > 1 or len(devices) > 1) else "auto",
+        num_nodes=num_nodes,
         max_epochs=max_epochs,
         val_check_interval=val_check_interval,
         callbacks=[checkpoint_callback, lr_callback, dvc_callback],  # , progress_bar_callback],

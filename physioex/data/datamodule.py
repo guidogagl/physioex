@@ -43,7 +43,6 @@ class PhysioExDataModule(pl.LightningDataModule):
             raise ValueError("ERR: datasets should be a list or a PhysioExDataset")
 
         self.batch_size = batch_size
-        self.hpc = num_nodes > 1
 
         if isinstance(folds, int):
             self.dataset.split(folds)
@@ -56,22 +55,9 @@ class PhysioExDataModule(pl.LightningDataModule):
 
         train_idx, valid_idx, test_idx = self.dataset.get_sets()
 
-        if not self.hpc:
-            self.train_dataset = self.dataset
-            self.valid_dataset = self.dataset
-            self.test_dataset = self.dataset
-
-            self.train_sampler = SubsetRandomSampler(train_idx)
-            self.valid_sampler = SubsetRandomSampler(valid_idx)
-            self.test_sampler = SubsetRandomSampler(test_idx)
-        else:
-            self.train_dataset = Subset(self.dataset, train_idx)
-            self.valid_dataset = Subset(self.dataset, valid_idx)
-            self.test_dataset = Subset(self.dataset, test_idx)
-
-            self.train_sampler = self.train_dataset
-            self.valid_sampler = self.valid_dataset
-            self.test_sampler = self.test_dataset
+        self.train_dataset = Subset(self.dataset, train_idx)
+        self.valid_dataset = Subset(self.dataset, valid_idx)
+        self.test_dataset = Subset(self.dataset, test_idx)
 
     def train_dataloader(self):
         """
@@ -83,24 +69,15 @@ class PhysioExDataModule(pl.LightningDataModule):
         return DataLoader(
             self.train_dataset,
             batch_size=self.batch_size,
-            sampler=(
-                DistributedSampler(self.train_sampler)
-                if self.hpc
-                else self.train_sampler
-            ),
+            shuffle=True,
             num_workers=self.num_workers,
         )
 
     def val_dataloader(self):
-
         return DataLoader(
             self.valid_dataset,
             batch_size=self.batch_size,
-            sampler=(
-                DistributedSampler(self.valid_sampler)
-                if self.hpc
-                else self.valid_sampler
-            ),
+            shuffle=False,
             num_workers=self.num_workers,
         )
 
@@ -108,8 +85,6 @@ class PhysioExDataModule(pl.LightningDataModule):
         return DataLoader(
             self.test_dataset,
             batch_size=self.batch_size,
-            sampler=(
-                DistributedSampler(self.test_sampler) if self.hpc else self.test_sampler
-            ),
+            shuffle=False,
             num_workers=self.num_workers,
         )

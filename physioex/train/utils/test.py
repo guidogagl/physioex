@@ -78,14 +78,18 @@ def test(
     # progress_bar_callback = RichProgressBar()
 
     ########### Trainer Setup ############
+    from lightning.pytorch.accelerators import find_usable_cuda_devices
+
+    devices = find_usable_cuda_devices(-1)
 
     trainer = Trainer(
-        devices="auto",
-        strategy="ddp" if hpc and num_nodes > 1 else "auto",
-        num_nodes=num_nodes if hpc else 1,
+        devices=devices,
+        strategy="ddp" if (num_nodes > 1 or len(devices) > 1) else "auto",
+        num_nodes=num_nodes,
         # callbacks=[progress_bar_callback],
         deterministic=True,
     )
+    
     results = []
     for _, test_datamodule in enumerate(datamodule):
         results += [trainer.test(model, datamodule=test_datamodule)[0]]

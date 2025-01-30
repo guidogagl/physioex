@@ -16,6 +16,7 @@ hpc/
 /models/
 /hpc
 /mlp
+/scripts/
 **/.future
 
 script

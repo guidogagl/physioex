@@ -8,37 +8,45 @@ from collections import OrderedDict
 
 from physioex.train.networks.base import SleepModule
 
-# from 30-seconds of signal we need to extract the 5 second subsequence
-# that is more relevant for the classification task
+from physioex.train.networks.sleeptransformer import PositionalEncoding
+from physioex.train.networks.seqsleepnet import AttentionLayer
+
 
 import seaborn as sns
 import matplotlib.pyplot as plt
 
+module_config = dict()
+
+import torch.distributions as dist
+import torch.nn.functional as F
+
+class ProtoLoss( nn.Module ):    
+    def __init__(self):
+        super(ProtoLoss, self).__init__()
+        self.target_loss = nn.CrossEntropyLoss()
+        self.multi_channels_loss = nn.CrossEntropyLoss()
+    
+        
+    def forward(self, preds, targets, multi_channels_preds):
+        
+        batch, L, nchan, nclasses = multi_channels_preds.size()
+         
+        # target loss 
+        tl = self.target_loss( preds.reshape( -1, nclasses), targets.reshape(-1) )
+        
+        # multi channel loss
+        targets = targets.reshape( batch, L, 1).repeat( 1, 1, nchan )
+        mcl = self.multi_channels_loss( multi_channels_preds.reshape( -1, nclasses ), targets.reshape( -1 ))
+        
+        return tl, mcl
+
 
 class ProtoSleepNet(SleepModule):
-    def __init__(self, module_config: dict):
+    def __init__(self, module_config: dict = module_config):
         super(ProtoSleepNet, self).__init__(NN(module_config), module_config)
 
-        self.prototypes = self.nn.epoch_encoder.prototype
-
-        self.step = 0
-
-    def log_prototypes(self, log: str):
-        # prototypes shape : (N, hidden_size)
-        # convert the model parameters to numpy
-        prototypes = self.prototypes.prototypes.detach().cpu().numpy()
-
-        # create the heatmap of the prototypes
-        # y label equal to prototype index, x label equal to the feature index
-        # display the cbar with diverging colors
-        sns.heatmap(prototypes, cmap="RdPu", cbar=True)
-        plt.xlabel("Features")
-        plt.ylabel("Prototype")
-
-        plt.title("Prototypes")
-        self.logger.experiment.add_figure(f"{log}-age-corr", plt.gcf(), self.step)
-        plt.close()
-
+        self.loss = ProtoLoss()
+        
     def compute_loss(
         self,
         embeddings,
@@ -47,57 +55,138 @@ class ProtoSleepNet(SleepModule):
         log: str = "train",
         log_metrics: bool = False,
     ):
-        self.step += 1
+        
+        commit_loss, multi_channels_preds = embeddings
+        
+        batch_size, seq_len, n_class = outputs.size()
 
-        if self.step % 250 == 0 and log == "train":
-            self.log_prototypes(log)
+        outputs = outputs.reshape(-1, n_class)
+        targets = targets.reshape(-1)
 
+        tl, mcl = self.loss( outputs, targets, multt_channels_preds )
+
+        loss = commit_loss + mcl + tl
+        
+        self.log(f"{log}_loss", loss, prog_bar=True, sync_dist=True)
+        self.log(f"{log}_target_acc", self.wacc(outputs, targets), prog_bar=True, sync_dist=True)
+
+        nchan = multi_channels_preds.size(2)
+        multi_channels_preds = multi_channels_preds.reshape( -1, nchan, n_class )
+        
+        for c in range( nchan ):
+            self.log(f"{log}_{c}_acc", self.wacc(multi_channels_preds[:, c], targets), prog_bar=True, sync_dist=True)
+            
+        self.log(f"{log}_commit_loss", commit_loss, prog_bar=True, sync_dist=True)
+
+        if log_metrics:
+            self.log(f"{log}_ck", self.ck(outputs, targets), sync_dist=True)
+            self.log(f"{log}_pr", self.pr(outputs, targets), sync_dist=True)
+            self.log(f"{log}_rc", self.rc(outputs, targets), sync_dist=True)
+            self.log(f"{log}_macc", self.macc(outputs, targets), sync_dist=True)
+            self.log(f"{log}_mf1", self.mf1(outputs, targets), sync_dist=True)
+        
         return super().compute_loss(embeddings, outputs, targets, log, log_metrics)
 
 
 class NN(nn.Module):
-    def __init__(self, config: dict):
+    def __init__(self, module_config = module_config):
         super(NN, self).__init__()
 
-        assert (
-            3000 % config["proto_lenght"] == 0
-        ), "The prototype lenght must be a divisor of 3000"
+        from physioex.train.networks.sleeptransformer import EpochEncoder as SectionEncoder
+        from physioex.train.networks.sleeptransformer import SequenceEncoder
+        
+        from vector_quantize_pytorch import SimVQ
+        
+        in_channels = module_config["in_channels"]
+        module_config["in_channels"] = 1
+        
+        self.S = module_config["S"]
+        self.N = module_config["N"]
+                
+        self.section_encoder = SectionEncoder( module_config )
 
-        self.epoch_encoder = EpochEncoder(
-            hidden_size=3000 // config["proto_lenght"],
-            attention_size=128,
-            N=config["N"],
-            n_prototypes=config["n_prototypes"],
-            temperature=1.0,
+        self.sampler = HardAttentionLayer(
+            hidden_size = 128,
+            attention_size = 128 * in_channels,
+            N = module_config["N"],            
         )
-
-        self.sequence_encoder = SequenceEncoder(
-            hidden_size=self.epoch_encoder.out_size, nhead=4
+        
+        self.prototype = SimVQ(
+            dim = 128,
+            codebook_size = 50 * in_channels,
+            rotation_trick = True,  # use rotation trick from Fifty et al.
+            channel_first=False
         )
+                
+        self.sequence_encoder = SequenceEncoder( module_config )
+        
+        if in_channels > 1:
+            self.channels_sampler = HardAttentionLayer(
+                hidden_size = 128,
+                attention_size = 128,
+                N = 1
+            )
+        else :
+            self.channels_sampler = nn.Identity()
 
-        self.clf = nn.Linear(self.epoch_encoder.out_size, config["n_classes"])
+        
+        module_config["in_channels"] = in_channels
+
+        self.clf = nn.Linear( 128, module_config["n_classes"])
 
     def encode(self, x):
         # x shape : (batch_size, seq_len, n_chan, n_samp)
-        batch_size, seq_len, _, _ = x.size()
+        batch, L, nchan, T, F = x.size()
+        
+        p, _, commit_loss = self.get_prototypes( x ) # batch, L, nchan, N, 128
+        
+        # average prototypes
+        p = p.mean( dim = 3 ).reshape( batch, L, nchan, 128).permute( 0, 2, 1, 3)
+        p = p.reshape( -1, L, 128 )        
+        
+        ### sequence learning ##### 
+        p = self.sequence_encoder( p ) # out -1, L, 128
+        
+        ### multichannel optimization:
+        mcy = self.clf( p.reshape( -1, 128) ).reshape( batch, nchan, L, -1).permute( 0, 2, 1, 3 )
+        # batch, L, nchan, nclasses
+                
+        ### channel picking
+        p = p.reshape( batch, nchan, L, 128).permute( 0, 2, 1, 3).reshape( -1, nchan, 128)
+ 
+        p = self.channels_sampler( p ).reshape( batch*L, 128 )
+        y = self.clf(y)
+        
+        return (commit_loss, mcy) , y 
 
-        proto, _ = self.epoch_encoder(x)
+    
+    def get_prototypes(self, x):
+        # x shape : (batch_size, seq_len, n_chan, n_samp)
+        batch, L, nchan, T, F = x.size()
+        
+        #### section reshaping ####
+        x = x.reshape( batch * L * nchan, 1, T, F )
+        # shape of x is -1, 1, 29, 129 --> -1, 1, 30, 129
+        last_x = x[:, :, -1].reshape(-1, 1, 1, F)        
+        x = torch.cat( [x, last_x], dim = 2)
+        
+        x = x.reshape(-1, 1, self.S, F)
+        #### section encoding #####        
+        x = self.section_encoder( x ) # out -1, 1, 128
+        
+        ### epoch reshaping #####        
+        x = x.reshape( -1, (T+1)//self.S, 128 )
+        
+        ### sampling N elements from the input
+        x = self.sampler( x ) # out -1, N, 128                               
+        
+        ### convert section into prototype 
+        p, indx, commit_loss = self.prototype( x.reshape(-1, 128) )                
 
-        # proto shape : (batch_size, seq_len, N, hidden_size)
-        # we selected N prototypes from each epoch in the sequence
-
-        # sum the prototypes to get the epoch representation
-        N = proto.size(2)
-        proto = torch.sum(proto, dim=2) / N
-
-        # proto shape : (batch_size, seq_len, hidden_size)
-        # encode the sequence with the transformer
-        proto = self.sequence_encoder(proto).reshape(batch_size * seq_len, -1)
-
-        clf = self.clf(proto).reshape(batch_size, seq_len, -1)
-        proto = proto.reshape(batch_size, seq_len, -1)
-
-        return proto, clf
+        p = p.reshape(batch, L, nchan, self.N, 128 )
+        indx = indx.reshape(batch, L, nchan, self.N )
+                
+        return p, indx, commit_loss
 
     def forwad(self, x):
         x, y = self.encode(x)
@@ -105,153 +194,6 @@ class NN(nn.Module):
         return y
 
 
-class SequenceEncoder(nn.Module):
-    def __init__(
-        self,
-        hidden_size: int,
-        nhead: int,
-    ):
-        super(SequenceEncoder, self).__init__()
-        assert (
-            hidden_size % nhead == 0
-        ), "Hidden size must be a divisor of the number of heads"
-
-        self.pe = PositionalEncoding(hidden_size, 1024)
-
-        # autoregressive model for the sequence trasnformer based on the transformer architecture
-        self.encoder = nn.TransformerEncoderLayer(
-            d_model=hidden_size,
-            nhead=nhead,
-            dim_feedforward=hidden_size,
-            dropout=0.25,
-            batch_first=True,
-        )
-
-        self.encoder = nn.TransformerEncoder(self.encoder, num_layers=1)
-
-    def forward(self, x):
-        # x shape : (batch_size, seq_len, hidden_size)
-
-        # encode the sequence with positional encoding
-        x = self.pe(x)
-
-        # encode the sequence with the transformer
-        x = self.encoder(x)
-
-        return x
-
-
-class PrototypeLayer(nn.Module):
-    def __init__(
-        self,
-        hidden_size: int,
-        N: int = 1,  # number of prototypes to learn
-    ):
-        super(PrototypeLayer, self).__init__()
-
-        self.prototypes = nn.Parameter(torch.zeros(N, hidden_size), requires_grad=True)
-
-        # nn.init.uniform_(self.prototypes, 0, 1)
-
-        # TODO inizilizzare a 0
-        nn.init.constant_(self.prototypes, 0)
-
-    def forward(self, x):
-        # x shape : (batch_size, seq_len, hidden_size)
-        batch_size, seq_len, hidden_size = x.size()
-
-        x = x.reshape(batch_size * seq_len, hidden_size)
-
-        # calculate the  distance between each element of the sequence and the prototypes
-        dist = torch.cdist(x, self.prototypes) + 1e-20
-
-        # dist shape : (batch_size * seq_len, N)
-        # select the prototype with the minimum distance with gumbel softmax
-        dist = -torch.log(dist)
-        # dist shape : (batch_size * seq_len, N)
-
-        logits = torch.nn.functional.gumbel_softmax(dist, tau=1.0, hard=True)
-
-        dist = dist * logits
-
-        print("Dist shape: ", dist.shape)
-        print("Dist expected shape, ", (batch_size, 1))
-
-        # logits shape : (batch_size * seq_len, N)
-        # select the prototype with the maximum probability for each sample
-        proto = torch.einsum("bn, nh -> bh", logits, self.prototypes)
-
-        # proto shape : (batch_size * seq_len, hidden_size)
-        x = x - proto
-
-        x = x.reshape(batch_size, seq_len, hidden_size)
-        proto = proto.reshape(batch_size, seq_len, hidden_size)
-
-        return proto, x
-
-
-class EpochEncoder(nn.Module):
-    def __init__(
-        self,
-        hidden_size: int,
-        attention_size: int,
-        N: int = 1,  # number of elements to select from the epoch
-        n_prototypes: int = 25,  # number of elements to learn
-        temperature: float = 1.0,
-    ):
-
-        super(EpochEncoder, self).__init__()
-        self.hidden_size = hidden_size
-        self.N = N
-
-        # we need to extract frequency-related features from the signal
-        self.conv1 = nn.Sequential(
-            OrderedDict(
-                [
-                    ("conv1", nn.Conv1d(1, 32, 5)),
-                    ("relu1", nn.ReLU()),
-                    ("maxpool1", nn.MaxPool1d(5)),
-                    ("conv2", nn.Conv1d(32, 64, 5)),
-                    ("relu2", nn.ReLU()),
-                    ("maxpool2", nn.MaxPool1d(5)),
-                    ("conv3", nn.Conv1d(64, 128, 5)),
-                    ("relu3", nn.ReLU()),
-                    ("maxpool3", nn.MaxPool1d(5)),
-                    ("conv4", nn.Conv1d(128, 256, 3)),
-                    ("relu4", nn.ReLU()),
-                    ("flatten", nn.Flatten()),
-                ]
-            )
-        )
-
-        self.out_size = self.conv1(torch.randn(1, 1, hidden_size)).shape[1]
-
-        self.sampler = HardAttentionLayer(hidden_size, attention_size, N, temperature)
-
-        self.prototype = PrototypeLayer(self.out_size, n_prototypes)
-
-    def forward(self, x):
-        # x shape : (batch_size, seq_len, n_chan, n_samp)
-        batch_size, seq_len, n_chan, n_samp = x.size()
-
-        assert (
-            n_samp % self.hidden_size == 0
-        ), "Hidden size must be a divisor of the number of samples"
-
-        x = x.reshape(batch_size * seq_len, n_chan * (n_samp // self.hidden_size), -1)
-        x = self.sampler(x)  # shape : (batch_size * seq_len, N, hidden_size)
-        x = x.reshape(batch_size * seq_len * self.N, 1, -1)
-
-        x = self.conv1(x)  # shape : (batch_size * seq_len * self.N, out_size)
-
-        x = x.reshape(batch_size, seq_len * self.N, self.out_size)
-
-        proto, residual = self.prototype(x)
-
-        proto = proto.reshape(batch_size, seq_len, self.N, self.out_size)
-        residual = residual.reshape(batch_size, seq_len, self.N, self.out_size)
-
-        return proto, residual
 
 
 class HardAttentionLayer(nn.Module):
@@ -260,8 +202,7 @@ class HardAttentionLayer(nn.Module):
         hidden_size: int,
         attention_size: int,
         N: int = 1,  # number of elements to select
-        temperature: float = 1.0,
-        encoding: nn.Module = None,
+        temperature: float = 0.1,
     ):
         super(HardAttentionLayer, self).__init__()
 
@@ -303,24 +244,3 @@ class HardAttentionLayer(nn.Module):
 
         return x
 
-
-class PositionalEncoding(nn.Module):
-    def __init__(self, hidden_size, max_len=5000):
-        super().__init__()
-
-        # Create matrix of [SeqLen, HiddenDim] representing the positional encoding for max_len inputs
-        pe = torch.zeros(max_len, hidden_size)
-        position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
-        div_term = torch.exp(
-            torch.arange(0, hidden_size, 2).float() * (-math.log(10000.0) / hidden_size)
-        )
-        pe[:, 0::2] = torch.sin(position * div_term)
-        pe[:, 1::2] = torch.cos(position * div_term)
-        pe = pe.unsqueeze(0)
-
-        self.register_buffer("pe", pe, persistent=False)
-
-    def forward(self, x):
-        # shape x : (batch_size, seq_len, hidden_size)
-        x = x + self.pe[:, : x.size(1)]
-        return x
