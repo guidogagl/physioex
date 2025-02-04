@@ -63,12 +63,12 @@ class ProtoSleepNet(SleepModule):
         outputs = outputs.reshape(-1, n_class)
         targets = targets.reshape(-1)
 
-        tl, mcl = self.loss( outputs, targets, multt_channels_preds )
+        tl, mcl = self.loss( outputs, targets, multi_channels_preds )
 
         loss = commit_loss + mcl + tl
         
         self.log(f"{log}_loss", loss, prog_bar=True, sync_dist=True)
-        self.log(f"{log}_target_acc", self.wacc(outputs, targets), prog_bar=True, sync_dist=True)
+        self.log(f"{log}_acc", self.wacc(outputs, targets), prog_bar=True, sync_dist=True)
 
         nchan = multi_channels_preds.size(2)
         multi_channels_preds = multi_channels_preds.reshape( -1, nchan, n_class )
@@ -85,7 +85,7 @@ class ProtoSleepNet(SleepModule):
             self.log(f"{log}_macc", self.macc(outputs, targets), sync_dist=True)
             self.log(f"{log}_mf1", self.mf1(outputs, targets), sync_dist=True)
         
-        return super().compute_loss(embeddings, outputs, targets, log, log_metrics)
+        return loss
 
 
 class NN(nn.Module):
@@ -129,11 +129,8 @@ class NN(nn.Module):
         else :
             self.channels_sampler = nn.Identity()
 
+        self.clf = self.sequence_encoder.clf
         
-        module_config["in_channels"] = in_channels
-
-        self.clf = nn.Linear( 128, module_config["n_classes"])
-
     def encode(self, x):
         # x shape : (batch_size, seq_len, n_chan, n_samp)
         batch, L, nchan, T, F = x.size()
@@ -145,7 +142,7 @@ class NN(nn.Module):
         p = p.reshape( -1, L, 128 )        
         
         ### sequence learning ##### 
-        p = self.sequence_encoder( p ) # out -1, L, 128
+        p = self.sequence_encoder.encode( p ) # out -1, L, 128
         
         ### multichannel optimization:
         mcy = self.clf( p.reshape( -1, 128) ).reshape( batch, nchan, L, -1).permute( 0, 2, 1, 3 )
@@ -155,7 +152,7 @@ class NN(nn.Module):
         p = p.reshape( batch, nchan, L, 128).permute( 0, 2, 1, 3).reshape( -1, nchan, 128)
  
         p = self.channels_sampler( p ).reshape( batch*L, 128 )
-        y = self.clf(y)
+        y = self.clf(p).reshape( batch, L, -1)
         
         return (commit_loss, mcy) , y 
 

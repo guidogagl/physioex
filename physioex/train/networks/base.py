@@ -67,7 +67,7 @@ class SleepModule(pl.LightningModule):
             self.opt,
             mode="min",
             factor=0.5,
-            patience=3,
+            patience=1,
             threshold=0.0001,
             threshold_mode="rel",
             cooldown=0,
@@ -79,8 +79,8 @@ class SleepModule(pl.LightningModule):
             "scheduler": scheduler,
             "name": "lr_scheduler",
             "monitor": "val_loss",
-            "interval": "step",
-            "frequency": 1000,
+            "interval": "epoch",
+            "frequency": 1,
         }
         return [self.opt], [scheduler]
 

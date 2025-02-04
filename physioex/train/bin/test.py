@@ -29,3 +29,7 @@ def test_script():
         results_path=parser["results_path"],
         aggregate_datasets=parser["aggregate"],
     )
+
+
+if __name__ == "__main__":
+    test_script()

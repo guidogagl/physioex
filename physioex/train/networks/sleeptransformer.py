@@ -104,7 +104,7 @@ class SequenceEncoder(nn.Module):
     def forward(self, x):
         x = self.pe(x)
         x = self.encoder(x)
-        x = self.lin(x)
+        x = self.clf(x)
         return x
 
     def encode(self, x):
