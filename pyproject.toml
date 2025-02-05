@@ -42,7 +42,8 @@ dependencies = [
     "torch",
     "torchmetrics",
     "tqdm",
-    "wfdb"
+    "wfdb",
+    "gdown"
 ]
 
 [project.urls]

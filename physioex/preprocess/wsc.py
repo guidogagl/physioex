@@ -39,7 +39,7 @@ class WSCPreprocessor(Preprocessor):
     @logger.catch
     def get_subjects_records(self) -> List[str]:
 
-        records_dir = os.path.join(self.dataset_folder, "..", "wsc", "polysomnography")
+        records_dir = os.path.join(self.dataset_folder, "..", "raw_wsc", "polysomnography")
 
         records = os.listdir(records_dir)
         records = [
@@ -301,6 +301,6 @@ def read_edf_file(edf_file_path: str):
 
 if __name__ == "__main__":
 
-    # WSCPreprocessor(visit=1, data_folder="/mnt/guido-data/").run()
-    # WSCPreprocessor(visit=2, data_folder="/mnt/guido-data/").run()
-    WSCPreprocessor(visit=3, data_folder="/mnt/guido-data/").run()
+    WSCPreprocessor(visit=1, data_folder="/mnt/vde/sleep-data/").run()
+    WSCPreprocessor(visit=2, data_folder="/mnt/vde/sleep-data/").run()
+    WSCPreprocessor(visit=3, data_folder="/mnt/vde/sleep-data/").run()

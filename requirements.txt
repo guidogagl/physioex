@@ -29,3 +29,4 @@ torch==2.4.0
 torchmetrics==1.4.1
 tqdm==4.66.5
 wfdb==4.1.2
+gdown==5.2.0

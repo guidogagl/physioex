@@ -9,7 +9,7 @@ from loguru import logger
 
 from physioex.train.networks import config as network_config
 from physioex.train.networks.base import SleepModule
-
+import gdown
 
 def get_models_table():
     check_table_path = pkg.resource_filename(
@@ -80,6 +80,10 @@ def load_model(
             model_name = "tinysleepnet"
         elif model.__name__ == "Chambon2018Net":
             model_name = "chambon2018"
+        elif model.__name__ == "SleepTransformer":
+            model_name = "sleeptransformer"
+        elif model.__name__ == "MiceTransformer":
+            model_name = "micetransformer"
         else:
             raise ValueError(
                 f"Model {model.__name__} not found in the registered pretrained models"
@@ -106,7 +110,11 @@ def load_model(
         )
     else:
         pass
-
+    
+    if not os.path.isfile( ckpt_path ):
+        url = table["download"].values[0]
+        gdown.download( url, ckpt_path, fuzzy=True )
+    
     default_kwargs.update(model_kwargs)
     model_kwargs = default_kwargs
 

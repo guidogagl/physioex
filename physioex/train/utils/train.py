@@ -106,7 +106,7 @@ def train(
     
     lr_callback = LearningRateMonitor(logging_interval="step")
     
-    dvc_callback = DeviceStatsMonitor()
+    #dvc_callback = DeviceStatsMonitor()
     
     # progress_bar_callback = RichProgressBar()
     my_logger = [
@@ -124,16 +124,14 @@ def train(
 
     num_steps = datamodule.dataset.__len__() * 0.7 // effective_batch_size
     val_check_interval = max(1, num_steps // num_validations)
-
-
-    
+        
     trainer = Trainer(
         devices=devices,
         strategy = "ddp" if (num_nodes > 1 or len(devices) > 1) else "auto",
         num_nodes=num_nodes,
         max_epochs=max_epochs,
         val_check_interval=val_check_interval,
-        callbacks=[checkpoint_callback, lr_callback, dvc_callback],  # , progress_bar_callback],
+        callbacks=[checkpoint_callback, lr_callback ], # dvc_callback, progress_bar_callback],
         deterministic=True,
         logger=my_logger,
     )
@@ -142,5 +140,5 @@ def train(
     model = model.train()
     # Start training
     trainer.fit(model, datamodule=datamodule)
-
+    
     return checkpoint_callback.best_model_path

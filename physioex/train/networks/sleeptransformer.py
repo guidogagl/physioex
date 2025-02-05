@@ -12,6 +12,36 @@ import math
 
 module_config = dict()
 
+class MiceTransformer(SleepModule):
+    def __init__(self, module_config=module_config):
+        super(MiceTransformer, self).__init__(Net(module_config), module_config)
+        
+
+    def compute_loss(
+        self,
+        embeddings,
+        outputs,
+        targets,
+        log: str = "train",
+        log_metrics: bool = False,
+    ):
+        
+        batch_size, seq_len, n_class = outputs.size()
+        
+        # from 5 classes W, N1, N2, N3, R
+        # to 3 classes W, N, R
+        # N = N1 + N2 + N3
+        
+        W = W = outputs[:, :, 0]
+        N = outputs[:, :, 1] + outputs[:, :, 2] + outputs[:, :, 3]
+        R = outputs[:, :, 4]
+
+        outputs = torch.stack([W, N, R], dim=2)
+        
+        return super.compute_loss(embeddings, outputs, targets, log, log_metrics)
+    
+    
+
 class SleepTransformer(SleepModule):
     def __init__(self, module_config=module_config):
         super(SleepTransformer, self).__init__(Net(module_config), module_config)
