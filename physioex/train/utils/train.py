@@ -67,23 +67,25 @@ def train(
     if resume and (model is None):
         chekpoints = list(Path(checkpoint_path).glob("*.ckpt"))
         if len(chekpoints) > 0:
-            # read the lightning_logs/version_XX/metrics.csv file
-            metrics = os.listdir(os.path.join(checkpoint_path, "lightning_logs"))
-            # find the last version
-            version = sorted(metrics)[-1]
-            metrics = pd.read_csv(
-                os.path.join(checkpoint_path, "lightning_logs", version, "metrics.csv")
-            )
+        
+            try:
+                # read the lightning_logs/version_XX/metrics.csv file
+                metrics = os.listdir(os.path.join(checkpoint_path, "lightning_logs"))
+                # find the last version
+                version = sorted(metrics)[-1]
+                metrics = pd.read_csv(
+                    os.path.join(checkpoint_path, "lightning_logs", version, "metrics.csv")
+                )
 
-            # get the max_epoch from the metrics file
-            interruption_epoch = max(metrics["epoch"])
+                interruption_epoch = max(metrics["epoch"])
 
-            if interruption_epoch < max_epochs:
-                max_epochs = max_epochs - interruption_epoch
-            else:
-                return chekpoints[0]
+                if interruption_epoch < max_epochs:
+                    max_epochs = max_epochs - interruption_epoch
 
-            logger.info(f"Resuming training from epoch {interruption_epoch}")
+                logger.info(f"Resuming training from epoch {interruption_epoch}")
+            
+            except:
+                logger.info(f"No logging metric found, setting max_epoch to {max_peoch}")    
 
             model = model_class.load_from_checkpoint(
                 chekpoints[0], module_config=model_config
