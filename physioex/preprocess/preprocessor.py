@@ -112,14 +112,14 @@ class Preprocessor:
         return table
 
     @logger.catch
-    def get_sets(self) -> Tuple[List, List, List]:
+    def get_sets(self) -> Tuple[np.array, np.array, np.array]:
         """
         Returns the train, validation, and test subjects.
 
         (Optional) Method to be provided by the user. By default, the method splits the subjects randomly with 70% for training, 15% for validation, and 15% for testing.
 
         Returns:
-            Tuple[List, List, List]: A tuple containing the train, validation, and test subjects.
+            Tuple[np.array, np.array, np.array]: A tuple containing the train, validation, and test subjects.
         """
 
         np.random.seed(42)
@@ -203,7 +203,7 @@ class Preprocessor:
             signal_memmap.flush()
 
             for i, p_path in enumerate(p_paths):
-                p_signal = self.preprocessors[i](signal)
+                p_signal = self.preprocessors[i](signal, self.preprocessors_shape[i])
                 prep_var[i].add(p_signal)
 
                 p_signal_memmap = np.memmap(
