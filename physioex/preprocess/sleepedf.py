@@ -201,34 +201,6 @@ class SLEEPEDFPreprocessor(Preprocessor):
 
         return signals, labels
 
-    @logger.catch
-    def get_sets(self) -> Tuple[List, List, List]:
-
-        tmp_path = os.path.join(self.dataset_folder, "tmp.mat")
-        urlretrieve(
-            "https://github.com/pquochuy/xsleepnet/raw/master/sleepedf-78/data_split_eval.mat",
-            tmp_path,
-        )
-
-        split_matrix = loadmat(tmp_path)
-
-        train_subjects, valid_subjects, test_subjects = [], [], []
-        for fold in range(len(split_matrix["test_sub"])):
-
-            test_subjects.append(split_matrix["test_sub"][fold][0][0])
-            valid_subjects.append(split_matrix["eval_sub"][fold][0][0])
-
-            train_s = [
-                subject
-                for subject in SLEEPEDF_SUBJECTS
-                if subject not in test_subjects[-1]
-                and subject not in valid_subjects[-1]
-            ]
-            train_subjects.append(train_s)
-
-        os.remove(tmp_path)
-
-        return train_subjects, valid_subjects, test_subjects
 
 
 if __name__ == "__main__":

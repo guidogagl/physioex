@@ -13,6 +13,12 @@ sleeptransformer:
   preprocessing : xsleepnet
   target_transform: null
 
+
+micetransformer:
+  model: physioex.train.networks.sleeptransformer:MiceTransformer
+  preprocessing : xsleepnet
+  target_transform: null
+
 tinysleepnet:
   model: physioex.train.networks.tinysleepnet:TinySleepNet
   preprocessing : raw
@@ -32,6 +38,7 @@ protosleepnet:
   preprocessing : xsleepnet
   target_transform: null
   model_kwargs:
+    learning_rate : .00001
     N : 1
     S : 2
     n_prototypes : 50

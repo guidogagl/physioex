@@ -252,14 +252,6 @@ class PhysioExParser:
             help="Specify the model checkpoint, if None a pretrained model is loaded. Expected type: str. Default: None",
         )
 
-        cls.parser.add_argument(
-            "-rp",
-            "--results_path",
-            default=None,
-            type=str,
-            help="Specify the path where to store the results. Expected type: str. Default: None",
-        )
-
         parser = cls.parser.parse_args()
         parser = read_config(parser)
         parser = parse_model(parser)

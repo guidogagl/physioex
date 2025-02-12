@@ -34,7 +34,7 @@ class MESAPreprocessor(Preprocessor):
     @logger.catch
     def get_subjects_records(self) -> List[str]:
 
-        records_dir = os.path.join(self.dataset_folder, "mesa", "polysomnography")
+        records_dir = os.path.join(self.dataset_folder, "raw_mesa", "polysomnography")
 
         edf_dir = os.path.join(records_dir, "edfs")
 
@@ -68,6 +68,6 @@ class MESAPreprocessor(Preprocessor):
 
 if __name__ == "__main__":
 
-    p = MESAPreprocessor(data_folder="/home/guido/physioex-data/")
+    p = MESAPreprocessor(data_folder="/mnt/vde/sleep-data/")
 
     p.run()

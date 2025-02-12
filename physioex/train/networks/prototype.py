@@ -20,6 +20,8 @@ module_config = dict()
 import torch.distributions as dist
 import torch.nn.functional as F
 
+import time
+
 class ProtoLoss( nn.Module ):    
     def __init__(self):
         super(ProtoLoss, self).__init__()
@@ -63,12 +65,12 @@ class ProtoSleepNet(SleepModule):
         outputs = outputs.reshape(-1, n_class)
         targets = targets.reshape(-1)
 
-        tl, mcl = self.loss( outputs, targets, multt_channels_preds )
+        tl, mcl = self.loss( outputs, targets, multi_channels_preds )
 
         loss = commit_loss + mcl + tl
         
         self.log(f"{log}_loss", loss, prog_bar=True, sync_dist=True)
-        self.log(f"{log}_target_acc", self.wacc(outputs, targets), prog_bar=True, sync_dist=True)
+        self.log(f"{log}_acc", self.wacc(outputs, targets), prog_bar=True, sync_dist=True)
 
         nchan = multi_channels_preds.size(2)
         multi_channels_preds = multi_channels_preds.reshape( -1, nchan, n_class )
@@ -85,7 +87,7 @@ class ProtoSleepNet(SleepModule):
             self.log(f"{log}_macc", self.macc(outputs, targets), sync_dist=True)
             self.log(f"{log}_mf1", self.mf1(outputs, targets), sync_dist=True)
         
-        return super().compute_loss(embeddings, outputs, targets, log, log_metrics)
+        return loss
 
 
 class NN(nn.Module):
@@ -106,8 +108,8 @@ class NN(nn.Module):
         self.section_encoder = SectionEncoder( module_config )
 
         self.sampler = HardAttentionLayer(
-            hidden_size = 128,
-            attention_size = 128 * in_channels,
+            hidden_size = 129 * self.S,
+            attention_size = 129 * self.S,
             N = module_config["N"],            
         )
         
@@ -129,24 +131,31 @@ class NN(nn.Module):
         else :
             self.channels_sampler = nn.Identity()
 
+        self.clf = self.sequence_encoder.clf
         
-        module_config["in_channels"] = in_channels
-
-        self.clf = nn.Linear( 128, module_config["n_classes"])
-
     def encode(self, x):
         # x shape : (batch_size, seq_len, n_chan, n_samp)
         batch, L, nchan, T, F = x.size()
         
+        start_time = time.time()
         p, _, commit_loss = self.get_prototypes( x ) # batch, L, nchan, N, 128
+        end_time = time.time()
+        #print( f"Prototype time: {end_time - start_time}")
         
+        start_time = time.time()        
         # average prototypes
         p = p.mean( dim = 3 ).reshape( batch, L, nchan, 128).permute( 0, 2, 1, 3)
         p = p.reshape( -1, L, 128 )        
+        end_time = time.time()
+        #print( f"Prototype average time: {end_time - start_time}")
         
         ### sequence learning ##### 
-        p = self.sequence_encoder( p ) # out -1, L, 128
+        start_time = time.time()
+        p = self.sequence_encoder.encode( p ) # out -1, L, 128
+        end_time = time.time()
+        #print( f"Sequence time: {end_time - start_time}")
         
+        start_time = time.time()
         ### multichannel optimization:
         mcy = self.clf( p.reshape( -1, 128) ).reshape( batch, nchan, L, -1).permute( 0, 2, 1, 3 )
         # batch, L, nchan, nclasses
@@ -155,7 +164,9 @@ class NN(nn.Module):
         p = p.reshape( batch, nchan, L, 128).permute( 0, 2, 1, 3).reshape( -1, nchan, 128)
  
         p = self.channels_sampler( p ).reshape( batch*L, 128 )
-        y = self.clf(y)
+        y = self.clf(p).reshape( batch, L, -1)
+        end_time = time.time()
+        #print( f"Multichannel time: {end_time - start_time}")
         
         return (commit_loss, mcy) , y 
 
@@ -164,28 +175,26 @@ class NN(nn.Module):
         # x shape : (batch_size, seq_len, n_chan, n_samp)
         batch, L, nchan, T, F = x.size()
         
+        start_time = time.time()
         #### section reshaping ####
         x = x.reshape( batch * L * nchan, 1, T, F )
         # shape of x is -1, 1, 29, 129 --> -1, 1, 30, 129
         last_x = x[:, :, -1].reshape(-1, 1, 1, F)        
         x = torch.cat( [x, last_x], dim = 2)
         
-        x = x.reshape(-1, 1, self.S, F)
+        x = x.reshape(batch *L * nchan, -1, self.S * F)
+        
+        x = self.sampler( x ) # out -1, N, self.S * F
+        x = x.reshape( -1, 1, self.S, F)
+        
         #### section encoding #####        
         x = self.section_encoder( x ) # out -1, 1, 128
         
-        ### epoch reshaping #####        
-        x = x.reshape( -1, (T+1)//self.S, 128 )
-        
-        ### sampling N elements from the input
-        x = self.sampler( x ) # out -1, N, 128                               
-        
-        ### convert section into prototype 
         p, indx, commit_loss = self.prototype( x.reshape(-1, 128) )                
 
         p = p.reshape(batch, L, nchan, self.N, 128 )
         indx = indx.reshape(batch, L, nchan, self.N )
-                
+
         return p, indx, commit_loss
 
     def forwad(self, x):
