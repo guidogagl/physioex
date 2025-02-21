@@ -109,13 +109,13 @@ class NN(nn.Module):
 
         self.sampler = HardAttentionLayer(
             hidden_size = 129 * self.S,
-            attention_size = 129 * self.S,
+            attention_size = 1024, #129 * self.S,
             N = module_config["N"],            
         )
         
         self.prototype = SimVQ(
             dim = 128,
-            codebook_size = 50 * in_channels,
+            codebook_size = 50,
             rotation_trick = True,  # use rotation trick from Fifty et al.
             channel_first=False
         )

@@ -9,6 +9,7 @@ from physioex.train.networks.base import SleepModule
 from physioex.train.networks.seqsleepnet import AttentionLayer
 
 import math
+import torchmetrics as tm
 
 module_config = dict()
 
@@ -16,7 +17,26 @@ class MiceTransformer(SleepModule):
     def __init__(self, module_config=module_config):
         super(MiceTransformer, self).__init__(Net(module_config), module_config)
         
-
+        self.wacc = tm.Accuracy(
+            task="multiclass", num_classes=3, average="weighted"
+        )
+        self.macc = tm.Accuracy(
+            task="multiclass", num_classes=3, average="macro"
+        )
+        self.wf1 = tm.F1Score(
+            task="multiclass", num_classes=3, average="weighted"
+        )
+        self.mf1 = tm.F1Score(
+            task="multiclass", num_classes=3, average="macro"
+        )
+        self.ck = tm.CohenKappa(task="multiclass", num_classes=3)
+        self.pr = tm.Precision(
+            task="multiclass", num_classes=3, average="weighted"
+        )
+        self.rc = tm.Recall(
+            task="multiclass", num_classes=3, average="weighted"
+        )
+        
     def compute_loss(
         self,
         embeddings,
@@ -32,7 +52,7 @@ class MiceTransformer(SleepModule):
         # to 3 classes W, N, R
         # N = N1 + N2 + N3
         
-        W = W = outputs[:, :, 0]
+        W = outputs[:, :, 0]
         N = outputs[:, :, 1] + outputs[:, :, 2] + outputs[:, :, 3]
         R = outputs[:, :, 4]
 
