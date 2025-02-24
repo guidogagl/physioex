@@ -37,6 +37,13 @@ class MiceTransformer(SleepModule):
         self.rc = tm.Recall(
             task="multiclass", num_classes=3, average="weighted"
         )
+        self.cm = {'cm': tm.ConfusionMatrix(task="multiclass",
+                                            num_classes=3,
+                                            normalize=None).cuda()
+        }
+        self.cm['cm5'] = tm.ConfusionMatrix(task="multiclass",
+                                            num_classes=5,
+                                            normalize=None).cuda()
 
     def compute_loss(
         self,
@@ -53,13 +60,16 @@ class MiceTransformer(SleepModule):
         # to 3 classes W, N, R
         # N = N1 + N2 + N3
         
-        W = W = outputs[:, :, 0]
+        if log_metrics == True:
+            self.cm['cm5'].update(outputs.reshape(-1, outputs.shape[-1]), targets.flatten())
+        
+        W = outputs[:, :, 0]
         N = outputs[:, :, 1] + outputs[:, :, 2] + outputs[:, :, 3]
         R = outputs[:, :, 4]
 
         outputs = torch.stack([W, N, R], dim=2)
         
-        return super.compute_loss(embeddings, outputs, targets, log, log_metrics)
+        return super(MiceTransformer, self).compute_loss(embeddings, outputs, targets, log, log_metrics)
     
     
 
