@@ -37,6 +37,25 @@ class MiceTransformer(SleepModule):
             task="multiclass", num_classes=3, average="weighted"
         )
         
+        self.pe = PositionalEncoding( 128 )
+        
+        t_layer = nn.TransformerEncoderLayer(
+            d_model=128,
+            nhead=8,
+            dim_feedforward=1024,
+            dropout=0.1,
+            batch_first=True,
+        )
+        
+        self.mice_to_human_encoder = nn.TransformerEncoder(
+            t_layer, 
+            num_layers=4
+        )
+        
+        # set all the parameters of self.nn with require_grads = False
+        for param in self.nn.parameters():
+            param.requires_grad = False
+            
     def compute_loss(
         self,
         embeddings,
@@ -53,14 +72,46 @@ class MiceTransformer(SleepModule):
         # N = N1 + N2 + N3
         
         W = outputs[:, :, 0]
-        N = outputs[:, :, 1] + outputs[:, :, 2] + outputs[:, :, 3]
+
+        N = torch.maximum( outputs[:, :, 1], outputs[:, :, 2] )
+        N = torch.maximum( N, outputs[:, :, 3] )
+
         R = outputs[:, :, 4]
 
         outputs = torch.stack([W, N, R], dim=2)
         
         return super.compute_loss(embeddings, outputs, targets, log, log_metrics)
-    
-    
+
+    def encode( self, x ):
+        batch, L, nchan, T, F = x.shape
+        # T in mice is equal to 17, but in humans is equal to 29
+        # let's make it 34
+       
+        x = torch.permute( x, (0, 1, 2, 4, 3)).reshape( batch, L, nchan, F, T, 1)
+        x = x.expand(batch, L, nchan, F, T, 2).reshape( batch, L, nchan, F, -1 )
+        x = torch.permute( x, (0, 1, 2, 4, 3))
+        
+        x = self.pe(x)
+        x = self.mice_to_human_encoder(x)
+        
+        with torch.no_grad():
+            return self.nn.encode(x)
+        
+    def forward(self, x):
+        batch, L, nchan, T, F = x.shape
+        # T in mice is equal to 17, but in humans is equal to 29
+        # let's make it 34
+       
+        x = torch.permute( x, (0, 1, 2, 4, 3)).reshape( batch, L, nchan, F, T, 1)
+        x = x.expand(batch, L, nchan, F, T, 2).reshape( batch, L, nchan, F, -1 )
+        x = torch.permute( x, (0, 1, 2, 4, 3))
+        
+        x = self.pe(x)
+        x = self.mice_to_human_encoder(x)
+        
+        with torch.no_grad():
+            return self.nn(x)
+        
 
 class SleepTransformer(SleepModule):
     def __init__(self, module_config=module_config):

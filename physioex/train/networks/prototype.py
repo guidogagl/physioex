@@ -105,10 +105,23 @@ class NN(nn.Module):
         self.S = module_config["S"]
         self.N = module_config["N"]
                 
-        self.section_encoder = SectionEncoder( module_config )
+        self.pe = PositionalEncoding( 128 )
+        
+        t_layer = nn.TransformerEncoderLayer(
+            d_model=128 * module_config["in_channels"],
+            nhead=8,
+            dim_feedforward=1024,
+            dropout=0.1,
+            batch_first=True,
+        )
+        
+        self.encoder = nn.TransformerEncoder(
+            t_layer, 
+            num_layers=4
+        )
 
         self.sampler = HardAttentionLayer(
-            hidden_size = 129 * self.S,
+            hidden_size = 128,
             attention_size = 1024, #129 * self.S,
             N = module_config["N"],            
         )
@@ -175,20 +188,15 @@ class NN(nn.Module):
         # x shape : (batch_size, seq_len, n_chan, n_samp)
         batch, L, nchan, T, F = x.size()
         
-        start_time = time.time()
-        #### section reshaping ####
+        #### epoch encoding ####
         x = x.reshape( batch * L * nchan, 1, T, F )
-        # shape of x is -1, 1, 29, 129 --> -1, 1, 30, 129
-        last_x = x[:, :, -1].reshape(-1, 1, 1, F)        
-        x = torch.cat( [x, last_x], dim = 2)
+        x = x[ ..., :128 ]
         
-        x = x.reshape(batch *L * nchan, -1, self.S * F)
+        x = self.pe(x)
+        x = self.encoder(x)
         
-        x = self.sampler( x ) # out -1, N, self.S * F
-        x = x.reshape( -1, 1, self.S, F)
-        
-        #### section encoding #####        
-        x = self.section_encoder( x ) # out -1, 1, 128
+        # out : -1, 1, T, 128                
+        x = self.sampler( x ) # out -1, N, 128
         
         p, indx, commit_loss = self.prototype( x.reshape(-1, 128) )                
 
