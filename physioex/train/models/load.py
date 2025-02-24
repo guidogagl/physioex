@@ -83,7 +83,7 @@ def load_model(
         elif model.__name__ == "SleepTransformer":
             model_name = "sleeptransformer"
         elif model.__name__ == "MiceTransformer":
-            model_name = "micetransformer_transferlearning"
+            model_name = "micetransformer"
         elif model.__name__ == "ProtoSleepNet":
             model_name = "protosleepnet"
         else:
