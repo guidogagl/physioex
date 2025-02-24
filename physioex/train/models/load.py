@@ -83,7 +83,7 @@ def load_model(
         elif model.__name__ == "SleepTransformer":
             model_name = "sleeptransformer"
         elif model.__name__ == "MiceTransformer":
-            model_name = "micetransformer"
+            model_name = "micetransformer_transferlearning"
         else:
             raise ValueError(
                 f"Model {model.__name__} not found in the registered pretrained models"

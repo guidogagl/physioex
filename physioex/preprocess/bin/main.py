@@ -6,6 +6,7 @@ from physioex.preprocess.mass import MASSPreprocessor
 from physioex.preprocess.mesa import MESAPreprocessor
 from physioex.preprocess.mros import MROSPreprocessor
 from physioex.preprocess.shhs import SHHSPreprocessor
+from physioex.preprocess.kornum import KornumPreprocessor
 
 preprocessors = {
     "dcsm": DCSMPreprocessor,
@@ -14,6 +15,7 @@ preprocessors = {
     "hmc": HMCPreprocessor,
     "mesa": MESAPreprocessor,
     "mros": MROSPreprocessor,
+    "kornum": KornumPreprocessor,
 }
 
 import importlib

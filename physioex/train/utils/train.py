@@ -85,7 +85,7 @@ def train(
                 logger.info(f"Resuming training from epoch {interruption_epoch}")
             
             except:
-                logger.info(f"No logging metric found, setting max_epoch to {max_peoch}")    
+                logger.info(f"No logging metric found, setting max_epoch to {max_epochs}")    
 
             model = model_class.load_from_checkpoint(
                 chekpoints[0], module_config=model_config

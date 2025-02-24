@@ -13,11 +13,17 @@ sleeptransformer:
   preprocessing : xsleepnet
   target_transform: null
 
-
-micetransformer:
+micetransformer_transferlearning:
   model: physioex.train.networks.sleeptransformer:MiceTransformer
-  preprocessing : xsleepnet
+  preprocessing : xsleepnet_mouse
   target_transform: null
+
+micetransformer_train:
+  model: physioex.train.networks.sleeptransformer:SleepTransformer
+  preprocessing : xsleepnet_mouse100
+  target_transform: null
+  model_kwargs:
+    n_classes: 3
 
 tinysleepnet:
   model: physioex.train.networks.tinysleepnet:TinySleepNet
