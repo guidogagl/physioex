@@ -3,6 +3,7 @@ from collections import OrderedDict
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import torchmetrics as tm
 from pytorch_lightning.utilities.types import OptimizerLRScheduler
 
 from physioex.train.networks.base import SleepModule
@@ -16,6 +17,26 @@ class MiceTransformer(SleepModule):
     def __init__(self, module_config=module_config):
         super(MiceTransformer, self).__init__(Net(module_config), module_config)
         
+        # update num_classes for metrics
+        self.wacc = tm.Accuracy(
+            task="multiclass", num_classes=3, average="weighted"
+        )
+        self.macc = tm.Accuracy(
+            task="multiclass", num_classes=3, average="macro"
+        )
+        self.wf1 = tm.F1Score(
+            task="multiclass", num_classes=3, average="weighted"
+        )
+        self.mf1 = tm.F1Score(
+            task="multiclass", num_classes=3, average="macro"
+        )
+        self.ck = tm.CohenKappa(task="multiclass", num_classes=3)
+        self.pr = tm.Precision(
+            task="multiclass", num_classes=3, average="weighted"
+        )
+        self.rc = tm.Recall(
+            task="multiclass", num_classes=3, average="weighted"
+        )
 
     def compute_loss(
         self,
