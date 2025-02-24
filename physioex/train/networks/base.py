@@ -37,6 +37,9 @@ class SleepModule(pl.LightningModule):
             self.rc = tm.Recall(
                 task="multiclass", num_classes=config["n_classes"], average="weighted"
             )
+            self.cm = {'cm': tm.ConfusionMatrix(task="multiclass",
+                                            num_classes=3,
+                                            normalize=None).cuda()}
         elif self.n_classes == 1:
             # regression experiment
             self.mse = tm.MeanSquaredError()
@@ -127,6 +130,8 @@ class SleepModule(pl.LightningModule):
             self.log(f"{log}_rc", self.rc(outputs, targets), sync_dist=True)
             self.log(f"{log}_macc", self.macc(outputs, targets), sync_dist=True)
             self.log(f"{log}_mf1", self.mf1(outputs, targets), sync_dist=True)
+            self.cm['cm'].update(outputs, targets)
+
         return loss
 
     def training_step(self, batch, batch_idx):

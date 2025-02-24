@@ -3,6 +3,7 @@ from collections import OrderedDict
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import torchmetrics as tm
 from pytorch_lightning.utilities.types import OptimizerLRScheduler
 
 from physioex.train.networks.base import SleepModule
@@ -36,6 +37,14 @@ class MiceTransformer(SleepModule):
         self.rc = tm.Recall(
             task="multiclass", num_classes=3, average="weighted"
         )
+        self.cm = {'cm': tm.ConfusionMatrix(task="multiclass",
+                                            num_classes=3,
+                                            normalize=None).cuda()
+        }
+        self.cm['cm5'] = tm.ConfusionMatrix(task="multiclass",
+                                            num_classes=5,
+                                            normalize=None).cuda()
+
         
         self.pe = PositionalEncoding( 128 )
         
@@ -71,8 +80,10 @@ class MiceTransformer(SleepModule):
         # to 3 classes W, N, R
         # N = N1 + N2 + N3
         
+        if log_metrics == True:
+            self.cm['cm5'].update(outputs.reshape(-1, outputs.shape[-1]), targets.flatten())
+        
         W = outputs[:, :, 0]
-
         N = torch.maximum( outputs[:, :, 1], outputs[:, :, 2] )
         N = torch.maximum( N, outputs[:, :, 3] )
 
@@ -80,8 +91,9 @@ class MiceTransformer(SleepModule):
 
         outputs = torch.stack([W, N, R], dim=2)
         
-        return super.compute_loss(embeddings, outputs, targets, log, log_metrics)
-
+        return super(MiceTransformer, self).compute_loss(embeddings, outputs, targets, log, log_metrics)
+    
+    
     def encode( self, x ):
         batch, L, nchan, T, F = x.shape
         # T in mice is equal to 17, but in humans is equal to 29
