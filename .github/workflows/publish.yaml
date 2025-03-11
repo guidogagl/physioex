@@ -27,6 +27,6 @@ jobs:
         - name: Publish to PyPI
           env:
             TWINE_USERNAME: __token__  # Use the token authentication
-            TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
+            TWINE_PASSWORD: ${{ secrets.PIPY_TOKEN }}
           run: |
             twine upload dist/*
