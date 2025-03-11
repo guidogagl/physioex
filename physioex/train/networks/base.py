@@ -7,6 +7,16 @@ import torch.nn as nn
 import torch.optim as optim
 import torchmetrics as tm
 
+def confusion_matrix_to_dict(confusion_matrix):
+    """
+    Convert a confusion matrix tensor to a dictionary of scalars.
+    """
+    cm = confusion_matrix.cpu().numpy()
+    cm_dict = {}
+    for i in range(cm.shape[0]):
+        for j in range(cm.shape[1]):
+            cm_dict[f"cm_{i}_{j}"] = cm[i, j]
+    return cm_dict
 
 class SleepModule(pl.LightningModule):
     def __init__(self, nn: nn.Module, config: Dict):
@@ -37,9 +47,9 @@ class SleepModule(pl.LightningModule):
             self.rc = tm.Recall(
                 task="multiclass", num_classes=config["n_classes"], average="weighted"
             )
-            self.cm = {'cm': tm.ConfusionMatrix(task="multiclass",
-                                            num_classes=3,
-                                            normalize=None).cuda()}
+            self.cm = tm.ConfusionMatrix(task="multiclass",
+                                            num_classes=config["n_classes"],
+                                            normalize=None)
         elif self.n_classes == 1:
             # regression experiment
             self.mse = tm.MeanSquaredError()
@@ -107,13 +117,17 @@ class SleepModule(pl.LightningModule):
         embeddings = embeddings.reshape(batch_size * seq_len, -1)
         outputs = outputs.reshape(-1, n_class)
         targets = targets.reshape(-1)
-
+        
+    
         if self.n_classes > 1:
             loss = self.loss(embeddings, outputs, targets)
 
             self.log(f"{log}_loss", loss, prog_bar=True, sync_dist=True)
             self.log(f"{log}_acc", self.wacc(outputs, targets), prog_bar=True, sync_dist=True)
             self.log(f"{log}_f1", self.wf1(outputs, targets), prog_bar=True, sync_dist=True)
+            
+            conf_dict = confusion_matrix_to_dict( self.cm(outputs, targets) )            
+            self.log_dict(f"{log}_confmat", conf_dict, sync_dist=True) 
         else:
             outputs = outputs.view(-1)
 

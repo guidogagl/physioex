@@ -19,7 +19,8 @@ class PhysioExDataModule(pl.LightningDataModule):
         task: str = "sleep",
         folds: Union[int, List[int]] = -1,
         data_folder: str = None,
-        num_nodes: int = 1,
+        evaluate_on_whole_night: bool = False,
+        num_nodes : int = 1,
         num_workers: int = os.cpu_count(),
     ):
         super().__init__()
@@ -37,8 +38,23 @@ class PhysioExDataModule(pl.LightningDataModule):
                 data_folder=data_folder,
                 task=task,
             )
+            
+            if evaluate_on_whole_night:
+                self.eval_dataset = PhysioExDataset(
+                datasets=datasets,
+                preprocessing=preprocessing,
+                selected_channels=selected_channels,
+                sequence_length=-1,
+                target_transform=target_transform,
+                data_folder=data_folder,
+                task=task,
+            )
+            else:
+                self.eval_dataset = self.dataset
+            
         elif isinstance(datasets, PhysioExDataset):
             self.dataset = datasets
+            self.eval_dataset = datasets
         else:
             raise ValueError("ERR: datasets should be a list or a PhysioExDataset")
 
@@ -53,11 +69,14 @@ class PhysioExDataModule(pl.LightningDataModule):
             for i, fold in enumerate(folds):
                 self.dataset.split(fold, i)
 
-        train_idx, valid_idx, test_idx = self.dataset.get_sets()
+        train_idx, _, _ = self.dataset.get_sets()
+        _, valid_idx, test_idx = self.eval_dataset.get_sets()
 
         self.train_dataset = Subset(self.dataset, train_idx)
-        self.valid_dataset = Subset(self.dataset, valid_idx)
-        self.test_dataset = Subset(self.dataset, test_idx)
+        self.valid_dataset = Subset(self.eval_dataset, valid_idx)
+        self.test_dataset = Subset(self.eval_dataset, test_idx)
+        
+        self.eown = evaluate_on_whole_night
 
     def train_dataloader(self):
         """
@@ -76,7 +95,7 @@ class PhysioExDataModule(pl.LightningDataModule):
     def val_dataloader(self):
         return DataLoader(
             self.valid_dataset,
-            batch_size=self.batch_size,
+            batch_size=self.batch_size if not self.eown else 1,
             shuffle=False,
             num_workers=self.num_workers,
         )
@@ -84,7 +103,7 @@ class PhysioExDataModule(pl.LightningDataModule):
     def test_dataloader(self):
         return DataLoader(
             self.test_dataset,
-            batch_size=self.batch_size,
+            batch_size=self.batch_size if not self.eown else 1,
             shuffle=False,
             num_workers=self.num_workers,
         )

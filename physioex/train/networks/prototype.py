@@ -189,12 +189,12 @@ class NN(nn.Module):
         batch, L, nchan, T, F = x.size()
         
         #### epoch encoding ####
-        x = x.reshape( batch * L * nchan, 1, T, F )
+        x = x.reshape( batch * L * nchan, T, F )
         x = x[ ..., :128 ]
         
         x = self.pe(x)
         x = self.encoder(x)
-        
+    
         # out : -1, 1, T, 128                
         x = self.sampler( x ) # out -1, N, 128
         

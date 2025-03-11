@@ -25,7 +25,6 @@ class PhysioExDataset(torch.utils.data.Dataset):
         task: str = "sleep",
     ):
         self.datasets = datasets
-        self.L = sequence_length
         self.channels_index = [indexed_channels.index(ch) for ch in selected_channels]
 
         self.readers = []
@@ -57,6 +56,7 @@ class PhysioExDataset(torch.utils.data.Dataset):
         self.target_transform = target_transform
 
         self.len = offset
+        self.L = sequence_length if sequence_length != -1 else 30 * 2 * 60 * 24
 
     def __len__(self):
         return self.len

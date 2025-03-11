@@ -24,6 +24,8 @@ class Reader(ABC):
         pass
 
 
+
+
 class MemmapReader(Reader):
     # this object abstracts the reading of subject data from memmap files for a specific dataset
     def __init__(
@@ -143,6 +145,58 @@ class MemmapReader(Reader):
 
         return X, y
 
+class WholeNightReader(MemmapReader):
+    # suppose the batch_size to be 1
+    # reads every time one night
+    def __init__(
+        self,
+        data_folder: str,
+        dataset: str,
+        preprocessing: str,
+        #sequence_length: int,
+        channels_index: List[int],
+        offset: int,
+    ):
+        super().__init__(
+            data_folder = data_folder,
+            dataset = dataset,
+            preprocessing = preprocessing,
+            sequence_length = 30 * 2 * 60 * 24, # 24 hours,  
+            channels_index = channels_index,
+            offset = offset            
+        )
+        
+    def get_signal(self, idx):
+        idx = idx - self.offset
+
+        subject_id = self.subject_idx[idx]
+        num_windows = self.windows_index[subject_id]
+
+        input_shape = tuple([num_windows] + self.input_shape)
+
+        data_path = os.path.join(self.data_path, str(subject_id) + ".npy")
+
+        X = np.memmap(data_path, dtype="float32", mode="r", shape=input_shape)
+        X = X[:, self.channels_index]
+        X = (torch.tensor(X).float() - self.mean) / self.std
+
+        return X
+
+    def get_stages(self, idx):
+        idx = idx - self.offset
+
+        subject_id = self.subject_idx[idx]
+        num_windows = self.windows_index[subject_id]
+
+        labels_shape = (num_windows,)
+
+        labels_path = os.path.join(self.labels_path, str(subject_id) + ".npy")
+
+        y = np.memmap(labels_path, dtype="int16", mode="r", shape=labels_shape)
+
+        y = torch.tensor(y).long()
+
+        return y
 
 class AgeMemmapReader(MemmapReader):
     def __init__(
@@ -258,12 +312,20 @@ class DataReader(Reader):
         hpc: bool,
         task: str = "sleep",
     ):
-        if task == "sleep":
+        if task == "sleep" and sequence_length > 0:            
             self.reader = MemmapReader(
                 data_folder=data_folder,
                 dataset=dataset,
                 preprocessing=preprocessing,
                 sequence_length=sequence_length,
+                channels_index=channels_index,
+                offset=offset,
+            )
+        elif task == "sleep" and sequence_length == -1:
+            self.reader = WholeNightReader(
+                data_folder=data_folder,
+                dataset=dataset,
+                preprocessing=preprocessing,
                 channels_index=channels_index,
                 offset=offset,
             )
