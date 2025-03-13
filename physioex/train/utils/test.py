@@ -85,8 +85,12 @@ def test(
     from lightning.pytorch.accelerators import find_usable_cuda_devices
 
     if results_path is None:
-        results_path = os.path.dirname( checkpoint_path )
-    
+        if checkpoint_path is not None:
+            results_path = os.path.dirname( checkpoint_path )
+        else :
+            results_path = os.path.join( os.getcwd(), "temp" )
+            os.makedirs( results_path, exist_ok=True )
+        
     devices = find_usable_cuda_devices(-1)
     my_logger = [
         TensorBoardLogger(save_dir=results_path + "/test_logs/"),
