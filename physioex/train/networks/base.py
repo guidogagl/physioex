@@ -47,6 +47,7 @@ class SleepModule(pl.LightningModule):
             self.rc = tm.Recall(
                 task="multiclass", num_classes=config["n_classes"], average="weighted"
             )
+            
             self.cm = tm.ConfusionMatrix(task="multiclass",
                                             num_classes=config["n_classes"],
                                             normalize=None)
@@ -127,7 +128,8 @@ class SleepModule(pl.LightningModule):
             self.log(f"{log}_f1", self.wf1(outputs, targets), prog_bar=True, sync_dist=True)
             
             conf_dict = confusion_matrix_to_dict( self.cm(outputs, targets) )            
-            self.log_dict(f"{log}_confmat", conf_dict, sync_dist=True) 
+            # TODO: log confusion matrix
+            #self.log_dict(f"{log}_confmat", conf_dict, sync_dist=True) 
         else:
             outputs = outputs.view(-1)
 
