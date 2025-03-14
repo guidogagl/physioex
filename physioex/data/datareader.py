@@ -207,9 +207,49 @@ class AgeMemmapReader(MemmapReader):
         sequence_length: int,
         channels_index: List[int],
         offset: int,
-    ):
-        super().__init__(
-            data_folder, dataset, preprocessing, sequence_length, channels_index, offset
+        ):
+
+        self.preprocessing = preprocessing
+
+        self.data_path = os.path.join(data_folder, dataset, preprocessing)
+        self.labels_path = os.path.join(data_folder, dataset, "labels")
+
+        self.L = sequence_length
+        self.channels_index = channels_index
+        self.offset = offset
+
+        # get the scaling parameters
+        scaling = np.load(os.path.join(self.data_path, "scaling.npz"))
+
+        self.input_shape = list(scaling["mean"].shape)
+
+        self.mean = torch.tensor(scaling["mean"][channels_index]).float()
+        self.std = torch.tensor(scaling["std"][channels_index]).float()
+
+        # read the table
+        self.table = pd.read_csv(os.path.join(data_folder, dataset, "table.csv"))
+
+        ## Modify table to drop the wrong age 
+        self.table = self.clean_and_update_df(self.table)
+
+        num_windows = self.table["num_windows"].values
+        subjects_id = self.table["subject_id"].values
+
+        if self.L > np.max(num_windows):
+            logger.warning(
+                f"Sequence length {self.L} is greater than the max number of windows {np.max(num_windows)} for dataset {dataset}."
+            )
+
+        self.len = num_windows - self.L
+
+        neg = np.where(self.len < 0)[0]
+        if len(neg) > 0:
+            self.len[neg] = 0
+
+        self.len = int(np.sum(self.len + 1))
+
+        self.subject_idx, self.relative_idx, self.windows_index = build_index(
+            num_windows, subjects_id, self.L
         )
 
     def __getitem__(self, idx):
@@ -225,6 +265,19 @@ class AgeMemmapReader(MemmapReader):
 
         return X, y
 
+    def clean_and_update_df(self,df):
+        "Reads the table of the dataset and removes entries with NaN age"
+
+        
+        # Remove entries where nsrr_age is missing
+        df = df.dropna(subset=['nsrr_age']).reset_index(drop=True)
+        
+        # Recalculate start_index and end_index
+        df['start_index'] = 0
+        df['end_index'] = df['num_windows'].cumsum()
+        df['start_index'] = df['end_index'].shift(1, fill_value=0)
+        
+        return df
 
 class H5Reader(Reader):
     def __init__(
