@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import List, Tuple
 from urllib.request import urlretrieve
 
+import mne
 import numpy as np
 import pandas as pd
 from braindecode.datasets import SleepPhysionet as SP
@@ -130,6 +131,9 @@ class SLEEPEDFPreprocessor(Preprocessor):
             data_folder=data_folder,
         )
 
+    #Keep an age dictionary to map age to subjects before saving in table.csv
+        self.age_dict = {}
+
     @logger.catch
     def download_dataset(self) -> None:
         os.environ["MNE_DATA"] = self.dataset_folder
@@ -192,6 +196,26 @@ class SLEEPEDFPreprocessor(Preprocessor):
             signals.append(sig)
             labels.append(label)
 
+        # Extract age from EDF Metadata 
+        # IMPORTANT: In this dataset it on the last_name field
+        try:
+            raw = dataset.datasets[0].raw  # Access first recording's raw EEG
+            subject_info = raw.info.get("subject_info", {})
+            last_name = subject_info.get("last_name", "")
+
+            # Extract age if stored as "XXyr"
+            if "yr" in last_name:
+                age = float(last_name.replace("yr", "").strip())
+            else:
+                logger.warning(f'Last name field has the value" {last_name}, Setting to None')
+                age = None
+        except Exception as e:
+            logger.warning(f"Failed to extract age from {record}: {e}")
+            age = None
+
+        #Add age in the dictionary
+        self.age_dict[int(record)] = age
+
         # restore printing
         sys.stdout = sys.__stdout__
         sys.stderr = sys.__stderr__
@@ -200,8 +224,19 @@ class SLEEPEDFPreprocessor(Preprocessor):
         labels = np.array(labels)
 
         return signals, labels
+    
+    @logger.catch
+    def customize_table(self, table):
+        
+        age_list = []
+        for subject_id in tqdm(table["subject_id"], desc="Adding Age"):
+            age = self.age_dict.get(subject_id, None)
+            age_list.append(age)
 
+        # Add age column to the table
+        table["nsrr_age"] = age_list
 
+        return table
 
 if __name__ == "__main__":
 
