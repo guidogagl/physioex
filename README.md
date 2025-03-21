@@ -50,29 +50,29 @@ These datasets can be easily get from the NSSR archive. Once downloaded in your 
 ### Create a Virtual Environment (Optional but Recommended)
 
 ```bash
-    conda create -n physioex python==3.10
-    conda activate physioex
-    conda install pip
-    pip install --upgrade pip  # On Windows, use `venv\Scripts\activate`
+$ conda create -n physioex python==3.10
+$ conda activate physioex
+$ conda install pip
+$ pip install --upgrade pip  # On Windows, use `venv\Scripts\activate`
 ```
 
 ### Install from source ( Recommended )
 1. **Clone the Repository:**
 ```bash
-   git clone https://github.com/guidogagl/physioex.git
-   cd physioex
+$ git clone https://github.com/guidogagl/physioex.git
+$ cd physioex
 ```
 
 2. **Install Dependencies and Package in Development Mode**
 ```bash
-    pip install -e .
+$ pip install -e .
 ```
 
 ### Install via pip
 
 1. **Install PhysioEx from PyPI:**
 ```bash
-pip install physioex
+$ pip install physioex
 ```
 
 Note: the github version of the library is kept updated weekly, the PiPy version may be outdated depending on the last commit of the github version. We recommend to use the github version if possible.  
