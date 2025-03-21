@@ -130,6 +130,11 @@ class SLEEPEDFPreprocessor(Preprocessor):
             data_folder=data_folder,
         )
 
+    #Keep an age dictionary to map age to subjects before saving in table.csv 
+        self.age_dict = {}
+    #Similarly a sex dictionary to map sex to subjects (MALE=1 , FEMALE =2 , ISO5218)
+        self.sex_dict = {}
+
     @logger.catch
     def download_dataset(self) -> None:
         os.environ["MNE_DATA"] = self.dataset_folder
@@ -192,6 +197,35 @@ class SLEEPEDFPreprocessor(Preprocessor):
             signals.append(sig)
             labels.append(label)
 
+        # Extract age and sex from EDF Metadata 
+        # IMPORTANT: In this dataset age is on the last_name field 
+        try:
+            raw = dataset.datasets[0].raw  # Access first recording's raw EEG
+            subject_info = raw.info.get("subject_info", {})
+
+            # Get Age variable in last_name
+            last_name = subject_info.get("last_name", "")
+            # Extract age if stored as "XXyr"
+            if "yr" in last_name:
+                age = float(last_name.replace("yr", "").strip())
+            else:
+                logger.warning(f'Last name field has the value" {last_name}, Setting to None')
+                age = None
+
+            # Extract SEX
+            sex = subject_info.get("sex","")
+
+        except Exception as e:
+            logger.warning(f"Failed to extract metadata from {record}: {e}")
+            age = None
+            sex = None
+
+
+
+        #Add age and sex in the dictionary
+        self.age_dict[int(record)] = age
+        self.sex_dict[int(record)] = sex
+
         # restore printing
         sys.stdout = sys.__stdout__
         sys.stderr = sys.__stderr__
@@ -200,8 +234,24 @@ class SLEEPEDFPreprocessor(Preprocessor):
         labels = np.array(labels)
 
         return signals, labels
+    
+    @logger.catch
+    def customize_table(self, table):
 
+        age_list = []
+        sex_list = []
+        for subject_id in tqdm(table["subject_id"], desc="Adding Age and Sex"):
+            age = self.age_dict.get(subject_id, None)
+            sex = self.sex_dict.get(subject_id, None )
+            age_list.append(age)
+            sex_list.append(sex)
 
+        # Add age column to the table (named nsrr_age for cosistency with other datasets)
+        table["nsrr_age"] = age_list    
+        # Add sex variable
+        table["sex"] = sex_list
+
+        return table
 
 if __name__ == "__main__":
 
