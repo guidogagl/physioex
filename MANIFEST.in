@@ -1,0 +1,4 @@
+include physioex/train/models/checkpoints/*.ckpt
+include physioex/train/models/backup/*.ckpt
+include physioex/train/models/check_table.csv
+include physioex/train/networks/config.yaml

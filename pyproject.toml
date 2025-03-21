@@ -53,12 +53,7 @@ Repository = "https://github.com/guidogagl/physioex"
 Issues = "https://github.com/guidogagl/physioex/issues"
 
 [tool.setuptools]
-include = [
-    "physioex/train/models/checkpoints/*.ckpt",
-    "physioex/train/models/backup/*.ckpt",
-    "physioex/train/models/check_table.csv",
-    "physioex/train/networks/config.yaml"
-]
+include-package-data = true
 
 [tool.setuptools.packages.find]
 where = ["."]
