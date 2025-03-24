@@ -21,7 +21,7 @@ class PhysioExDataModule(pl.LightningDataModule):
         data_folder: str = None,
         evaluate_on_whole_night: bool = False,
         num_nodes : int = 1,
-        num_workers: int = os.cpu_count(),
+        num_workers: int = 0,
     ):
         super().__init__()
 

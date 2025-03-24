@@ -141,8 +141,8 @@ class PhysioExParser:
         "--num_workers",
         "-nw",
         type=int,
-        default=os.cpu_count(),
-        help="Specify the number of workers for the dataloader. Expected type: int. Default: os.cpu_count()",
+        default=0,
+        help="Specify the number of workers for the dataloader. Expected type: int. Default: 0",
     )
 
     ##### Trainer arguments #####

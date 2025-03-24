@@ -35,6 +35,7 @@ def test(
 
     seed_everything(42, workers=True)
     set_float32_matmul_precision("medium")
+    #torch.multiprocessing.set_sharing_strategy('file_descriptor')
 
     datamodule_kwargs["batch_size"] = batch_size
     # datamodule_kwargs["hpc"] = hpc
