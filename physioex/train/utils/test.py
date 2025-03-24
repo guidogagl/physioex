@@ -90,8 +90,14 @@ def test(
         else :
             results_path = os.path.join( os.getcwd(), "temp" )
             os.makedirs( results_path, exist_ok=True )
+    
+    try :
+        devices = find_usable_cuda_devices(-1)
+        logger.info( f"Available devices: {devices}")
+
+    except :
+        devices = "auto"
         
-    devices = find_usable_cuda_devices(-1)
     my_logger = [
         TensorBoardLogger(save_dir=results_path + "/test_logs/"),
         CSVLogger(save_dir=results_path + "/test_logs/"),

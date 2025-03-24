@@ -27,6 +27,7 @@ physioex/data/mass/download.py
 physioex/data/hpap/download.py
 physioex/train/models/checkpoints/sleeptransformer-EEG-EOG-EMG-L=21-test_acc=0.879.ckpt
 physioex/explain/spectralgradients/
+physioex.code-workspace
 
 # C extensions
 *.so

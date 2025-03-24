@@ -103,9 +103,11 @@ def load_model(
             & (table["in_channels"] == in_channels)
         ]
 
+        
         if "model_kwargs" in network_config[model_name]:
-            default_kwargs.update(network_config[model]["model_kwargs"])
+            default_kwargs.update(network_config[model_name]["model_kwargs"])
 
+        
         ckpt_path = table["checkpoint"].values[0]
         ckpt_path = pkg.resource_filename(
             "physioex", os.path.join("train", "models", "checkpoints", ckpt_path)
@@ -114,8 +116,19 @@ def load_model(
         pass
     
     if not os.path.isfile( ckpt_path ):
-        url = table["download"].values[0]
-        gdown.download( url, ckpt_path, fuzzy=True )
+        
+        from huggingface_hub import hf_hub_download
+        
+        # Scarica il modello dal repository Hugging Face
+        model_name = table["name"].values[0]
+        filename = os.path.basename(ckpt_path)
+        ckpt_path = hf_hub_download(
+            repo_id="4rooms/physioex",
+            filename=filename,
+            local_dir=pkg.resource_filename(
+                "physioex", os.path.join("train", "models", "checkpoints")
+            ),
+        )
     
     default_kwargs.update(model_kwargs)
     model_kwargs = default_kwargs

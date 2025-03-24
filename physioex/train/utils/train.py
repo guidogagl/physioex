@@ -117,8 +117,11 @@ def train(
     ########### Trainer Setup ############
     from lightning.pytorch.accelerators import find_usable_cuda_devices
 
-    devices = find_usable_cuda_devices(-1)
-    logger.info( f"Available devices: {devices}")
+    try :
+        devices = find_usable_cuda_devices(-1)
+        logger.info( f"Available devices: {devices}")
+    except :
+        devices = "auto"
     
     effective_batch_size = batch_size * num_nodes * len(devices)
 
