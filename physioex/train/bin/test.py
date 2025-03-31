@@ -20,6 +20,7 @@ def test_script():
         datasets=parser["datasets"],
         datamodule_kwargs=datamodule_kwargs,
         model=None,
+        fold=parser["fold"],
         model_class=parser["model"],
         model_config=parser["model_kwargs"],
         batch_size=parser["batch_size"],
