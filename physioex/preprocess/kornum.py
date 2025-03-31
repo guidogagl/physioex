@@ -46,7 +46,7 @@ class KornumPreprocessor(Preprocessor):
         id_list = []
         location_list = []
         
-        for root, _, files in os.walk(self.data_folder):
+        for root, _, files in os.walk(self.dataset_folder):
             for file in files:
                 if file.endswith(".edf"):
                     scorer_list.append(root.split('/')[-2][11:])
