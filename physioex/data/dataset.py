@@ -145,8 +145,8 @@ class PhysioExDataset(torch.utils.data.Dataset):
                     logger.error(error_string)
                     raise ValueError("ERR: split should be 0, 1 or 2")
 
-        train_idx = np.concatenate(train_idx)
-        valid_idx = np.concatenate(valid_idx)
+        train_idx = np.concatenate(train_idx) if train_idx else np.array([])
+        valid_idx = np.concatenate(valid_idx) if valid_idx else np.array([])
         test_idx = np.concatenate(test_idx)
 
         return train_idx, valid_idx, test_idx
