@@ -100,10 +100,10 @@ class PhysioExDataModule(pl.LightningDataModule):
             num_workers=self.num_workers,
         )
 
-    def test_dataloader(self):
+    def test_dataloader(self, shuffle=False):
         return DataLoader(
             self.test_dataset,
             batch_size=self.batch_size if not self.eown else 1,
-            shuffle=False,
+            shuffle=shuffle,
             num_workers=self.num_workers,
         )
