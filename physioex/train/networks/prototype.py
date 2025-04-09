@@ -100,6 +100,20 @@ class NN(nn.Module):
         from vector_quantize_pytorch import SimVQ
         
         in_channels = module_config["in_channels"]
+        
+        in_channels = module_config["in_channels"]
+        if in_channels == 1:
+            n_prototypes = [30]
+        elif in_channels == 2:
+            n_prototypes = [30, 10]
+        elif in_channels == 3:
+            n_prototypes = [30, 10, 10]
+        else:
+            raise ValueError(f"Unsupported in_channels value: {in_channels}")
+        
+        assert in_channels == len( n_prototypes ), "Err: Number of prototypes must match the number of channels of the model"
+        
+        
         module_config["in_channels"] = 1
         
         self.S = module_config["S"]
@@ -126,12 +140,16 @@ class NN(nn.Module):
             N = module_config["N"],            
         )
         
-        self.prototype = SimVQ(
-            dim = 128,
-            codebook_size = 50,
-            rotation_trick = True,  # use rotation trick from Fifty et al.
-            channel_first=False
-        )
+        self.prototype = nn.ModuleList(
+            [
+                SimVQ(
+                    dim = 128,
+                    codebook_size = codebook_size,
+                    rotation_trick = True,  # use rotation trick from Fifty et al.
+                    channel_first=False
+                ) for codebook_size in n_prototypes   
+            ]
+        ) 
                 
         self.sequence_encoder = SequenceEncoder( module_config )
         
@@ -198,10 +216,24 @@ class NN(nn.Module):
         # out : -1, 1, T, 128                
         x = self.sampler( x ) # out -1, N, 128
         
-        p, indx, commit_loss = self.prototype( x.reshape(-1, 128) )                
-
-        p = p.reshape(batch, L, nchan, self.N, 128 )
-        indx = indx.reshape(batch, L, nchan, self.N )
+        x = x.reshape( nchan, -1, self.N, 128 )
+        commit_loss = 0        
+        
+        p, indx = [], []        
+        for chan in range( nchan ):
+            chan_p, chan_indx, chan_loss = self.prototype[chan]( x[chan].reshape(-1, 128) )
+            
+            commit_loss += chan_loss
+            p += [ chan_p.reshape( batch, L, self.N, 128) ]     
+            indx += [ chan_indx.reshape( batch, L, self.N) ]
+        
+        p, indx = torch.stack( p ), torch.stack( indx )
+        
+        p = p.permute( 1, 2, 0, 3, 4)
+        indx = indx.permute( 1, 2, 0, 3 )
+        
+        #p = p.reshape(batch, L, nchan, self.N, 128 )
+        #indx = indx.reshape(batch, L, nchan, self.N )
 
         return p, indx, commit_loss
 
