@@ -134,7 +134,10 @@ def load_model(
     model_kwargs = default_kwargs
 
     model = (
-        model.load_from_checkpoint(ckpt_path, module_config=model_kwargs)
+        model.load_from_checkpoint(ckpt_path, 
+            module_config=model_kwargs,
+            map_location = torch.device( "cpu" )
+        )
         .to(device)
         .eval()
     )
