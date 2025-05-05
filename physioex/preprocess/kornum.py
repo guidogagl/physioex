@@ -24,7 +24,7 @@ class KornumPreprocessor(Preprocessor):
 
         super().__init__(
             dataset_name="kornum",
-            signal_shape=[3, 512],
+            signal_shape=[3, 400],
             preprocessors_name=preprocessors_name,
             preprocessors=preprocessors,
             preprocessors_shape=preprocessor_shape,

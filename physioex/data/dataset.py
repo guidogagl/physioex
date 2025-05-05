@@ -51,7 +51,7 @@ class PhysioExDataset(torch.utils.data.Dataset):
             self.readers += [reader]
 
         self.dataset_idx = np.array(self.dataset_idx, dtype=np.uint8)
-        # set the table fold to the 0 fold by default
+        # set the table fold to a random fold by default
         self.split()
         self.target_transform = target_transform
 

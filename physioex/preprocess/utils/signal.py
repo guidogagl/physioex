@@ -48,10 +48,10 @@ def xsleepnet_preprocessing_mouse(signals, preprocessor_shape):
     
     return xsleepnet_preprocessing(signals,
                                    preprocessor_shape,
-                                   fs=128,
+                                   fs=100,
                                    window="hamming",
-                                   nperseg=256,
-                                   noverlap=240,
+                                   nperseg=200,
+                                   noverlap=188,
                                    nfft=256)
     
 
