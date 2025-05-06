@@ -21,6 +21,7 @@ import torch.distributions as dist
 import torch.nn.functional as F
 
 import time
+import copy 
 
 class ProtoLoss( nn.Module ):    
     def __init__(self):
@@ -99,22 +100,17 @@ class NN(nn.Module):
         
         from vector_quantize_pytorch import SimVQ
         
-        in_channels = module_config["in_channels"]
-        
-        in_channels = module_config["in_channels"]
-        if in_channels == 1:
-            n_prototypes = [30]
-        elif in_channels == 2:
-            n_prototypes = [30, 10]
-        elif in_channels == 3:
-            n_prototypes = [30, 10, 10]
+        self.in_channels = module_config["in_channels"]
+        if self.in_channels == 1:
+            self.n_prototypes = [30]
+        elif self.in_channels == 2:
+            self.n_prototypes = [30, 10]
+        elif self.in_channels == 3:
+            self.n_prototypes = [30, 10, 10]
         else:
-            raise ValueError(f"Unsupported in_channels value: {in_channels}")
+            raise ValueError(f"Unsupported in_channels value: {self.in_channels}")
         
-        assert in_channels == len( n_prototypes ), "Err: Number of prototypes must match the number of channels of the model"
-        
-        
-        module_config["in_channels"] = 1
+        assert self.in_channels == len( self.n_prototypes ), "Err: Number of prototypes must match the number of channels of the model"
         
         self.S = module_config["S"]
         self.N = module_config["N"]
@@ -122,7 +118,7 @@ class NN(nn.Module):
         self.pe = PositionalEncoding( 128 )
         
         t_layer = nn.TransformerEncoderLayer(
-            d_model=128 * module_config["in_channels"],
+            d_model=128, # each channel is processed as an independent sample, otherwise it would be 128 * in_channels
             nhead=8,
             dim_feedforward=1024,
             dropout=0.1,
@@ -137,7 +133,7 @@ class NN(nn.Module):
         self.sampler = HardAttentionLayer(
             hidden_size = 128,
             attention_size = 1024, #129 * self.S,
-            N = module_config["N"],            
+            N = self.N,           
         )
         
         self.prototype = nn.ModuleList(
@@ -147,13 +143,16 @@ class NN(nn.Module):
                     codebook_size = codebook_size,
                     rotation_trick = True,  # use rotation trick from Fifty et al.
                     channel_first=False
-                ) for codebook_size in n_prototypes   
+                ) for codebook_size in self.n_prototypes   
             ]
         ) 
-                
-        self.sequence_encoder = SequenceEncoder( module_config )
         
-        if in_channels > 1:
+        # need to change n_channels to 1 to create sequence encoder, because each channel is processed independently
+        modified_config = copy.deepcopy(module_config)
+        modified_config["in_channels"] = 1
+        self.sequence_encoder = SequenceEncoder( modified_config )
+        
+        if self.in_channels > 1:
             self.channels_sampler = HardAttentionLayer(
                 hidden_size = 128,
                 attention_size = 128,
@@ -216,7 +215,8 @@ class NN(nn.Module):
         # out : -1, 1, T, 128                
         x = self.sampler( x ) # out -1, N, 128
         
-        x = x.reshape( nchan, -1, self.N, 128 )
+        x = x.reshape( -1, nchan, self.N, 128 )
+        x = x.permute( 1, 0, 2, 3 )
         commit_loss = 0        
         
         p, indx = [], []        
