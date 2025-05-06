@@ -101,14 +101,7 @@ class NN(nn.Module):
         from vector_quantize_pytorch import SimVQ
         
         self.in_channels = module_config["in_channels"]
-        if self.in_channels == 1:
-            self.n_prototypes = [30]
-        elif self.in_channels == 2:
-            self.n_prototypes = [30, 10]
-        elif self.in_channels == 3:
-            self.n_prototypes = [30, 10, 10]
-        else:
-            raise ValueError(f"Unsupported in_channels value: {self.in_channels}")
+        self.n_prototypes = module_config["n_prototypes"]
         
         assert self.in_channels == len( self.n_prototypes ), "Err: Number of prototypes must match the number of channels of the model"
         
