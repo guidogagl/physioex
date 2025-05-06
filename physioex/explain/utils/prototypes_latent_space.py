@@ -22,33 +22,54 @@ from physioex.train.networks.base import SleepModule
 from physioex.train.bin.parser import PhysioExParser
 from physioex.preprocess.utils.signal import OnlineVariance
 
-
+def get_groups(datamodule: PhysioExDataModule, 
+               dataset_idx: torch.Tensor,
+               subject_id: torch.Tensor) -> List[str]:
+    
+    groups = []
+    
+    for d_idx, s_id in zip(dataset_idx, subject_id):
+        d_idx = int(d_idx)
+        s_id = int(s_id)
+        
+        d_table = datamodule.dataset.readers[d_idx].reader.table
+        
+        if 'group' in d_table.columns:
+            group = d_table[d_table['subject_id'] == s_id]['group'].values[0]
+        else:
+            group = 'Unique group'
+        
+        groups.append(group)
+    
+    return groups
+    
 def subject_density(prototype_predictions: np.ndarray[np.int_],
                     channels: List[str],
                     n_proto: List[int],
                     subjects: np.ndarray[np.int_],
-                    results_path: str):
+                    results_path: str,
+                    attribute: str = 'subjects') -> None:
     
     # Plot the ratio of sleep stage per prototype. One plot per channel. 
-    df_dict = {'subjects': subjects}
+    df_dict = {attribute: subjects}
     for c_idx, c in enumerate(channels): 
         df_dict[c] = prototype_predictions[:,c_idx]
     df = pd.DataFrame(df_dict)
     
     # Create a barplot with value counts of df['subjects']
     plt.figure(figsize=(10, 6))
-    sns.barplot(x=df['subjects'].value_counts().index, y=df['subjects'].value_counts(normalize=True).values, palette="viridis")
+    sns.barplot(x=df[attribute].value_counts().index, y=df[attribute].value_counts(normalize=True).values, palette="viridis")
     plt.title("Value Counts of Subjects")
     plt.xlabel("Subjects")
     plt.ylabel("Count")
     plt.tight_layout()
-    save_path = Path(results_path) / 'prototype_density' / 'subject_density'
+    save_path = Path(results_path) / 'prototype_density' / (attribute + '_density')
     Path(save_path).mkdir(parents=True, exist_ok=True)
-    plt.savefig(os.path.join(save_path, 'subject_counts.png'))
+    plt.savefig(os.path.join(save_path, attribute + '_counts.png'))
     plt.close()
     
     for c_idx, c in enumerate(channels):
-        ratio_table = df.groupby(c)['subjects'].value_counts(normalize=True).unstack().fillna(0)
+        ratio_table = df.groupby(c)[attribute].value_counts(normalize=True).unstack().fillna(0)
         fig, axes = plt.subplots(int(np.ceil(np.sqrt(n_proto[c_idx]))), int(np.floor(np.sqrt(n_proto[c_idx]))), figsize=(25, 25), dpi=300)
         for i in range(axes.size):
             ax = axes[int(i // axes.shape[1]), int(i % axes.shape[1])]
@@ -56,9 +77,9 @@ def subject_density(prototype_predictions: np.ndarray[np.int_],
                 ax.axis('off')
             else:
                 ax.pie(ratio_table.loc[i], labels=ratio_table.loc[i].index, autopct='%1.1f%%', startangle=90, textprops={'fontsize': 25})
-            ax.set_title(f'Prototype {i} - Count {(df[c] == i).sum()}', fontsize=25)
+                ax.set_title(f'Prototype {i} - Count {(df[c] == i).sum()}', fontsize=25)
         plt.tight_layout()
-        save_path = Path(results_path) / 'prototype_density' / 'subject_density'
+        save_path = Path(results_path) / 'prototype_density' / (attribute + '_density')
         Path(save_path).mkdir(parents=True, exist_ok=True)
         plt.savefig(os.path.join(save_path, f'{c}.png'))
         
@@ -301,18 +322,20 @@ def visualize(
     y = []
     proto_idx = []
     subjects_id = []
+    groups = []
+
     
     for _, test_datamodule in enumerate(datamodule):
         dataloader = test_datamodule.test_dataloader(shuffle=True)
         d_iter = iter(dataloader)
         
-        samples = 70000 # number of epochs for visualization
+        samples = 4000 # number of epochs for visualization
         n_batches = int(samples / batch_size)
         for batch in tqdm(range(n_batches), desc="Getting prototypes"):
             
             # Get the next batch                
             try:
-                x_, y_, subject_id_, _ = next(d_iter)
+                x_, y_, subject_id_, dataset_idx_ = next(d_iter)
             except StopIteration: # if the iterator is exhausted
                 print("End of dataloader after " + str(batch * batch_size) + " samples")
                 break
@@ -354,6 +377,8 @@ def visualize(
             y.append(y_)
             subjects_id.append(subject_id_)
             proto_idx.append(proto_idx_)
+            groups.append(get_groups(test_datamodule, dataset_idx_, subject_id_))
+
 
         # plot transition matrix
         for c_idx, c in enumerate(channels):
@@ -381,6 +406,7 @@ def visualize(
         y = np.concatenate(y, axis=0)
         subjects_id = np.concatenate(subjects_id, axis=0)
         proto_idx = np.concatenate(proto_idx, axis=0)
+        groups = np.concatenate(groups, axis=0)
                     
         if len(np.unique(y)) == 5:
             label_map = {0: "W", 1: "N1", 2: "N2", 3: "N3", 4: "R"}
@@ -394,6 +420,9 @@ def visualize(
         
         # plot subject density in each prototype
         subject_density(proto_idx, channels, n_proto, subjects_id, results_path)
+        
+        # plot group density
+        subject_density(proto_idx, channels, n_proto, groups, results_path, 'group')
 
         # plot average psd per prototype
         average_psd(channels, mean_psd, results_path)
