@@ -168,7 +168,7 @@ class NN(nn.Module):
         batch, L, nchan, T, F = x.size()
         
         start_time = time.time()
-        p, _, commit_loss = self.get_prototypes( x ) # batch, L, nchan, N, 128
+        _, p, _, commit_loss, _ = self.get_prototypes( x ) # batch, L, nchan, N, 128
         end_time = time.time()
         #print( f"Prototype time: {end_time - start_time}")
         
@@ -192,8 +192,8 @@ class NN(nn.Module):
                 
         ### channel picking
         p = p.reshape( batch, nchan, L, 128).permute( 0, 2, 1, 3).reshape( -1, nchan, 128)
- 
-        p = self.channels_sampler( p ).reshape( batch*L, 128 )
+        p = self.channels_sampler( p )[0] if self.in_channels > 1 else p # HardAttentionLayer returns a tuple (x_sampled, alphas)
+        p = p.reshape( batch*L, 128 ) 
         y = self.clf(p).reshape( batch, L, -1)
         end_time = time.time()
         #print( f"Multichannel time: {end_time - start_time}")
@@ -213,7 +213,7 @@ class NN(nn.Module):
         x = self.encoder(x)
     
         # out : -1, 1, T, 128                
-        x = self.sampler( x ) # out -1, N, 128
+        x, alphas = self.sampler( x ) # out -1, N, 128
         
         x = x.reshape( -1, nchan, self.N, 128 )
         x = x.permute( 1, 0, 2, 3 )
@@ -231,11 +231,15 @@ class NN(nn.Module):
         
         p = p.permute( 1, 2, 0, 3, 4)
         indx = indx.permute( 1, 2, 0, 3 )
+        alphas = alphas.reshape(batch, L, nchan, self.N, T)
         
+        x = x.permute( 1, 0, 2, 3 )
+        x = x.reshape(batch, L, nchan, 1, 128 )
+
         #p = p.reshape(batch, L, nchan, self.N, 128 )
         #indx = indx.reshape(batch, L, nchan, self.N )
 
-        return p, indx, commit_loss
+        return x, p, indx, commit_loss, alphas
 
     def forwad(self, x):
         x, y = self.encode(x)
@@ -291,5 +295,4 @@ class HardAttentionLayer(nn.Module):
         # select N elements from the sequence x using alphas
         x = torch.einsum("bns, bsh -> bnh", alphas, x)
 
-        return x
-
+        return x, alphas
