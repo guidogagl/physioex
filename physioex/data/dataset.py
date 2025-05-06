@@ -106,12 +106,12 @@ class PhysioExDataset(torch.utils.data.Dataset):
     def __getitem__(self, idx):
         dataset_idx = int(self.dataset_idx[idx])
 
-        X, y = self.readers[dataset_idx][idx]
+        X, y, subjects = self.readers[dataset_idx][idx]
 
         if self.target_transform is not None:
             y = self.target_transform(y)
 
-        return X, y
+        return X, y, subjects, dataset_idx
 
     def get_sets(self):
         # return the indexes in the table of the train, valid and test subjects
