@@ -40,7 +40,7 @@ protosleepnet:
     learning_rate : .00001
     N : 1
     S : 2
-    n_prototypes : 50
+    n_prototypes : [50, 20] # must match number of channels
 
 
 

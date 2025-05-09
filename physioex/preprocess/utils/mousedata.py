@@ -72,7 +72,7 @@ def read_sleepdata_annotation(filename):
 
 def process_sleepdata_file(edf_path, tsv_path):
 
-    fs = 128
+    fs = 100
     epoch_second = 4
 
     # get the file name of the absolute path filename without the extension

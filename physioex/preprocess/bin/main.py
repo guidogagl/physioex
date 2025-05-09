@@ -8,6 +8,7 @@ from physioex.preprocess.mros import MROSPreprocessor
 from physioex.preprocess.shhs import SHHSPreprocessor
 from physioex.preprocess.kornum import KornumPreprocessor
 from physioex.preprocess.sleepedf import SLEEPEDFPreprocessor
+from physioex.preprocess.sleepyrat import SleepyRatPreprocessor
 
 preprocessors = {
     "dcsm": DCSMPreprocessor,
@@ -18,6 +19,7 @@ preprocessors = {
     "mros": MROSPreprocessor,
     "kornum": KornumPreprocessor,
     "sleepedf": SLEEPEDFPreprocessor,
+    "sleepyrat": SleepyRatPreprocessor,
 }
 
 import importlib

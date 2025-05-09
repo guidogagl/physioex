@@ -155,21 +155,21 @@ class SleepModule(pl.LightningModule):
             self.log("val_loss", float("inf"))
 
         # Logica di training
-        inputs, targets = batch
+        inputs, targets, subjects, dataset_idx = batch
         embeddings, outputs = self.encode(inputs)
 
         return self.compute_loss(embeddings, outputs, targets)
 
     def validation_step(self, batch, batch_idx):
         # Logica di validazione
-        inputs, targets = batch
+        inputs, targets, subjects, dataset_idx = batch
         embeddings, outputs = self.encode(inputs)
 
         return self.compute_loss(embeddings, outputs, targets, "val")
 
     def test_step(self, batch, batch_idx):
         # Logica di training
-        inputs, targets = batch
+        inputs, targets, subjects, dataset_idx = batch
 
         embeddings, outputs = self.encode(inputs)
 

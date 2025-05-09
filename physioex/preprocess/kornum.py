@@ -2,11 +2,9 @@ import os
 from pathlib import Path
 from typing import List, Tuple
 
-import h5py
 import numpy as np
 import pandas as pd
 from loguru import logger
-from scipy.io import loadmat
 
 from physioex.preprocess.preprocessor import Preprocessor
 from physioex.preprocess.utils.signal import xsleepnet_preprocessing_mouse
@@ -26,7 +24,7 @@ class KornumPreprocessor(Preprocessor):
 
         super().__init__(
             dataset_name="kornum",
-            signal_shape=[3, 512],
+            signal_shape=[3, 400],
             preprocessors_name=preprocessors_name,
             preprocessors=preprocessors,
             preprocessors_shape=preprocessor_shape,
@@ -46,7 +44,7 @@ class KornumPreprocessor(Preprocessor):
         id_list = []
         location_list = []
         
-        for root, _, files in os.walk(self.data_folder):
+        for root, _, files in os.walk(self.dataset_folder):
             for file in files:
                 if file.endswith(".edf"):
                     scorer_list.append(root.split('/')[-2][11:])
@@ -91,59 +89,110 @@ class KornumPreprocessor(Preprocessor):
         
         return signal, stages    
         
-    def get_sets(self) -> Tuple[np.array, np.array, np.array]:
-        """
-        Splits subjects into Train, Validation, and Test sets using a greedy allocation strategy.
+    def get_sets(self, k=4) -> Tuple[List[np.array], List[np.array], List[np.array]]:
+        """    
+        Performs K-Fold splitting using a greedy allocation strategy.
+        
+        The greedy strategy assigns each subject to the set that has the lowest proportion filled 
+        relative to its target allocation ratio. This is done because some of the mice have much
+        more epochs than others. This ensures a correct distribution of sleep epochs according to
+        the predefined ratios, while keeping mice segregated.
 
-        The function assigns each subject to the set that has the lowest proportion filled 
-        relative to its target allocation ratio. This ensures a correct distribution 
-        of sleep epochs according to the predefined ratios, while keeping subjects segregated.
+        Args:
+            k (int): Number of folds.
 
         Returns:
-            Tuple[np.array, np.array, np.array]: A tuple containing the train, validation, and test subjects.
+            Tuple[List[np.array], List[np.array], List[np.array]]: 
+            Lists of train, validation, and test sets for each fold.
         """
 
-        np.random.seed(42)
-        
-        durations = self.table['num_windows'].values.tolist()
-        subjects = self.table['subject_id'].values.tolist()
+        durations = np.array(self.table['num_windows'].values)  # Convert durations to NumPy array
+        subjects = np.array(self.table['subject_id'])  # Convert to NumPy array for indexing
         
         total_duration = sum(durations)
         train_ratio = 0.7  
         val_ratio = 0.15
         test_ratio = 1 - train_ratio - val_ratio 
-        
-        indices = np.argsort(-np.array(durations))  # Sort by descending duration
-        train, val, test = [], [], []
-        train_dur, val_dur, test_dur = 0, 0, 0
-        for i in indices:
-            subject = subjects[i]
-            dur = durations[i]
-            
-            # Compute current filling proportions relative to target
-            train_fill = train_dur / (train_ratio * total_duration)
-            val_fill = val_dur / (val_ratio * total_duration)
-            test_fill = test_dur / (test_ratio * total_duration)
 
-            # Assign the subject to the least filled set
-            if train_fill <= val_fill and train_fill <= test_fill:
-                train.append(subject)
-                train_dur += dur
-            elif val_fill <= train_fill and val_fill <= test_fill:
-                val.append(subject)
-                val_dur += dur
-            else:
-                test.append(subject)
-                test_dur += dur
-        
-        return (np.array(train).reshape(1, -1),
-                np.array(val).reshape(1, -1),
-                np.array(test).reshape(1, -1),
-        )
+        # Keep track of which subjects have been used in test/validation sets
+        used_test_subjects = set()
+        used_val_subjects = set()
+
+        # Lists to store train/val/test splits for all folds
+        all_train_folds, all_val_folds, all_test_folds = [], [], []
+
+        np.random.seed(42)  # Ensure reproducibility
+        shuffled_subjects = np.random.permutation(subjects)  # Randomize subject order
+
+        for fold in range(k):
+            remaining_subjects = list(shuffled_subjects)  # Copy subject list for current fold
+
+            # Assign subjects to test set incrementally until test_ratio is reached
+            test, test_dur = [], 0
+            np.random.shuffle(remaining_subjects)
+            for subject in remaining_subjects[:]:  # Iterate over a copy
+                if subject in used_test_subjects:
+                    continue  # Skip if subject was already in a test set before
+
+                subject_idx = np.where(subjects == subject)[0][0]
+                subject_dur = durations[subject_idx]
+
+                if (test_dur + subject_dur) / total_duration <= test_ratio:
+                    test.append(subject)
+                    test_dur += subject_dur
+                    used_test_subjects.add(subject)  # Mark as used
+                    remaining_subjects.remove(subject)
+
+            # Assign subjects to validation set incrementally until val_ratio is reached
+            val, val_dur = [], 0
+            np.random.shuffle(remaining_subjects)
+            for subject in remaining_subjects[:]:
+                if subject in used_val_subjects:
+                    continue  # Skip if subject was already in a validation set before
+
+                subject_idx = np.where(subjects == subject)[0][0]
+                subject_dur = durations[subject_idx]
+
+                if (val_dur + subject_dur) / total_duration <= val_ratio:
+                    val.append(subject)
+                    val_dur += subject_dur
+                    used_val_subjects.add(subject)  # Mark as used
+                    remaining_subjects.remove(subject)
+
+            # Assign the remaining subjects to the training set
+            train = remaining_subjects
+
+            # Convert to NumPy arrays
+            train, val, test = np.array(train), np.array(val), np.array(test)
+
+            # Compute durations properly
+            train_dur = sum(durations[np.isin(subjects, train)]) if len(train) > 0 else 0
+            test_dur = sum(durations[np.isin(subjects, test)]) if len(test) > 0 else 0
+            val_dur = sum(durations[np.isin(subjects, val)]) if len(val) > 0 else 0
+
+            train_prop = train_dur / total_duration
+            val_prop = val_dur / total_duration
+            test_prop = test_dur / total_duration
+
+            # Append this fold's split
+            all_train_folds.append(train)
+            all_val_folds.append(val)
+            all_test_folds.append(test)
+
+            # Print fold details
+            print(f"\n===== Fold {fold + 1} =====")
+            print(f"Train Subjects ({len(train)}): {train}")
+            print(f"Validation Subjects ({len(val)}): {val}")
+            print(f"Test Subjects ({len(test)}): {test}")
+            print(f"Epoch Distribution: Train {train_prop:.2%}, Val {val_prop:.2%}, Test {test_prop:.2%}")
+
+        return all_train_folds, all_val_folds, all_test_folds
+
+
 
 
 if __name__ == "__main__":
 
-    p = KornumPreprocessor(data_folder="/Users/tlj258/Library/CloudStorage/OneDrive-UniversityofCopenhagen/Documents/THESIS_DATA/EEGdata_cleaned_physioex")
+    p = KornumPreprocessor(data_folder="/esat/biomeddata/ggagliar/")
 
     p.run()

@@ -136,14 +136,14 @@ class MemmapReader(Reader):
 
         y = torch.tensor(y).long()
 
-        return y
+        return y, subject_id
 
     def __getitem__(self, idx):
 
         X = self.get_signal(idx)
-        y = self.get_stages(idx)
+        y, subject_id = self.get_stages(idx)
 
-        return X, y
+        return X, y, subject_id
 
 class WholeNightReader(MemmapReader):
     # suppose the batch_size to be 1

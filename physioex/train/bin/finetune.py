@@ -33,7 +33,7 @@ def finetune_script():
         "model_class": None,
         "model_config": None,
         "batch_size": parser["batch_size"],
-        "fold": -1,
+        "fold": parser["fold"],
         "hpc": parser["hpc"],
         "num_validations": parser["num_validations"],
         "checkpoint_path": (
@@ -64,6 +64,7 @@ def finetune_script():
             datasets=parser["datasets"],
             datamodule_kwargs=datamodule_kwargs,
             model=None,
+            fold=parser["fold"],
             model_class=parser["model"],
             model_config=parser["model_kwargs"],
             batch_size=parser["batch_size"],

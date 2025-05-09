@@ -136,6 +136,14 @@ class PhysioExParser:
         required=False,
         help="The absolute path of the directory where the physioex dataset are stored, if None the home directory is used. Expected type: str. Optional. Default: None",
     )
+    
+    parser.add_argument(
+        "--fold",
+        type=int,
+        default=-1,
+        required=False,
+        help="Fold number to use. Default: -1 (random)",
+    )
 
     parser.add_argument(
         "--num_workers",

@@ -51,7 +51,7 @@ class PhysioExDataset(torch.utils.data.Dataset):
             self.readers += [reader]
 
         self.dataset_idx = np.array(self.dataset_idx, dtype=np.uint8)
-        # set the table fold to the 0 fold by default
+        # set the table fold to a random fold by default
         self.split()
         self.target_transform = target_transform
 
@@ -106,12 +106,12 @@ class PhysioExDataset(torch.utils.data.Dataset):
     def __getitem__(self, idx):
         dataset_idx = int(self.dataset_idx[idx])
 
-        X, y = self.readers[dataset_idx][idx]
+        X, y, subjects = self.readers[dataset_idx][idx]
 
         if self.target_transform is not None:
             y = self.target_transform(y)
 
-        return X, y
+        return X, y, subjects, dataset_idx
 
     def get_sets(self):
         # return the indexes in the table of the train, valid and test subjects
@@ -145,8 +145,8 @@ class PhysioExDataset(torch.utils.data.Dataset):
                     logger.error(error_string)
                     raise ValueError("ERR: split should be 0, 1 or 2")
 
-        train_idx = np.concatenate(train_idx)
-        valid_idx = np.concatenate(valid_idx)
+        train_idx = np.concatenate(train_idx) if train_idx else np.array([])
+        valid_idx = np.concatenate(valid_idx) if valid_idx else np.array([])
         test_idx = np.concatenate(test_idx)
 
         return train_idx, valid_idx, test_idx
