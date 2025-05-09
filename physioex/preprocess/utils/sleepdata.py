@@ -8,7 +8,7 @@ import pyedflib
 from scipy.signal import filtfilt, firwin, resample
 
 
-def read_edfrecords(filename, channel):
+def read_edfrecords(filename, channel, start=0, n=None):
     # Apri il file EDF
     f = pyedflib.EdfReader(filename)
 
@@ -19,7 +19,7 @@ def read_edfrecords(filename, channel):
     fs = f.getSampleFrequency(channel)
 
     # Leggi il segnale dal canale specificato
-    signal = f.readSignal(channel)
+    signal = f.readSignal(channel, int(start*fs), int(n*fs))
 
     # Chiudi il file EDF
     f.close()
@@ -230,14 +230,14 @@ def process_sleepdata_file(edf_path, xml_path):
     return signal.astype(np.float32), stages.astype(int)
 
 
-def read_channel_signal(filename, channel):
+def read_channel_signal(filename, channel, start=0, n=None):
 
     if isinstance(channel, tuple):
-        c4, old_fs = read_edfrecords(filename, channel[0])
-        m1, old_fs = read_edfrecords(filename, channel[1])
+        c4, old_fs = read_edfrecords(filename, channel[0], start, n)
+        m1, old_fs = read_edfrecords(filename, channel[1], start, n)
         eeg = c4 - m1
     else:
-        eeg, old_fs = read_edfrecords(filename, channel)
+        eeg, old_fs = read_edfrecords(filename, channel, start, n)
 
     return eeg, old_fs
 
