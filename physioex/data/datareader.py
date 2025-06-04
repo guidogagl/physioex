@@ -9,6 +9,11 @@ import pandas as pd
 import torch
 from loguru import logger
 
+from tqdm import tqdm  
+from functools import lru_cache
+
+from joblib import Parallel, delayed
+
 
 class Reader(ABC):
     @abstractmethod
@@ -24,8 +29,6 @@ class Reader(ABC):
         pass
 
 
-
-
 class MemmapReader(Reader):
     # this object abstracts the reading of subject data from memmap files for a specific dataset
     def __init__(
@@ -39,7 +42,7 @@ class MemmapReader(Reader):
     ):
 
         self.preprocessing = preprocessing
-
+        self.dataset = dataset
         self.data_path = os.path.join(data_folder, dataset, preprocessing)
         self.labels_path = os.path.join(data_folder, dataset, "labels")
 
@@ -77,7 +80,8 @@ class MemmapReader(Reader):
         self.subject_idx, self.relative_idx, self.windows_index = build_index(
             num_windows, subjects_id, self.L
         )
-
+        
+            
     def get_table(self):
         folds_colum = [col for col in self.table.columns if "fold_" in col]
         return self.table[["subject_id", "num_windows"] + folds_colum].copy()
@@ -141,8 +145,8 @@ class MemmapReader(Reader):
     def __getitem__(self, idx):
 
         X = self.get_signal(idx)
-        y, subject_id = self.get_stages(idx)
-
+        y, subject_id = self.get_stages(idx)    
+        
         return X, y, subject_id
 
 class WholeNightReader(MemmapReader):
@@ -196,7 +200,7 @@ class WholeNightReader(MemmapReader):
 
         y = torch.tensor(y).long()
 
-        return y
+        return y, subject_id
 
 class AgeMemmapReader(MemmapReader):
     def __init__(

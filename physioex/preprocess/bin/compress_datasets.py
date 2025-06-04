@@ -1,153 +1,139 @@
 import argparse
 import os
-from pathlib import Path
-
-import h5py
-import numpy as np
-import pandas as pd
-from joblib import Parallel, delayed
+from physioex.data import PhysioExDataset, PhysioExDataModule
+import torch
 from tqdm import tqdm
+import os
+
+from lightning.pytorch import seed_everything
+
+def compress_eval_dataset(loader, output_path, loader_type = "eval"):
+
+    inputs, targets = [], []
+    for batch in tqdm(loader, desc=f"Compressing {loader_type} dataset"):
+        X, y, _, _ = batch
+
+        if args.dataset == "shhs":
+            X = X.to(torch.float16)
+        else:
+            X = X.float()
+
+        y = y.long()
+
+        # X shape 1, night_lenght, channels, input_shape
+
+        # get if nan or inf values are present
+        if torch.isnan(X).any() or torch.isinf(X).any():
+            print(f"Error: NaN or Inf values found in {loader_type} dataset")
+            exit(1)
+
+        X = X.squeeze(0)
+        y = y.squeeze(0)
+
+        inputs.append(X)
+        targets.append(y)    
+        
+    inputs = tuple( inputs )
+    targets = tuple( targets )
+    
+    #print(f"Inputs shape: {len(inputs).shape}, Targets shape: {targets.shape}")
+    
+    output_path = os.path.join(output_folder, f"{loader_type}_dataset.pt")
+    
+    print(f"Saving {loader_type} dataset to {output_path}")
+    torch.save((inputs, targets), output_path)
 
 
-def read_subject_record(data_folder, dataset_name, subject, num_windows, n_channels):
-    subject = str(subject)
+def compress_dataset(loader, output_path, loader_type = "train"):            
+    # iterate over the loader, compress the X tensor from torch.float32 to torch.float16
+    # save the compressed tensor to a file
+    
+    inputs, targets = [], []
+    for batch in tqdm(loader, desc=f"Compressing {loader_type} dataset"):
+        X, y, _, _ = batch
 
-    # the values are stored as numpy memmaps
-    raw = np.memmap(
-        os.path.join(data_folder, dataset_name, "raw", f"{subject}.npy"),
-        dtype="float32",
-        mode="r",
-        shape=(num_windows, n_channels, 3000),
-    )[:]
+        if args.dataset == "shhs":
+            X = X.to(torch.float16)
+        else:
+            X = X.float()
 
-    xsleep = np.memmap(
-        os.path.join(data_folder, dataset_name, "xsleepnet", f"{subject}.npy"),
-        dtype="float32",
-        mode="r",
-        shape=(num_windows, n_channels, 29, 129),
-    )[:]
+        y = y.long()
 
-    labels = np.memmap(
-        os.path.join(data_folder, dataset_name, "labels", f"{subject}.npy"),
-        dtype="int16",
-        mode="r",
-        shape=(num_windows,),
-    )[:]
+        # X shape 1, night_lenght, channels, input_shape
 
-    return subject, raw, xsleep, labels
+        # get if nan or inf values are present
+        if torch.isnan(X).any() or torch.isinf(X).any():
+            print(f"Error: NaN or Inf values found in {loader_type} dataset")
+            exit(1)
+
+        X = X.squeeze(0)
+        y = y.squeeze(0)
+
+        inputs.append(X)
+        targets.append(y)    
+        
+    inputs = torch.cat(inputs, dim = 0)
+    targets = torch.cat(targets, dim = 0)
+    
+    print(f"Inputs shape: {inputs.shape}, Targets shape: {targets.shape}")
+    
+    output_path = os.path.join(output_folder, f"{loader_type}_dataset.pt")
+    
+    print(f"Saving {loader_type} dataset to {output_path}")
+    torch.save((inputs, targets), output_path)
 
 
 if __name__ == "__main__":
+    
+    seed_everything(42, workers=True)
+    
     # Parse arguments
     parser = argparse.ArgumentParser(description="Compress datasets")
     parser.add_argument(
         "--data_folder", default="/mnt/guido-data/", type=str, help="data folder"
     )
     parser.add_argument(
-        "--datasets_name",
-        default="mass hmc dcsm mros mesa shhs",
+        "-d",
+        "--dataset",
+        help="Specify the datasets list to train the model on. Expected type: list. Default: ['sleepedf']",
         type=str,
-        help="datasets name",
+        default="sleepedf",
     )
+    
     parser.add_argument(
-        "--output_folder", default="/mnt/guido-data/", type=str, help="output folder"
-    )
-    parser.add_argument(
-        "--force", action="store_true", help="Overwrite the content of the output file"
-    )
-    parser.add_argument(
-        "--n_jobs", default=1, type=int, help="number of jobs to run in parallel"
+        "--output_folder", default="./.tmp/", type=str, help="output folder"
     )
 
     args = parser.parse_args()
 
-    # convert the datasets name to a list
-    datasets_name = args.datasets_name.split()
+    for preprocessing in ["raw", "xsleepnet"]:
 
-    # check that the datasets exist else raise a warning:
-    for name in datasets_name:
-        if not os.path.exists(os.path.join(args.data_folder, name)):
-            print(f"Warning: {name} does not exist in {args.data_folder}")
-            # remove the name from the list
-            datasets_name.remove(name)
+        print( "Creating PhysioExDataModule...")
+        data = PhysioExDataModule(
+            datasets = [args.dataset],
+            batch_size = 1,
+            preprocessing = preprocessing,
+            selected_channels = ["EEG", "EOG", "EMG"],
+            sequence_length = -1,
+            data_folder = args.data_folder,
+            num_workers= os.cpu_count(),
+        )
 
-    # create the output folder if it does not exist
-    Path(args.output_folder).mkdir(parents=True, exist_ok=True)
+        output_folder = os.path.join(args.output_folder, args.dataset, preprocessing) 
+        os.makedirs(output_folder, exist_ok=True)
+        
+        # get the dataloaders
+        train_loader = data.train_dataloader()
+        eval_loader = data.val_dataloader()
+        test_loader = data.test_dataloader()
+        
+        
+        print("Compressing datasets...")
+        # compress the train, eval and test datasets
+        compress_eval_dataset(eval_loader, output_folder, "eval")
+        compress_eval_dataset(test_loader, output_folder, "test")
+        
+        compress_dataset(train_loader, output_folder, "train")
 
-    # process each dataset separately
-    for name in datasets_name:
-        print(f"Info: processing {name}")
-
-        n_channels = 3 if name not in ["hmc", "dcsm"] else 4
-
-        # create the output file for the current dataset
-        h5_file_path = os.path.join(args.output_folder, f"{name}.h5")
-        if os.path.exists(h5_file_path) and not args.force:
-            print(f"Warning: {h5_file_path} already exists. Use --force to overwrite.")
-            continue
-
-        with h5py.File(h5_file_path, "w") as file:
-            file.create_group("raw")
-            file.create_group("xsleepnet")
-            file.create_group("labels")
-
-            # read the table of the dataset from the disk
-            table = pd.read_csv(os.path.join(args.data_folder, name, "table.csv"))
-
-            if "Unnamed: 0" in table.columns:
-                table = table.drop("Unnamed: 0", axis=1)
-
-            # for each column in the table create a dataset in the corresponding group
-            for column in table.columns:
-                if column in ["raw", "xsleepnet", "labels"]:  # string columns to skip
-                    continue
-
-                if (
-                    "fold" in column
-                ):  # the fold columns needs to be converted to int columns
-                    table[column] = (
-                        table[column]
-                        .map({"train": 0, "valid": 1, "test": 2})
-                        .astype(int)
-                    )
-
-                # create the dataset without compression
-                file.create_dataset(
-                    column,
-                    data=np.reshape(table[column].astype(int).values, (-1)),
-                    chunks=True,
-                )
-
-            # read and save the scaling information
-            data = np.load(os.path.join(args.data_folder, name, "raw", "scaling.npz"))
-            file["raw"].create_dataset("mean", data=data["mean"], chunks=True)
-            file["raw"].create_dataset("std", data=data["std"], chunks=True)
-
-            data = np.load(
-                os.path.join(args.data_folder, name, "xsleepnet", "scaling.npz")
-            )
-            file["xsleepnet"].create_dataset("mean", data=data["mean"], chunks=True)
-            file["xsleepnet"].create_dataset("std", data=data["std"], chunks=True)
-
-            # read from the file the subject list
-            subject_list = list(table["subject_id"])
-
-            batch_size = args.n_jobs
-
-            for i in tqdm(range(0, len(subject_list), batch_size)):
-                batch_subjects = subject_list[i : i + batch_size]
-                batch_indices = list(range(i, min(i + batch_size, len(subject_list))))
-                batch_num_windows = [table["num_windows"][idx] for idx in batch_indices]
-
-                results = Parallel(n_jobs=args.n_jobs)(
-                    delayed(read_subject_record)(
-                        args.data_folder, name, subject, num_windows, n_channels
-                    )
-                    for subject, num_windows in zip(batch_subjects, batch_num_windows)
-                )
-
-                for subject, raw, xsleep, labels in results:
-                    # create the datasets without compression
-                    file["raw"].create_dataset(subject, data=raw, chunks=True)
-                    file["xsleepnet"].create_dataset(subject, data=xsleep, chunks=True)
-                    file["labels"].create_dataset(subject, data=labels, chunks=True)
+        print(f"Datasets compressed and saved to {output_folder}")
+    print("Done!")

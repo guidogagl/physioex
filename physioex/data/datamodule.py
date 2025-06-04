@@ -6,6 +6,7 @@ from torch.utils.data import DataLoader, DistributedSampler, Subset, SubsetRando
 
 from physioex.data.dataset import PhysioExDataset
 
+from loguru import logger
 
 class PhysioExDataModule(pl.LightningDataModule):
     def __init__(
@@ -39,8 +40,7 @@ class PhysioExDataModule(pl.LightningDataModule):
                 task=task,
             )
             
-            if evaluate_on_whole_night:
-                self.eval_dataset = PhysioExDataset(
+            self.eval_dataset = PhysioExDataset(
                 datasets=datasets,
                 preprocessing=preprocessing,
                 selected_channels=selected_channels,
@@ -49,12 +49,12 @@ class PhysioExDataModule(pl.LightningDataModule):
                 data_folder=data_folder,
                 task=task,
             )
-            else:
-                self.eval_dataset = self.dataset
             
         elif isinstance(datasets, PhysioExDataset):
+            logger.warning("The usage of PhysioExDataset as datasets is deprecated. Please use a list of dataset names instead.")
             self.dataset = datasets
             self.eval_dataset = datasets
+
         else:
             raise ValueError("ERR: datasets should be a list or a PhysioExDataset")
 
@@ -75,8 +75,6 @@ class PhysioExDataModule(pl.LightningDataModule):
         self.train_dataset = Subset(self.dataset, train_idx)
         self.valid_dataset = Subset(self.eval_dataset, valid_idx)
         self.test_dataset = Subset(self.eval_dataset, test_idx)
-        
-        self.eown = evaluate_on_whole_night
 
     def train_dataloader(self):
         """
@@ -90,20 +88,23 @@ class PhysioExDataModule(pl.LightningDataModule):
             batch_size=self.batch_size,
             shuffle=True,
             num_workers=self.num_workers,
+            #persistent_workers=True
         )
 
     def val_dataloader(self):
         return DataLoader(
             self.valid_dataset,
-            batch_size=self.batch_size if not self.eown else 1,
+            batch_size = 1, # self.batch_size if not self.eown else 1,
             shuffle=False,
             num_workers=self.num_workers,
+            #persistent_workers=True
         )
 
     def test_dataloader(self, shuffle=False):
         return DataLoader(
             self.test_dataset,
-            batch_size=self.batch_size if not self.eown else 1,
+            batch_size=1, #self.batch_size if not self.eown else 1,
             shuffle=shuffle,
             num_workers=self.num_workers,
+            #persistent_workers=True
         )

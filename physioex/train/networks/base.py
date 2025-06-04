@@ -18,12 +18,30 @@ def confusion_matrix_to_dict(confusion_matrix):
             cm_dict[f"cm_{i}_{j}"] = cm[i, j]
     return cm_dict
 
+def voting_strategy( model : torch.nn.Module, inputs : torch.Tensor, L : int  ):
+
+    embeddings , outputs = model.encode(inputs)   
+
+    outputs = torch.zeros_like(outputs)
+    embeddings = torch.zeros_like(embeddings)     
+
+    # input shape is ( bach_size, night_lenght, n_channels, ... )
+    # segment the input in self.L segments with a sliding window of stride 1 and size self.L
+    for i in range(0, inputs.size(1) - L + 1, 1):
+        input_segment = inputs[:, i:i+L]
+        seg_emb, seg_outputs = model.encode(input_segment)
+        
+        outputs[:, i:i+L] += torch.nn.functional.softmax( seg_outputs, dim=-1 )
+        embeddings[:, i:i+L] += seg_emb 
+    
+    return embeddings, outputs
+
 class SleepModule(pl.LightningModule):
     def __init__(self, nn: nn.Module, config: Dict):
         super(SleepModule, self).__init__()
         self.save_hyperparameters(ignore=["nn"])
         self.nn = nn
-
+        self.L = config["sequence_length"]
         self.n_classes = config["n_classes"]
 
         if self.n_classes > 1:
@@ -163,14 +181,15 @@ class SleepModule(pl.LightningModule):
     def validation_step(self, batch, batch_idx):
         # Logica di validazione
         inputs, targets, subjects, dataset_idx = batch
-        embeddings, outputs = self.encode(inputs)
-
+        
+        embeddings , outputs = voting_strategy(self, inputs, self.L)
+        
         return self.compute_loss(embeddings, outputs, targets, "val")
 
     def test_step(self, batch, batch_idx):
         # Logica di training
         inputs, targets, subjects, dataset_idx = batch
 
-        embeddings, outputs = self.encode(inputs)
+        embeddings , outputs = voting_strategy(self, inputs, self.L)
 
         return self.compute_loss(embeddings, outputs, targets, "test", log_metrics=True)

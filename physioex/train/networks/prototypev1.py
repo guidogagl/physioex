@@ -142,40 +142,34 @@ class SectionEncoder( nn.Module ):
         activation_func = nn.GELU(),
     ):
         super(SectionEncoder, self).__init__()
-        class FFStack( nn.Module ):
-            def __init__(
-                self, 
-                input_dim = 128,
-                hidden_dim = 1024,
-                dropout = 0.1, 
-                activation_func = nn.GELU(),
-                ):
-                super(FFStack, self).__init__()
+        
+        self.pe = PositionalEncoding(input_dim, 100)
 
-                self.ff = nn.Sequential(
-                    nn.Linear(input_dim, hidden_dim),
-                    activation_func,
-                    nn.Dropout( dropout ),
-                    nn.Linear(hidden_dim, input_dim)
-                )
-                self.norm = nn.LayerNorm( input_dim )
-                self.dropout = nn.Dropout( dropout )
-
-            def forward(self, x):
-                return self.norm( x + self.dropout( self.ff(x) ) )
-
-        self.encoders = nn.ModuleList( 
-            [ FFStack(
-                input_dim = input_dim,
-                hidden_dim = hidden_dim,
-                dropout = dropout,
-                activation_func = activation_func
-            )  for _ in range( n_layers )] 
+        encoder_layer = nn.TransformerEncoderLayer(
+            d_model=input_dim,  # each channel is processed as an independent sample, otherwise it would be 128 * in_channels
+            nhead=8,
+            dim_feedforward=hidden_dim,
+            dropout=dropout,
+            activation=activation_func,
+            batch_first=True,
         )
 
-    def forward(self, x ):
-        for encoder in self.encoders:
-            x = encoder(x)
+        self.encoder = nn.TransformerEncoder(
+            encoder_layer, 
+            num_layers=n_layers
+        )
+        
+        self.additive_attention = AttentionLayer(
+            128, 
+            64,
+        )
+        
+    def forward(self, x):
+        # batch, seq_len, hidden_size = x.size()        
+        x = self.pe(x)
+        x = self.encoder(x)
+        x = self.additive_attention(x)
+        
         return x
 
 class NN(nn.Module):
@@ -193,23 +187,6 @@ class NN(nn.Module):
         
         self.S = module_config["S"]
         self.N = module_config["N"]
-
-        """       
-        self.pe = PositionalEncoding( 128 )
-        
-        t_layer = nn.TransformerEncoderLayer(
-            d_model=128, # each channel is processed as an independent sample, otherwise it would be 128 * in_channels
-            nhead=8,
-            dim_feedforward=1024,
-            dropout=0.1,
-            batch_first=True,
-        )
-        
-        self.encoder = nn.TransformerEncoder(
-            t_layer, 
-            num_layers=4
-        )
-        """
 
         self.encoder = SectionEncoder(
             input_dim = 128,
@@ -285,19 +262,19 @@ class NN(nn.Module):
     
     def get_prototypes(self, x):
         # x shape : (batch_size, seq_len, n_chan, n_samp)
-        batch, L, nchan, T, F = x.size()
+        batch, L, nchan, T, _ = x.size()
         
         #### epoch encoding ####
-        x = x.reshape( batch * L * nchan, T, F )
+        x = x.reshape( batch * L * nchan, T, -1 )
         x = x[ ..., :128 ]
+
+        x = F.pad( x, (0, 0, 0, 1) ).reshape(-1, 6, 5, 128 ) 
+
+        _, alphas = self.sampler( x.sum( dim = -2 ) )  
         
-        #x = self.pe(x)
-        #x = self.encoder(x)
-    
-        # out : -1, 1, T, 128                
-        x, alphas = self.sampler( x ) # out -1, N, 128
-        x = x.reshape( -1, 128 )
+        x = torch.einsum("bns, bsh -> bnh", alphas, x.reshape( -1, 6, 5*128 ) ).reshape( -1, 5, 128 )
         
+        # now we want to use a transformer encoder to encode the sequence
         x = self.encoder(x)
 
         prototypes, indexes, commit_loss = self.prototype(x)

@@ -1,11 +1,15 @@
 from physioex.train.bin.parser import PhysioExParser
-from physioex.train.utils import test
-
 
 def test_script():
 
     parser = PhysioExParser.test_parser()
 
+    # check if we are running in fast mode or not
+    if parser["fast"]:
+        from physioex.train.utils.fast_test import test
+    else:
+        from physioex.train.utils.test import test
+    
     datamodule_kwargs = {
         "selected_channels": parser["selected_channels"],
         "sequence_length": parser["sequence_length"],

@@ -15,10 +15,59 @@ from torch import set_float32_matmul_precision
 from physioex.data import PhysioExDataModule
 from physioex.train.networks.base import SleepModule
 
+from torch.utils.data import Dataset, DataLoader
+
+class FastTrainDataset(Dataset):
+    def __init__(self, dataset : str, preprocess : str, L : int, indexed_channels : List[int] ):
+        
+        logger.info(f"Loading FastTrainDataset for {dataset} with preprocess {preprocess}")        
+
+        X, y = torch.load(
+            f".tmp/{dataset}/{preprocess}/train_dataset.pt",
+            map_location=torch.device("cpu")
+        )
+
+        logger.info(f"Loaded X: {X.shape}, y: {y.shape} from {dataset} with preprocess {preprocess}")
+
+        self.X = X[:, indexed_channels]
+        self.y = y
+        self.L = L 
+
+        self.lenght = len(y) - L + 1
+
+    def __len__(self):
+        return self.lenght
+
+    def __getitem__(self, idx):
+        return self.X[idx:idx+self.L].float(), self.y[idx:idx+self.L].long(), 0, 0
+
+
+class FastEvalDataset(Dataset):
+    def __init__(self, dataset : str, preprocess : str, indexed_channels : List[int], split = "eval" ):
+        
+        logger.info(f"Loading FastEvalDataset for {dataset} with preprocess {preprocess}")        
+
+        X, y = torch.load(
+            f".tmp/{dataset}/{preprocess}/{split}_dataset.pt",
+            map_location=torch.device("cpu")
+        )
+
+        self.X = X
+        self.y = y
+
+        self.indexed_channels = indexed_channels
+
+        self.lenght = len(y)
+
+    def __len__(self):
+        return len( self.y )
+
+    def __getitem__(self, idx):
+        return self.X[idx][:, self.indexed_channels].float(), self.y[idx].long(), 0, 0
 
 
 def train(
-    datasets: Union[List[str], str, PhysioExDataModule],
+    datasets: str,
     datamodule_kwargs: dict = {},
     model: SleepModule = None,  # if passed model_class, model_config and resume are ignored
     model_class: Type[SleepModule] = None,
@@ -49,21 +98,43 @@ def train(
     Path(checkpoint_path).mkdir(parents=True, exist_ok=True)
 
     ##### DataModule Setup #####
-    if isinstance(datasets, PhysioExDataModule):
-        datamodule = datasets
-    elif isinstance(datasets, str):
-        datamodule = PhysioExDataModule(
-            datasets=[datasets],
-            **datamodule_kwargs,
-        )
-    elif isinstance(datasets, list):
-        datamodule = PhysioExDataModule(
-            datasets=datasets,
-            **datamodule_kwargs,
-        )
-    else:
-        raise ValueError("datasets must be a list, a string or a PhysioExDataModule")
+    datamodule = PhysioExDataModule(
+        datasets=[datasets[0]],
+        **datamodule_kwargs,
+    )
 
+    ## custom fast train dataloader
+    train_dataset = FastTrainDataset(
+        dataset = datasets[0],
+        preprocess = datamodule_kwargs["preprocessing"],
+        L = datamodule_kwargs["sequence_length"],
+        indexed_channels = datamodule.dataset.channels_index
+    )
+    
+    # create the train dataloader
+    train_loader = DataLoader(
+        train_dataset,
+        batch_size=batch_size,
+        shuffle=True,
+        num_workers=datamodule_kwargs["num_workers"],
+    )
+
+    ### custom fast eval dataloader
+
+    eval_dataset = FastEvalDataset(
+        dataset = datasets[0],
+        preprocess = datamodule_kwargs["preprocessing"],
+        indexed_channels = datamodule.dataset.channels_index,
+        split = "eval",
+    )
+
+    eval_loader = DataLoader(
+        eval_dataset,
+        batch_size=1,
+        num_workers=datamodule_kwargs["num_workers"],
+    )
+
+    ###
     ########### Resuming Model if needed else instantiate it ############:
     if resume and (model is None):
         chekpoints = list(Path(checkpoint_path).glob("*.ckpt"))
@@ -152,10 +223,7 @@ def train(
 
     # setup the model in training mode if needed
     model = model.train()
-    
-    
-    
+        
     # Start training
-    trainer.fit(model, datamodule=datamodule)
-    
+    trainer.fit(model, train_loader, eval_loader)
     return checkpoint_callback.best_model_path

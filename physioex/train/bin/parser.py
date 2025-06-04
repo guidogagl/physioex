@@ -139,6 +139,7 @@ class PhysioExParser:
     
     parser.add_argument(
         "--fold",
+        "-fd",
         type=int,
         default=-1,
         required=False,
@@ -149,7 +150,7 @@ class PhysioExParser:
         "--num_workers",
         "-nw",
         type=int,
-        default=0,
+        default=os.cpu_count(),
         help="Specify the number of workers for the dataloader. Expected type: int. Default: 0",
     )
 
@@ -168,6 +169,13 @@ class PhysioExParser:
         "-hpc",
         action="store_true",
         help="Using high performance computing setups or not, need to be called when datasets have been compressed into .h5 format with the compress_datasets command. Expected type: bool. Optional. Default: False",
+    )
+    
+    parser.add_argument(
+        "--fast",
+        "-f",
+        action="store_true",
+        help="Use fast mode for training and testing, this will load the datasets in memory ( half precision for training and full precision for testing ) and will not use the hpc mode. Expected type: bool. Optional. Default: False",
     )
 
     parser.add_argument(

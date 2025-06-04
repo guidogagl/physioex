@@ -44,31 +44,6 @@ class ProtoLoss( nn.Module ):
         return tl, mcl
 
 
-def voting_strategy( model : torch.nn.Module, inputs : torch.Tensor, L : int  ):
-    
-    batch_size, night_lenght, n_channels, _, _ = inputs.size()
-
-    (commit_loss, mcy), outputs = model.encode(inputs)   
-
-    outputs = torch.zeros( batch_size, night_lenght, 5, device=inputs.device, dtype=inputs.dtype )
-    mcy = torch.zeros( batch_size, night_lenght, n_channels, 5, device=inputs.device, dtype=inputs.dtype )   
-
-    commit_loss = 0
-    
-    # input shape is ( bach_size, night_lenght, n_channels, ... )
-    # segment the input in self.L segments with a sliding window of stride 1 and size self.L
-    for i in range(0, inputs.size(1) - L + 1, 1):
-        input_segment = inputs[:, i:i+L]
-        (seg_cl, seg_mcy), seg_outputs = model.encode(input_segment)
-        
-        outputs[:, i:i+L] += torch.nn.functional.softmax( seg_outputs, dim=-1 )
-        mcy[:, i:i+L] += torch.nn.functional.softmax( seg_mcy, dim=-1 )
-        commit_loss += seg_cl
-
-    commit_loss = commit_loss / (inputs.size(1) - L + 1)
-    
-    return (commit_loss, mcy), outputs
-
 class ProtoSleepNet(SleepModule):
     def __init__(self, module_config: dict = module_config):
         super(ProtoSleepNet, self).__init__(NN(module_config), module_config)
@@ -116,72 +91,11 @@ class ProtoSleepNet(SleepModule):
         return loss
 
 
-    def validation_step(self, batch, batch_idx):
-        # Logica di validazione
-        inputs, targets, subjects, dataset_idx = batch
-
-        embeddings , outputs = voting_strategy(self, inputs, self.L)
-        
-        return self.compute_loss(embeddings, outputs, targets, "val")
-
-    def test_step(self, batch, batch_idx):
-        # Logica di training
-        inputs, targets, subjects, dataset_idx = batch
-
-        embeddings , outputs = voting_strategy(self, inputs, self.L)
-
-        return self.compute_loss(embeddings, outputs, targets, "test", log_metrics=True)
-
-
-class SectionEncoder( nn.Module ):
-    def __init__(self, 
-        n_layers = 4,
-        input_dim = 128,
-        hidden_dim = 1024,
-        dropout = 0.1, 
-        activation_func = nn.GELU(),
-    ):
-        super(SectionEncoder, self).__init__()
-        class FFStack( nn.Module ):
-            def __init__(
-                self, 
-                input_dim = 128,
-                hidden_dim = 1024,
-                dropout = 0.1, 
-                activation_func = nn.GELU(),
-                ):
-                super(FFStack, self).__init__()
-
-                self.ff = nn.Sequential(
-                    nn.Linear(input_dim, hidden_dim),
-                    activation_func,
-                    nn.Dropout( dropout ),
-                    nn.Linear(hidden_dim, input_dim)
-                )
-                self.norm = nn.LayerNorm( input_dim )
-                self.dropout = nn.Dropout( dropout )
-
-            def forward(self, x):
-                return self.norm( x + self.dropout( self.ff(x) ) )
-
-        self.encoders = nn.ModuleList( 
-            [ FFStack(
-                input_dim = input_dim,
-                hidden_dim = hidden_dim,
-                dropout = dropout,
-                activation_func = activation_func
-            )  for _ in range( n_layers )] 
-        )
-
-    def forward(self, x ):
-        for encoder in self.encoders:
-            x = encoder(x)
-        return x
-
 class NN(nn.Module):
     def __init__(self, module_config = module_config):
         super(NN, self).__init__()
 
+        from physioex.train.networks.sleeptransformer import EpochEncoder as SectionEncoder
         from physioex.train.networks.sleeptransformer import SequenceEncoder
         
         from vector_quantize_pytorch import SimVQ
@@ -189,12 +103,23 @@ class NN(nn.Module):
         self.in_channels = module_config["in_channels"]
         self.n_prototypes = module_config["n_prototypes"]
         
+        in_channels = module_config["in_channels"]
+        if in_channels == 1:
+            n_prototypes = [30]
+        elif in_channels == 2:
+            n_prototypes = [30, 10]
+        elif in_channels == 3:
+            n_prototypes = [30, 10, 10]
+        else:
+            raise ValueError(f"Unsupported in_channels value: {in_channels}")
+        self.n_prototypes = n_prototypes  
+        module_config["n_prototypes"] = n_prototypes
+              
         # assert self.in_channels == len( self.n_prototypes ), "Err: Number of prototypes must match the number of channels of the model"
         
         self.S = module_config["S"]
         self.N = module_config["N"]
-
-        """       
+                
         self.pe = PositionalEncoding( 128 )
         
         t_layer = nn.TransformerEncoderLayer(
@@ -209,26 +134,22 @@ class NN(nn.Module):
             t_layer, 
             num_layers=4
         )
-        """
-
-        self.encoder = SectionEncoder(
-            input_dim = 128,
-            hidden_dim = 1024,
-            dropout = 0.1, 
-            activation_func = nn.GELU(),
-        )
 
         self.sampler = HardAttentionLayer(
             hidden_size = 128,
-            attention_size = 1024, 
+            attention_size = 1024, #129 * self.S,
             N = self.N,           
         )
         
-        self.prototype = SimVQ(
+        self.prototype = nn.ModuleList(
+            [
+                SimVQ(
                     dim = 128,
-                    codebook_size = self.n_prototypes,  
+                    codebook_size = codebook_size,
                     rotation_trick = True,  # use rotation trick from Fifty et al.
                     channel_first=False
+                ) for codebook_size in self.n_prototypes   
+            ]
         ) 
         
         # need to change n_channels to 1 to create sequence encoder, because each channel is processed independently
@@ -242,6 +163,8 @@ class NN(nn.Module):
                 attention_size = 128,
                 N = 1
             )
+        else :
+            self.channels_sampler = nn.Identity()
 
         self.clf = self.sequence_encoder.clf
         
@@ -249,38 +172,38 @@ class NN(nn.Module):
         # x shape : (batch_size, seq_len, n_chan, n_samp)
         batch, L, nchan, T, F = x.size()
         
-        #start_time = time.time()
+        start_time = time.time()
         _, p, _, commit_loss, _ = self.get_prototypes( x ) # batch, L, nchan, N, 128
-        #print(f"Prototypes computed in {time.time() - start_time:.2f} seconds")
+        end_time = time.time()
+        #print( f"Prototype time: {end_time - start_time}")
         
+        start_time = time.time()        
         # average prototypes
         p = p.mean( dim = 3 ).reshape( batch, L, nchan, 128).permute( 0, 2, 1, 3)
         p = p.reshape( -1, L, 128 )        
+        end_time = time.time()
+        #print( f"Prototype average time: {end_time - start_time}")
         
         ### sequence learning ##### 
         start_time = time.time()
         p = self.sequence_encoder.encode( p ) # out -1, L, 128
-        #print(f"Sequence encoding computed in {time.time() - start_time:.2f} seconds")
+        end_time = time.time()
+        #print( f"Sequence time: {end_time - start_time}")
         
-        start_time = time.time()                
+        start_time = time.time()
+        ### multichannel optimization:
         mcy = self.clf( p.reshape( -1, 128) ).reshape( batch, nchan, L, -1).permute( 0, 2, 1, 3 )
-        #print(f"Multi-channel classification computed in {time.time() - start_time:.2f} seconds")
+        # batch, L, nchan, nclasses
                 
         ### channel picking
-        start_time = time.time()
         p = p.reshape( batch, nchan, L, 128).permute( 0, 2, 1, 3).reshape( -1, nchan, 128)
-        
-        if self.in_channels > 1:
-            p, _ = self.channels_sampler( p ) 
-        
-        #print(f"Channel sampling computed in {time.time() - start_time:.2f} seconds")        
-        p = p.reshape( batch*L, 128 )
-         
-        #start_time = time.time()
+        p = self.channels_sampler( p )[0] if self.in_channels > 1 else p # HardAttentionLayer returns a tuple (x_sampled, alphas)
+        p = p.reshape( batch*L, 128 ) 
         y = self.clf(p).reshape( batch, L, -1)
-        #print(f"Final classification computed in {time.time() - start_time:.2f} seconds")
-                
-        return (commit_loss, mcy), y 
+        end_time = time.time()
+        #print( f"Multichannel time: {end_time - start_time}")
+        
+        return (commit_loss, mcy) , y 
 
     
     def get_prototypes(self, x):
@@ -291,23 +214,39 @@ class NN(nn.Module):
         x = x.reshape( batch * L * nchan, T, F )
         x = x[ ..., :128 ]
         
-        #x = self.pe(x)
-        #x = self.encoder(x)
+        x = self.pe(x)
+        x = self.encoder(x)
     
         # out : -1, 1, T, 128                
         x, alphas = self.sampler( x ) # out -1, N, 128
-        x = x.reshape( -1, 128 )
         
-        x = self.encoder(x)
-
-        prototypes, indexes, commit_loss = self.prototype(x)
+        x = x.reshape( -1, nchan, self.N, 128 )
+        x = x.permute( 1, 0, 2, 3 )
+        commit_loss = 0        
         
-        prototypes = prototypes.reshape( batch, L, nchan, self.N, 128 )
-        indexes = indexes.reshape( batch, L, nchan, self.N )        
+        p, indx = [], []        
+        for chan in range( nchan ):
+            chan_p, chan_indx, chan_loss = self.prototype[chan]( x[chan].reshape(-1, 128) )
+            
+            commit_loss += chan_loss
+            p += [ chan_p.reshape( batch, L, self.N, 128) ]     
+            indx += [ chan_indx.reshape( batch, L, self.N) ]
+        
+        p, indx = torch.stack( p ), torch.stack( indx )
+        
+        p = p.permute( 1, 2, 0, 3, 4)
+        indx = indx.permute( 1, 2, 0, 3 )
+        alphas = alphas.reshape(batch, L, nchan, self.N, T)
+        
+        x = x.permute( 1, 0, 2, 3 )
+        x = x.reshape(batch, L, nchan, 1, 128 )
 
-        return x, prototypes, indexes, commit_loss, alphas
+        #p = p.reshape(batch, L, nchan, self.N, 128 )
+        #indx = indx.reshape(batch, L, nchan, self.N )
 
-    def forward(self, x):
+        return x, p, indx, commit_loss, alphas
+
+    def forwad(self, x):
         x, y = self.encode(x)
 
         return y
