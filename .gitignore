@@ -9,6 +9,7 @@ distribute/
 
 results/
 wandb
+.tmp/
 
 physioex/train/old/
 hpc/
