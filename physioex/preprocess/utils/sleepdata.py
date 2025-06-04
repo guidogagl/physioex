@@ -19,7 +19,10 @@ def read_edfrecords(filename, channel, start=0, n=None):
     fs = f.getSampleFrequency(channel)
 
     # Leggi il segnale dal canale specificato
-    signal = f.readSignal(channel, int(start*fs), int(n*fs))
+    if n is None:
+        print('n is None')
+    n = None if n is None else int(n * fs)
+    signal = f.readSignal(channel, int(start*fs), n)
 
     # Chiudi il file EDF
     f.close()
