@@ -32,25 +32,34 @@ seqsexnet:
     weight_decay :  .0000001
     n_classes: 2
 
-protosleepnet:
-  model: physioex.train.networks.prototype:ProtoSleepNet
+protosleeptransformer:
+  model: physioex.train.networks.protosleeptransformer:ProtoSleepTransformerNet
   preprocessing : xsleepnet
   target_transform: null
   model_kwargs:
-    learning_rate : .00001
-    N : 1
-    S : 2
-    n_prototypes : 50
+    weights : [0.75, 0.25]
 
-protosleepnetv1:
-  model: physioex.train.networks.prototypev1:ProtoSleepNet
+protoseqsleepnet:
+  model: physioex.train.networks.protoseqsleepnet:ProtoSeqSleepNet
   preprocessing : xsleepnet
   target_transform: null
   model_kwargs:
-    learning_rate : .00001
-    N : 1
-    S : 2
-    n_prototypes : 50
+    weights : [0.75, 0.25] #[0.99, 0.01]
+
+
+protosleeptransformer.1:
+  model: physioex.train.networks.protosleeptransformer:ProtoSleepTransformerNet
+  preprocessing : xsleepnet
+  target_transform: null
+  model_kwargs:
+    weights : [1, 0]
+
+protoseqsleepnet.1:
+  model: physioex.train.networks.protoseqsleepnet:ProtoSeqSleepNet
+  preprocessing : xsleepnet
+  target_transform: null
+  model_kwargs:
+    weights : [1, 0]
 
 
 default:

@@ -17,11 +17,11 @@ from physioex.train.models.load import load_model
 from physioex.train.networks.base import SleepModule
 
 from loguru import logger
-
+from torch.utils.data import Dataset, DataLoader
 from physioex.train.utils.fast_train import FastEvalDataset
 
 def test(
-    datasets: Union[List[str], str, PhysioExDataModule],
+    datasets: List[str],
     datamodule_kwargs: dict = {},
     model: SleepModule = None,  # if passed model_class, model_config and resume are ignored
     model_class=None,
@@ -45,23 +45,10 @@ def test(
     datamodule_kwargs["num_nodes"] = num_nodes
 
     ##### DataModule Setup #####
-    datamodule =PhysioExDataModule(
-            datasets = datasets,
-            **datamodule_kwargs,
-    )
+    indexed_channels = ["EEG", "EOG", "EMG", "ECG"]
+    channels_index = [indexed_channels.index(ch) for ch in datamodule_kwargs["selected_channels"]]
 
-    eval_dataset = FastEvalDataset(
-        dataset = datasets[0],
-        preprocess = datamodule_kwargs["preprocessing"],
-        indexed_channels = datamodule.dataset.channels_index,
-        split = "test",
-    )
-
-    eval_loader = DataLoader(
-        eval_dataset,
-        batch_size=1,
-        num_workers=datamodule_kwargs["num_workers"],
-    )
+    
 
     ########### Resuming Model if needed else instantiate it ############:
     if model is None:
@@ -106,14 +93,46 @@ def test(
     )
     
     results = []
-    cm_dict = {}
-    for _, test_datamodule in enumerate(datamodule):
-        logger.info( f"Testing on {test_datamodule.datasets_id[0]}")
-        results += [trainer.test(model, eval_loader )[0]]
-        results[-1]["dataset"] = (
-            test_datamodule.datasets_id[0] if not aggregate_datasets else "aggregate"
+    if aggregate_datasets:
+        eval_dataset = FastEvalDataset(
+            datasets = datasets,
+            preprocess = datamodule_kwargs["preprocessing"],
+            indexed_channels = channels_index,
+            split = "test",
+            data_folder= datamodule_kwargs["data_folder"],
         )
+
+        eval_loader = DataLoader(
+            eval_dataset,
+            batch_size=1,
+            num_workers=datamodule_kwargs["num_workers"],
+        )
+        
+        results += [trainer.test(model, eval_loader )[0]]
+        results[-1]["dataset"] = "aggregate"
         results[-1]["fold"] = fold
+
+    else:
+        for dataset in datasets:
+            logger.info( f"Testing on {dataset}")
+            
+            eval_dataset = FastEvalDataset(
+                datasets = [dataset],
+                preprocess = datamodule_kwargs["preprocessing"],
+                indexed_channels = channels_index,
+                split = "test",
+                data_folder= datamodule_kwargs["data_folder"],
+            )
+
+            eval_loader = DataLoader(
+                eval_dataset,
+                batch_size=1,
+                num_workers=datamodule_kwargs["num_workers"],
+            )
+            
+            results += [trainer.test(model, eval_loader )[0]]
+            results[-1]["dataset"] = dataset
+            results[-1]["fold"] = fold
         
     results = pd.DataFrame(results)
 

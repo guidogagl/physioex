@@ -105,7 +105,7 @@ def test(
     ]
     
     trainer = Trainer(
-        devices=devices,
+        devices=devices, #devices,
         strategy="ddp" if (num_nodes > 1 or len(devices) > 1) else "auto",
         num_nodes=num_nodes,
         # callbacks=[progress_bar_callback],

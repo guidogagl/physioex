@@ -4,6 +4,7 @@ distribute/
 # Byte-compiled / optimized / DLL files
 **/__pycache__/
 
+
 *.py[cod]
 *$py.class
 
@@ -26,9 +27,11 @@ lightning_logs
 physioex/data/shhs/download.py
 physioex/data/mass/download.py
 physioex/data/hpap/download.py
-physioex/train/models/checkpoints/sleeptransformer-EEG-EOG-EMG-L=21-test_acc=0.879.ckpt
+physioex/train/models/checkpoints/
 physioex/explain/spectralgradients/
 physioex.code-workspace
+/articles/
+/.tmp
 
 # C extensions
 *.so

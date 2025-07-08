@@ -138,8 +138,8 @@ def load_model(
             module_config=model_kwargs,
             map_location = torch.device( "cpu" )
         )
-        .to(device)
         .eval()
+        #.to(device)
     )
 
     if softmax:

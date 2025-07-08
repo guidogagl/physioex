@@ -3,12 +3,11 @@ from typing import Dict, List, Type, Union
 
 from physioex.train.models import load_model
 from physioex.train.networks.base import SleepModule
-from physioex.train.utils.train import train
+
 
 # the finetune function is similar to the train function but it has a few differences:
 # - models can't be finetuned from scratch, they must be loaded from a checkpoint, or being a pretrained model from physioex.models
 # tipycally when fine-tuning a model you want to setup the learning rate
-
 
 def finetune(
     model: Union[
@@ -20,7 +19,13 @@ def finetune(
     learning_rate: float = 1e-7,  # if None not updated
     weight_decay: Union[str, float] = "auto",  # if None not updated
     train_kwargs: Dict = {},
+    fast : bool = False,
 ) -> str:
+    
+    if fast :
+        from physioex.train.utils.fast_train import train        
+    else:
+        from physioex.train.utils.train import train
 
     if model is None:
         # if model is None, model_class and model_config must be passed

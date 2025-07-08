@@ -110,7 +110,7 @@ class SleepModule(pl.LightningModule):
         scheduler = {
             "scheduler": scheduler,
             "name": "lr_scheduler",
-            "monitor": "val_loss",
+            "monitor": "val/loss",
             "interval": "epoch",
             "frequency": 1,
         }
@@ -141,11 +141,14 @@ class SleepModule(pl.LightningModule):
         if self.n_classes > 1:
             loss = self.loss(embeddings, outputs, targets)
 
-            self.log(f"{log}_loss", loss, prog_bar=True, sync_dist=True)
-            self.log(f"{log}_acc", self.wacc(outputs, targets), prog_bar=True, sync_dist=True)
-            self.log(f"{log}_f1", self.wf1(outputs, targets), prog_bar=True, sync_dist=True)
-            
-            conf_dict = confusion_matrix_to_dict( self.cm(outputs, targets) )            
+            self.log(f"{log}/loss", loss, prog_bar=True, sync_dist=True,  on_epoch = False if log == "train" else True)
+            self.log(f"{log}/acc", self.wacc(outputs, targets), prog_bar=True, sync_dist=True,  on_epoch = False if log == "train" else True)
+            self.log(f"{log}/f1", self.wf1(outputs, targets), prog_bar=True, sync_dist=True,  on_epoch = False if log == "train" else True)
+
+            if log == "val":
+                self.log(f"{log}_acc", self.wacc(outputs, targets), sync_dist=True,  on_epoch = False if log == "train" else True)
+
+            conf_dict = confusion_matrix_to_dict(self.cm(outputs, targets))
             # TODO: log confusion matrix
             #self.log_dict(f"{log}_confmat", conf_dict, sync_dist=True) 
         else:
@@ -153,24 +156,25 @@ class SleepModule(pl.LightningModule):
 
             loss = self.loss(embeddings, outputs, targets)
 
-            self.log(f"{log}_loss", loss, prog_bar=True, sync_dist=True)
-            self.log(f"{log}_r2", self.r2(outputs, targets), prog_bar=True, sync_dist=True)
-            self.log(f"{log}_mae", self.mae(outputs, targets), prog_bar=True, sync_dist=True)
-            self.log(f"{log}_mse", self.mse(outputs, targets), prog_bar=True, sync_dist=True)
+            self.log(f"{log}/loss", loss, prog_bar=True, sync_dist=True)
+            self.log(f"{log}/r2", self.r2(outputs, targets), prog_bar=True, sync_dist=True)
+            self.log(f"{log}/mae", self.mae(outputs, targets), prog_bar=True, sync_dist=True)
+            self.log(f"{log}/mse", self.mse(outputs, targets), prog_bar=True, sync_dist=True)
 
         if log_metrics and self.n_classes > 1:
-            self.log(f"{log}_ck", self.ck(outputs, targets), sync_dist=True)
-            self.log(f"{log}_pr", self.pr(outputs, targets), sync_dist=True)
-            self.log(f"{log}_rc", self.rc(outputs, targets), sync_dist=True)
-            self.log(f"{log}_macc", self.macc(outputs, targets), sync_dist=True)
-            self.log(f"{log}_mf1", self.mf1(outputs, targets), sync_dist=True)
+            self.log(f"{log}/ck", self.ck(outputs, targets), sync_dist=True, on_epoch = False if log == "train" else True)
+            self.log(f"{log}/pr", self.pr(outputs, targets), sync_dist=True, on_epoch = False if log == "train" else True)
+            self.log(f"{log}/rc", self.rc(outputs, targets), sync_dist=True, on_epoch = False if log == "train" else True)
+            self.log(f"{log}/macc", self.macc(outputs, targets), sync_dist=True, on_epoch = False if log == "train" else True)
+            self.log(f"{log}/mf1", self.mf1(outputs, targets), sync_dist=True, on_epoch = False if log =="train" else True )
+
             self.cm['cm'].update(outputs, targets)
 
         return loss
 
     def training_step(self, batch, batch_idx):
-        if "val_loss" not in self.trainer.logged_metrics:
-            self.log("val_loss", float("inf"))
+        if "val/loss" not in self.trainer.logged_metrics:
+            self.log("val/loss", float("inf"))
 
         # Logica di training
         inputs, targets, subjects, dataset_idx = batch

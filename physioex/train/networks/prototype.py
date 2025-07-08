@@ -1,80 +1,22 @@
-from typing import Dict
 import torch
 import torch.nn as nn
-
-import math
-
-from collections import OrderedDict
+import torch.nn.functional as F
 
 from physioex.train.networks.base import SleepModule
+from physioex.train.networks.utils.proto_layers import *
 
-from physioex.train.networks.sleeptransformer import PositionalEncoding
-from physioex.train.networks.seqsleepnet import AttentionLayer
+from vector_quantize_pytorch import SimVQ
 
-
-import seaborn as sns
-import matplotlib.pyplot as plt
 
 module_config = dict()
 
-import torch.distributions as dist
-import torch.nn.functional as F
 
-import time
-import copy 
+class ProtoSleepModule(SleepModule):
+    def __init__(self, model: nn.Module, module_config: dict = module_config):
+        super(ProtoSleepModule, self).__init__(model, module_config)
 
-class ProtoLoss( nn.Module ):    
-    def __init__(self):
-        super(ProtoLoss, self).__init__()
-        self.target_loss = nn.CrossEntropyLoss()
-        self.multi_channels_loss = nn.CrossEntropyLoss()
-    
-        
-    def forward(self, preds, targets, multi_channels_preds):
-        
-        batch, L, nchan, nclasses = multi_channels_preds.size()
-         
-        # target loss 
-        tl = self.target_loss( preds.reshape( -1, nclasses), targets.reshape(-1) )
-        
-        # multi channel loss
-        targets = targets.reshape( batch, L, 1).repeat( 1, 1, nchan )
-        mcl = self.multi_channels_loss( multi_channels_preds.reshape( -1, nclasses ), targets.reshape( -1 ))
-        
-        return tl, mcl
+        self.loss = nn.CrossEntropyLoss()
 
-
-def voting_strategy( model : torch.nn.Module, inputs : torch.Tensor, L : int  ):
-    
-    batch_size, night_lenght, n_channels, _, _ = inputs.size()
-
-    (commit_loss, mcy), outputs = model.encode(inputs)   
-
-    outputs = torch.zeros( batch_size, night_lenght, 5, device=inputs.device, dtype=inputs.dtype )
-    mcy = torch.zeros( batch_size, night_lenght, n_channels, 5, device=inputs.device, dtype=inputs.dtype )   
-
-    commit_loss = 0
-    
-    # input shape is ( bach_size, night_lenght, n_channels, ... )
-    # segment the input in self.L segments with a sliding window of stride 1 and size self.L
-    for i in range(0, inputs.size(1) - L + 1, 1):
-        input_segment = inputs[:, i:i+L]
-        (seg_cl, seg_mcy), seg_outputs = model.encode(input_segment)
-        
-        outputs[:, i:i+L] += torch.nn.functional.softmax( seg_outputs, dim=-1 )
-        mcy[:, i:i+L] += torch.nn.functional.softmax( seg_mcy, dim=-1 )
-        commit_loss += seg_cl
-
-    commit_loss = commit_loss / (inputs.size(1) - L + 1)
-    
-    return (commit_loss, mcy), outputs
-
-class ProtoSleepNet(SleepModule):
-    def __init__(self, module_config: dict = module_config):
-        super(ProtoSleepNet, self).__init__(NN(module_config), module_config)
-
-        self.loss = ProtoLoss()
-        
     def compute_loss(
         self,
         embeddings,
@@ -83,282 +25,317 @@ class ProtoSleepNet(SleepModule):
         log: str = "train",
         log_metrics: bool = False,
     ):
-        
-        commit_loss, multi_channels_preds = embeddings
-        
+
+        (commit_loss, coverage, mcy) = embeddings
+
+        coverage = coverage.reshape(-1)
+
+        self.log(
+            f"{log}/cov/mean",
+            coverage.mean() * (1 + (29 // 2)),
+            prog_bar=True,
+            sync_dist=True,
+        )
+        self.log(f"{log}/cov/var", coverage.var(), sync_dist=True)
+
         batch_size, seq_len, n_class = outputs.size()
 
         outputs = outputs.reshape(-1, n_class)
         targets = targets.reshape(-1)
 
-        tl, mcl = self.loss( outputs, targets, multi_channels_preds )
+        loss = self.loss(outputs, targets)
+        self.log(f"{log}/loss", loss, prog_bar=True, sync_dist=True)
 
-        loss = commit_loss + mcl + tl
-        
-        self.log(f"{log}_loss", loss, prog_bar=True, sync_dist=True)
-        self.log(f"{log}_acc", self.wacc(outputs, targets), prog_bar=True, sync_dist=True)
+        loss = loss + commit_loss - 0.1 * coverage.var()
 
-        nchan = multi_channels_preds.size(2)
-        multi_channels_preds = multi_channels_preds.reshape( -1, nchan, n_class )
-        
-        for c in range( nchan ):
-            self.log(f"{log}_{c}_acc", self.wacc(multi_channels_preds[:, c], targets), prog_bar=True, sync_dist=True)
-            
-        self.log(f"{log}_commit_loss", commit_loss, prog_bar=True, sync_dist=True)
+        self.log(
+            f"{log}/acc", self.wacc(outputs, targets), prog_bar=True, sync_dist=True
+        )
+
+        if log == "val":
+            self.log(f"{log}_acc", self.wacc(outputs, targets), sync_dist=True)
+
+        if mcy is not None:
+            mcy = mcy.reshape(batch_size * seq_len, -1, n_class)
+
+            c0_acc = self.wacc(mcy[:, 0], targets)
+            c1_acc = self.wacc(mcy[:, 1], targets)
+            c2_acc = self.wacc(mcy[:, 2], targets)
+
+            self.nn.channels_proba = [c0_acc, c1_acc, c2_acc]
+
+            self.log(f"{log}/c0_acc", c0_acc, sync_dist=True)
+            self.log(f"{log}/c1_acc", c1_acc, sync_dist=True)
+            self.log(f"{log}/c2_acc", c2_acc, sync_dist=True)
+
+        self.log(f"{log}/commit_loss", commit_loss, sync_dist=True)
 
         if log_metrics:
-            self.log(f"{log}_ck", self.ck(outputs, targets), sync_dist=True)
-            self.log(f"{log}_pr", self.pr(outputs, targets), sync_dist=True)
-            self.log(f"{log}_rc", self.rc(outputs, targets), sync_dist=True)
-            self.log(f"{log}_macc", self.macc(outputs, targets), sync_dist=True)
-            self.log(f"{log}_mf1", self.mf1(outputs, targets), sync_dist=True)
-        
+            self.log(f"{log}/f1", self.wf1(outputs, targets), sync_dist=True)
+            self.log(f"{log}/ck", self.ck(outputs, targets), sync_dist=True)
+            self.log(f"{log}/pr", self.pr(outputs, targets), sync_dist=True)
+            self.log(f"{log}/rc", self.rc(outputs, targets), sync_dist=True)
+            self.log(f"{log}/macc", self.macc(outputs, targets), sync_dist=True)
+            self.log(f"{log}/mf1", self.mf1(outputs, targets), sync_dist=True)
+
         return loss
 
+    def training_step(self, batch, batch_idx):
+        if "val/loss" not in self.trainer.logged_metrics:
+            self.log("val/loss", float("inf"))
+
+        # Logica di training
+        inputs, targets, subjects, dataset_idx = batch
+        embeddings, outputs = self.encode(inputs)
+
+        return self.compute_loss(embeddings, outputs, targets)
 
     def validation_step(self, batch, batch_idx):
         # Logica di validazione
         inputs, targets, subjects, dataset_idx = batch
 
-        embeddings , outputs = voting_strategy(self, inputs, self.L)
-        
+        embeddings, outputs = voting_strategy(self, inputs, self.L)
+
         return self.compute_loss(embeddings, outputs, targets, "val")
 
     def test_step(self, batch, batch_idx):
         # Logica di training
         inputs, targets, subjects, dataset_idx = batch
 
-        embeddings , outputs = voting_strategy(self, inputs, self.L)
+        embeddings, outputs = voting_strategy(self, inputs, self.L)
 
         return self.compute_loss(embeddings, outputs, targets, "test", log_metrics=True)
 
 
-class SectionEncoder( nn.Module ):
-    def __init__(self, 
-        n_layers = 4,
-        input_dim = 128,
-        hidden_dim = 1024,
-        dropout = 0.1, 
-        activation_func = nn.GELU(),
-    ):
-        super(SectionEncoder, self).__init__()
-        class FFStack( nn.Module ):
-            def __init__(
-                self, 
-                input_dim = 128,
-                hidden_dim = 1024,
-                dropout = 0.1, 
-                activation_func = nn.GELU(),
-                ):
-                super(FFStack, self).__init__()
+class ProtoSleepNet(nn.Module):
+    def __init__(self, module_config=module_config):
+        super(ProtoSleepNet, self).__init__()
 
-                self.ff = nn.Sequential(
-                    nn.Linear(input_dim, hidden_dim),
-                    activation_func,
-                    nn.Dropout( dropout ),
-                    nn.Linear(hidden_dim, input_dim)
-                )
-                self.norm = nn.LayerNorm( input_dim )
-                self.dropout = nn.Dropout( dropout )
-
-            def forward(self, x):
-                return self.norm( x + self.dropout( self.ff(x) ) )
-
-        self.encoders = nn.ModuleList( 
-            [ FFStack(
-                input_dim = input_dim,
-                hidden_dim = hidden_dim,
-                dropout = dropout,
-                activation_func = activation_func
-            )  for _ in range( n_layers )] 
+        self.time_masking = TimeMasking(
+            hidden_size=128,  # hidden size of the epoch encoder
+            L=29,  # length of the time masking window
+            temperature=0.1,  # temperature for the softmax
         )
 
-    def forward(self, x ):
-        for encoder in self.encoders:
-            x = encoder(x)
+        try:
+            self.weights = module_config[
+                "weights"
+            ]  # default equal weights for channels and mixed channels
+        except:
+            print(module_config)
+            exit(0)
+
+        print("Channel mixing weights :", self.weights)
+
+        self.channel_mixer = nn.TransformerEncoderLayer(
+            d_model=128, nhead=4, dim_feedforward=256, batch_first=True
+        )
+
+        self.channel_mixer = nn.Sequential(self.channel_mixer, nn.LayerNorm([3, 128]))
+
+        self.prototype = SimVQ(
+            dim=128,
+            codebook_size=50,
+            rotation_trick=True,  # use rotation trick from Fifty et al.
+            channel_first=False,
+        )
+
+        self.channels_dropout = ChannelsDropout(dropout_prob=0.5)
+        self.channels_proba = [0.7, 0.7, 0.7]
+
+        self.channels_sampler = ChannelSampler(
+            hidden_size=128,
+            attention_size=32,
+        )
+
+        self.clf = nn.Linear(128, 5)
+
+    def epoch_encoder(self, x):
+        pass
+
+    def sequence_encoder(self, x):
+        pass
+
+    def proto_encoder(self, x):
+        batch, L, nchan, T, F = x.size()
+
+        #### epoch encoding ####
+        x = x.reshape(batch * L, nchan, T, F)
+        x = self.epoch_encoder(x)
+
+        x = [self.time_masking(x[:, i]) for i in range(nchan)]
+
+        mask = [mask_.reshape(batch * L, 1, T) for _, mask_ in x]
+        x = [x_.reshape(batch * L, 1, 128) for x_, _ in x]
+        x, mask = torch.cat(x, dim=1), torch.cat(mask, dim=1)
+
+        # x shape : (batch_size * seq_len, n_chan, 128)
+        # mask shape : (batch_size * seq_len, n_chan, T)
+        coverage = torch.sum(mask.reshape(-1, T), dim=-1) / ((T // 2) + 1)
+        coverage = coverage.reshape(batch, L, nchan)
+
+        #### channel mixing ####
+        x = (self.weights[0] * x) + (
+            self.weights[1] * self.channel_mixer(x)
+        )  # (batch * L, n_chan, 128)
+
         return x
 
-class NN(nn.Module):
-    def __init__(self, module_config = module_config):
-        super(NN, self).__init__()
+    def prototyping(self, x):
+        batch, L, nchan, T, F = x.size()
 
-        from physioex.train.networks.sleeptransformer import SequenceEncoder
-        
-        from vector_quantize_pytorch import SimVQ
-        
-        self.in_channels = module_config["in_channels"]
-        self.n_prototypes = module_config["n_prototypes"]
-        
-        # assert self.in_channels == len( self.n_prototypes ), "Err: Number of prototypes must match the number of channels of the model"
-        
-        self.S = module_config["S"]
-        self.N = module_config["N"]
+        x = self.proto_encoder(x)
 
-        """       
-        self.pe = PositionalEncoding( 128 )
-        
-        t_layer = nn.TransformerEncoderLayer(
-            d_model=128, # each channel is processed as an independent sample, otherwise it would be 128 * in_channels
-            nhead=8,
-            dim_feedforward=1024,
-            dropout=0.1,
-            batch_first=True,
-        )
-        
-        self.encoder = nn.TransformerEncoder(
-            t_layer, 
-            num_layers=4
-        )
-        """
+        # prototyping
+        x = x.reshape(batch * L * nchan, 128)
+        p, indexes, commit_loss = self.prototype(x)
+        p = p.reshape(batch, L, nchan, 128)
+        indexes = indexes.reshape(batch, L, nchan)
 
-        self.encoder = SectionEncoder(
-            input_dim = 128,
-            hidden_dim = 1024,
-            dropout = 0.1, 
-            activation_func = nn.GELU(),
-        )
+        # sequence encoding
+        x = self.sequence_encoder(p.clone())
 
-        self.sampler = HardAttentionLayer(
-            hidden_size = 128,
-            attention_size = 1024, 
-            N = self.N,           
-        )
-        
-        self.prototype = SimVQ(
-                    dim = 128,
-                    codebook_size = self.n_prototypes,  
-                    rotation_trick = True,  # use rotation trick from Fifty et al.
-                    channel_first=False
-        ) 
-        
-        # need to change n_channels to 1 to create sequence encoder, because each channel is processed independently
-        modified_config = copy.deepcopy(module_config)
-        modified_config["in_channels"] = 1
-        self.sequence_encoder = SequenceEncoder( modified_config )
-        
-        if self.in_channels > 1:
-            self.channels_sampler = HardAttentionLayer(
-                hidden_size = 128,
-                attention_size = 128,
-                N = 1
-            )
+        # channels dropout
+        x = x.reshape(batch * L, nchan, 128)
+        x, alphas = self.channels_sampler(x, r_alphas=True)
 
-        self.clf = self.sequence_encoder.clf
-        
+        p = p.reshape(batch * L, nchan, 128)
+        p = torch.einsum("bs, bsh -> bh", alphas, p)
+
+        alphas = alphas.reshape(batch, L, nchan)
+        return p, alphas
+
     def encode(self, x):
         # x shape : (batch_size, seq_len, n_chan, n_samp)
         batch, L, nchan, T, F = x.size()
-        
-        #start_time = time.time()
-        _, p, _, commit_loss, _ = self.get_prototypes( x ) # batch, L, nchan, N, 128
-        #print(f"Prototypes computed in {time.time() - start_time:.2f} seconds")
-        
-        # average prototypes
-        p = p.mean( dim = 3 ).reshape( batch, L, nchan, 128).permute( 0, 2, 1, 3)
-        p = p.reshape( -1, L, 128 )        
-        
-        ### sequence learning ##### 
-        start_time = time.time()
-        p = self.sequence_encoder.encode( p ) # out -1, L, 128
-        #print(f"Sequence encoding computed in {time.time() - start_time:.2f} seconds")
-        
-        start_time = time.time()                
-        mcy = self.clf( p.reshape( -1, 128) ).reshape( batch, nchan, L, -1).permute( 0, 2, 1, 3 )
-        #print(f"Multi-channel classification computed in {time.time() - start_time:.2f} seconds")
-                
-        ### channel picking
-        start_time = time.time()
-        p = p.reshape( batch, nchan, L, 128).permute( 0, 2, 1, 3).reshape( -1, nchan, 128)
-        
-        if self.in_channels > 1:
-            p, _ = self.channels_sampler( p ) 
-        
-        #print(f"Channel sampling computed in {time.time() - start_time:.2f} seconds")        
-        p = p.reshape( batch*L, 128 )
-         
-        #start_time = time.time()
-        y = self.clf(p).reshape( batch, L, -1)
-        #print(f"Final classification computed in {time.time() - start_time:.2f} seconds")
-                
-        return (commit_loss, mcy), y 
 
-    
-    def get_prototypes(self, x):
-        # x shape : (batch_size, seq_len, n_chan, n_samp)
-        batch, L, nchan, T, F = x.size()
-        
         #### epoch encoding ####
-        x = x.reshape( batch * L * nchan, T, F )
-        x = x[ ..., :128 ]
-        
-        #x = self.pe(x)
-        #x = self.encoder(x)
-    
-        # out : -1, 1, T, 128                
-        x, alphas = self.sampler( x ) # out -1, N, 128
-        x = x.reshape( -1, 128 )
-        
-        x = self.encoder(x)
+        x = x.reshape(batch * L, nchan, T, F)
+        x = self.epoch_encoder(x)
 
-        prototypes, indexes, commit_loss = self.prototype(x)
-        
-        prototypes = prototypes.reshape( batch, L, nchan, self.N, 128 )
-        indexes = indexes.reshape( batch, L, nchan, self.N )        
+        x = [self.time_masking(x[:, i]) for i in range(nchan)]
 
-        return x, prototypes, indexes, commit_loss, alphas
+        mask = [mask_.reshape(batch * L, 1, T) for _, mask_ in x]
+        x = [x_.reshape(batch * L, 1, 128) for x_, _ in x]
+        x, mask = torch.cat(x, dim=1), torch.cat(mask, dim=1)
+
+        # x shape : (batch_size * seq_len, n_chan, 128)
+        # mask shape : (batch_size * seq_len, n_chan, T)
+        coverage = torch.sum(mask.reshape(-1, T), dim=-1) / ((T // 2) + 1)
+        coverage = coverage.reshape(batch, L, nchan)
+
+        #### channel mixing ####
+        x = (self.weights[0] * x) + (
+            self.weights[1] * self.channel_mixer(x)
+        )  # (batch * L, n_chan, 128)
+
+        # prototyping
+        x = x.reshape(batch * L * nchan, 128)
+        x, indexes, commit_loss = self.prototype(x)
+        x = x.reshape(batch, L, nchan, 128)
+        indexes = indexes.reshape(batch, L, nchan)
+
+        # sequence encoding
+        x = self.sequence_encoder(x)
+
+        # multi channel classification
+        if self.training:
+            x = x.reshape(-1, nchan, 128)
+            mcy = [
+                self.clf(x[:, 0]).reshape(-1, 1, 5),
+                self.clf(x[:, 1]).reshape(-1, 1, 5),
+                self.clf(x[:, 2]).reshape(-1, 1, 5),
+            ]
+            mcy = torch.cat(mcy, dim=1).reshape(batch, L, nchan, 5)
+            x = x.reshape(batch, L, nchan, 128)
+        else:
+            mcy = None
+        # channels dropout
+        x = x.reshape(batch * L, nchan, 128)
+        x = self.channels_dropout(x, self.channels_proba)  # apply dropout to channels
+        x = self.channels_sampler(x)
+
+        # classification
+        x = self.clf(x).reshape(batch, L, -1)
+
+        return (commit_loss, coverage, mcy), x
 
     def forward(self, x):
         x, y = self.encode(x)
 
         return y
 
+    def project(self, x):
+        # x shape : (batch_size, seq_len, n_chan, n_samp)
+        batch, L, nchan, T, F = x.size()
+
+        #### epoch encoding ####
+        x = x.reshape(batch * L, nchan, T, F)
+        x = self.epoch_encoder(x)
+
+        x = [self.time_masking(x[:, i]) for i in range(nchan)]
+
+        mask = [mask_.reshape(batch * L, 1, T) for _, mask_ in x]
+        x = [x_.reshape(batch * L, 1, 128) for x_, _ in x]
+        x, mask = torch.cat(x, dim=1), torch.cat(mask, dim=1)
+
+        # x shape : (batch_size * seq_len, n_chan, 128)
+        # mask shape : (batch_size * seq_len, n_chan, T)
+        coverage = torch.sum(mask.reshape(-1, T), dim=-1) / ((T // 2) + 1)
+        coverage = coverage.reshape(batch, L, nchan)
+
+        #### channel mixing ####
+        x = (self.weights[0] * x) + (
+            self.weights[1] * self.channel_mixer(x)
+        )  # (batch * L, n_chan, 128)
+
+        # prototyping
+        x = x.reshape(batch * L * nchan, 128)
+        x, indexes, commit_loss = self.prototype(x)
+        x = x.reshape(batch, L, nchan, 128)
+        indexes = indexes.reshape(batch, L, nchan)
+
+        # sequence encoding
+        x = self.sequence_encoder(x)
+
+        # channels dropout
+        x = x.reshape(batch * L, nchan, 128)
+        x = self.channels_dropout(x, self.channels_proba)  # apply dropout to channels
+        x = self.channels_sampler(x)
+
+        return x.reshape(batch, L, -1)
 
 
+def voting_strategy(model: torch.nn.Module, inputs: torch.Tensor, L: int):
+    batch_size, night_length, n_channels, _, _ = inputs.size()
 
-class HardAttentionLayer(nn.Module):
-    def __init__(
-        self,
-        hidden_size: int,
-        attention_size: int,
-        N: int = 1,  # number of elements to select
-        temperature: float = 0.1,
-    ):
-        super(HardAttentionLayer, self).__init__()
+    outputs = torch.zeros(
+        batch_size, night_length, 5, device=inputs.device, dtype=inputs.dtype
+    )
+    coverage = torch.zeros(
+        batch_size, night_length, n_channels, device=inputs.device, dtype=inputs.dtype
+    )
 
-        self.temperature = temperature
+    commit_loss = 0
 
-        self.pe = PositionalEncoding(hidden_size, 100)
+    # input shape is ( bach_size, night_length, n_channels, ... )
+    # segment the input in self.L segments with a sliding window of stride 1 and size self.L
+    for i in range(0, inputs.size(1) - L + 1, 1):
+        input_segment = inputs[:, i : i + L]
+        (seg_cl, seg_coverage, seg_mcy), seg_outputs = model.encode(input_segment)
 
-        self.N = N
+        outputs[:, i : i + L] += torch.nn.functional.softmax(seg_outputs, dim=-1)
+        coverage[:, i : i + L] += seg_coverage
 
-        self.Q = nn.Linear(hidden_size, attention_size * N, bias=False)
-        self.K = nn.Linear(hidden_size, attention_size * N, bias=False)
+        commit_loss += seg_cl
 
-    def forward(self, x):
-        batch_size, sequence_length, hidden_size = x.size()
+    # normalize the coverage values
+    for i in range(L):
+        coverage[:, i] = coverage[:, i] / (i + 1)
+        coverage[:, -i - 1] = coverage[:, -i - 1] / (i + 1)
 
-        # encode the sequence with positional encoding
-        pos_emb = self.pe(x)
+    coverage[:, L:-L] = coverage[:, L:-L] / L
 
-        # calculate the query and key
-        Q = self.Q(pos_emb)
-        K = self.K(pos_emb)
+    commit_loss = commit_loss / (inputs.size(1) - L + 1)
 
-        Q = Q.reshape(batch_size, sequence_length, self.N, -1).transpose(1, 2)
-        K = K.reshape(batch_size, sequence_length, self.N, -1).transpose(1, 2)
-
-        attention = torch.einsum("bnsh,bnth -> bnst", Q, K) / (hidden_size ** (1 / 2))
-        attention = torch.sum(attention, dim=-1) / sequence_length
-
-        # attention shape : (batch_size * N, sequence_length)
-        logits = attention.reshape(batch_size * self.N, sequence_length)
-        # apply the Gumbel-Softmax trick to select the N most important elements
-        alphas = torch.nn.functional.gumbel_softmax(
-            logits, tau=self.temperature, hard=True
-        )
-        alphas = alphas.reshape(batch_size, self.N, sequence_length)
-
-        # select N elements from the sequence x using alphas
-        x = torch.einsum("bns, bsh -> bnh", alphas, x)
-
-        return x, alphas
+    return (commit_loss, coverage, None), outputs

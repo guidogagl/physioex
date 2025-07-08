@@ -103,12 +103,12 @@ class EpochEncoder(nn.Module):
         ), f"frequency dimension mismatch, provided input size: {str(x.size())}"
 
         x = self.F2_filtbank(x)
-
-        x = torch.reshape(x, (batch_size, self.T, self.D * self.in_chans))
+        x = x.permute(0, 2, 1, 3)  # (batch_size, T, in_chan, D )
+        x = torch.reshape(x, (batch_size, self.T, self.in_chans * self.D ))
         x, _ = self.F2_birnn(x)
         x = self.F2_attention(x)
 
-        return x
+        return x.reshape( batch_size, -1)
 
 
 class SequenceEncoder(nn.Module):

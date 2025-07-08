@@ -31,7 +31,7 @@ def train(
     max_epochs: int = 10,
     num_nodes: int = 1,
     resume: bool = True,
-    monitor: str = "val_acc",
+    monitor: str = "val/acc",
     mode: str = "max",
 ) -> str:
 
@@ -109,7 +109,7 @@ def train(
     
     lr_callback = LearningRateMonitor(logging_interval="step")
     
-    #dvc_callback = DeviceStatsMonitor()
+    dvc_callback = DeviceStatsMonitor()
     
     # progress_bar_callback = RichProgressBar()
     my_logger = [
@@ -123,13 +123,13 @@ def train(
     try :
         devices = find_usable_cuda_devices(-1)
         logger.info( f"Available devices: {devices}")
-        effective_batch_size = batch_size * num_nodes * len(devices)
+        effective_batch_size = batch_size * num_nodes *  len(devices)
 
     except :
         devices = "auto"
         effective_batch_size = batch_size * num_nodes
 
-    num_steps = datamodule.dataset.__len__() * 0.7 // effective_batch_size
+    num_steps = int( datamodule.dataset.__len__() * 0.7 ) // effective_batch_size
     val_check_interval = max(1, num_steps // num_validations)
     
     if devices == "auto":
@@ -140,20 +140,18 @@ def train(
         strategy = "auto"
             
     trainer = Trainer(
-        devices=devices,
+        devices = devices,
         strategy = strategy,
         num_nodes=num_nodes,
         max_epochs=max_epochs,
         val_check_interval=val_check_interval,
-        callbacks=[checkpoint_callback, lr_callback ], # dvc_callback, progress_bar_callback],
+        callbacks=[checkpoint_callback, lr_callback,  dvc_callback], #, progress_bar_callback],
         deterministic=True,
         logger=my_logger,
     )
 
     # setup the model in training mode if needed
     model = model.train()
-    
-    
     
     # Start training
     trainer.fit(model, datamodule=datamodule)

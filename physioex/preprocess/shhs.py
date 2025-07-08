@@ -80,7 +80,7 @@ class SHHSPreprocessor(Preprocessor):
         nsrrid, edf_path, ann_path = record
 
         signal, labels = process_sleepdata_file(edf_path, ann_path)
-
+        
         return signal, labels
 
     @logger.catch

@@ -106,7 +106,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    for preprocessing in ["raw", "xsleepnet"]:
+    for preprocessing in ["raw", "xsleepnet"]: # "raw", 
 
         print( "Creating PhysioExDataModule...")
         data = PhysioExDataModule(

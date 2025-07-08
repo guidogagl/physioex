@@ -211,9 +211,9 @@ class PhysioExParser:
     parser.add_argument(
         "--monitor",
         "-mon",
-        default="val_acc",
+        default="val/acc",
         type=str,
-        help="Specify the metric to monitor for the checkpoint callaback. Expected type: str. Default: 'val_acc'",
+        help="Specify the metric to monitor for the checkpoint callaback. Expected type: str. Default: 'val/acc'",
     )
 
     parser.add_argument(
