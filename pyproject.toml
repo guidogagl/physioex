@@ -12,6 +12,36 @@ authors = [
 ]
 license = {file = "LICENSE"}
 dependencies = [
+    # Base dependencies are in optional-dependencies sections
+    # Use: pip install -e .[standalone] or pip install -e .[hpc]
+]
+
+[project.optional-dependencies]
+# For HPC environments with pre-loaded modules (minimal dependencies)
+hpc = [
+    "huggingface_hub",
+    "vector_quantize_pytorch",
+    "pytorch_metric_learning",
+    "captum",
+    "dirhash",
+    "joblib",
+    "loguru",
+    "numpy",
+    "pandas",
+    "psg_utils",
+    "pyEDFlib",
+    "pyunpack",
+    "PyYAML",
+    "rarfile",
+    "requests",
+    "seaborn",
+    "setuptools",
+    "tqdm",
+    "wfdb",
+]
+
+# For standalone environments (all dependencies)
+standalone = [
     "huggingface_hub",
     "vector_quantize_pytorch",
     "tensorboard",
@@ -22,16 +52,14 @@ dependencies = [
     "dirhash",
     "h5py",
     "joblib",
-    "lightning",
+    "lightning",  
     "loguru",
     "matplotlib",
-    "npy_append_array",
     "numpy",
     "pandas",
-    "paramiko",
     "psg_utils",
     "pyEDFlib",
-    "pytorch_lightning",
+    "pytorch_lightning",  
     "pytorch_metric_learning",
     "pyunpack",
     "PyYAML",
@@ -41,18 +69,11 @@ dependencies = [
     "scipy",
     "seaborn",
     "setuptools",
-    "torch",
-    "torchmetrics",
+    "torch",  
+    "torchmetrics", 
     "tqdm",
     "wfdb",
-    "gdown"
 ]
-
-[project.urls]
-Homepage = "https://github.com/guidogagl/physioex"
-Documentation = "https://guidogagl.github.io/physioex"
-Repository = "https://github.com/guidogagl/physioex"
-Issues = "https://github.com/guidogagl/physioex/issues"
 
 [tool.setuptools]
 include-package-data = true
@@ -66,3 +87,9 @@ train = "physioex.train.bin.train:train_script"
 finetune = "physioex.train.bin.finetune:finetune_script"
 test_model = "physioex.train.bin.test:test_script"
 preprocess = "physioex.preprocess.bin.main:main"
+
+[project.urls]
+Homepage = "https://github.com/guidogagl/physioex"
+Documentation = "https://guidogagl.github.io/physioex"
+Repository = "https://github.com/guidogagl/physioex"
+Issues = "https://github.com/guidogagl/physioex/issues"

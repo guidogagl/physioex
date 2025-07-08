@@ -20,6 +20,9 @@ hpc/
 /mlp
 /scripts/
 **/.future
+/.venvs
+activate_t1.sh
+setup_hpc_t1.sh
 
 script
 temp 
