@@ -114,13 +114,50 @@ def read_edf(edf_path, tsv_path):
     signal = np.array([eeg, eog, emg])
     signal = np.transpose(signal).reshape(len(stages), epoch_second * fs, 3)
 
-    # find the epochs associated with stages < 0 or > 5
+    # find the epochs associated with stages < 0 or >= 5
     stages = np.array(stages)
-    invalid_epochs = np.where(np.logical_or(stages < 0, stages > 5))[0]
+    invalid_epochs = np.where(np.logical_or(stages < 0, stages >= 5))[0]
 
     # remove the invalid epochs
     stages = np.delete(stages, invalid_epochs)
     signal = np.delete(signal, invalid_epochs, axis=0)
+
+    # do not consider recording if only wake data
+    if all(s == 0 for s in stages):
+        return None, None
+
+    # remove Wake epochs if Wake is the biggest class:
+    count_stage = np.bincount(stages)
+    if count_stage[0] > max(count_stage[1:]):  # if too much W
+        # print('Wake is the biggest class. Trimming it..')
+        second_largest = max(count_stage[1:])
+
+        W_ind = stages == 0  # W indices
+        last_evening_W_index = np.where(np.diff(W_ind) != 0)[0][0] + 1
+        if stages[0] == 0:  # only true if the first epoch is W
+            num_evening_W = last_evening_W_index
+        else:
+            num_evening_W = 0
+
+        first_morning_W_index = np.where(np.diff(W_ind) != 0)[0][-1] + 1
+        num_morning_W = len(stages) - first_morning_W_index + 1
+
+        nb_pre_post_sleep_wake_eps = num_evening_W + num_morning_W
+        if nb_pre_post_sleep_wake_eps > second_largest:
+            total_W_to_remove = nb_pre_post_sleep_wake_eps - second_largest
+            if num_evening_W > total_W_to_remove:
+                stages = stages[total_W_to_remove:]
+                signal = signal[total_W_to_remove:]
+            else:
+                evening_W_to_remove = num_evening_W
+                morning_W_to_remove = total_W_to_remove - evening_W_to_remove
+                stages = stages[evening_W_to_remove : len(stages) - morning_W_to_remove]
+                signal = signal[evening_W_to_remove : len(signal) - morning_W_to_remove]
+
+        # print(f'New stages distribution: {np.bincount(stages)}')
+    else:
+        # print('Wake is not the biggest class, nothing to remove.')
+        pass
 
     signal = np.transpose(signal, (0, 2, 1))
 
@@ -142,7 +179,7 @@ class ParkinsonsPreprocessor(Preprocessor):
         night_str = "night" if night else "nap"
         healthy_str = "HOA" if healthy else "PD"
         
-        dataset_name = f"parkinsons/{night_str}/{healthy_str}"
+        dataset_name = f"parkinsons4/{night_str}/{healthy_str}"
         
         super().__init__(
             dataset_name=dataset_name,
@@ -156,7 +193,7 @@ class ParkinsonsPreprocessor(Preprocessor):
         self.night = night
         self.healthy = healthy
         
-        self.root_folder = os.path.join(self.data_folder, "parkinsons" )
+        self.root_folder = os.path.join(self.data_folder, "parkinsons4" )
         
     @logger.catch
     def get_subjects_records(self) -> List[str]:
@@ -169,11 +206,15 @@ class ParkinsonsPreprocessor(Preprocessor):
 
         # now loop into the couples "record_id" and "group" to create the records list
         records_list = []
+        records_dict = {}
+        count = 0
         for idx, row in table.iterrows():
             subject_id = row['record_id']
             group = row['group']
             
             if self.healthy and group != "HOA":
+                continue
+            if not self.healthy and group != "PD":
                 continue
             
             records_dir = os.path.join(self.root_folder, "Parkinson_data", "Data", str(subject_id) + "_nap" if not self.night else str(subject_id) )
@@ -183,6 +224,10 @@ class ParkinsonsPreprocessor(Preprocessor):
                 continue
 
             records_list.append(records_dir)
+            records_dict[count] = subject_id
+            count += 1
+
+        self.records_dict = records_dict
 
         return records_list
 
@@ -193,10 +238,82 @@ class ParkinsonsPreprocessor(Preprocessor):
         edf_path = [f for f in files if f.endswith('.edf')][0]
         tsv_path = [f for f in files if f.endswith('.tsv')][0]
                 
-        signal, labels = read_edf(edf_path, tsv_path)
+        signal, labels = read_edf(os.path.join(record, edf_path), os.path.join(record, tsv_path))
         return signal, labels
+    
+    @logger.catch
+    def customize_table(self, table) -> pd.DataFrame:
+
+        table["record_id"] = table["subject_id"].map(self.records_dict)
+        
+        return table
 
 
+def global_split(data_folder):
+    for group in ['HOA', 'PD']:
+        table_path_nap = os.path.join(data_folder, "parkinsons4", "nap", group, "table.csv")
+        table_nap = pd.read_csv(table_path_nap)
+        table_path_night = os.path.join(data_folder, "parkinsons4", "night", group, "table.csv")
+        table_night = pd.read_csv(table_path_night)
+
+        nap_ids = set(table_nap['record_id'])
+        night_ids = set(table_night['record_id'])
+
+        both_ids = np.array(list(nap_ids & night_ids))
+        nap_only_ids = np.array(list(nap_ids - night_ids))
+        night_only_ids = np.array(list(night_ids - nap_ids))
+
+        record_ids = [both_ids, nap_only_ids, night_only_ids]
+
+        train_subjects, valid_subjects, test_subjects = [], [], []
+
+        np.random.seed(42)
+
+        for ids in record_ids:
+            n_total = len(ids)
+            n_train = int(n_total * 0.7)
+            n_test = int(n_total * 0.15)
+
+            train_ids = np.random.choice(ids, size=n_train, replace=False)
+            remaining_ids = np.setdiff1d(ids, train_ids, assume_unique=True)
+
+            test_ids = np.random.choice(remaining_ids, size=n_test, replace=False)
+            valid_ids = np.setdiff1d(remaining_ids, test_ids, assume_unique=True)
+
+            train_subjects.extend(train_ids)
+            valid_subjects.extend(valid_ids)
+            test_subjects.extend(test_ids)
+
+        
+        train_subjects = np.array(train_subjects).reshape(1, -1)
+        valid_subjects = np.array(valid_subjects).reshape(1, -1)
+        test_subjects = np.array(test_subjects).reshape(1, -1)
+
+        fold = 0
+        table_nap.loc[
+            table_nap["record_id"].isin(train_subjects[fold]), f"fold_{fold}"
+        ] = "train"
+        table_nap.loc[
+            table_nap["record_id"].isin(valid_subjects[fold]), f"fold_{fold}"
+        ] = "valid"
+        table_nap.loc[table_nap["record_id"].isin(test_subjects[fold]), f"fold_{fold}"] = (
+            "test"
+        )
+
+        table_night.loc[
+            table_night["record_id"].isin(train_subjects[fold]), f"fold_{fold}"
+        ] = "train"
+        table_night.loc[
+            table_night["record_id"].isin(valid_subjects[fold]), f"fold_{fold}"
+        ] = "valid"
+        table_night.loc[table_night["record_id"].isin(test_subjects[fold]), f"fold_{fold}"] = (
+            "test"
+        )
+
+        logger.info("Saving the tables ...")
+        table_nap.to_csv(table_path_nap)
+        table_night.to_csv(table_path_night)
+        
 
 if __name__ == "__main__":
 
@@ -204,3 +321,5 @@ if __name__ == "__main__":
     ParkinsonsPreprocessor(data_folder="/home/coder/sleep/sleep-data/", night= True, healthy=False).run()
     ParkinsonsPreprocessor(data_folder="/home/coder/sleep/sleep-data/", night= False, healthy=True).run()
     ParkinsonsPreprocessor(data_folder="/home/coder/sleep/sleep-data/", night= False, healthy=False).run()
+
+    global_split(data_folder="/home/coder/sleep/sleep-data/")
