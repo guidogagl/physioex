@@ -20,10 +20,18 @@ def confusion_matrix_to_dict(confusion_matrix):
 
 def voting_strategy( model : torch.nn.Module, inputs : torch.Tensor, L : int  ):
 
-    embeddings , outputs = model.encode(inputs)   
-
-    outputs = torch.zeros_like(outputs)
-    embeddings = torch.zeros_like(embeddings)     
+    batch_size, night_length, n_channels, _, _ = inputs.size()
+    
+    embeddings_sample, _ = model.encode(inputs[:, 0:L])   
+    embeddings_dim = embeddings_sample.shape[-1]
+    
+    outputs = torch.zeros(
+        batch_size, night_length, model.n_classes, device=inputs.device, dtype=inputs.dtype 
+    )
+    
+    embeddings = torch.zeros(
+        batch_size, night_length, embeddings_dim, device=inputs.device, dtype=inputs.dtype 
+    )
 
     # input shape is ( bach_size, night_lenght, n_channels, ... )
     # segment the input in self.L segments with a sliding window of stride 1 and size self.L
