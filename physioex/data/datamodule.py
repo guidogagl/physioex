@@ -62,12 +62,15 @@ class PhysioExDataModule(pl.LightningDataModule):
 
         if isinstance(folds, int):
             self.dataset.split(folds)
+            self.eval_dataset.split(folds)
         else:
             assert len(folds) == len(
                 datasets
             ), "ERR: folds and datasets should have the same length"
             for i, fold in enumerate(folds):
                 self.dataset.split(fold, i)
+                self.eval_dataset.split(fold, i)
+
 
         train_idx, _, _ = self.dataset.get_sets()
         _, valid_idx, test_idx = self.eval_dataset.get_sets()
@@ -104,6 +107,15 @@ class PhysioExDataModule(pl.LightningDataModule):
         return DataLoader(
             self.test_dataset,
             batch_size=1, #self.batch_size if not self.eown else 1,
+            shuffle=shuffle,
+            num_workers=self.num_workers,
+            #persistent_workers=True
+        )
+    
+    def all_dataloader(self, eval=False, shuffle=False):
+        return DataLoader(
+            self.dataset if not eval else self.eval_dataset,
+            batch_size=self.batch_size if not eval else 1, #self.batch_size if not self.eown else 1,
             shuffle=shuffle,
             num_workers=self.num_workers,
             #persistent_workers=True
