@@ -90,7 +90,7 @@ class PhysioExDataset(torch.utils.data.Dataset):
                     {"train": 0, "valid": 1, "test": 2}
                 )
         else:
-            self.tables[dataset_idx]["split"] = table[f"fold_{fold}"].map(
+            self.tables[dataset_idx]["split"] = self.tables[dataset_idx][f"fold_{fold}"].map(
                 {"train": 0, "valid": 1, "test": 2}
             )
 
