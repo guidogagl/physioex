@@ -36,17 +36,38 @@ def read_edf(rec_path, events_path, night):
         "Sleep stage 1": 1,
         "Sleep stage 2": 2, 
         "Sleep stage 3": 3, 
+        "Sleep stage 4": 3,
         "Sleep stage R": 4
     }
     fs=100
     epoch_second=30
 
-    events_data = mne.io.read_raw_edf(events_path)
-    annotations = events_data.annotations
-    annotations = [stages_map[i] for i in annotations.description if i in stages_map.keys()]
+    # Get annotations
+    events_data = mne.io.read_raw_edf(events_path, preload=False)
+    annotations = [
+        (stages_map[ann['description']], ann['onset'], ann['duration'])
+        for ann in events_data.annotations
+        if ann['description'] in stages_map
+        ]
+
+    start = annotations[0][1]
+    print('Start: ', start)
+
+    # Get one annotation per second
+    stages_per_second = []
+    stopping = start
+    for i, (descr, onset, dur) in enumerate(annotations):
+        if onset != stopping:
+            length = int(onset-stopping)
+            stages_per_second.extend([-1]*length)
+        stages_per_second.extend([descr]*int(dur))
+        stopping = onset+dur
+
+            
+    # Get one annotation per epoch
     stages = []
-    for i in range(len(annotations)//epoch_second): # convert annotations per second to annotations per epoch
-        epoch_annots = annotations[i*epoch_second : (i+1)*epoch_second]
+    for i in range(len(stages_per_second)//epoch_second): # convert annotations per second to annotations per epoch    
+        epoch_annots = stages_per_second[i*epoch_second : (i+1)*epoch_second]
         unique_labels = set(epoch_annots)
         if len(unique_labels) == 1:
             stages.append(unique_labels.pop()) # add unique label
@@ -56,21 +77,26 @@ def read_edf(rec_path, events_path, night):
     if not night:
         start_sleep = next((i for i, x in enumerate(stages) if x != 0), -1)
 
-        if start_sleep*epoch_second >= 20*60 or start_sleep == -1: # if no sleep in the first 20 minutes, MSLT nap opportunity is stopped
-            end_test = int(20*60/epoch_second)
+        if start_sleep*epoch_second >= start+20*60 or start_sleep == -1: # if no sleep in the first 20 minutes, MSLT nap opportunity is stopped
+            end_test = int((start+20*60)/epoch_second)
         else: # else, MSLT nap opportunity is stopped 15 minutes after sleep onset
             end_test = start_sleep + int(15*60/epoch_second)
         end_test = max(end_test, len(stages))
         stages = stages[:end_test] 
 
-    available_channels = get_channels(rec_path)
+    try:
+        available_channels = get_channels(rec_path)
+    except:
+        print(f"Error: {rec_path} corrupted")
+        return None, None
     eeg_channel = get_channel_from_available(available_channels, POSSIBLE_EEG_CHANNELS)
     if eeg_channel is None:
         print(f"Error: no EEG channel found in {rec_path}")
         print(f"Available channels: {available_channels}")
         return None, None
     else:
-        eeg, old_fs = read_channel_signal(rec_path, eeg_channel, n=len(stages)*epoch_second)
+        eeg, old_fs = read_channel_signal(rec_path, eeg_channel, start, n=len(stages)*epoch_second)
+        
 
     # Creazione del filtro FIR bandpass
     Nfir = 500
@@ -88,7 +114,7 @@ def read_edf(rec_path, events_path, night):
         print(f"Available channels: {available_channels}")
         return None, None
     else:
-        eog, old_fs = read_channel_signal(rec_path, eog_channel, n=len(stages)*epoch_second)
+        eog, old_fs = read_channel_signal(rec_path, eog_channel, start, n=len(stages)*epoch_second)
 
     # filtering and resampling
     eog = filtfilt(b_band, 1, eog)
@@ -102,7 +128,7 @@ def read_edf(rec_path, events_path, night):
         print(f"Available channels: {available_channels}")
         return None, None
     else:
-        emg, old_fs = read_channel_signal(rec_path, emg_channel, n=len(stages)*epoch_second)
+        emg, old_fs = read_channel_signal(rec_path, emg_channel, start, n=len(stages)*epoch_second)
 
     # filtering and resampling
     b_band = firwin(Nfir + 1, 10, pass_zero=False, fs=old_fs)
@@ -262,7 +288,7 @@ def global_split(data_folder, groups):
             for subject_id in table['record_id']:
                 subjects.append(subject_id)
 
-        nap_ids = np.unique(subjects)
+        nap_ids = set(subjects)
 
         table_path_night = os.path.join(data_folder, "napping", "psg", group, "table.csv")
         table_night = pd.read_csv(table_path_night)
