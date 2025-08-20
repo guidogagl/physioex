@@ -141,9 +141,9 @@ class PhysioExParser:
         "--fold",
         "-fd",
         type=int,
-        default=-1,
+        default=0,
         required=False,
-        help="Fold number to use. Default: -1 (random)",
+        help="Fold number to use. Default: Fold 0",
     )
 
     parser.add_argument(
