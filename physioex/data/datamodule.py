@@ -59,7 +59,7 @@ class PhysioExDataModule(pl.LightningDataModule):
         sequence_length: int = 21,
         target_transform: Callable = None,
         task: str = "sleep",
-        folds: Union[int, List[int]] = -1,
+        folds: Union[int, List[int]] = 0,
         data_folder: str = None,
         num_workers: int = 0,
         data_prefetch: bool = True,

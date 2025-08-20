@@ -25,7 +25,7 @@ def train(
     model_class: Type[SleepModule] = None,
     model_config: dict = None,
     batch_size: int = 128,
-    fold: int = -1,
+    fold: int = 0,
     num_validations: int = 10,
     checkpoint_path: str = None,
     max_epochs: int = 10,
