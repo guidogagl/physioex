@@ -58,15 +58,12 @@ class ProtoSleepModule(SleepModule):
         if mcy is not None:
             mcy = mcy.reshape(batch_size * seq_len, -1, n_class)
 
-            c0_acc = self.wacc(mcy[:, 0], targets)
-            c1_acc = self.wacc(mcy[:, 1], targets)
-            c2_acc = self.wacc(mcy[:, 2], targets)
+            channel_acc = [self.wacc(mcy[:, i], targets) for i in range(self.nn.in_channels)]
 
-            self.nn.channels_proba = [c0_acc, c1_acc, c2_acc]
-
-            self.log(f"{log}/c0_acc", c0_acc, sync_dist=True)
-            self.log(f"{log}/c1_acc", c1_acc, sync_dist=True)
-            self.log(f"{log}/c2_acc", c2_acc, sync_dist=True)
+            self.nn.channels_proba = channel_acc
+            
+            for i, c_acc in enumerate(channel_acc):
+                self.log(f"{log}/c{i}_acc", c_acc, sync_dist=True)
 
         self.log(f"{log}/commit_loss", commit_loss, sync_dist=True)
 
@@ -111,6 +108,8 @@ class ProtoSleepNet(nn.Module):
     def __init__(self, module_config=module_config):
         super(ProtoSleepNet, self).__init__()
 
+        self.in_channels = module_config["in_channels"]
+
         self.time_masking = TimeMasking(
             hidden_size=128,  # hidden size of the epoch encoder
             L=29,  # length of the time masking window
@@ -120,7 +119,7 @@ class ProtoSleepNet(nn.Module):
         try:
             self.weights = module_config[
                 "weights"
-            ]  # default equal weights for channels and mixed channels
+            ] 
         except:
             print(module_config)
             exit(0)
@@ -131,17 +130,19 @@ class ProtoSleepNet(nn.Module):
             d_model=128, nhead=4, dim_feedforward=256, batch_first=True
         )
 
-        self.channel_mixer = nn.Sequential(self.channel_mixer, nn.LayerNorm([3, 128]))
+        self.channel_mixer = nn.Sequential(self.channel_mixer, nn.LayerNorm([self.in_channels, 128]))
 
+        self.n_prototypes = module_config["n_prototypes"]
+        
         self.prototype = SimVQ(
             dim=128,
-            codebook_size=50,
+            codebook_size=self.n_prototypes,
             rotation_trick=True,  # use rotation trick from Fifty et al.
             channel_first=False,
         )
 
         self.channels_dropout = ChannelsDropout(dropout_prob=0.5)
-        self.channels_proba = [0.7, 0.7, 0.7]
+        self.channels_proba = [0.7 for _ in range(self.in_channels)]
 
         self.channels_sampler = ChannelSampler(
             hidden_size=128,
@@ -241,11 +242,7 @@ class ProtoSleepNet(nn.Module):
         # multi channel classification
         if self.training:
             x = x.reshape(-1, nchan, 128)
-            mcy = [
-                self.clf(x[:, 0]).reshape(-1, 1, 5),
-                self.clf(x[:, 1]).reshape(-1, 1, 5),
-                self.clf(x[:, 2]).reshape(-1, 1, 5),
-            ]
+            mcy = [ self.clf(x[:, i]).reshape(-1, 1, 5) for i in range(nchan) ]
             mcy = torch.cat(mcy, dim=1).reshape(batch, L, nchan, 5)
             x = x.reshape(batch, L, nchan, 128)
         else:

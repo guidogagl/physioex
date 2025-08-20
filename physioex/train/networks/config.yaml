@@ -38,6 +38,7 @@ protosleeptransformer:
   target_transform: null
   model_kwargs:
     weights : [0.75, 0.25]
+    n_prototypes : 50
 
 protoseqsleepnet:
   model: physioex.train.networks.protoseqsleepnet:ProtoSeqSleepNet
@@ -45,7 +46,7 @@ protoseqsleepnet:
   target_transform: null
   model_kwargs:
     weights : [0.75, 0.25] #[0.99, 0.01]
-
+    n_prototypes : 50
 
 protosleeptransformer.1:
   model: physioex.train.networks.protosleeptransformer:ProtoSleepTransformerNet
@@ -53,6 +54,7 @@ protosleeptransformer.1:
   target_transform: null
   model_kwargs:
     weights : [1, 0]
+    n_prototypes : 50
 
 protoseqsleepnet.1:
   model: physioex.train.networks.protoseqsleepnet:ProtoSeqSleepNet
@@ -60,6 +62,7 @@ protoseqsleepnet.1:
   target_transform: null
   model_kwargs:
     weights : [1, 0]
+    n_prototypes : 50
 
 
 default:

@@ -27,7 +27,7 @@ def test(
     model_class=None,
     model_config: dict = None,
     batch_size: int = 128,
-    fold: int = -1,
+    fold: int = 0,
     hpc: bool = False,
     checkpoint_path: str = None,
     results_path: str = None,

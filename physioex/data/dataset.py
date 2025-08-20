@@ -51,8 +51,8 @@ class PhysioExDataset(torch.utils.data.Dataset):
             self.readers += [reader]
 
         self.dataset_idx = np.array(self.dataset_idx, dtype=np.uint8)
-        # set the table fold to a random fold by default
-        self.split()
+        # set the table fold to fold 0 by default
+        self.split(0)
         self.target_transform = target_transform
 
         self.len = offset
@@ -61,35 +61,30 @@ class PhysioExDataset(torch.utils.data.Dataset):
     def __len__(self):
         return self.len
 
-    def split(self, fold: int = -1, dataset_idx: int = -1):
+    def split(self, fold: int = 0, dataset_idx: int = -1):
+        assert fold >= 0, "ERR: fold must be >= 0. fold=-1 (randomly selected fold) is deprecated."
         assert dataset_idx < len(self.tables), "ERR: dataset_idx out of range"
 
-        # if fold is -1, set the split to a random fold for each dataset
-        if fold == -1 and dataset_idx == -1:
+        # Apply the specified fold to dataset(s)
+        if dataset_idx == -1:
+            # Apply to all datasets
             for i, table in enumerate(self.tables):
-                num_folds = [col for col in table.columns if "fold_" in col]
-                num_folds = len(num_folds)
-                selcted_fold = np.random.randint(0, num_folds)
-
-                self.tables[i]["split"] = table[f"fold_{selcted_fold}"].map(
-                    {"train": 0, "valid": 1, "test": 2}
-                )
-        elif fold == -1 and dataset_idx != -1:
-            num_folds = [
-                col for col in self.tables[dataset_idx].columns if "fold_" in col
-            ]
-            num_folds = len(num_folds)
-            selcted_fold = np.random.randint(0, num_folds)
-
-            self.tables[dataset_idx]["split"] = table[f"fold_{selcted_fold}"].map(
-                {"train": 0, "valid": 1, "test": 2}
-            )
-        elif fold != -1 and dataset_idx == -1:
-            for i, table in enumerate(self.tables):
+                fold_columns = [col for col in table.columns if "fold_" in col]
+                num_folds = len(fold_columns)
+                if fold >= num_folds:
+                    raise ValueError(f"ERR: fold {fold} is out of range for dataset {i}. Available folds: 0-{num_folds-1} (total: {num_folds} folds)")
+                
                 self.tables[i]["split"] = table[f"fold_{fold}"].map(
                     {"train": 0, "valid": 1, "test": 2}
                 )
         else:
+            # Apply to specific dataset
+            table = self.tables[dataset_idx]
+            fold_columns = [col for col in table.columns if "fold_" in col]
+            num_folds = len(fold_columns)
+            if fold >= num_folds:
+                raise ValueError(f"ERR: fold {fold} is out of range for dataset {dataset_idx}. Available folds: 0-{num_folds-1} (total: {num_folds} folds)")
+            
             self.tables[dataset_idx]["split"] = table[f"fold_{fold}"].map(
                 {"train": 0, "valid": 1, "test": 2}
             )

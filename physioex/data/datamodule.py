@@ -18,7 +18,7 @@ class PhysioExDataModule(pl.LightningDataModule):
         sequence_length: int = 21,
         target_transform: Callable = None,
         task: str = "sleep",
-        folds: Union[int, List[int]] = -1,
+        folds: Union[int, List[int]] = 0,
         data_folder: str = None,
         evaluate_on_whole_night: bool = False,
         num_nodes : int = 1,
@@ -62,12 +62,14 @@ class PhysioExDataModule(pl.LightningDataModule):
 
         if isinstance(folds, int):
             self.dataset.split(folds)
+            self.eval_dataset.split(folds)
         else:
             assert len(folds) == len(
                 datasets
             ), "ERR: folds and datasets should have the same length"
             for i, fold in enumerate(folds):
                 self.dataset.split(fold, i)
+                self.eval_dataset.split(fold, i)
 
         train_idx, _, _ = self.dataset.get_sets()
         _, valid_idx, test_idx = self.eval_dataset.get_sets()
