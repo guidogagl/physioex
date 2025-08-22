@@ -229,21 +229,26 @@ class IntracranialPreprocessor(Preprocessor):
         
         records = []
         record_dict = {}
+        subj_dict = {}
         count = 0
         
         subjects = set(list(table['SubjID']))
+        nights = ['Night001', 'Night002']
         for subj in subjects:
-            records_dir = os.path.join(self.root_folder, "Intracranial_data", "EEG", subj)
-            # check if the directory exists if not continue
-            if not os.path.exists(records_dir):
-                logger.warning(f"Record directory {records_dir} does not exist. Skipping subject {subj}.")
-                continue
+            for night in nights:
+                records_dir = os.path.join(self.root_folder, "Intracranial_data", "EEG", subj, night)
+                # check if the directory exists if not continue
+                if not os.path.exists(records_dir):
+                    logger.warning(f"Record directory {records_dir} does not exist. Skipping subject {subj}.")
+                    continue
 
-            records.append(records_dir)
-            record_dict[count] = subj
-            count += 1
+                records.append(records_dir)
+                record_dict[count] = f"{subj}_{night}"
+                subj_dict[count] = subj
+                count += 1
 
         self.record_dict = record_dict
+        self.subj_dict = subj_dict
 
         return records
 
@@ -251,26 +256,25 @@ class IntracranialPreprocessor(Preprocessor):
     def read_subject_record(self, record: str) -> Tuple[np.array, np.array]:
         print(record)
 
-        nights = [n for n in os.listdir(record)if n.startswith('Night')]
+        #nights = [n for n in os.listdir(record)if n.startswith('Night')]
 
         signal = []
         labels = []
 
         # Concatenate night 1 and 2
-        for night in nights:
-            print(night)
-            files = os.listdir(os.path.join(record, night))
-            edf_path = [f for f in files if f.endswith(('.edf', '.EDF'))][0]
-            csv_path = [f for f in files if f.endswith('_Default.csv')][0]
-            if self.scalp:
-                ns2_path = None
-                signal_tmp, labels_tmp = read_edf(os.path.join(record, night, edf_path), os.path.join(record, night, csv_path), None)
-            else:
-                ns2_path = [f for f in files if f.endswith('.ns2')]  
-                signal_tmp, labels_tmp = read_edf(os.path.join(record, night, edf_path), os.path.join(record, night, csv_path), os.path.join(record, night, ns2_path))
+        #for night in nights:
+        files = os.listdir(record) #os.listdir(os.path.join(record, night))
+        edf_path = [f for f in files if f.endswith(('.edf', '.EDF'))][0]
+        csv_path = [f for f in files if f.endswith('_Default.csv')][0]
+        if self.scalp:
+            ns2_path = None
+            signal_tmp, labels_tmp = read_edf(os.path.join(record, edf_path), os.path.join(record, csv_path), None)
+        else:
+            ns2_path = [f for f in files if f.endswith('.ns2')]  
+            signal_tmp, labels_tmp = read_edf(os.path.join(record, edf_path), os.path.join(record, csv_path), os.path.join(record, ns2_path))
 
-            signal.extend(signal_tmp)
-            labels.extend(labels_tmp)
+        signal = signal_tmp
+        labels = labels_tmp
 
         return np.array(signal), np.array(labels)
 
@@ -278,6 +282,7 @@ class IntracranialPreprocessor(Preprocessor):
     def customize_table(self, table) -> pd.DataFrame:
 
         table["record_id"] = table["subject_id"].map(self.record_dict)
+        table["subject"] = table["subject_id"].map(self.subj_dict)
         
         return table
     
@@ -292,24 +297,24 @@ class IntracranialPreprocessor(Preprocessor):
 
         np.random.seed(42)
 
-        table = self.table.copy()
-        subjects = np.array(table['subject_id'])
-        shuffled_subjects = np.random.permutation(subjects) 
-        k = len(subjects)
+        subject_col = 'subject'
+        id_col = 'subject_id'
 
-        for fold in range(k):
-            remaining_subjects = list(shuffled_subjects)
-            idx = shuffled_subjects[fold]
-            test = [idx]
-            remaining_subjects.remove(idx)
-            idx = shuffled_subjects[(fold+1)%k]
-            val = [idx]
-            remaining_subjects.remove(idx)
-            train = remaining_subjects
+        df = self.table.copy()
+        subjects = sorted(df[subject_col].unique())
+        n = len(subjects)
 
-            all_train_folds.append(train)
-            all_val_folds.append(val)
-            all_test_folds.append(test)
+        for i, val_subj in enumerate(subjects):
+            test_subj = subjects[(i + 1) % n]
+            train_subjs = [s for s in subjects if s not in (val_subj, test_subj)]
+
+            train_ids = df.loc[df[subject_col].isin(train_subjs), id_col].tolist()
+            val_ids   = df.loc[df[subject_col] == val_subj, id_col].tolist()
+            test_ids  = df.loc[df[subject_col] == test_subj, id_col].tolist()
+
+            all_train_folds.append(train_ids)
+            all_val_folds.append(val_ids)
+            all_test_folds.append(test_ids)
 
         return all_train_folds, all_val_folds, all_test_folds
 
