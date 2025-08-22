@@ -184,7 +184,7 @@ class ParkinsonsPreprocessor(Preprocessor):
         night_str = "night" if night else "nap"
         healthy_str = "HOA" if healthy else "PD"
         
-        dataset_name = f"parkinsons4/{night_str}/{healthy_str}"
+        dataset_name = f"parkinsons/{night_str}/{healthy_str}"
         
         super().__init__(
             dataset_name=dataset_name,
@@ -198,7 +198,7 @@ class ParkinsonsPreprocessor(Preprocessor):
         self.night = night
         self.healthy = healthy
         
-        self.root_folder = os.path.join(self.data_folder, "parkinsons4" )
+        self.root_folder = os.path.join(self.data_folder, "parkinsons" )
         
     @logger.catch
     def get_subjects_records(self) -> List[str]:
@@ -256,9 +256,9 @@ class ParkinsonsPreprocessor(Preprocessor):
 
 def global_split(data_folder, k=10):
     for group in ['HOA', 'PD']:
-        table_path_nap = os.path.join(data_folder, "parkinsons4", "nap", group, "table.csv")
+        table_path_nap = os.path.join(data_folder, "parkinsons", "nap", group, "table.csv")
         table_nap = pd.read_csv(table_path_nap)
-        table_path_night = os.path.join(data_folder, "parkinsons4", "night", group, "table.csv")
+        table_path_night = os.path.join(data_folder, "parkinsons", "night", group, "table.csv")
         table_night = pd.read_csv(table_path_night)
 
         nap_ids = set(table_nap['record_id'])
