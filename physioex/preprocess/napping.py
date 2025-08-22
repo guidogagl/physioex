@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 from loguru import logger
 from scipy.io import loadmat
-from scipy.signal import filtfilt, firwin, resample
+from scipy.signal import filtfilt, firwin, resample, resample_poly
 
 from physioex.preprocess.preprocessor import Preprocessor
 from physioex.preprocess.utils.signal import xsleepnet_preprocessing
@@ -51,7 +51,6 @@ def read_edf(rec_path, events_path, night):
         ]
 
     start = annotations[0][1]
-    print('Start: ', start)
 
     # Get one annotation per second
     stages_per_second = []
@@ -84,11 +83,7 @@ def read_edf(rec_path, events_path, night):
         end_test = max(end_test, len(stages))
         stages = stages[:end_test] 
 
-    try:
-        available_channels = get_channels(rec_path)
-    except:
-        print(f"Error: {rec_path} corrupted")
-        return None, None
+    available_channels = get_channels(rec_path)
     eeg_channel = get_channel_from_available(available_channels, POSSIBLE_EEG_CHANNELS)
     if eeg_channel is None:
         print(f"Error: no EEG channel found in {rec_path}")
@@ -97,6 +92,10 @@ def read_edf(rec_path, events_path, night):
     else:
         eeg, old_fs = read_channel_signal(rec_path, eeg_channel, start, n=len(stages)*epoch_second)
         
+    # upsample for compatibility
+    if old_fs < fs:
+        eeg = resample_poly(eeg, fs/old_fs, 1)
+        old_fs = fs
 
     # Creazione del filtro FIR bandpass
     Nfir = 500
@@ -116,6 +115,11 @@ def read_edf(rec_path, events_path, night):
     else:
         eog, old_fs = read_channel_signal(rec_path, eog_channel, start, n=len(stages)*epoch_second)
 
+    # upsample for compatibility
+    if old_fs < fs:
+        eog = resample_poly(eog, fs/old_fs, 1)
+        old_fs = fs
+
     # filtering and resampling
     eog = filtfilt(b_band, 1, eog)
 
@@ -129,6 +133,11 @@ def read_edf(rec_path, events_path, night):
         return None, None
     else:
         emg, old_fs = read_channel_signal(rec_path, emg_channel, start, n=len(stages)*epoch_second)
+
+    # upsample for compatibility
+    if old_fs < fs:
+        emg = resample_poly(emg, fs/old_fs, 1)
+        old_fs = fs
 
     # filtering and resampling
     b_band = firwin(Nfir + 1, 10, pass_zero=False, fs=old_fs)
@@ -240,17 +249,22 @@ class NappingPreprocessor(Preprocessor):
         for idx, row in table.iterrows():
             subject_id = row['subj_id']
             group = row['group']
-            
+
             if self.group != group:
                 continue
                 
             records_name = os.path.join(self.root_folder, "Napping_data", "Napping_data", str(subject_id), str(subject_id) + "_PSG" if self.psg else str(subject_id) + "_MSLT"  + str(self.mslt))
             # check if the directory exists if not continue
             if not os.path.exists(records_name +'.EDF'):
-                logger.warning(f"Record {records_name} does not exist. Skipping subject {subject_id}.")
-                continue
+                if os.path.exists(records_name +'.edf'):
+                    extension = '.edf'
+                else:
+                    logger.warning(f"Record {records_name} does not exist. Skipping subject {subject_id}.")
+                    continue
+            else:
+                extension = '.EDF'
 
-            records_list.append(records_name)
+            records_list.append((records_name, extension))
             records_dict[count] = subject_id
             count += 1
 
@@ -261,8 +275,8 @@ class NappingPreprocessor(Preprocessor):
     @logger.catch
     def read_subject_record(self, record: str) -> Tuple[np.array, np.array]:
 
-        rec_path = record + '.EDF'
-        events_path = record + '_events.EDF'
+        rec_path = record[0] + record[1]
+        events_path = record[0] + '_events.EDF'
 
         signal, labels = read_edf(rec_path, events_path, self.psg)
         
