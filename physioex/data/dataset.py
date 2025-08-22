@@ -81,7 +81,7 @@ class PhysioExDataset(torch.utils.data.Dataset):
             num_folds = len(num_folds)
             selcted_fold = np.random.randint(0, num_folds)
 
-            self.tables[dataset_idx]["split"] = table[f"fold_{selcted_fold}"].map(
+            self.tables[dataset_idx]["split"] = self.tables[dataset_idx][f"fold_{selcted_fold}"].map(
                 {"train": 0, "valid": 1, "test": 2}
             )
         elif fold != -1 and dataset_idx == -1:
