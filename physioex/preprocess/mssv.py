@@ -50,10 +50,18 @@ def process_recording(edf_path, tsv_path):
     if fs != old_fs:
         eeg1 = resample(eeg1, int(len(eeg1) * fs / old_fs))
      
-    eeg2 = eeg1.copy() # only working with one EEG channel for now, but filling eeg2 for shape coherence with other datasets
+    if len(eeg_candidates) > 1:
+        eeg_candidates_other = [ch for ch in eeg_candidates if ch != eeg_channel]
+        eeg2_channel = random.choice(eeg_candidates_other)
+        eeg2, old_fs = read_channel_signal(edf_path, eeg2_channel)
+        eeg2 = filtfilt(b_band, 1, eeg2)
+        if fs != old_fs:
+            eeg2 = resample(eeg2, int(len(eeg2) * fs / old_fs))
+    else:
+        eeg2 = eeg1.copy()  # only one EEG channel available
     
     emg_candidates = [ch for ch in available_channels if 'EMG' in ch.upper()]
-    emg_channel = random.choice(eeg_candidates) if emg_candidates else None
+    emg_channel = random.choice(emg_candidates) if emg_candidates else None
     if emg_channel is None:
         print(f"Error: no EMG channel found in {edf_path}")
         print(f"Available channels: {available_channels}")
@@ -95,6 +103,8 @@ def process_recording(edf_path, tsv_path):
     signal = np.delete(signal, invalid_epochs, axis=0)
     
     signal = np.transpose(signal, (0, 2, 1))
+    
+    signal = signal * 1e6
 
     return signal.astype(np.float32), stages.astype(int)
 
@@ -126,6 +136,7 @@ class MSSVPreprocessor(Preprocessor):
 
     def __init__(
         self,
+        lab: str,
         preprocessors_name: List[str] = ["xsleepnet_mouse"],
         preprocessors=[xsleepnet_preprocessing_mouse],
         preprocessor_shape=[[3, 17, 129]],
@@ -133,7 +144,7 @@ class MSSVPreprocessor(Preprocessor):
     ):
 
         super().__init__(
-            dataset_name="mssv",
+            dataset_name="mssv/" + lab,
             signal_shape=[3, 400],
             preprocessors_name=preprocessors_name,
             preprocessors=preprocessors,
@@ -141,7 +152,8 @@ class MSSVPreprocessor(Preprocessor):
             data_folder=data_folder,
         )
         
-        self.source_dataset = os.path.join(self.dataset_folder, 'mssv_openneuro')
+        self.source_dataset = os.path.join(os.path.dirname(self.dataset_folder), 'openneuro')
+        self.lab = lab 
         
         self.split_subjects_table = None
         self._iterator = None
@@ -187,6 +199,7 @@ class MSSVPreprocessor(Preprocessor):
 
             participants_path = os.path.join(self.source_dataset, 'participants.tsv')
             self.participants = pd.read_csv(participants_path, sep='\t')
+            self.participants = self.participants[self.participants['lab'] == self.lab]
             
             split_subjects_rows = []    
                 
@@ -374,6 +387,8 @@ class MSSVPreprocessor(Preprocessor):
 
 if __name__ == "__main__":
 
-    p = MSSVPreprocessor(data_folder="/home/coder/sleep/sleep-data/")
-
-    p.run()
+    MSSVPreprocessor(data_folder="/home/coder/sleep/sleep-data/", lab='lab_1').run()
+    MSSVPreprocessor(data_folder="/home/coder/sleep/sleep-data/", lab='lab_2').run()
+    MSSVPreprocessor(data_folder="/home/coder/sleep/sleep-data/", lab='lab_3').run()
+    MSSVPreprocessor(data_folder="/home/coder/sleep/sleep-data/", lab='lab_4').run()
+    MSSVPreprocessor(data_folder="/home/coder/sleep/sleep-data/", lab='lab_5').run()
