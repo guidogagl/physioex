@@ -35,7 +35,6 @@ def test(
 
     datamodule_kwargs["batch_size"] = batch_size
     datamodule_kwargs["folds"] = fold
-    datamodule_kwargs["num_nodes"] = num_nodes
 
     ##### DataModule Setup #####
     if isinstance(datasets, PhysioExDataModule):

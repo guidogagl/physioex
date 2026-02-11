@@ -90,7 +90,7 @@ class PhysioExDataModule(pl.LightningDataModule):
 
         if isinstance(eval_datasets, list):
             self.eval_dataset = PhysioExDataset(
-                datasets=datasets,
+                datasets=eval_datasets,
                 preprocessing=preprocessing,
                 selected_channels=selected_channels,
                 sequence_length=-1,

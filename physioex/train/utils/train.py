@@ -42,7 +42,6 @@ def train(
 
     datamodule_kwargs["batch_size"] = batch_size
     datamodule_kwargs["folds"] = fold
-    datamodule_kwargs["num_nodes"] = num_nodes
 
     if checkpoint_path is None:
         checkpoint_path = "models/" + str(uuid.uuid4())
@@ -102,6 +101,17 @@ def train(
         CSVLogger(save_dir=checkpoint_path),
     ]
 
+    ########### Trainer Setup ############
+    from lightning.pytorch.accelerators import find_usable_cuda_devices
+
+    try :
+        devices = find_usable_cuda_devices(-1)
+        logger.info( f"Available devices: {devices}")
+        effective_batch_size = batch_size * num_nodes *  len(devices)
+
+    except :
+        devices = "auto"
+        effective_batch_size = batch_size * num_nodes
     num_steps = datamodule.__len__() // effective_batch_size
     val_check_interval = max(1, num_steps // num_validations)
 

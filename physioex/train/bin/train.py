@@ -27,7 +27,6 @@ def train_script():
         "model": None,
         "batch_size": parser["batch_size"],
         "fold": parser["fold"],
-        "hpc": parser["hpc"],
         "num_validations": parser["num_validations"],
         "checkpoint_path": (
             parser["checkpoint_dir"]
@@ -54,7 +53,6 @@ def train_script():
             model_class=parser["model"],
             model_config=parser["model_kwargs"],
             batch_size=parser["batch_size"],
-            hpc=parser["hpc"],
             num_nodes=parser["num_nodes"],
             checkpoint_path=best_checkpoint,
             results_path=parser["results_path"],
