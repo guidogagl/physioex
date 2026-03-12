@@ -35,7 +35,7 @@ class SleepyRatPreprocessor(Preprocessor):
     ):
         super().__init__(
             dataset_name="sleepyrat",
-            signal_shape=[3, 512],
+            signal_shape=[3, 400],
             preprocessors_name=preprocessors_name,
             preprocessors=preprocessors,
             preprocessors_shape=preprocessor_shape,
@@ -104,7 +104,7 @@ class SleepyRatPreprocessor(Preprocessor):
         mousedata:process_sleepdata_file, adapted for SleepyRat dataset
         """
 
-        fs = 128
+        fs = 100
         epoch_second = 4
 
         # get the file name of the absolute path filename without the extension

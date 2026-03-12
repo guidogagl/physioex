@@ -48,25 +48,18 @@ class ProtoSleepModule(SleepModule):
         loss = loss + proto_loss + commit_loss
 
         proto_acc = self.wacc(proto_y, targets)
+        
+        channel_acc = [self.wacc(mcy[:, i], targets) for i in range(self.nn.in_channels)]
 
-        eeg_acc = self.wacc(mcy[:, 0], targets)
-        eog_acc = self.wacc(mcy[:, 1], targets)
-        emg_acc = self.wacc(mcy[:, 2], targets)
+        self.nn.channels_proba = channel_acc
+        
+        for i, c_acc in enumerate(channel_acc):
+            self.log(f"{log}/c{i}_acc", c_acc, sync_dist=True)
 
-        mc_loss = (
-            self.loss(mcy[:, 0], targets)
-            + self.loss(mcy[:, 1], targets)
-            + self.loss(mcy[:, 2], targets)
-        )
+        mc_loss = sum(self.loss(mcy[:, i], targets) for i in range(self.nn.in_channels))
         loss = loss + mc_loss
 
-        self.nn.channels_proba = [eeg_acc, eog_acc, emg_acc]
-
         self.log(f"{log}/p_acc", proto_acc, sync_dist=True)
-
-        self.log(f"{log}/eeg_acc", eeg_acc, sync_dist=True)
-        self.log(f"{log}/eog_acc", eog_acc, sync_dist=True)
-        self.log(f"{log}/emg_acc", emg_acc, sync_dist=True)
 
         if log == "val":
             self.log(f"{log}_acc", self.wacc(outputs, targets), sync_dist=True)
@@ -112,6 +105,8 @@ class ProtoSleepNet(nn.Module):
     def __init__(self, module_config=module_config):
         super(ProtoSleepNet, self).__init__()
 
+        self.in_channels = module_config["in_channels"]
+
         self.time_masking = TimeMasking(
             hidden_size=128,  # hidden size of the epoch encoder
             L=29,  # length of the time masking window
@@ -126,15 +121,17 @@ class ProtoSleepNet(nn.Module):
 
         self.channel_mixer = _initialize_residual_transformer(self.channel_mixer)
 
+        self.n_prototypes = module_config["n_prototypes"]
+        
         self.prototype = SimVQ(
             dim=128,
-            codebook_size= module_config.get("n_prototypes", 50),
+            codebook_size=self.n_prototypes,
             rotation_trick=True,  # use rotation trick from Fifty et al.
             channel_first=False,
         )
 
         self.channels_dropout = ChannelsDropout(dropout_prob=0.5)
-        self.channels_proba = [0.7, 0.7, 0.7]
+        self.channels_proba = [0.7 for _ in range(self.in_channels)]
 
         self.clf = nn.Linear(128, 5)
 

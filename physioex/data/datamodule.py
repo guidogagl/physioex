@@ -59,7 +59,7 @@ class PhysioExDataModule(pl.LightningDataModule):
         sequence_length: int = 21,
         target_transform: Callable = None,
         task: str = "sleep",
-        folds: Union[int, List[int]] = -1,
+        folds: Union[int, List[int]] = 0,
         data_folder: str = None,
         num_workers: int = 0,
         data_prefetch: bool = True,
@@ -90,7 +90,7 @@ class PhysioExDataModule(pl.LightningDataModule):
 
         if isinstance(eval_datasets, list):
             self.eval_dataset = PhysioExDataset(
-                datasets=datasets,
+                datasets=eval_datasets,
                 preprocessing=preprocessing,
                 selected_channels=selected_channels,
                 sequence_length=-1,

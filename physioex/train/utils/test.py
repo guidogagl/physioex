@@ -21,7 +21,7 @@ def test(
     model_class=None,
     model_config: dict = None,
     batch_size: int = 128,
-    fold: int = -1,
+    fold: int = 0,
     checkpoint_path: str = None,
     results_path: str = None,
     num_nodes: int = 1,
@@ -35,7 +35,6 @@ def test(
 
     datamodule_kwargs["batch_size"] = batch_size
     datamodule_kwargs["folds"] = fold
-    datamodule_kwargs["num_nodes"] = num_nodes
 
     ##### DataModule Setup #####
     if isinstance(datasets, PhysioExDataModule):
