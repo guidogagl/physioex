@@ -1,0 +1,23 @@
+# LaBraM — Large Brain Model (Jiang et al., ICLR 2024)
+# Variable channel count with channel-aware position embeddings.
+# Maps input channels to LABRAM_CHANNEL_ORDER indices for correct pos embed.
+
+model_name: labram
+sampling_rate: 200
+embedding_dim: 200
+epoch_seconds: 30
+
+# Channel handling — variable, maps to LABRAM_CHANNEL_ORDER (128 electrodes)
+# Channel indices resolved at runtime via braindecode.models.labram.LABRAM_CHANNEL_ORDER
+target_layout: null  # variable: resolved from LABRAM_CHANNEL_ORDER
+channel_aliases: {}
+missing_strategy: drop  # unmatched channels are dropped, not zero-padded
+
+# Preprocessing
+normalization: scale_div  # x / 100 (0.1 mV range → [-1,1])
+normalization_params:
+  scale_divisor: 100.0
+
+# Encoding
+patch_size: 200  # 1 s at 200 Hz
+embedding_reduction: fc_norm_of_patch_token_mean  # forward_features default

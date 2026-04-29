@@ -1,0 +1,31 @@
+# NeuroLM — Neural Language Model (Liu et al., 2024)
+# Patch-based tokenization at 200 Hz. Channels mapped to VQ vocabulary indices.
+# Embedding = masked mean over valid tokens → (B, 768).
+
+model_name: neurolm
+sampling_rate: 200
+embedding_dim: 768
+epoch_seconds: 30
+
+# Channel handling — variable, maps to _STANDARD_1020 vocabulary (128+ entries)
+target_layout: null  # variable: maps by name to VQ vocabulary index
+channel_aliases:
+  C3-A2: C3
+  C4-A1: C4
+  O1-A2: O1
+  O2-A1: O2
+  F3-A2: F3
+  F4-A1: F4
+  FZ-CZ: FZ
+  CZ-PZ: PZ
+missing_strategy: drop  # unknown channels raise ValueError
+
+# Preprocessing
+normalization: scale_div  # x / 100 (paper §3.2)
+normalization_params:
+  scale_divisor: 100.0
+
+# Encoding
+patch_size: 200  # 1 s at 200 Hz
+block_size: 1024  # max total tokens (channels × time_patches)
+embedding_reduction: masked_mean_over_valid_tokens

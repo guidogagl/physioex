@@ -1,0 +1,23 @@
+# CBraMod — Criss-Cross Brain Foundation Model (Jiang et al., ICLR 2025)
+# Variable channel count: patch-based, permutation-invariant across channels.
+# Drops non-EEG (EOG/EMG/ECG) channels; accepts all remaining EEG.
+
+model_name: cbramod
+sampling_rate: 200
+embedding_dim: 200
+epoch_seconds: 30
+
+# Channel handling
+target_layout: null  # variable: accepts any EEG channels
+channel_aliases: {}
+missing_strategy: zero_pad
+
+# Preprocessing
+normalization: clip100  # clip ±100 µV then /100 → ~[-1,1]
+normalization_params:
+  clip_uv: 100.0
+  scale_divisor: 100.0
+
+# Encoding
+patch_size: 200  # 1 s at 200 Hz
+embedding_reduction: mean_over_channels_and_patches  # out.mean(dim=(1,2))

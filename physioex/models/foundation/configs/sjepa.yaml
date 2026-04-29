@@ -1,0 +1,56 @@
+# Signal-JEPA (Guetschel et al., 2024)
+# Fixed 19-channel standard 10-20 montage with spatial positional encoder.
+# Embedding = mean over tokens → (B, 64).
+
+model_name: sjepa
+sampling_rate: 128
+embedding_dim: 64
+epoch_seconds: 30
+
+# Channel handling — fixed 19-channel 10-20 layout
+target_layout:
+  - FP1
+  - FP2
+  - F3
+  - F4
+  - C3
+  - C4
+  - P3
+  - P4
+  - O1
+  - O2
+  - F7
+  - F8
+  - T3
+  - T4
+  - T5
+  - T6
+  - FZ
+  - CZ
+  - PZ
+
+channel_aliases:
+  T7: T3
+  T8: T4
+  P7: T5
+  P8: T6
+  FPZ-CZ: FZ
+  PZ-OZ: PZ
+  EEG FPZ-CZ: FZ
+  EEG PZ-OZ: PZ
+  C3-A2: C3
+  C4-A1: C4
+  O1-A2: O1
+  O2-A1: O2
+  F3-A2: F3
+  F4-A1: F4
+
+missing_strategy: zero_pad
+min_match_ratio: 0.5  # raise if <50% channels matched
+
+# Preprocessing
+normalization: none  # scale-agnostic
+normalization_params: {}
+
+# Encoding
+embedding_reduction: mean_over_tokens  # features.mean(dim=1)

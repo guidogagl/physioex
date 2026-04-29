@@ -1,34 +1,134 @@
-from physioex.train.bin.parser import PhysioExParser
+"""CLI entry point for evaluating a pretrained PhysioEx model."""
+import argparse
+import importlib
+import os
+import yaml
 
-from physioex.train.utils.test import test
+import pandas as pd
+
+from physioex.data.dataset import PhysioExDataset
+from physioex.train.trainer import Trainer
+
+
+def _import_class(spec):
+    """Import a class from 'module.path:ClassName' spec."""
+    module_path, class_name = spec.rsplit(":", 1)
+    return getattr(importlib.import_module(module_path), class_name)
 
 
 def test_script():
-    parser = PhysioExParser.test_parser()
-
-    datamodule_kwargs = {
-        "selected_channels": parser["selected_channels"],
-        "sequence_length": parser["sequence_length"],
-        "target_transform": parser["target_transform"],
-        "preprocessing": parser["preprocessing"],
-        "task": parser["model_task"],
-        "data_folder": parser["data_folder"],
-        "num_workers": parser["num_workers"],
-    }
-
-    test(
-        datasets=parser["datasets"],
-        datamodule_kwargs=datamodule_kwargs,
-        model=None,
-        fold=parser["fold"],
-        model_class=parser["model"],
-        model_config=parser["model_kwargs"],
-        batch_size=parser["batch_size"],
-        num_nodes=parser["num_nodes"],
-        checkpoint_path=parser["checkpoint_path"],
-        results_path=parser["results_path"],
-        aggregate_datasets=parser["aggregate"],
+    parser = argparse.ArgumentParser(
+        description="Evaluate a PhysioEx model on datasets."
     )
+    parser.add_argument(
+        "--model",
+        type=str,
+        required=True,
+        help="Model class spec: 'module.path:ClassName'",
+    )
+    parser.add_argument(
+        "--ckpt_path",
+        type=str,
+        required=True,
+        help="Path to pretrained checkpoint to evaluate",
+    )
+    parser.add_argument(
+        "--datasets", nargs="+", required=True, help="One or more dataset names"
+    )
+    parser.add_argument(
+        "--config",
+        type=str,
+        default=None,
+        help="Optional YAML config file (merged over defaults)",
+    )
+    parser.add_argument(
+        "--model_kwargs",
+        type=str,
+        default="{}",
+        help="JSON/YAML string with model constructor kwargs",
+    )
+    parser.add_argument("--fold", type=int, default=0)
+    parser.add_argument(
+        "--results_path",
+        type=str,
+        default=None,
+        help="Directory to save results CSV",
+    )
+    parser.add_argument("--gpu_id", type=int, default=None)
+    parser.add_argument("--selected_channels", nargs="+", default=["EEG"])
+    parser.add_argument("--seqlen", type=int, default=21)
+    parser.add_argument("--preprocessing", type=str, default="raw")
+    parser.add_argument(
+        "--voting",
+        action="store_true",
+        help="Use sliding-window voting evaluation (recommended for full-night sequences)",
+    )
+    parser.add_argument(
+        "--voting_L",
+        type=int,
+        default=21,
+        help="Window length for voting evaluation",
+    )
+    args = parser.parse_args()
+
+    # Merge YAML config if provided
+    if args.config is not None:
+        with open(args.config, "r") as f:
+            config = yaml.safe_load(f) or {}
+        for k, v in config.items():
+            if hasattr(args, k) and v is not None:
+                setattr(args, k, v)
+
+    # Parse model_kwargs string (supports JSON and YAML)
+    try:
+        import json
+
+        model_kwargs = json.loads(args.model_kwargs)
+    except Exception:
+        model_kwargs = yaml.safe_load(args.model_kwargs) or {}
+
+    # Build model and load checkpoint
+    model_class = _import_class(args.model)
+    model = model_class(**model_kwargs)
+    model, _, _ = Trainer.load_checkpoint(model, args.ckpt_path)
+
+    results = []
+    for ds_name in args.datasets:
+        dataset = PhysioExDataset(
+            datasets=[ds_name],
+            selected_channels=args.selected_channels,
+            seqlen=args.seqlen,
+            preprocessing=args.preprocessing,
+        )
+        if args.voting:
+            res = Trainer.voting_evaluate(
+                model=model,
+                dataset=dataset,
+                L=args.voting_L,
+                fold=args.fold,
+                gpu_id=args.gpu_id,
+            )
+        else:
+            res = Trainer.evaluate(
+                model=model,
+                dataset=dataset,
+                fold=args.fold,
+                gpu_id=args.gpu_id,
+            )
+        # Flatten metrics (skip non-scalar like confusion_matrix, support)
+        scalar = {k: v for k, v in res.items() if isinstance(v, (int, float))}
+        scalar["dataset"] = ds_name
+        scalar["fold"] = args.fold
+        results.append(scalar)
+
+    df = pd.DataFrame(results)
+    if args.results_path:
+        os.makedirs(args.results_path, exist_ok=True)
+        out = os.path.join(args.results_path, "results.csv")
+        df.to_csv(out, index=False)
+        print(f"[Info] Results saved to {out}")
+    print(df.to_string(index=False))
+    return df
 
 
 if __name__ == "__main__":

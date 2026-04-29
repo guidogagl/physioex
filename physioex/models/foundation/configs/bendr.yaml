@@ -1,0 +1,61 @@
+# BENDR — BENchmark D Representations (Kostas et al., 2021)
+# Fixed 20-channel layout (19 EEG + 1 SCALE token).
+# Maps input to standard 10-20 layout; per-sequence min-max to [-1,1].
+
+model_name: bendr
+sampling_rate: 256
+embedding_dim: 2048
+epoch_seconds: 30
+
+# Channel handling — 20 channels (19 EEG + SCALE)
+target_layout:
+  - FP1
+  - FP2
+  - F7
+  - F3
+  - FZ
+  - F4
+  - F8
+  - T7
+  - C3
+  - CZ
+  - C4
+  - T8
+  - P7
+  - P3
+  - PZ
+  - P4
+  - P8
+  - O1
+  - O2
+  - SCALE
+
+channel_aliases:
+  # Legacy 10-20 names
+  T3: T7
+  T4: T8
+  T5: P7
+  T6: P8
+  # Sleep-montage referenced pairs → unipolar
+  EEG FPZ-CZ: FZ
+  FPZ-CZ: FZ
+  FPZ: FZ
+  FPZCZ: FZ
+  PZ-OZ: PZ
+  PZOZ: PZ
+  C3-A2: C3
+  C4-A1: C4
+  O1-A2: O1
+  O2-A1: O2
+  F3-A2: F3
+  F4-A1: F4
+
+missing_strategy: zero_pad
+
+# Preprocessing
+normalization: minmax  # per-sequence min-max to [-1,1] over matched channels
+normalization_params:
+  mean_center: true  # DC removal before mapping
+
+# Encoding
+embedding_reduction: encoder_4chunk_pool

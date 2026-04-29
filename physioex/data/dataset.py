@@ -1,56 +1,72 @@
-from typing import Callable, List
+import os
+import torch
+from torch.utils.data import Dataset, DataLoader
+from torch.utils.data.distributed import DistributedSampler
+import yaml
+from typing import List, Callable, Tuple
+
+from physioex.data.datareader import DataReader, DTYPE
 
 import numpy as np
-import torch
-from loguru import logger
+import pandas as pd
 
-from physioex.data.datareader import DataReader
 
-import torch
-
-DTYPE = torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float32
-
-def merge_scaling(means, std_devs, sample_sizes):    
-    # cast means and stds to float64
-
-    means = [ mean.to( torch.float64) for mean in means ]
-    std_devs = [ std.to( torch.float64) for std in std_devs ]
+def merge_scaling(means, std_devs, sample_sizes):
+    means = [mean.to(torch.float64) for mean in means]
+    std_devs = [std.to(torch.float64) for std in std_devs]
 
     total_samples = sum(sample_sizes)
-    
-    # Calcolo media ponderata
+
     total_mean = sum(M * N for M, N in zip(means, sample_sizes)) / total_samples
-    
-    # Calcolo varianza totale
+
     total_variance = (
         sum(
-            N * (D**2 + (M - total_mean)**2)
+            N * (D**2 + (M - total_mean) ** 2)
             for M, D, N in zip(means, std_devs, sample_sizes)
-        ) / total_samples
+        )
+        / total_samples
     )
-    
-    # Assicurati che la varianza non sia negativa (potrebbe accadere per errori di arrotondamento)
+
     total_variance = torch.clamp(total_variance, min=0.0) + 1e-10
-    
     total_std_dev = torch.sqrt(total_variance)
-    return total_mean.to( DTYPE ), total_std_dev.to( DTYPE )
+    return total_mean.to(DTYPE), total_std_dev.to(DTYPE)
 
 
-class PhysioExDataset(torch.utils.data.Dataset):
+class PhysioExDataset(Dataset):
     def __init__(
         self,
-        datasets: List[str],
-        data_folder: str,
+        datasets: List[str] = None,
         preprocessing: str = "raw",
-        selected_channels: List[int] = ["EEG"],
-        sequence_length: int = 21,
+        selected_channels: List[str] = ["EEG"],
+        seqlen: int = 21,
+        indexed_channels: List[str] = ["EEG", "EOG", "EMG", "ECG"],
         target_transform: Callable = None,
-        hpc: bool = False,
-        indexed_channels: List[int] = ["EEG", "EOG", "EMG", "ECG"],
-        task: str = "sleep",
+        data_folder: str = None,
     ):
+
+        super().__init__()
+
         self.datasets = datasets
+        self.preprocessing = preprocessing
+        self.seqlen = seqlen
+
+        self.selected_channels = selected_channels
+        self.indexed_channels = indexed_channels
         self.channels_index = [indexed_channels.index(ch) for ch in selected_channels]
+
+        self.target_transform = target_transform
+        self.data_folder = data_folder
+
+        if self.data_folder is None:
+            self.data_folder = os.environ.get("PHYSIOEX_DATA_PATH", None)
+
+        # read the PHYSIOEX_CONFIG.yaml file if it exists
+        self.get_parameters_from_config()
+
+        if self.data_folder is None:
+            raise ValueError(
+                "[Err.] PhysioExDataset : Data folder not specified. Please set the PHYSIOEX_DATA_PATH environment variable or provide the data_folder argument."
+            )
 
         self.readers = []
         self.tables = []
@@ -59,141 +75,245 @@ class PhysioExDataset(torch.utils.data.Dataset):
         offset = 0
 
         means, stds, sizes = [], [], []
-
-        for i, dataset in enumerate(datasets):
+        for i, dataset in enumerate(self.datasets):
             reader = DataReader(
-                data_folder=data_folder,
+                data_folder=self.data_folder,
                 dataset=dataset,
-                preprocessing=preprocessing,
-                sequence_length=sequence_length,
+                preprocessing=self.preprocessing,
+                seqlen=self.seqlen,
                 channels_index=self.channels_index,
                 offset=offset,
-                hpc=hpc,
-                task=task,
             )
-            offset += len(reader)
 
-            self.dataset_idx += list(np.ones(len(reader)) * i)
+            size = len(reader)
 
-            self.tables.append(reader.get_table())
+            offset += size
+
+            mean, std = reader.get_scaling()
+
+            means.append(mean)
+            stds.append(std)
+            sizes.append(size)
+
+            self.dataset_idx += list(np.ones(size) * i)
             self.readers += [reader]
 
-            means.append( reader.reader.mean )
-            stds.append( reader.reader.std )
-            sizes.append( reader.reader.get_n_subjects() )
+        self.dataset_idx = np.array(self.dataset_idx, dtype=np.uint16)
 
-        if len( self.readers ) > 1:
-            self.mean, self.std = merge_scaling( means, stds, sizes )
-        else:
-            self.mean, self.std = self.readers[0].reader.mean, self.readers[0].reader.std
-        
-        self.dataset_idx = np.array(self.dataset_idx, dtype=np.int8)
-        # set the table fold to a random fold by default
-        self.split()
-        self.target_transform = target_transform
+        self.mean, self.std = merge_scaling(means, stds, sizes)
 
-        self.len = offset
-        self.L = sequence_length if sequence_length != -1 else 30 * 2 * 60 * 24
+    def __getitem__(self, idx: int):
+        dataset_idx = self.dataset_idx[idx]
+        signal, labels = self.readers[dataset_idx].__getitem__(idx)
 
-    def __len__(self):
-        return self.len
+        # scale the signal
+        # signal = ( signal - self.mean ) / self.std
 
-    def set_scaling(self, mean : torch.Tensor, std : torch.Tensor ):
+        if self.target_transform is not None:
+            labels = self.target_transform(labels)
+        return signal, labels
+
+    def split(self, fold: int = 0):
+        train_indexes = []
+        valid_subjects, test_subjects = [], []
+
+        dataset_offset = 0
+        for dataset_idx, reader in enumerate(self.readers):
+
+            table = reader.get_table()
+            table = table[["subject_id", "num_windows", f"fold_{fold}"]]
+            for i, row in table.iterrows():
+                num_windows = row["num_windows"]
+                if row[f"fold_{fold}"] == "valid":
+                    valid_subjects.append((dataset_idx, row["subject_id"]))
+                elif row[f"fold_{fold}"] == "test":
+                    test_subjects.append((dataset_idx, row["subject_id"]))
+                else:
+                    train_indexes += list(
+                        range(dataset_offset, dataset_offset + num_windows)
+                    )
+
+                dataset_offset += num_windows
+
+        train_indexes = np.array(train_indexes, dtype=np.int32)
+
+        return train_indexes, valid_subjects, test_subjects
+
+    def get_table(self, dataset_idx: int) -> pd.DataFrame:
+        return self.readers[dataset_idx].get_table()
+
+    def get_num_channels(self):
+        return len(self.selected_channels)
+
+    def set_table(self, dataset_idx: int, table: pd.DataFrame):
+        old_table = self.readers[dataset_idx].set_table(table)
+        return old_table
+
+    def get_subject(
+        self,
+        dataset_idx: int,
+        subject_id: int,
+        seqlen: int = None,
+        return_subject_age: bool = False,
+    ):
+        return self.readers[dataset_idx].get_subject(
+            idx=0,
+            subject_id=subject_id,
+            seqlen=seqlen,
+            return_subject_age=return_subject_age,
+        )
+
+    def get_n_subjects(self):
+        n_subjects = 0
+        for reader in self.readers:
+            n_subjects += reader.get_n_subjects()
+        return n_subjects
+
+    def set_scaling(self, mean: torch.Tensor, std: torch.Tensor):
+        old_mean = self.mean
+        old_std = self.std
+
         self.mean = mean
         self.std = std
 
-        return
-    
+        return old_mean, old_std
+
     def get_scaling(self):
         return self.mean, self.std
 
-    def split(self, fold: int = -1, dataset_idx: int = -1):
-        assert dataset_idx < len(self.tables), "ERR: dataset_idx out of range"
-
-        # if fold is -1, set the split to a random fold for each dataset
-        if fold == -1 and dataset_idx == -1:
-            for i, table in enumerate(self.tables):
-                num_folds = [col for col in table.columns if "fold_" in col]
-                num_folds = len(num_folds)
-                selected_fold = np.random.randint(0, num_folds)
-
-                self.tables[i]["split"] = self.tables[i][f"fold_{selected_fold}"].map(
-                    {"train": 0, "valid": 1, "test": 2}
+    def get_parameters_from_config(self):
+        config = {}
+        try:
+            with open("PHYSIOEX_CONFIG.yaml", "r") as f:
+                yaml_content = yaml.safe_load(f) or {}
+                config = yaml_content.get("PhysioExDataset", {})
+                print(
+                    "[Info - PhysioExDataset]: Loaded configuration from PHYSIOEX_CONFIG.yaml file."
                 )
-        elif fold == -1 and dataset_idx != -1:
-            num_folds = [
-                col for col in self.tables[dataset_idx].columns if "fold_" in col
+        except FileNotFoundError:
+            print(
+                "[Warning - PhysioExDataset]: PHYSIOEX_CONFIG.yaml file not found. Using default parameters or those provided in the function call."
+            )
+        except Exception as exc:
+            print(
+                f"[Warning - PhysioExDataset]: Failed to load PHYSIOEX_CONFIG.yaml due to {exc}. Using default parameters."
+            )
+
+        # override parameters from the config file if they are not None
+        if "datasets" in config and config["datasets"] is not None:
+            self.datasets = config["datasets"]
+        if "preprocessing" in config and config["preprocessing"] is not None:
+            self.preprocessing = config["preprocessing"]
+        if "seqlen" in config and config["seqlen"] is not None:
+            self.seqlen = config["seqlen"]
+        if "indexed_channels" in config and config["indexed_channels"] is not None:
+            self.indexed_channels = config["indexed_channels"]
+        if "selected_channels" in config and config["selected_channels"] is not None:
+            self.selected_channels = config["selected_channels"]
+            self.channels_index = [
+                self.indexed_channels.index(ch) for ch in self.selected_channels
             ]
-            num_folds = len(num_folds)
-            selcted_fold = np.random.randint(0, num_folds)
+        if "data_folder" in config and config["data_folder"] is not None:
+            self.data_folder = config["data_folder"]
 
-            self.tables[dataset_idx]["split"] = table[f"fold_{selcted_fold}"].map(
-                {"train": 0, "valid": 1, "test": 2}
-            )
-        elif fold != -1 and dataset_idx == -1:
-            for i, table in enumerate(self.tables):
-                self.tables[i]["split"] = table[f"fold_{fold}"].map(
-                    {"train": 0, "valid": 1, "test": 2}
-                )
-        else:
-            self.tables[dataset_idx]["split"] = self.tables[dataset_idx][f"fold_{fold}"].map(
-                {"train": 0, "valid": 1, "test": 2}
-            )
 
-    def get_num_folds(self):
-        # take the min number of folds for each dataset table
-        num_folds = 100
-        for table in self.tables:
-            num_folds = min(
-                num_folds, len([col for col in table.columns if "fold_" in col])
-            )
-        return num_folds
+class _PhysioExTrainDataset(Dataset):
+    def __init__(self, dataset: PhysioExDataset, train_indexes: List[int]):
+        super().__init__()
+        self.dataset = dataset
+        self.train_indexes = train_indexes
 
-    def __getitem__(self, idx):
-        dataset_idx = int(self.dataset_idx[idx])
+    def __len__(self):
+        return len(self.train_indexes)
 
-        X, y, subjects = self.readers[dataset_idx][idx]
+    def __getitem__(self, idx: int):
+        actual_idx = self.train_indexes[idx]
+        return self.dataset[actual_idx]
 
-        if self.target_transform is not None:
-            y = self.target_transform(y)
 
-        X = (X - self.mean) / self.std 
-        
-        return X, y, subjects, dataset_idx
+class _PhysioExEvalDataset(Dataset):
+    def __init__(self, dataset: PhysioExDataset, eval_subjects: List[tuple]):
+        super().__init__()
 
-    def get_sets(self):
-        # return the indexes in the table of the train, valid and test subjects
-        train_idx = []
-        valid_idx = []
-        test_idx = []
+        self.dataset = dataset
+        self.eval_subjects = eval_subjects
 
-        start_index = 0
+        # get the num max_windows
+        max_windows = 0
+        for dataset_idx, subject_id in eval_subjects:
+            table = self.dataset.get_table(dataset_idx)
+            num_windows = table.loc[
+                table["subject_id"] == subject_id, "num_windows"
+            ].values[0]
+            if num_windows > max_windows:
+                max_windows = num_windows
 
-        for table in self.tables:
-            for _, row in table.iterrows():
-                num_windows = max(row["num_windows"] - self.L, 0) + 1
+        self.max_windows = max_windows
 
-                indices = np.arange(
-                    start=start_index, stop=start_index + num_windows
-                ).astype(np.int32)
+    def __len__(self):
+        return len(self.eval_subjects)
 
-                start_index += num_windows
+    def __getitem__(self, idx: int):
+        dataset_idx, subject_id = self.eval_subjects[idx]
+        subject_signal, subject_labels = self.dataset.get_subject(
+            dataset_idx=dataset_idx, subject_id=subject_id, seqlen=self.max_windows
+        )
+        return subject_signal, subject_labels
 
-                if row["split"] == 0:
-                    train_idx.append(indices)
-                elif row["split"] == 1:
-                    valid_idx.append(indices)
-                elif row["split"] == 2:
-                    test_idx.append(indices)
-                else:
-                    error_string = "ERR: split should be 0, 1 or 2. Not " + str(
-                        row["split"]
-                    )
-                    logger.error(error_string)
-                    raise ValueError("ERR: split should be 0, 1 or 2")
 
-        train_idx = np.concatenate(train_idx) if train_idx else np.array([])
-        valid_idx = np.concatenate(valid_idx) if valid_idx else np.array([])
-        test_idx = np.concatenate(test_idx)
+def get_dataloaders(
+    dataset: PhysioExDataset,
+    fold: int = 0,
+    train_batch_size: int = 32,
+    eval_batch_size: int = 1,
+    distributed: bool = False,
+    **dataloader_kwargs,
+) -> Tuple[DataLoader, DataLoader, DataLoader]:
 
-        return train_idx, valid_idx, test_idx
+    train_indexes, valid_subjects, test_subjects = dataset.split(fold=fold)
+    train_dataset = _PhysioExTrainDataset(dataset, train_indexes)
+    valid_dataset = _PhysioExEvalDataset(dataset, valid_subjects)
+    test_dataset = _PhysioExEvalDataset(dataset, test_subjects)
+
+    # create distalibuted samplers
+    if distributed:
+        train_sampler = DistributedSampler(train_dataset, shuffle=True)
+        valid_sampler = DistributedSampler(valid_dataset, shuffle=False)
+        test_sampler = DistributedSampler(test_dataset, shuffle=False)
+
+        train_loader = DataLoader(
+            train_dataset,
+            sampler=train_sampler,
+            batch_size=train_batch_size,
+            **dataloader_kwargs,
+        )
+        valid_loader = DataLoader(
+            valid_dataset,
+            sampler=valid_sampler,
+            batch_size=eval_batch_size,
+            **dataloader_kwargs,
+        )
+        test_loader = DataLoader(
+            test_dataset,
+            sampler=test_sampler,
+            batch_size=eval_batch_size,
+            **dataloader_kwargs,
+        )
+    else:
+        train_loader = DataLoader(
+            train_dataset,
+            shuffle=True,
+            batch_size=train_batch_size,
+            **dataloader_kwargs,
+        )
+        valid_loader = DataLoader(
+            valid_dataset,
+            shuffle=False,
+            batch_size=eval_batch_size,
+            **dataloader_kwargs,
+        )
+        test_loader = DataLoader(
+            test_dataset, shuffle=False, batch_size=eval_batch_size, **dataloader_kwargs
+        )
+
+    return train_loader, valid_loader, test_loader
