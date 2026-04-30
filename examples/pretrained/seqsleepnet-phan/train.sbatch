@@ -3,7 +3,7 @@
 #SBATCH --gres=gpu:nvidia_h200:1
 #SBATCH --nice=200
 #SBATCH --time=10:00:00
-#SBATCH --job-name=seqsleepnet-huy
+#SBATCH --job-name=seqsleepnet-phan
 #SBATCH --output=/sofia/scratch/pilot/pilot_2026_0012/logs/pretrained/%x_%j.out
 
 PROJECT=/sofia/scratch/pilot/pilot_2026_0012
@@ -24,7 +24,7 @@ export PHYSIOEX_CACHE_DIR="${PROJECT}/data/Guido/.cache/physioex"
 export HF_HUB_OFFLINE=1
 export CUBLAS_WORKSPACE_CONFIG=:4096:8
 
-OUTDIR="${PROJECT}/data/Guido/pretrained/seqsleepnet-huy"
+OUTDIR="${PROJECT}/data/Guido/pretrained/seqsleepnet-phan"
 mkdir -p "$OUTDIR"
 mkdir -p "${PROJECT}/logs/pretrained"
 

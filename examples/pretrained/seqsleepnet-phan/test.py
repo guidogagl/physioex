@@ -1,6 +1,6 @@
 """Evaluate a pretrained SeqSleepNet (Phan et al. 2019) from HuggingFace.
 
-Downloads the model via ``load_from_pretrained("seqsleepnet-huy")``,
+Downloads the model via ``load_from_pretrained("seqsleepnet-phan")``,
 evaluates on Sleep-EDF test set, and produces:
     - Console table with per-class and overall metrics
     - Confusion matrix plot (saved as PNG)
@@ -57,14 +57,14 @@ def main():
     parser.add_argument(
         "--gpu_id", type=int, default=None, help="GPU device id (None for CPU)"
     )
-    parser.add_argument("--output_dir", type=str, default="results/seqsleepnet-huy")
+    parser.add_argument("--output_dir", type=str, default="results/seqsleepnet-phan")
     args = parser.parse_args()
 
     os.makedirs(args.output_dir, exist_ok=True)
 
     # ── Load pretrained model ────────────────────────────────────────────
     print("Loading pretrained SeqSleepNet from HuggingFace...")
-    model = load_from_pretrained("seqsleepnet-huy")
+    model = load_from_pretrained("seqsleepnet-phan")
     print(f"Model loaded: {type(model).__name__}")
 
     # ── Dataset (same config as training) ────────────────────────────────

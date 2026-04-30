@@ -1,6 +1,6 @@
-"""Evaluate seqsleepnet-huy on all supported datasets.
+"""Evaluate seqsleepnet-phan on all supported datasets.
 
-Downloads the pretrained model via ``load_from_pretrained("seqsleepnet-huy")``,
+Downloads the pretrained model via ``load_from_pretrained("seqsleepnet-phan")``,
 then evaluates it on the test split of every available dataset using per-subject
 voting (sliding window L=20).  Datasets whose data is not found locally are
 skipped gracefully.
@@ -9,9 +9,9 @@ Results are saved to ``metrics.json`` (per-dataset format compatible with
 HuggingFace upload) and optionally uploaded with ``--upload``.
 
 Usage:
-    python examples/pretrained/seqsleepnet-huy/test_pretrained.py --gpu_id 0
-    python examples/pretrained/seqsleepnet-huy/test_pretrained.py --gpu_id 0 --datasets sleepedf hmc
-    python examples/pretrained/seqsleepnet-huy/test_pretrained.py --gpu_id 0 --upload
+    python examples/pretrained/seqsleepnet-phan/test_pretrained.py --gpu_id 0
+    python examples/pretrained/seqsleepnet-phan/test_pretrained.py --gpu_id 0 --datasets sleepedf hmc
+    python examples/pretrained/seqsleepnet-phan/test_pretrained.py --gpu_id 0 --upload
 """
 import argparse
 import json
@@ -27,7 +27,7 @@ from physioex.train.trainer import Trainer
 CHANNELS = ["EEG"]
 PIPELINE = "seqsleepnet"
 SEQ_LEN = 20
-MODEL_NAME = "seqsleepnet-huy"
+MODEL_NAME = "seqsleepnet-phan"
 SCALAR_METRICS = ["accuracy", "f1_score", "cohen_kappa", "precision", "recall"]
 
 
@@ -96,7 +96,7 @@ def print_summary_table(all_results):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Evaluate seqsleepnet-huy on all supported datasets"
+        description="Evaluate seqsleepnet-phan on all supported datasets"
     )
     parser.add_argument(
         "--gpu_id", type=int, default=None, help="GPU device id (None for CPU)"

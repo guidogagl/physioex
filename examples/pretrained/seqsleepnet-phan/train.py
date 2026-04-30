@@ -20,7 +20,7 @@ training set.  PhysioEx skips this step intentionally.
 After training, the script:
     1. Evaluates on the test set
     2. Saves model.pt (state_dict), config.json, and metrics.json locally
-    3. Uploads to HuggingFace Hub (4rooms/physioex/seqsleepnet-huy/)
+    3. Uploads to HuggingFace Hub (4rooms/physioex/seqsleepnet-phan/)
 
 Usage:
     python examples/pretrained/seqsleepnet/train.py [--gpu_id 0]
@@ -37,7 +37,7 @@ from physioex.train.trainer import Trainer
 
 # ── Paper configuration ──────────────────────────────────────────────────────
 
-MODEL_NAME = "seqsleepnet-huy"
+MODEL_NAME = "seqsleepnet-phan"
 HF_REPO_ID = "4rooms/physioex"
 
 MODEL_KWARGS = {
@@ -79,7 +79,7 @@ def main():
         "--upload", action="store_true", help="Upload to HuggingFace Hub"
     )
     parser.add_argument(
-        "--output_dir", type=str, default="pretrained_output/seqsleepnet-huy"
+        "--output_dir", type=str, default="pretrained_output/seqsleepnet-phan"
     )
     parser.add_argument(
         "--dataset_root",
