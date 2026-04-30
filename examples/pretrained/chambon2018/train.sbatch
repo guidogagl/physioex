@@ -31,4 +31,4 @@ cd "${GUIDO}/physioex"
 python examples/pretrained/chambon2018/train.py \
     --gpu_id 0 \
     --output_dir "$OUTDIR" \
-    --dataset_root "${PROJECT}/data/Guido/physionet-sleep-data"
+    --dataset_root "${PROJECT}/data/Guido/mass/MASS/Original"

@@ -6,21 +6,21 @@ Replicates the experiment from:
     IEEE TNSRE 2018 (arXiv:1707.03321).
 
 Configuration (from the paper):
-    - Dataset: MASS Session 3 (61 subjects), single EEG channel
-    - Temporal context: L epochs (paper explores k=0 to 5, optimal k=1 -> L=3)
-    - Preprocessing: bandpass 0.3-40 Hz, resample 100 Hz (raw waveforms)
-    - Optimizer: Adam, lr=1e-3
+    - Dataset: MASS Session 3 (62 subjects, 256Hz native, downsampled to 128Hz)
+    - Temporal context: k=1 (optimal) -> L=3 epochs (current +/- 1)
+    - Preprocessing: bandpass 0.3-40 Hz, resample to 128 Hz
+    - Optimizer: Adam, lr=1e-3, beta1=0.9, beta2=0.999, eps=1e-8
     - Batch size: 128
-    - Loss: CrossEntropyLoss (balanced sampling)
-    - Early stopping: patience 5
+    - Loss: CrossEntropyLoss (paper uses balanced sampling ~20% per stage)
+    - Early stopping: patience 5 on validation loss
     - Dropout: 0.25
+    - Weight init: Normal(0, 0.1) in paper; PyTorch default here
     - 5-fold cross-validation in paper; here single fold
 
-Note: the paper uses MASS-SS3 as primary dataset. If MASS data is not
-available, falls back to Sleep-EDF.
-
-IMPORTANT: This model outputs (B, 1, n_classes) — it predicts ONLY the
-central epoch of the sequence. The Trainer must handle this shape.
+Differences from the paper:
+    - Single fold split instead of 5-fold by subject
+    - No class-balanced sampling (paper uses ~20% per stage per batch)
+    - Default PyTorch weight init instead of Normal(0, 0.1)
 
 Usage:
     python examples/pretrained/chambon2018/train.py --gpu_id 0
@@ -41,15 +41,17 @@ HF_REPO_ID = "4rooms/physioex"
 MODEL_KWARGS = {
     "n_classes": 5,
     "in_channels": 1,
-    "sf": 100,
-    "n_times": 3000,
+    "sf": 128,
+    "n_times": 3840,  # 30s * 128Hz
     "dropout": 0.25,
 }
 
 TRAIN_CONFIG = {
-    "dataset": "sleepedf",
+    "dataset": "mass",
+    "dataset_kwargs": {"cohort": 3},
     "channels": ["EEG"],
     "pipeline_preset": "raw",
+    "pipeline_kwargs": {"target_fs": 128.0},
     "sequence_length": 3,
     "max_epochs": 100,
     "lr": 1e-3,
@@ -80,20 +82,28 @@ def main():
         "--dataset_root",
         type=str,
         default=None,
-        help="Root directory of dataset",
+        help="Root directory of MASS data",
     )
     args = parser.parse_args()
 
     os.makedirs(args.output_dir, exist_ok=True)
 
     # ── Dataset ──────────────────────────────────────────────────────────
+    # MASS Session 3, single EEG, resample to 128Hz (paper spec)
     # label_transform: keep only the central epoch label (index 1 of L=3)
+    from physioex.data.presets import get_preset
+
+    pipeline = get_preset(
+        TRAIN_CONFIG["pipeline_preset"], **TRAIN_CONFIG.get("pipeline_kwargs", {})
+    )
+
     DatasetClass = get_dataset(TRAIN_CONFIG["dataset"])
     ds_kwargs = dict(
         channels=TRAIN_CONFIG["channels"],
-        pipelines=TRAIN_CONFIG["pipeline_preset"],
+        pipelines=pipeline,
         sequence_length=TRAIN_CONFIG["sequence_length"],
         label_transform=lambda labels: labels[1:2],
+        **TRAIN_CONFIG.get("dataset_kwargs", {}),
     )
     if args.dataset_root:
         ds_kwargs["root"] = args.dataset_root
