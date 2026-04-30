@@ -90,11 +90,13 @@ def main():
 
     # ── Dataset ──────────────────────────────────────────────────────────
     # sequence_length=5: provides 5 consecutive epochs per sample
+    # label_transform: keep only the central (3rd) epoch label
     SleepEDF = get_dataset("sleepedf")
     ds_kwargs = dict(
         channels=TRAIN_CONFIG["channels"],
         pipelines=TRAIN_CONFIG["pipeline_preset"],
         sequence_length=TRAIN_CONFIG["sequence_length"],
+        label_transform=lambda labels: labels[2:3],
     )
     if args.dataset_root:
         ds_kwargs["root"] = args.dataset_root

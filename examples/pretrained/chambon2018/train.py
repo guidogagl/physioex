@@ -87,11 +87,13 @@ def main():
     os.makedirs(args.output_dir, exist_ok=True)
 
     # ── Dataset ──────────────────────────────────────────────────────────
+    # label_transform: keep only the central epoch label (index 1 of L=3)
     DatasetClass = get_dataset(TRAIN_CONFIG["dataset"])
     ds_kwargs = dict(
         channels=TRAIN_CONFIG["channels"],
         pipelines=TRAIN_CONFIG["pipeline_preset"],
         sequence_length=TRAIN_CONFIG["sequence_length"],
+        label_transform=lambda labels: labels[1:2],
     )
     if args.dataset_root:
         ds_kwargs["root"] = args.dataset_root
