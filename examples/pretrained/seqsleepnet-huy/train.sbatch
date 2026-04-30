@@ -2,7 +2,7 @@
 #SBATCH --partition=zen4_h200
 #SBATCH --gres=gpu:nvidia_h200:1
 #SBATCH --nice=200
-#SBATCH --time=12:00:00
+#SBATCH --time=10:00:00
 #SBATCH --job-name=seqsleepnet-huy
 #SBATCH --output=/sofia/scratch/pilot/pilot_2026_0012/logs/pretrained/%x_%j.out
 
