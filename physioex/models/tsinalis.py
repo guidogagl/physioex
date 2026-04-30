@@ -62,8 +62,7 @@ class TsinalisCNN(nn.Module):
         # C1: Long temporal filters (2 seconds = sfreq*2 samples)
         c1_kernel = sfreq * 2  # 200 for 100Hz
         self.conv1 = nn.Sequential(
-            nn.Conv1d(1, n_filters_c1, kernel_size=c1_kernel, stride=1, bias=False),
-            nn.BatchNorm1d(n_filters_c1),
+            nn.Conv1d(1, n_filters_c1, kernel_size=c1_kernel, stride=1),
             nn.ReLU(inplace=True),
         )
 
@@ -77,8 +76,7 @@ class TsinalisCNN(nn.Module):
         # C2: Cross-filter convolution (2D)
         c2_kernel = (n_filters_c1, 30)
         self.conv2 = nn.Sequential(
-            nn.Conv2d(1, n_filters_c2, kernel_size=c2_kernel, stride=1, bias=False),
-            nn.BatchNorm2d(n_filters_c2),
+            nn.Conv2d(1, n_filters_c2, kernel_size=c2_kernel, stride=1),
             nn.ReLU(inplace=True),
         )
 
