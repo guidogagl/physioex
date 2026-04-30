@@ -4,22 +4,21 @@ Replicates the experiment from:
     Tsinalis et al., "Automatic Sleep Stage Scoring with Single-Channel
     EEG Using Convolutional Neural Networks", arXiv:1610.01683.
 
-Configuration:
-    - Dataset: Sleep-EDF, 20 subjects, Fpz-Cz channel
-    - Input: 5 concatenated 30s epochs (15000 samples at 100Hz)
-    - Preprocessing: bandpass 0.3-40 Hz, resample 100 Hz (raw waveforms)
-    - Optimizer: SGD with class-balanced batches (paper spec)
-    - Loss: CrossEntropyLoss (ignore_index=-1)
-    - Evaluation: 20-fold cross-validation in paper; here single fold
+Configuration (from the paper):
+    - Dataset: Sleep-EDF Expanded (paper used 20-subject version)
+    - Input: 5 concatenated 30s epochs (15000 samples at 100Hz), Fpz-Cz
+    - Preprocessing: none (paper uses raw signal without preprocessing)
+    - Optimizer: SGD with L2 regularization
+    - Loss: softmax with L2 regularization (= CrossEntropyLoss + weight_decay)
+    - Evaluation: 20-fold leave-one-out in paper; here single fold
 
-Note: the paper does not report specific lr, batch size, or epoch count.
-We use lr=1e-3, batch_size=32, max_epochs=100, early_stopping=20 as
-reasonable defaults for SGD-trained CNNs on sleep staging data.
-
-IMPORTANT: This model classifies the CENTRAL epoch from a 5-epoch window.
-The dataset must provide 5 concatenated epochs as input and the label of
-the central (3rd) epoch as target.  The model itself handles single-epoch
-output — the Trainer's loss will be computed on this single prediction.
+Differences from the paper:
+    - Sleep-EDF Expanded (78 subjects) instead of original 20 subjects
+    - Pipeline "identity" (no filtering) instead of per-paper raw signal
+      (Sleep-EDF is already at 100Hz, no resampling needed)
+    - Single fold split instead of 20-fold leave-one-subject-out
+    - No class-balanced sampling (paper uses balanced batches per SGD epoch)
+    - lr, batch_size, epochs not reported in paper; we use reasonable defaults
 
 Usage:
     python examples/pretrained/tsinalis-2016/train.py --gpu_id 0
@@ -39,7 +38,6 @@ HF_REPO_ID = "4rooms/physioex"
 
 MODEL_KWARGS = {
     "n_classes": 5,
-    "n_times": 15000,
     "sfreq": 100,
     "n_filters_c1": 20,
     "n_filters_c2": 400,
@@ -50,7 +48,7 @@ MODEL_KWARGS = {
 TRAIN_CONFIG = {
     "dataset": "sleepedf",
     "channels": ["EEG"],
-    "pipeline_preset": "raw",
+    "pipeline_preset": "identity",
     "sequence_length": 5,
     "max_epochs": 100,
     "lr": 1e-3,
