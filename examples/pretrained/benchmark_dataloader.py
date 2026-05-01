@@ -36,6 +36,10 @@ CONFIGS = [
     {"num_workers": 4, "pin_memory": True, "prefetch_factor": 4},
     {"num_workers": 8, "pin_memory": True, "prefetch_factor": 2},
     {"num_workers": 8, "pin_memory": True, "prefetch_factor": 4},
+    {"num_workers": 12, "pin_memory": True, "prefetch_factor": 2},
+    {"num_workers": 16, "pin_memory": True, "prefetch_factor": 2},
+    {"num_workers": 24, "pin_memory": True, "prefetch_factor": 2},
+    {"num_workers": 32, "pin_memory": True, "prefetch_factor": 2},
 ]
 
 
