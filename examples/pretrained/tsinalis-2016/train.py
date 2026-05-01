@@ -132,7 +132,15 @@ def main():
     # TsinalisCNN outputs (B, 1, n_classes), not (B, L, n_classes),
     # so the voting eval step (which expects seq-to-seq output) is
     # replaced with the standard eval step.
-    Trainer._voting_eval_step = Trainer._eval_step
+    # Wrap _eval_step to accept (and ignore) the L keyword argument
+    _orig_eval_step = Trainer._eval_step.__func__
+
+    @classmethod
+    @torch.no_grad()
+    def _central_eval_step(cls, model, batch, loss_fn, device, L=None):
+        return _orig_eval_step(cls, model, batch, loss_fn, device)
+
+    Trainer._voting_eval_step = _central_eval_step
 
     # ── Model ────────────────────────────────────────────────────────────
     model = TsinalisCNN(**MODEL_KWARGS)
