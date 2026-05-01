@@ -955,10 +955,10 @@ class BasePhysioDataset(Dataset):
             epoch_end,
             fill_value=-1,
         )
-        if self.label_transform is not None:
-            labels_slice = self.label_transform(labels_slice)
-        # Re-sanitize after any user-provided transform (cheap) to enforce
-        # the AASM contract at the tensor boundary.
+        # Sanitize labels before cross-channel normalization.
+        # label_transform is applied AFTER normalization (see below)
+        # so it can safely reduce the label dimension without being
+        # re-padded by the cross-channel length alignment step.
         labels_slice = self._sanitize_labels(np.asarray(labels_slice, dtype=np.int16))
         labels_tensor = torch.from_numpy(np.asarray(labels_slice, dtype=np.int64))
 
@@ -1072,6 +1072,13 @@ class BasePhysioDataset(Dataset):
             labels_tensor = torch.cat([labels_tensor, pad_lbl])
         elif labels_tensor.shape[0] > max_len:
             labels_tensor = labels_tensor[:max_len]
+
+        # Apply label_transform AFTER cross-channel normalization so it
+        # can reduce the label dimension (e.g. extract central epoch)
+        # without being undone by the padding step above.
+        if self.label_transform is not None:
+            labels_np = self.label_transform(labels_tensor.numpy())
+            labels_tensor = torch.from_numpy(np.asarray(labels_np, dtype=np.int64))
 
         subject_meta = {
             "id": spec.subject_id,
