@@ -26,6 +26,6 @@ export CUBLAS_WORKSPACE_CONFIG=:4096:8
 
 cd "${GUIDO}/physioex"
 
-python examples/pretrained/seqsleepnet/test_pretrained.py \
+python examples/pretrained/seqsleepnet-phan/test_pretrained.py \
     --gpu_id 0 \
     --dataset_root "${PROJECT}/data/Guido/physionet-sleep-data"

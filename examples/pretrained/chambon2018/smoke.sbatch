@@ -32,4 +32,4 @@ python examples/pretrained/chambon2018/train.py \
     --gpu_id 0 \
     --max_epochs 1 \
     --output_dir "$OUTDIR" \
-    --dataset_root "${PROJECT}/data/Guido/physionet-sleep-data"
+    --dataset_root "${PROJECT}/data/Guido/mass/MASS/Original"
