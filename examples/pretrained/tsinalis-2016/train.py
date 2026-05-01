@@ -118,6 +118,12 @@ def main():
     if args.early_stopping_patience is not None:
         TRAIN_CONFIG["early_stopping_patience"] = args.early_stopping_patience
 
+    # ── Central-epoch model: disable voting during training validation ──
+    # TsinalisCNN outputs (B, 1, n_classes), not (B, L, n_classes),
+    # so the voting eval step (which expects seq-to-seq output) is
+    # replaced with the standard eval step.
+    Trainer._voting_eval_step = Trainer._eval_step
+
     # ── Model ────────────────────────────────────────────────────────────
     model = TsinalisCNN(**MODEL_KWARGS)
 

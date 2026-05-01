@@ -32,4 +32,4 @@ python examples/pretrained/lseqsleepnet-phan/train.py \
     --gpu_id 0 \
     --max_epochs 1 \
     --output_dir "$OUTDIR" \
-    --dataset_root "${PROJECT}/data/Guido/physionet-sleep-data"
+    --dataset_root "${PROJECT}/data/Guido/shhs"
