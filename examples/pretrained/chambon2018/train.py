@@ -84,6 +84,18 @@ def main():
         default=None,
         help="Root directory of MASS data",
     )
+    parser.add_argument(
+        "--max_epochs",
+        type=int,
+        default=None,
+        help="Override max training epochs (for smoke tests)",
+    )
+    parser.add_argument(
+        "--early_stopping_patience",
+        type=int,
+        default=None,
+        help="Override early stopping patience",
+    )
     args = parser.parse_args()
 
     os.makedirs(args.output_dir, exist_ok=True)
@@ -108,6 +120,12 @@ def main():
     if args.dataset_root:
         ds_kwargs["root"] = args.dataset_root
     dataset = DatasetClass(**ds_kwargs)
+
+    # ── CLI overrides ────────────────────────────────────────────
+    if args.max_epochs is not None:
+        TRAIN_CONFIG["max_epochs"] = args.max_epochs
+    if args.early_stopping_patience is not None:
+        TRAIN_CONFIG["early_stopping_patience"] = args.early_stopping_patience
 
     # ── Model ────────────────────────────────────────────────────────────
     model = Chambon2018Net(**MODEL_KWARGS)
