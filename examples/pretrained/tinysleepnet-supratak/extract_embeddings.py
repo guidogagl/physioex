@@ -26,6 +26,9 @@ def main():
     parser.add_argument("--gpu_id", type=int, default=0)
     parser.add_argument("--datasets", nargs="+", default=None)
     parser.add_argument("--overwrite", action="store_true")
+    parser.add_argument(
+        "--upload", action="store_true", help="Upload to HuggingFace Hub"
+    )
     args = parser.parse_args()
 
     device = f"cuda:{args.gpu_id}" if args.gpu_id is not None else "cpu"
@@ -62,6 +65,7 @@ def main():
             L=SEQ_LEN,
             device=device,
             overwrite=args.overwrite,
+            upload=args.upload,
         )
         print(f"  Saved to {path}")
 
