@@ -140,13 +140,20 @@ class SeqSleepNet(nn.Module):
 
         self.clf = nn.Linear(2 * seqnhidden2, n_classes)
 
-    def forward(self, x):
+    def encode(self, x):
+        """Encode input spectrograms to contextualized per-epoch embeddings.
 
+        Args:
+            x: (B, L, C, T, F) spectrogram input.
+
+        Returns:
+            (B, L, 2*seqnhidden2) contextualized epoch embeddings.
+        """
         batch_size, L, in_chans, T, F = x.size()
 
         x = x.reshape(batch_size * L, in_chans, T, F)
         x = self.filterbank(x)
-        x = x.permute(0, 2, 1, 3)  # shape ( batch_size*L, T, in_chans, D )
+        x = x.permute(0, 2, 1, 3)
         x = x.reshape(batch_size * L, T, -1)
 
         x, _ = self.seqn1(x)
@@ -156,6 +163,13 @@ class SeqSleepNet(nn.Module):
 
         x, _ = self.seqn2(x)
 
+        return x  # (B, L, 2*seqnhidden2)
+
+    def forward(self, x):
+
+        x = self.encode(x)  # (B, L, 2*seqnhidden2)
+
+        batch_size, L, _ = x.size()
         x = x.reshape(batch_size * L, -1)
         x = self.clf(x)
 
