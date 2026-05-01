@@ -85,6 +85,12 @@ def main():
         help="Root directory of MASS data",
     )
     parser.add_argument(
+        "--dataset",
+        type=str,
+        default=None,
+        help="Override dataset name (for smoke tests on different data)",
+    )
+    parser.add_argument(
         "--max_epochs",
         type=int,
         default=None,
@@ -99,6 +105,16 @@ def main():
     args = parser.parse_args()
 
     os.makedirs(args.output_dir, exist_ok=True)
+
+    # ── CLI overrides ────────────────────────────────────────────
+    if args.dataset is not None:
+        TRAIN_CONFIG["dataset"] = args.dataset
+        # Clear dataset_kwargs when overriding dataset
+        TRAIN_CONFIG.pop("dataset_kwargs", None)
+    if args.max_epochs is not None:
+        TRAIN_CONFIG["max_epochs"] = args.max_epochs
+    if args.early_stopping_patience is not None:
+        TRAIN_CONFIG["early_stopping_patience"] = args.early_stopping_patience
 
     # ── Dataset ──────────────────────────────────────────────────────────
     # MASS Session 3, single EEG, resample to 128Hz (paper spec)
@@ -120,12 +136,6 @@ def main():
     if args.dataset_root:
         ds_kwargs["root"] = args.dataset_root
     dataset = DatasetClass(**ds_kwargs)
-
-    # ── CLI overrides ────────────────────────────────────────────
-    if args.max_epochs is not None:
-        TRAIN_CONFIG["max_epochs"] = args.max_epochs
-    if args.early_stopping_patience is not None:
-        TRAIN_CONFIG["early_stopping_patience"] = args.early_stopping_patience
 
     # ── Central-epoch model: disable voting during training validation ──
     # Chambon2018Net outputs (B, 1, n_classes), not (B, L, n_classes),

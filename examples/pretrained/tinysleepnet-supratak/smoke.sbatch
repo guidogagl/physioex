@@ -32,4 +32,5 @@ python examples/pretrained/tinysleepnet-supratak/train.py \
     --gpu_id 0 \
     --max_epochs 1 \
     --output_dir "$OUTDIR" \
+    --dataset sleepedf \
     --dataset_root "${PROJECT}/data/Guido/physionet-sleep-data"
