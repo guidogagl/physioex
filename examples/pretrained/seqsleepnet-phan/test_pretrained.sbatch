@@ -22,6 +22,7 @@ source "${GUIDO}/physioex-env/bin/activate"
 
 export PHYSIOEX_CACHE_DIR="${PROJECT}/data/Guido/.cache/physioex"
 export CUBLAS_WORKSPACE_CONFIG=:4096:8
+export PYTHONUNBUFFERED=1
 # Note: NOT setting HF_HUB_OFFLINE — login node pre-downloads the model
 
 cd "${GUIDO}/physioex"
