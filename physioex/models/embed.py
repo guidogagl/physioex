@@ -192,19 +192,23 @@ def extract_embeddings(
             continue
 
         # Load full recording for this subject
-        spec = next(s for s in dataset._subjects if s.subject_id == subject_id)
-        n_epochs = dataset._n_epochs[subject_id]
-        item = dataset._build_item(spec, 0, n_epochs)
+        try:
+            spec = next(s for s in dataset._subjects if s.subject_id == subject_id)
+            n_epochs = dataset._n_epochs[subject_id]
+            item = dataset._build_item(spec, 0, n_epochs)
 
-        # Stack channels: (n_epochs, C, ...)
-        ch_tensors = [item["signals"][ch] for ch in item["channel_order"]]
-        signals = torch.stack(ch_tensors, dim=1)  # (n_epochs, C, ...)
-        signals = signals.unsqueeze(0)  # (1, n_epochs, C, ...)
+            # Stack channels: (n_epochs, C, ...)
+            ch_tensors = [item["signals"][ch] for ch in item["channel_order"]]
+            signals = torch.stack(ch_tensors, dim=1)  # (n_epochs, C, ...)
+            signals = signals.unsqueeze(0)  # (1, n_epochs, C, ...)
 
-        labels = item["labels"].numpy()
+            labels = item["labels"].numpy()
 
-        # Extract embeddings
-        embeddings = _extract_subject_sliding(model, signals, L, dev)
+            # Extract embeddings
+            embeddings = _extract_subject_sliding(model, signals, L, dev)
+        except Exception as e:
+            print(f"  [SKIP] {subject_id}: {e}")
+            continue
 
         if embedding_dim is None:
             embedding_dim = embeddings.shape[1]
