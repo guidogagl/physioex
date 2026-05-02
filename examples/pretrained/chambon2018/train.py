@@ -178,7 +178,7 @@ def main():
         loader_kwargs["prefetch_factor"] = 2
 
     train_loader = DataLoader(
-        Subset(dataset, train_idx.tolist()), shuffle=True, **loader_kwargs
+        Subset(dataset, train_idx), shuffle=True, **loader_kwargs
     )
     valid_loader = DataLoader(
         Subset(dataset, valid_idx), shuffle=False, **loader_kwargs
