@@ -351,6 +351,21 @@ def load_embeddings(
 SLEEP_CLASS_NAMES = ["W", "N1", "N2", "N3", "REM"]
 
 
+def _load_npy_as_float32(npy_path: Path) -> np.ndarray:
+    """Load a .npy file as float32, handling bfloat16 (|V2) transparently."""
+    arr = np.load(str(npy_path))
+    if arr.dtype == np.float32 or arr.dtype == np.float64:
+        return arr.astype(np.float32)
+    if arr.dtype == np.int16 or arr.dtype == np.int64:
+        return arr
+    # bfloat16 stored as void (|V2): convert via raw bytes → torch → numpy
+    if arr.dtype.kind == "V" and arr.dtype.itemsize == 2:
+        flat = torch.frombuffer(arr.tobytes(), dtype=torch.bfloat16)
+        return flat.float().numpy().reshape(arr.shape)
+    # Fallback: try direct cast
+    return arr.astype(np.float32)
+
+
 def linear_probe(
     model_name: str,
     dataset_name: str,
@@ -423,7 +438,7 @@ def linear_probe(
             subjects.append(
                 {
                     "id": subj_dir.name,
-                    "embeddings": np.load(str(emb_path)).astype(np.float32),
+                    "embeddings": _load_npy_as_float32(emb_path),
                     "labels": np.load(str(lbl_path)).astype(np.int64),
                 }
             )
