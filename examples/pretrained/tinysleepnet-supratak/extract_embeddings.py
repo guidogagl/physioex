@@ -2,11 +2,14 @@
 
 Loads the pretrained model from HuggingFace, then extracts per-epoch
 embeddings for every subject in the specified dataset(s) using
-sliding-window encoding.  Results are cached to disk.
+sliding-window encoding.  Results are cached to disk.  After extraction,
+runs a 5-fold linear probe and saves results.
 
 Usage:
     python examples/pretrained/tinysleepnet-supratak/extract_embeddings.py --gpu_id 0
     python examples/pretrained/tinysleepnet-supratak/extract_embeddings.py --gpu_id 0 --datasets sleepedf hmc
+    python examples/pretrained/tinysleepnet-supratak/extract_embeddings.py --gpu_id 0 --datasets shhs --visit 1 --dataset_root /data/shhs
+    python examples/pretrained/tinysleepnet-supratak/extract_embeddings.py --gpu_id 0 --datasets stages --site BOGN --dataset_root /data/stages
 """
 import argparse
 
@@ -29,6 +32,14 @@ def main():
     parser.add_argument(
         "--upload", action="store_true", help="Upload to HuggingFace Hub"
     )
+    parser.add_argument("--dataset_root", type=str, default=None,
+                        help="Override dataset root directory")
+    parser.add_argument("--visit", type=int, default=None,
+                        help="SHHS visit number (1 or 2)")
+    parser.add_argument("--site", type=str, default=None,
+                        help="STAGES site code (e.g. BOGN, GSBB)")
+    parser.add_argument("--subset", type=str, default=None,
+                        help="HPAP subset (lab-full, lab-split, home)")
     args = parser.parse_args()
 
     device = f"cuda:{args.gpu_id}" if args.gpu_id is not None else "cpu"
@@ -44,11 +55,20 @@ def main():
         print(f"\nExtracting embeddings on {ds_name}...")
         try:
             DatasetClass = get_dataset(ds_name)
-            dataset = DatasetClass(
+            ds_kwargs = dict(
                 channels=CHANNELS,
                 pipelines=PIPELINE,
                 sequence_length=SEQ_LEN,
             )
+            if args.dataset_root:
+                ds_kwargs["root"] = args.dataset_root
+            if args.visit is not None:
+                ds_kwargs["visit"] = args.visit
+            if args.site is not None:
+                ds_kwargs["site"] = args.site
+            if args.subset is not None:
+                ds_kwargs["subset"] = args.subset
+            dataset = DatasetClass(**ds_kwargs)
         except Exception as e:
             print(f"  [SKIP] {ds_name}: {e}")
             continue
@@ -57,11 +77,13 @@ def main():
             print(f"  [SKIP] {ds_name}: no subjects")
             continue
 
+        cache_name = dataset.DATASET_NAME
+
         path = extract_embeddings(
             model=model,
             dataset=dataset,
             model_name=MODEL_NAME,
-            dataset_name=ds_name,
+            dataset_name=cache_name,
             L=SEQ_LEN,
             device=device,
             overwrite=args.overwrite,
@@ -70,7 +92,7 @@ def main():
 
         linear_probe(
             model_name=MODEL_NAME,
-            dataset_name=ds_name,
+            dataset_name=cache_name,
             device=device,
             upload=args.upload,
         )
