@@ -46,6 +46,8 @@ class PhysioExTrainProgressBar:
         self.step_time_ms = step_time_ms
         self.steps_per_epoch = steps_per_epoch
         self.num_epochs = num_epochs
+        self._current_epoch = 0
+        self._current_step = 0
 
         self.live = None
         self.eval_progress = (
@@ -64,6 +66,7 @@ class PhysioExTrainProgressBar:
             self.devices = [Device.all()[device_id]]
 
         self.console = Console()
+        self._is_tty = self.console.is_terminal
 
         self.progress = Progress(
             SpinnerColumn(),
@@ -102,6 +105,8 @@ class PhysioExTrainProgressBar:
         steps_per_epoch = (
             steps_per_epoch if steps_per_epoch is not None else self.steps_per_epoch
         )
+        self._current_epoch = epoch
+        self._current_step = 0
         self.progress.reset(
             self.task, total=steps_per_epoch, epoch=epoch, max_epoch=self.num_epochs
         )
@@ -110,8 +115,23 @@ class PhysioExTrainProgressBar:
         self.step_loss = step_loss
         self.step_acc = step_acc
         self.step_time_ms = step_time_ms
+        self._current_step += 1
         self.progress.advance(self.task, 1)
-        self._update_live()
+        if self._is_tty:
+            self._update_live()
+        else:
+            # Non-TTY: print a summary line every 10% of the epoch
+            interval = max(1, self.steps_per_epoch // 10)
+            if self._current_step % interval == 0 or self._current_step == self.steps_per_epoch:
+                pct = 100.0 * self._current_step / self.steps_per_epoch
+                print(
+                    f"[Train] Epoch {self._current_epoch}/{self.num_epochs}  "
+                    f"Step {self._current_step}/{self.steps_per_epoch} ({pct:.0f}%)  "
+                    f"loss={self.step_loss:.4f}  acc={self.step_acc:.4f}  "
+                    f"step_time={self.step_time_ms:.1f}ms  "
+                    f"best_val_loss={self.best_val_loss:.4f}  best_val_acc={self.best_val_acc:.2%}",
+                    flush=True,
+                )
 
     def begin_eval(self, steps_per_eval: int):
         # create eval progress (no Live inside) and show it under train
@@ -120,7 +140,14 @@ class PhysioExTrainProgressBar:
         self._update_live()
 
     def end_eval(self):
-        # hide eval section
+        # Non-TTY: print a summary at end of eval
+        if not self._is_tty and self.eval_progress is not None:
+            ep = self.eval_progress
+            print(
+                f"[Eval]  Epoch {self._current_epoch}/{self.num_epochs}  "
+                f"val_loss={ep.step_loss:.4f}  val_acc={ep.step_acc:.4f}",
+                flush=True,
+            )
         self.show_eval = False
         self.eval_progress = None
         self._update_live()
@@ -160,6 +187,8 @@ class PhysioExTrainProgressBar:
         return Group(*renderables)
 
     def _start_live(self, refresh_per_second: int = 10):
+        if not self._is_tty:
+            return
         if self.live is None:
             self.live = Live(
                 self._render_header(),
@@ -170,12 +199,15 @@ class PhysioExTrainProgressBar:
         self.live.start()
 
     def _stop_live(self):
+        if not self._is_tty:
+            return
         assert self.live is not None, "Live not started."
         self.live.stop()
         self.live = None
 
     def _update_live(self):
-        assert self.live is not None, "Live not started."
+        if not self._is_tty or self.live is None:
+            return
         self.live.update(self._render_header())
 
 

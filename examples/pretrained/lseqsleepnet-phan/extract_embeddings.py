@@ -11,7 +11,7 @@ Usage:
 import argparse
 
 from physioex.data.datasets import available_datasets, get_dataset
-from physioex.models import extract_embeddings, load_from_pretrained
+from physioex.models import extract_embeddings, linear_probe, load_from_pretrained
 
 MODEL_NAME = "lseqsleepnet-phan"
 CHANNELS = ["EEG"]
@@ -65,9 +65,15 @@ def main():
             L=SEQ_LEN,
             device=device,
             overwrite=args.overwrite,
-            upload=args.upload,
         )
         print(f"  Saved to {path}")
+
+        linear_probe(
+            model_name=MODEL_NAME,
+            dataset_name=ds_name,
+            device=device,
+            upload=args.upload,
+        )
 
 
 if __name__ == "__main__":

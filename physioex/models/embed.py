@@ -11,6 +11,7 @@ Cache layout::
 
     {cache_root}/embeddings/{model_name}/{dataset_name}/
         metadata.json
+        linear_probe_results.json
         {subject_id}/
             embeddings.npy       (n_epochs, D)
             embeddings.meta.json
@@ -19,6 +20,7 @@ Cache layout::
 
 HuggingFace repo: ``4rooms/physioex-embeddings`` mirrors the same structure.
 ``load_embeddings()`` downloads from HF automatically if not in local cache.
+``linear_probe()`` evaluates embedding quality via 5-fold subject-wise CV.
 """
 from __future__ import annotations
 
@@ -116,35 +118,21 @@ def _upload_to_hf(out_dir: Path, model_name: str, dataset_name: str) -> None:
     api = HfApi()
     prefix = f"{model_name}/{dataset_name}"
 
-    # Upload metadata.json
-    meta_path = out_dir / "metadata.json"
-    if meta_path.exists():
-        api.upload_file(
-            path_or_fileobj=str(meta_path),
-            path_in_repo=f"{prefix}/metadata.json",
-            repo_id=HF_EMBEDDINGS_REPO,
-            repo_type="model",
-        )
+    # Ensure repo exists
+    api.create_repo(
+        repo_id=HF_EMBEDDINGS_REPO,
+        repo_type="model",
+        exist_ok=True,
+    )
 
-    # Upload per-subject files
-    for subj_dir in sorted(out_dir.iterdir()):
-        if not subj_dir.is_dir():
-            continue
-        subject_id = subj_dir.name
-        for fname in [
-            "embeddings.npy",
-            "embeddings.meta.json",
-            "labels.npy",
-            "labels.meta.json",
-        ]:
-            fpath = subj_dir / fname
-            if fpath.exists():
-                api.upload_file(
-                    path_or_fileobj=str(fpath),
-                    path_in_repo=f"{prefix}/{subject_id}/{fname}",
-                    repo_id=HF_EMBEDDINGS_REPO,
-                    repo_type="model",
-                )
+    # Upload entire directory in a single commit
+    api.upload_folder(
+        folder_path=str(out_dir),
+        path_in_repo=prefix,
+        repo_id=HF_EMBEDDINGS_REPO,
+        repo_type="model",
+        commit_message=f"Upload {model_name}/{dataset_name} embeddings",
+    )
 
     print(f"Uploaded embeddings to {HF_EMBEDDINGS_REPO}/{prefix}/")
 
@@ -354,3 +342,309 @@ def load_embeddings(
     )
 
     return out_dir
+
+
+# ---------------------------------------------------------------------------
+# Linear probing
+# ---------------------------------------------------------------------------
+
+SLEEP_CLASS_NAMES = ["W", "N1", "N2", "N3", "REM"]
+
+
+def linear_probe(
+    model_name: str,
+    dataset_name: str,
+    n_folds: int = 5,
+    max_epochs: int = 100,
+    lr: float = 1e-3,
+    weight_decay: float = 1e-4,
+    batch_size: int = 512,
+    device: str = "cpu",
+    upload: bool = False,
+    cache_dir: Optional[str] = None,
+) -> dict:
+    """5-fold subject-wise cross-validated linear probe on cached embeddings.
+
+    Loads per-subject embeddings and labels from the local cache, splits
+    subjects into *n_folds* folds, trains a ``nn.Linear`` classifier per
+    fold, and reports pooled and per-fold metrics.
+
+    Metrics reported (standard in sleep staging literature):
+
+    * **Accuracy (ACC)** — overall classification accuracy.
+    * **Macro F1 (MF1)** — unweighted mean of per-class F1; handles class
+      imbalance.
+    * **Cohen's Kappa (κ)** — chance-corrected agreement; the standard
+      metric in sleep medicine.
+    * **Per-class F1** — shows per-stage performance (N1 is typically
+      the hardest).
+
+    Results are saved to ``linear_probe_results.json`` in the embeddings
+    cache directory.  If *upload* is True, the entire directory (embeddings
+    + results) is uploaded to HuggingFace Hub.
+
+    Args:
+        model_name: Model identifier matching cache directory.
+        dataset_name: Dataset identifier matching cache directory.
+        n_folds: Number of cross-validation folds (default 5).
+        max_epochs: Training epochs per fold (default 100).
+        lr: Learning rate (default 1e-3).
+        weight_decay: L2 regularization (default 1e-4).
+        batch_size: Training batch size (default 512).
+        device: Device string (``"cpu"`` or ``"cuda:0"``).
+        upload: If True, upload results to HuggingFace Hub.
+        cache_dir: Override cache root directory.
+
+    Returns:
+        Results dict with ``per_fold``, ``pooled``, and ``mean_std`` keys.
+    """
+    from physioex.train.metrics import (
+        accuracy_score as _accuracy_score,
+        f1_score as _f1_score,
+        cohen_kappa_score as _cohen_kappa_score,
+        confusion_matrix as _confusion_matrix,
+        _per_class_f1,
+    )
+
+    emb_dir = _cache_root(cache_dir) / model_name / dataset_name
+    if not emb_dir.exists():
+        raise FileNotFoundError(f"No embeddings found at {emb_dir}")
+
+    # ------------------------------------------------------------------
+    # 1. Load all subject embeddings & labels
+    # ------------------------------------------------------------------
+    subjects = []
+    for subj_dir in sorted(emb_dir.iterdir()):
+        if not subj_dir.is_dir():
+            continue
+        emb_path = subj_dir / "embeddings.npy"
+        lbl_path = subj_dir / "labels.npy"
+        if emb_path.exists() and lbl_path.exists():
+            subjects.append(
+                {
+                    "id": subj_dir.name,
+                    "embeddings": np.load(str(emb_path)).astype(np.float32),
+                    "labels": np.load(str(lbl_path)).astype(np.int64),
+                }
+            )
+
+    if not subjects:
+        raise ValueError(f"No subject data found in {emb_dir}")
+
+    all_labels = np.concatenate([s["labels"] for s in subjects])
+    valid_labels = all_labels[all_labels >= 0]
+    n_classes = int(valid_labels.max()) + 1
+    class_names = (
+        SLEEP_CLASS_NAMES if n_classes == 5 else [str(i) for i in range(n_classes)]
+    )
+
+    # ------------------------------------------------------------------
+    # 2. Create deterministic fold assignments
+    # ------------------------------------------------------------------
+    n_subjects = len(subjects)
+    rng = np.random.RandomState(42)
+    indices = np.arange(n_subjects)
+    rng.shuffle(indices)
+    folds = np.array_split(indices, n_folds)
+
+    dev = torch.device(device)
+
+    per_fold = []
+    all_logits_list = []
+    all_targets_list = []
+
+    print(
+        f"\nLinear probe: {n_subjects} subjects, {n_folds}-fold CV, "
+        f"{n_classes} classes ({', '.join(class_names)})"
+    )
+
+    # ------------------------------------------------------------------
+    # 3. Train & evaluate per fold
+    # ------------------------------------------------------------------
+    for fold_idx in range(n_folds):
+        test_set = set(folds[fold_idx].tolist())
+        train_idx = [i for i in range(n_subjects) if i not in test_set]
+        test_idx = folds[fold_idx].tolist()
+
+        # Concatenate per-subject arrays
+        train_embs = np.concatenate([subjects[i]["embeddings"] for i in train_idx])
+        train_lbls = np.concatenate([subjects[i]["labels"] for i in train_idx])
+        test_embs = np.concatenate([subjects[i]["embeddings"] for i in test_idx])
+        test_lbls = np.concatenate([subjects[i]["labels"] for i in test_idx])
+
+        # Drop unscored epochs (label == -1)
+        train_mask = train_lbls >= 0
+        test_mask = test_lbls >= 0
+        train_embs, train_lbls = train_embs[train_mask], train_lbls[train_mask]
+        test_embs, test_lbls = test_embs[test_mask], test_lbls[test_mask]
+
+        X_train = torch.from_numpy(train_embs)
+        y_train = torch.from_numpy(train_lbls)
+        X_test = torch.from_numpy(test_embs)
+        y_test = torch.from_numpy(test_lbls)
+
+        # Linear classifier
+        D = X_train.shape[1]
+        probe_model = torch.nn.Linear(D, n_classes).to(dev)
+        optimizer = torch.optim.Adam(
+            probe_model.parameters(), lr=lr, weight_decay=weight_decay
+        )
+        loss_fn = torch.nn.CrossEntropyLoss()
+
+        train_loader = torch.utils.data.DataLoader(
+            torch.utils.data.TensorDataset(X_train, y_train),
+            batch_size=batch_size,
+            shuffle=True,
+            drop_last=False,
+        )
+
+        # --- Train ---
+        probe_model.train()
+        for _epoch in range(max_epochs):
+            for xb, yb in train_loader:
+                xb, yb = xb.to(dev), yb.to(dev)
+                loss = loss_fn(probe_model(xb), yb)
+                loss.backward()
+                optimizer.step()
+                optimizer.zero_grad()
+
+        # --- Evaluate ---
+        probe_model.eval()
+        test_logits_chunks = []
+        with torch.no_grad():
+            for i in range(0, len(X_test), batch_size):
+                chunk = X_test[i : i + batch_size].to(dev)
+                test_logits_chunks.append(probe_model(chunk).cpu())
+        test_logits = torch.cat(test_logits_chunks, dim=0)
+
+        # Metrics (functions expect logits and do argmax internally)
+        acc = _accuracy_score(test_logits, y_test, ignore_index=None)
+        mf1 = _f1_score(test_logits, y_test, ignore_index=None)
+        kappa = _cohen_kappa_score(test_logits, y_test, ignore_index=None)
+        cm = _confusion_matrix(test_logits, y_test, ignore_index=None)
+
+        preds = test_logits.argmax(dim=-1)
+        pcf1, support = _per_class_f1(preds, y_test, n_classes)
+
+        fold_result = {
+            "fold": fold_idx,
+            "accuracy": round(acc, 4),
+            "macro_f1": round(mf1, 4),
+            "kappa": round(kappa, 4),
+            "per_class_f1": {
+                name: round(pcf1[i], 4) for i, name in enumerate(class_names)
+            },
+            "support": {
+                name: int(support[i]) for i, name in enumerate(class_names)
+            },
+            "n_train_subjects": len(train_idx),
+            "n_test_subjects": len(test_idx),
+            "n_train_epochs": int(train_mask.sum()),
+            "n_test_epochs": int(test_mask.sum()),
+            "confusion_matrix": cm.tolist(),
+        }
+        per_fold.append(fold_result)
+        all_logits_list.append(test_logits)
+        all_targets_list.append(y_test)
+
+        pcf1_str = "  ".join(
+            f"{name}={pcf1[i]:.2f}" for i, name in enumerate(class_names)
+        )
+        print(
+            f"  Fold {fold_idx}: ACC={acc:.4f}  MF1={mf1:.4f}  "
+            f"\u03ba={kappa:.4f}  [{pcf1_str}]"
+        )
+
+    # ------------------------------------------------------------------
+    # 4. Pooled metrics (all folds concatenated)
+    # ------------------------------------------------------------------
+    all_logits = torch.cat(all_logits_list)
+    all_targets = torch.cat(all_targets_list)
+
+    pooled_acc = _accuracy_score(all_logits, all_targets, ignore_index=None)
+    pooled_mf1 = _f1_score(all_logits, all_targets, ignore_index=None)
+    pooled_kappa = _cohen_kappa_score(all_logits, all_targets, ignore_index=None)
+    pooled_cm = _confusion_matrix(all_logits, all_targets, ignore_index=None)
+    pooled_preds = all_logits.argmax(dim=-1)
+    pooled_pcf1, pooled_support = _per_class_f1(
+        pooled_preds, all_targets, n_classes
+    )
+
+    # Mean +/- std across folds
+    fold_accs = [f["accuracy"] for f in per_fold]
+    fold_mf1s = [f["macro_f1"] for f in per_fold]
+    fold_kappas = [f["kappa"] for f in per_fold]
+
+    results = {
+        "model_name": model_name,
+        "dataset_name": dataset_name,
+        "n_folds": n_folds,
+        "n_classes": n_classes,
+        "class_names": class_names,
+        "n_subjects": n_subjects,
+        "probe_config": {
+            "max_epochs": max_epochs,
+            "lr": lr,
+            "weight_decay": weight_decay,
+            "batch_size": batch_size,
+        },
+        "per_fold": per_fold,
+        "pooled": {
+            "accuracy": round(pooled_acc, 4),
+            "macro_f1": round(pooled_mf1, 4),
+            "kappa": round(pooled_kappa, 4),
+            "per_class_f1": {
+                name: round(pooled_pcf1[i], 4)
+                for i, name in enumerate(class_names)
+            },
+            "support": {
+                name: int(pooled_support[i])
+                for i, name in enumerate(class_names)
+            },
+            "confusion_matrix": pooled_cm.tolist(),
+        },
+        "mean_std": {
+            "accuracy": {
+                "mean": round(float(np.mean(fold_accs)), 4),
+                "std": round(float(np.std(fold_accs)), 4),
+            },
+            "macro_f1": {
+                "mean": round(float(np.mean(fold_mf1s)), 4),
+                "std": round(float(np.std(fold_mf1s)), 4),
+            },
+            "kappa": {
+                "mean": round(float(np.mean(fold_kappas)), 4),
+                "std": round(float(np.std(fold_kappas)), 4),
+            },
+        },
+    }
+
+    # ------------------------------------------------------------------
+    # 5. Print summary
+    # ------------------------------------------------------------------
+    pcf1_str = "  ".join(
+        f"{name}={pooled_pcf1[i]:.2f}" for i, name in enumerate(class_names)
+    )
+    print(
+        f"\n  Pooled:   ACC={pooled_acc:.4f}  MF1={pooled_mf1:.4f}  "
+        f"\u03ba={pooled_kappa:.4f}"
+    )
+    print(f"  Per-class F1: {pcf1_str}")
+    print(
+        f"  Mean\u00b1SD: ACC={np.mean(fold_accs):.4f}\u00b1{np.std(fold_accs):.4f}  "
+        f"MF1={np.mean(fold_mf1s):.4f}\u00b1{np.std(fold_mf1s):.4f}  "
+        f"\u03ba={np.mean(fold_kappas):.4f}\u00b1{np.std(fold_kappas):.4f}"
+    )
+
+    # ------------------------------------------------------------------
+    # 6. Save & upload
+    # ------------------------------------------------------------------
+    results_path = emb_dir / "linear_probe_results.json"
+    with open(results_path, "w") as f:
+        json.dump(results, f, indent=2)
+    print(f"  Results saved to {results_path}")
+
+    if upload:
+        _upload_to_hf(emb_dir, model_name, dataset_name)
+
+    return results

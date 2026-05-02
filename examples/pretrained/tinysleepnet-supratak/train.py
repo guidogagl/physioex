@@ -93,6 +93,12 @@ def main():
         default=None,
         help="Override early stopping patience",
     )
+    parser.add_argument(
+        "--num_workers",
+        type=int,
+        default=0,
+        help="DataLoader workers (0 = main process)",
+    )
     args = parser.parse_args()
 
     os.makedirs(args.output_dir, exist_ok=True)
@@ -122,6 +128,7 @@ def main():
     model = TinySleepNet(**MODEL_KWARGS)
 
     # ── Train ────────────────────────────────────────────────────────────
+    nw = args.num_workers
     model = Trainer.train(
         model=model,
         dataset=dataset,
@@ -133,6 +140,10 @@ def main():
         gpu_id=args.gpu_id,
         checkpoint_path=os.path.join(args.output_dir, "checkpoints"),
         early_stopping_patience=TRAIN_CONFIG["early_stopping_patience"],
+        num_workers=nw,
+        pin_memory=nw > 0,
+        persistent_workers=nw > 0,
+        prefetch_factor=2,
     )
 
     # ── Evaluate ─────────────────────────────────────────────────────────
