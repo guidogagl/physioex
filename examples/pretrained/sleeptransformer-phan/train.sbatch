@@ -32,4 +32,5 @@ cd "${GUIDO}/physioex"
 python examples/pretrained/sleeptransformer-phan/train.py \
     --gpu_id 0 \
     --output_dir "$OUTDIR" \
-    --dataset_root "${PROJECT}/data/Guido/shhs"
+    --dataset_root "${PROJECT}/data/Guido/shhs" \
+    --num_workers 8
