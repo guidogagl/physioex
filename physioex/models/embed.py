@@ -264,6 +264,7 @@ def load_embeddings(
     model_name: str,
     dataset_name: str,
     cache_dir: Optional[str] = None,
+    verbose: bool = False,
 ) -> Path:
     """Load cached embeddings, downloading from HuggingFace if needed.
 
@@ -274,6 +275,8 @@ def load_embeddings(
         model_name: Model identifier (e.g. ``"seqsleepnet-phan"``).
         dataset_name: Dataset name (e.g. ``"sleepedf"``).
         cache_dir: Override cache root directory.
+        verbose: If True, print embedding metadata and linear probe
+            results (if available).
 
     Returns:
         Path to the local embeddings directory containing per-subject
@@ -283,7 +286,7 @@ def load_embeddings(
 
         from physioex.models import load_embeddings
 
-        path = load_embeddings("seqsleepnet-phan", "sleepedf")
+        path = load_embeddings("seqsleepnet-phan", "sleepedf", verbose=True)
         # path / "SC4001E0" / "embeddings.npy"  ->  (n_epochs, 128)
     """
     out_dir = _cache_root(cache_dir) / model_name / dataset_name
@@ -291,6 +294,8 @@ def load_embeddings(
 
     # Check if already cached locally
     if meta_path.exists():
+        if verbose:
+            _print_embedding_info(out_dir)
         return out_dir
 
     # Download from HuggingFace
@@ -341,7 +346,73 @@ def load_embeddings(
         f"from {HF_EMBEDDINGS_REPO}"
     )
 
+    if verbose:
+        _print_embedding_info(out_dir)
+
     return out_dir
+
+
+def _print_embedding_info(emb_dir: Path) -> None:
+    """Print metadata and linear probe results for a cached embedding dir."""
+    meta_path = emb_dir / "metadata.json"
+    probe_path = emb_dir / "linear_probe_results.json"
+
+    if meta_path.exists():
+        with open(meta_path) as f:
+            meta = json.load(f)
+        print(f"\n{'=' * 60}")
+        print(f"Embeddings: {meta.get('model_name', '?')}/{meta.get('dataset_name', '?')}")
+        print(f"  Subjects:      {meta.get('n_subjects', '?')}")
+        print(f"  Embedding dim: {meta.get('embedding_dim', '?')}")
+        print(f"  Cache:         {emb_dir}")
+
+    if probe_path.exists():
+        with open(probe_path) as f:
+            probe = json.load(f)
+
+        pooled = probe.get("pooled", {})
+        mean_std = probe.get("mean_std", {})
+        class_names = probe.get("class_names", [])
+
+        print(f"\nLinear probe ({probe.get('n_folds', '?')}-fold subject-wise CV):")
+
+        # Pooled metrics
+        print(
+            f"  Pooled:   ACC={pooled.get('accuracy', 0):.4f}  "
+            f"MF1={pooled.get('macro_f1', 0):.4f}  "
+            f"\u03ba={pooled.get('kappa', 0):.4f}"
+        )
+
+        # Mean +/- std
+        acc_ms = mean_std.get("accuracy", {})
+        mf1_ms = mean_std.get("macro_f1", {})
+        kap_ms = mean_std.get("kappa", {})
+        print(
+            f"  Mean\u00b1SD: ACC={acc_ms.get('mean', 0):.4f}\u00b1{acc_ms.get('std', 0):.4f}  "
+            f"MF1={mf1_ms.get('mean', 0):.4f}\u00b1{mf1_ms.get('std', 0):.4f}  "
+            f"\u03ba={kap_ms.get('mean', 0):.4f}\u00b1{kap_ms.get('std', 0):.4f}"
+        )
+
+        # Per-class F1
+        pcf1 = pooled.get("per_class_f1", {})
+        if pcf1:
+            pcf1_str = "  ".join(
+                f"{name}={pcf1.get(name, 0):.2f}" for name in class_names
+            )
+            print(f"  Per-class F1: {pcf1_str}")
+
+        # Support
+        support = pooled.get("support", {})
+        if support:
+            sup_str = "  ".join(
+                f"{name}={int(support.get(name, 0))}" for name in class_names
+            )
+            print(f"  Support:      {sup_str}")
+
+        print(f"{'=' * 60}")
+    else:
+        print("  Linear probe: not yet computed")
+        print(f"{'=' * 60}")
 
 
 # ---------------------------------------------------------------------------
