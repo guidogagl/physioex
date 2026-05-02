@@ -151,9 +151,20 @@ def main():
     from torch.utils.data import DataLoader, Subset
     from physioex.data.collate import dict_collate_fn
 
-    train_idx, valid_subj, _ = dataset.split(fold=TRAIN_CONFIG["fold"])
+    train_idx, valid_subj, test_subj = dataset.split(fold=TRAIN_CONFIG["fold"])
     valid_ids = [sid for _, sid in valid_subj]
     valid_idx = dataset._subject_ids_to_flat_indices(valid_ids)
+
+    # Filter out samples where the central epoch label is -1 (unscored).
+    central = TRAIN_CONFIG["sequence_length"] // 2
+    train_idx = [
+        i for i in train_idx.tolist()
+        if dataset[i]["labels"][central].item() >= 0
+    ]
+    valid_idx = [
+        i for i in valid_idx
+        if dataset[i]["labels"][central].item() >= 0
+    ]
 
     nw = args.num_workers
     loader_kwargs = dict(
@@ -196,9 +207,11 @@ def main():
     )
 
     # ── Evaluate (windowed, same as validation) ───────────────────────
-    _, _, test_subj = dataset.split(fold=TRAIN_CONFIG["fold"])
     test_ids = [sid for _, sid in test_subj]
-    test_idx = dataset._subject_ids_to_flat_indices(test_ids)
+    test_idx = [
+        i for i in dataset._subject_ids_to_flat_indices(test_ids)
+        if dataset[i]["labels"][central].item() >= 0
+    ]
     test_loader = DataLoader(
         Subset(dataset, test_idx), shuffle=False, **loader_kwargs
     )
