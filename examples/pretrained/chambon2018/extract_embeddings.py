@@ -39,6 +39,8 @@ def main():
     parser.add_argument("--visit", type=int, default=None)
     parser.add_argument("--site", type=str, default=None)
     parser.add_argument("--subset", type=str, default=None)
+    parser.add_argument("--cohort", type=int, default=None,
+                        help="MASS cohort (1-5)")
     args = parser.parse_args()
 
     device = f"cuda:{args.gpu_id}" if args.gpu_id is not None else "cpu"
@@ -75,6 +77,8 @@ def main():
                 ds_kwargs["site"] = args.site
             if args.subset is not None:
                 ds_kwargs["subset"] = args.subset
+            if args.cohort is not None:
+                ds_kwargs["cohort"] = args.cohort
             dataset = DatasetClass(**ds_kwargs)
         except Exception as e:
             print(f"  [SKIP] {ds_name}: {e}")
