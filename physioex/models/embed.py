@@ -18,7 +18,8 @@ Cache layout::
             labels.npy           (n_epochs,)
             labels.meta.json
 
-HuggingFace repo: ``4rooms/physioex-embeddings`` mirrors the same structure.
+HuggingFace repos: ``4rooms/{model_name}-embeddings`` (one dataset repo per
+model) mirror the same structure.
 ``load_embeddings()`` downloads from HF automatically if not in local cache.
 ``linear_probe()`` evaluates embedding quality via 5-fold subject-wise CV.
 """
@@ -38,7 +39,7 @@ from physioex.data.cache import (
     cast_to_cache_dtype,
 )
 
-HF_EMBEDDINGS_REPO = "4rooms/physioex-embeddings"
+HF_EMBEDDINGS_ORG = "4rooms"
 
 
 def _cache_root(cache_dir: Optional[str] = None) -> Path:
@@ -111,30 +112,35 @@ def _extract_subject_sliding(
     return averaged[0].cpu().float().numpy()
 
 
+def _hf_repo_id(model_name: str) -> str:
+    """Return the HF dataset repo id for a model's embeddings."""
+    return f"{HF_EMBEDDINGS_ORG}/{model_name}-embeddings"
+
+
 def _upload_to_hf(out_dir: Path, model_name: str, dataset_name: str) -> None:
-    """Upload all embeddings in out_dir to HuggingFace Hub."""
+    """Upload embeddings for one dataset to HuggingFace Hub."""
     from huggingface_hub import HfApi
 
     api = HfApi()
-    prefix = f"{model_name}/{dataset_name}"
+    repo_id = _hf_repo_id(model_name)
 
     # Ensure repo exists
     api.create_repo(
-        repo_id=HF_EMBEDDINGS_REPO,
-        repo_type="model",
+        repo_id=repo_id,
+        repo_type="dataset",
         exist_ok=True,
     )
 
     # Upload entire directory in a single commit
     api.upload_folder(
         folder_path=str(out_dir),
-        path_in_repo=prefix,
-        repo_id=HF_EMBEDDINGS_REPO,
-        repo_type="model",
-        commit_message=f"Upload {model_name}/{dataset_name} embeddings",
+        path_in_repo=dataset_name,
+        repo_id=repo_id,
+        repo_type="dataset",
+        commit_message=f"Upload {dataset_name} embeddings",
     )
 
-    print(f"Uploaded embeddings to {HF_EMBEDDINGS_REPO}/{prefix}/")
+    print(f"Uploaded to {repo_id}/{dataset_name}/")
 
 
 def extract_embeddings(
@@ -273,7 +279,8 @@ def load_embeddings(
     """Load cached embeddings, downloading from HuggingFace if needed.
 
     Checks the local cache first. If embeddings are not found locally,
-    downloads them from ``4rooms/physioex-embeddings`` on HuggingFace Hub.
+    downloads them from ``4rooms/{model_name}-embeddings`` on HuggingFace
+    Hub (one dataset repo per model).
 
     Args:
         model_name: Model identifier (e.g. ``"seqsleepnet-phan"``).
@@ -303,52 +310,26 @@ def load_embeddings(
         return out_dir
 
     # Download from HuggingFace
-    from huggingface_hub import HfApi, hf_hub_download
+    from huggingface_hub import snapshot_download
 
-    prefix = f"{model_name}/{dataset_name}"
-    out_dir.mkdir(parents=True, exist_ok=True)
+    repo_id = _hf_repo_id(model_name)
+    model_cache = _cache_root(cache_dir) / model_name
 
-    # Download metadata first
     try:
-        hf_hub_download(
-            repo_id=HF_EMBEDDINGS_REPO,
-            filename=f"{prefix}/metadata.json",
-            local_dir=str(_cache_root(cache_dir)),
-            repo_type="model",
+        snapshot_download(
+            repo_id=repo_id,
+            repo_type="dataset",
+            allow_patterns=f"{dataset_name}/**",
+            local_dir=str(model_cache),
         )
     except Exception as e:
         raise FileNotFoundError(
             f"No embeddings for {model_name}/{dataset_name} on HuggingFace "
-            f"({HF_EMBEDDINGS_REPO}). Extract them first with "
+            f"({repo_id}). Extract them first with "
             f"extract_embeddings(). Error: {e}"
         )
 
-    # Read metadata to discover subjects
-    with open(meta_path) as f:
-        metadata = json.load(f)
-
-    # List all files under the prefix on HF
-    api = HfApi()
-    all_files = api.list_repo_files(repo_id=HF_EMBEDDINGS_REPO, repo_type="model")
-    prefix_files = [f for f in all_files if f.startswith(prefix + "/")]
-
-    # Download all embedding files
-    n_downloaded = 0
-    for hf_path in prefix_files:
-        if hf_path.endswith("/metadata.json"):
-            continue  # already downloaded
-        hf_hub_download(
-            repo_id=HF_EMBEDDINGS_REPO,
-            filename=hf_path,
-            local_dir=str(_cache_root(cache_dir)),
-            repo_type="model",
-        )
-        n_downloaded += 1
-
-    print(
-        f"Downloaded {n_downloaded} files for {model_name}/{dataset_name} "
-        f"from {HF_EMBEDDINGS_REPO}"
-    )
+    print(f"Downloaded {model_name}/{dataset_name} from {repo_id}")
 
     if verbose:
         _print_embedding_info(out_dir)
