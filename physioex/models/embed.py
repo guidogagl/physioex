@@ -564,6 +564,12 @@ def linear_probe(
         train_embs, train_lbls = train_embs[train_mask], train_lbls[train_mask]
         test_embs, test_lbls = test_embs[test_mask], test_lbls[test_mask]
 
+        # Standard scaling: fit on train, transform both
+        mean = train_embs.mean(axis=0)
+        std = train_embs.std(axis=0) + 1e-8
+        train_embs = (train_embs - mean) / std
+        test_embs = (test_embs - mean) / std
+
         X_train = torch.from_numpy(train_embs)
         y_train = torch.from_numpy(train_lbls)
         X_test = torch.from_numpy(test_embs)
