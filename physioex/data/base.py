@@ -982,7 +982,7 @@ class BasePhysioDataset(Dataset):
 
             if rc is None:
                 # Channel not available for this subject — zero-fill later
-                key = f"__missing_{req}_{i}"
+                key = req if isinstance(req, str) else _encode_physical(req)
                 channel_order.append(key)
                 channel_info[key] = {
                     "request": req,
@@ -997,7 +997,10 @@ class BasePhysioDataset(Dataset):
                 }
                 continue
 
-            key = _encode_physical(rc.physical)
+            # Use the user's request name as key (e.g. "EEG") rather than
+            # the resolved physical name (e.g. "EEG C3-LER") so that all
+            # subjects share the same keys — required for batching.
+            key = req if isinstance(req, str) else _encode_physical(rc.physical)
             channel_order.append(key)
 
             signal_data = self._load_or_compute_channel(spec, rc)
