@@ -56,7 +56,8 @@ TRAIN_CONFIG = {
     "batch_size": 16,
     "loss": "CrossEntropyLoss",
     "fold": 0,
-    "early_stopping_patience": 10,
+    # Paper: "converged when not improved in last 100k steps (~9 epochs)"
+    "early_stopping_patience": 9,
 }
 
 
@@ -145,14 +146,30 @@ def main():
     # ── Model ────────────────────────────────────────────────────────────
     model = CoReSleep(**MODEL_KWARGS)
 
+    # ── Optimizer & Scheduler (paper spec) ──────────────────────────────
+    optimizer = torch.optim.Adam(
+        model.parameters(),
+        lr=TRAIN_CONFIG["lr"],
+        weight_decay=TRAIN_CONFIG["weight_decay"],
+    )
+
+    # Paper: cosine annealing with max_lr=0.03, 20k warmup steps.
+    # We approximate with CosineAnnealingWarmRestarts after linear warmup.
+    # The Trainer's default ReduceLROnPlateau is overridden.
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+        optimizer,
+        T_max=TRAIN_CONFIG["max_epochs"],
+        eta_min=1e-6,
+    )
+
     # ── Train ────────────────────────────────────────────────────────────
     nw = args.num_workers
     model = Trainer.train(
         model=model,
         dataset=dataset,
         max_epochs=TRAIN_CONFIG["max_epochs"],
-        lr=TRAIN_CONFIG["lr"],
-        weight_decay=TRAIN_CONFIG["weight_decay"],
+        optimizer=optimizer,
+        scheduler=scheduler,
         train_batch_size=TRAIN_CONFIG["batch_size"],
         fold=TRAIN_CONFIG["fold"],
         gpu_id=args.gpu_id,

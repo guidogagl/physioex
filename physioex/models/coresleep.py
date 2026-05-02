@@ -58,7 +58,7 @@ class _InnerEncoder(nn.Module):
             dim_feedforward=d_ff,
             dropout=dropout,
             batch_first=True,
-            norm_first=True,
+            norm_first=False,
         )
         self.encoder = nn.TransformerEncoder(encoder_layer, num_layers=n_layers)
 
@@ -127,7 +127,7 @@ class _OuterEncoder(nn.Module):
             dim_feedforward=d_ff,
             dropout=dropout,
             batch_first=True,
-            norm_first=True,
+            norm_first=False,
         )
         self.encoder = nn.TransformerEncoder(encoder_layer, num_layers=n_layers)
 
