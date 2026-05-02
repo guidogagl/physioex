@@ -320,6 +320,26 @@ def neurolm_pipeline() -> PreprocessingPipeline:
     return _foundation_pipeline(200.0)
 
 
+def coresleep_preset() -> Dict[str, PreprocessingPipeline]:
+    """Per-modality spectrogram preset for CoRe-Sleep (Kontras et al. 2024).
+
+    EEG uses the same pipeline as ``seqsleepnet`` (BP 0.3–40 Hz + STFT),
+    sharing its cache.  EOG uses BP 0.3–23 Hz (paper spec) + same STFT.
+    """
+    return {
+        "EEG": seqsleepnet_pipeline(),
+        "EOG": PreprocessingPipeline(
+            [
+                BandpassFilter(low=0.3, high=23.0, order=5),
+                Resample(target_fs=100.0),
+                XSleepNetSpectrogram(
+                    nperseg=200, noverlap=100, nfft=256, window="hamming"
+                ),
+            ]
+        ),
+    }
+
+
 PRESETS = {
     # uniform (single-pipeline) presets
     "raw": raw_pipeline,
@@ -334,6 +354,7 @@ PRESETS = {
     # dict presets (per-modality bundles)
     "time_domain": time_domain_preset,
     "time_frequency": time_frequency_preset,
+    "coresleep": coresleep_preset,
     # foundation model presets (HP 0.5Hz + Notch 50Hz + Resample, matching EEGBenchmarks)
     "biot": biot_pipeline,
     "bendr": bendr_pipeline,
