@@ -143,46 +143,68 @@ def main():
         ds_kwargs["root"] = args.dataset_root
     dataset = DatasetClass(**ds_kwargs)
 
-    # ── Central-epoch model: disable voting during training validation ──
-    # Chambon2018Net outputs (B, 1, n_classes), not (B, L, n_classes),
-    # so the voting eval step is replaced with the standard eval step.
-    # Wrap _eval_step to accept (and ignore) the L keyword argument
-    _orig_eval_step = Trainer._eval_step.__func__
+    # ── Central-epoch model: use windowed validation ──────────────────
+    # Chambon2018Net classifies a single central epoch from an L=3 window.
+    # Full-night validation (_BasePhysioEvalDataset) would feed the entire
+    # recording to the model, causing a shape mismatch.  Instead, we use
+    # the same windowed Subset for both train and validation.
+    from torch.utils.data import DataLoader, Subset
+    from physioex.data.collate import dict_collate_fn
 
-    @classmethod
-    @torch.no_grad()
-    def _central_eval_step(cls, model, batch, loss_fn, device, L=None):
-        return _orig_eval_step(cls, model, batch, loss_fn, device)
+    train_idx, valid_subj, _ = dataset.split(fold=TRAIN_CONFIG["fold"])
+    valid_ids = [sid for _, sid in valid_subj]
+    valid_idx = dataset._subject_ids_to_flat_indices(valid_ids)
 
-    Trainer._voting_eval_step = _central_eval_step
+    nw = args.num_workers
+    loader_kwargs = dict(
+        batch_size=TRAIN_CONFIG["batch_size"],
+        num_workers=nw,
+        pin_memory=nw > 0,
+        persistent_workers=nw > 0,
+        collate_fn=dict_collate_fn,
+    )
+    if nw > 0:
+        loader_kwargs["prefetch_factor"] = 2
+
+    train_loader = DataLoader(
+        Subset(dataset, train_idx.tolist()), shuffle=True, **loader_kwargs
+    )
+    valid_loader = DataLoader(
+        Subset(dataset, valid_idx), shuffle=False, **loader_kwargs
+    )
 
     # ── Model ────────────────────────────────────────────────────────────
     model = Chambon2018Net(**MODEL_KWARGS)
 
+    # Initialize lazy modules with a dummy forward pass
+    from physioex.data.collate import stack_channels
+
+    dummy_batch = next(iter(train_loader))
+    with torch.no_grad():
+        model(stack_channels(dummy_batch))
+
     # ── Train ────────────────────────────────────────────────────────────
-    nw = args.num_workers
     model = Trainer.train(
         model=model,
-        dataset=dataset,
+        dataset=(train_loader, valid_loader),
         max_epochs=TRAIN_CONFIG["max_epochs"],
         lr=TRAIN_CONFIG["lr"],
         weight_decay=TRAIN_CONFIG["weight_decay"],
-        train_batch_size=TRAIN_CONFIG["batch_size"],
-        fold=TRAIN_CONFIG["fold"],
         gpu_id=args.gpu_id,
         checkpoint_path=os.path.join(args.output_dir, "checkpoints"),
         early_stopping_patience=TRAIN_CONFIG["early_stopping_patience"],
-        num_workers=nw,
-        pin_memory=nw > 0,
-        persistent_workers=nw > 0,
-        prefetch_factor=2,
     )
 
-    # ── Evaluate ─────────────────────────────────────────────────────────
+    # ── Evaluate (windowed, same as validation) ───────────────────────
+    _, _, test_subj = dataset.split(fold=TRAIN_CONFIG["fold"])
+    test_ids = [sid for _, sid in test_subj]
+    test_idx = dataset._subject_ids_to_flat_indices(test_ids)
+    test_loader = DataLoader(
+        Subset(dataset, test_idx), shuffle=False, **loader_kwargs
+    )
     results = Trainer.evaluate(
         model=model,
-        dataset=dataset,
-        fold=TRAIN_CONFIG["fold"],
+        dataset=test_loader,
         gpu_id=args.gpu_id,
     )
 
