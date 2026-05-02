@@ -79,7 +79,7 @@ def main():
 
         # Use the dataset's own name for cache separation
         # (e.g. "shhs_visit1", "stages_BOGN" instead of "shhs", "stages")
-        cache_name = dataset.dataset_name
+        cache_name = dataset.DATASET_NAME
 
         path = extract_embeddings(
             model=model,
