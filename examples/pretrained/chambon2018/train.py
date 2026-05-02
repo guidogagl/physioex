@@ -156,14 +156,14 @@ def main():
     valid_idx = dataset._subject_ids_to_flat_indices(valid_ids)
 
     # Filter out samples where the central epoch label is -1 (unscored).
-    central = TRAIN_CONFIG["sequence_length"] // 2
+    # label_transform already selected the central epoch → labels shape is (1,)
     train_idx = [
         i for i in train_idx.tolist()
-        if dataset[i]["labels"][central].item() >= 0
+        if dataset[i]["labels"][0].item() >= 0
     ]
     valid_idx = [
         i for i in valid_idx
-        if dataset[i]["labels"][central].item() >= 0
+        if dataset[i]["labels"][0].item() >= 0
     ]
 
     nw = args.num_workers
@@ -210,7 +210,7 @@ def main():
     test_ids = [sid for _, sid in test_subj]
     test_idx = [
         i for i in dataset._subject_ids_to_flat_indices(test_ids)
-        if dataset[i]["labels"][central].item() >= 0
+        if dataset[i]["labels"][0].item() >= 0
     ]
     test_loader = DataLoader(
         Subset(dataset, test_idx), shuffle=False, **loader_kwargs
