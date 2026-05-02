@@ -121,16 +121,26 @@ class TinySleepNet(nn.Module):
             n_classes=n_classes, n_rnn_units=n_rnn_units, n_rnn_layers=n_rnn_layers
         )
 
-    def forward(self, x):
+    def encode(self, x):
+        """Encode input signals to contextualized per-epoch embeddings.
+
+        Args:
+            x: (B, L, C, T) raw waveform input.
+
+        Returns:
+            (B, L, n_rnn_units) contextualized epoch embeddings.
+        """
         batch_size, seqlen, inchan, insamp = x.size()
 
         x = x.reshape(-1, inchan, insamp)
-
         x = self.feature_extractor(x)
-
         x = x.reshape(batch_size, seqlen, -1)
-
         x = self.clf.encode(x)
+
+        return x  # (B, L, n_rnn_units)
+
+    def forward(self, x):
+        x = self.encode(x)  # (B, L, n_rnn_units)
 
         batch_size, sequence_length, rnn_units = x.size()
         y = x.reshape(batch_size * sequence_length, rnn_units)
