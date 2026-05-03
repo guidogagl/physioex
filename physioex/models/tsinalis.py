@@ -3,6 +3,9 @@
 Reference: "Automatic Sleep Stage Scoring with Single-Channel EEG
 Using Convolutional Neural Networks" (arXiv:1610.01683).
 
+Includes ``extract_embeddings()`` for efficient per-epoch embedding
+extraction using a centered sliding window (L=5).
+
 Architecture (Table 3 of the paper):
   Input: 5 concatenated 30s epochs (15000 samples at 100Hz)
   C1: 20 filters, kernel=200, stride=1, ReLU
@@ -23,6 +26,11 @@ This is compatible with the standard Trainer when paired with a
 target_transform that extracts the central epoch label.
 """
 
+import json
+from pathlib import Path
+from typing import Optional
+
+import numpy as np
 import torch
 from torch import nn
 
@@ -98,6 +106,35 @@ class TsinalisCNN(nn.Module):
             nn.Linear(fc_size, n_classes),
         )
 
+    def _features(self, x):
+        """Extract feature vector before the classifier.
+
+        Args:
+            x: (B, 5, 1, 3000) or (B, 1, 15000).
+
+        Returns:
+            (B, fc_size) feature vector.
+        """
+        if x.dim() == 4:
+            B = x.shape[0]
+            x = x.reshape(B, 1, -1)
+        elif x.dim() == 2:
+            x = x.unsqueeze(1)
+
+        x = self.conv1(x)
+        x = self.pool1(x)
+        x = x.unsqueeze(1)
+        x = self.conv2(x)
+        x = self.pool2(x)
+        x = x.flatten(1)
+
+        # Pass through FC layers up to (but not including) the final linear
+        # classifier[0]=Dropout, [1]=Linear, [2]=ReLU, [3]=Dropout,
+        # [4]=Linear, [5]=ReLU, [6]=Linear(fc_size, n_classes)
+        for layer in list(self.classifier)[:-1]:
+            x = layer(x)
+        return x  # (B, fc_size)
+
     def forward(self, x):
         """Forward pass.
 
@@ -108,30 +145,180 @@ class TsinalisCNN(nn.Module):
         Returns:
             (B, 1, n_classes) logits for the central epoch.
         """
-        if x.dim() == 4:
-            # (B, L=5, C=1, T=3000) -> (B, 1, 15000)
-            B = x.shape[0]
-            x = x.reshape(B, 1, -1)
-        elif x.dim() == 2:
-            x = x.unsqueeze(1)  # (B, T) -> (B, 1, T)
+        feats = self._features(x)  # (B, fc_size)
+        out = list(self.classifier)[-1](feats)  # final Linear -> (B, n_classes)
+        return out.unsqueeze(1)
 
-        # C1 + P1
-        x = self.conv1(x)
-        x = self.pool1(x)
 
-        # Stack: treat as 2D image (filter × time)
-        x = x.unsqueeze(1)
+@torch.no_grad()
+def _extract_subject_centered(
+    model: TsinalisCNN,
+    signals: torch.Tensor,
+    L: int,
+    device: torch.device,
+    batch_size: int = 256,
+) -> np.ndarray:
+    """Extract per-epoch embeddings using centered L-epoch windows.
 
-        # C2 + P2
-        x = self.conv2(x)
-        x = self.pool2(x)
+    For each epoch, builds a window of L epochs centered on it (padding
+    with zeros at the edges), and extracts the feature vector via
+    ``model._features()``.  Each epoch gets exactly one embedding —
+    no sliding-window voting needed.
 
-        # Flatten + classify
-        x = x.flatten(1)
-        x = self.classifier(x)  # (B, n_classes)
+    Args:
+        model: A TsinalisCNN with ``_features()``.
+        signals: (1, N, C, T) full-night signal tensor.
+        L: Sequence length (5 for Tsinalis).
+        device: CUDA or CPU device.
+        batch_size: Windows per forward pass.
 
-        # Return (B, 1, n_classes) for Trainer compatibility
-        return x.unsqueeze(1)
+    Returns:
+        (N, D) numpy array of per-epoch embeddings.
+    """
+    signals = signals.squeeze(0)  # (N, C, T)
+    N, C, T = signals.shape
+    half = L // 2
+
+    # Pad beginning and end with zeros
+    pad = torch.zeros(half, C, T, dtype=signals.dtype)
+    padded = torch.cat([pad, signals, pad], dim=0)  # (N+2*half, C, T)
+
+    embeddings = []
+    for i in range(0, N, batch_size):
+        end = min(i + batch_size, N)
+        windows = []
+        for j in range(i, end):
+            # Window centered on epoch j (in padded coords: j+half)
+            w = padded[j : j + L]  # (L, C, T)
+            windows.append(w)
+        batch = torch.stack(windows).to(device)  # (batch, L, C, T)
+        feats = model._features(batch)  # (batch, D)
+        embeddings.append(feats.cpu().float())
+
+    return torch.cat(embeddings, dim=0).numpy()  # (N, D)
+
+
+def extract_embeddings(
+    model: TsinalisCNN,
+    dataset,
+    model_name: str,
+    dataset_name: str,
+    L: int = 5,
+    device: str = "cpu",
+    overwrite: bool = False,
+    upload: bool = False,
+    cache_dir: Optional[str] = None,
+) -> Path:
+    """Extract and cache per-epoch embeddings for Tsinalis.
+
+    Uses centered windows: for each epoch, builds a window of L=5 epochs
+    centered on it and extracts the CNN feature vector.  Functionally
+    identical to ``physioex.models.embed.extract_embeddings`` but
+    avoids redundant sliding-window voting.
+
+    Args:
+        model: A TsinalisCNN instance.
+        dataset: A BasePhysioDataset instance.
+        model_name: Identifier for cache directory.
+        dataset_name: Dataset name for cache.
+        L: Sequence length (default 5).
+        device: Device string.
+        overwrite: If True, re-extract even if cached.
+        upload: If True, upload to HuggingFace Hub.
+        cache_dir: Override cache root directory.
+
+    Returns:
+        Path to the embeddings directory.
+    """
+    from physioex.data.cache import ChannelCache, recommended_dtype, cast_to_cache_dtype
+    from physioex.models.embed import _cache_root, _upload_to_hf
+
+    out_dir = _cache_root(cache_dir) / model_name / dataset_name
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    dev = torch.device(device)
+    model = model.to(dev).eval()
+
+    cache = ChannelCache(cache_dir)
+
+    subjects = dataset.get_subjects()
+    n_extracted = 0
+    embedding_dim = None
+
+    for subj_idx, subject_id in enumerate(subjects):
+        subj_dir = out_dir / subject_id
+        emb_path = subj_dir / "embeddings.npy"
+
+        if emb_path.exists() and not overwrite:
+            if embedding_dim is None:
+                existing = np.load(str(emb_path), mmap_mode="r")
+                embedding_dim = existing.shape[1]
+            n_extracted += 1
+            continue
+
+        try:
+            spec = next(s for s in dataset._subjects if s.subject_id == subject_id)
+            n_epochs = dataset._n_epochs[subject_id]
+            item = dataset._build_item(spec, 0, n_epochs)
+
+            ch_tensors = [item["signals"][ch] for ch in item["channel_order"]]
+            signals = torch.stack(ch_tensors, dim=1).unsqueeze(0)  # (1, N, C, T)
+            labels = item["labels"].numpy()
+
+            embeddings = _extract_subject_centered(model, signals, L, dev)
+        except Exception as e:
+            print(f"  [SKIP] {subject_id}: {e}")
+            continue
+
+        if embedding_dim is None:
+            embedding_dim = embeddings.shape[1]
+
+        subj_dir.mkdir(parents=True, exist_ok=True)
+        dtype_name = recommended_dtype()
+
+        cache.atomic_save_array(
+            emb_path,
+            cast_to_cache_dtype(embeddings, dtype_name),
+            meta={
+                "model_name": model_name,
+                "dataset_name": dataset_name,
+                "subject_id": subject_id,
+                "embedding_dim": int(embeddings.shape[1]),
+                "n_epochs": int(embeddings.shape[0]),
+            },
+        )
+
+        lbl_path = subj_dir / "labels.npy"
+        cache.atomic_save_array(
+            lbl_path,
+            labels.astype(np.int16),
+            meta={
+                "subject_id": subject_id,
+                "n_epochs": int(labels.shape[0]),
+            },
+        )
+
+        n_extracted += 1
+        print(
+            f"  [{n_extracted}/{len(subjects)}] {subject_id}: "
+            f"{embeddings.shape[0]} epochs, dim={embeddings.shape[1]}"
+        )
+
+    metadata = {
+        "model_name": model_name,
+        "dataset_name": dataset_name,
+        "embedding_dim": int(embedding_dim) if embedding_dim else 0,
+        "n_subjects": len(subjects),
+    }
+    with open(out_dir / "metadata.json", "w") as f:
+        json.dump(metadata, f, indent=2)
+
+    print(f"Extracted {n_extracted} subjects to {out_dir}")
+
+    if upload:
+        _upload_to_hf(out_dir, model_name, dataset_name)
+
+    return out_dir
 
 
 if __name__ == "__main__":
