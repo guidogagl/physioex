@@ -1,11 +1,11 @@
-"""Train SeqSleepNet on Sleep-EDF following Phan et al. 2019.
+"""Train SeqSleepNet on MASS (all cohorts) following Phan et al. 2019.
 
 Replicates the experiment from:
     Phan et al., "SeqSleepNet: End-to-End Hierarchical Recurrent Neural
     Network for Sequence-to-Sequence Automatic Sleep Staging", IEEE TNSRE 2019.
 
-Configuration:
-    - Dataset: Sleep-EDF (Fpz-Cz channel only)
+Configuration (from the paper):
+    - Dataset: MASS (all 5 cohorts combined, C4 EEG channel)
     - Sequence length: L = 20 epochs
     - Preprocessing: bandpass 0.3-40 Hz, resample 100 Hz, STFT spectrogram
     - Optimizer: Adam, lr = 1e-4
@@ -14,16 +14,13 @@ Configuration:
     - Batch size: 32
     - Fold: 0 (PhysioEx single-fold split)
 
-Note: the original paper uses per-fold z-score normalization on the
-training set.  PhysioEx skips this step intentionally.
-
-After training, the script:
-    1. Evaluates on the test set
-    2. Saves model.pt (state_dict), config.json, and metrics.json locally
-    3. Uploads to HuggingFace Hub (4rooms/physioex/seqsleepnet-phan/)
+Note: the original paper trains on all 200 MASS subjects across SS01-SS05
+using 31-fold cross-validation. Here we combine all cohorts via MultiDataset
+and use a single-fold 70/15/15 split.
 
 Usage:
-    python examples/pretrained/seqsleepnet/train.py [--gpu_id 0]
+    python examples/pretrained/seqsleepnet-phan/train.py --gpu_id 0
+    python examples/pretrained/seqsleepnet-phan/train.py --gpu_id 0 --dataset_root /path/to/mass/MASS/Original
 """
 import argparse
 import json
@@ -32,10 +29,9 @@ import os
 import torch
 
 from physioex.data.datasets import get_dataset
+from physioex.data.multi import MultiDataset
 from physioex.models.seqsleepnet import SeqSleepNet
 from physioex.train.trainer import Trainer
-
-# ── Paper configuration ──────────────────────────────────────────────────────
 
 MODEL_NAME = "seqsleepnet-phan"
 HF_REPO_ID = "4rooms/physioex"
@@ -57,7 +53,8 @@ MODEL_KWARGS = {
 }
 
 TRAIN_CONFIG = {
-    "dataset": "sleepedf",
+    "dataset": "mass",
+    "dataset_cohorts": [1, 2, 3, 4, 5],
     "channels": ["EEG"],
     "pipeline_preset": "seqsleepnet",
     "sequence_length": 20,
@@ -67,11 +64,14 @@ TRAIN_CONFIG = {
     "batch_size": 32,
     "loss": "CrossEntropyLoss",
     "fold": 0,
+    "early_stopping_patience": 10,
 }
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Train SeqSleepNet (Phan et al. 2019)")
+    parser = argparse.ArgumentParser(
+        description="Train SeqSleepNet (Phan et al. 2019)"
+    )
     parser.add_argument(
         "--gpu_id", type=int, default=0, help="GPU device id (None for CPU)"
     )
@@ -79,25 +79,21 @@ def main():
         "--upload", action="store_true", help="Upload to HuggingFace Hub"
     )
     parser.add_argument(
-        "--output_dir", type=str, default="pretrained_output/seqsleepnet-phan"
+        "--output_dir",
+        type=str,
+        default="pretrained_output/seqsleepnet-phan",
     )
     parser.add_argument(
         "--dataset_root",
         type=str,
         default=None,
-        help="Root directory of Sleep-EDF data (overrides dataset default)",
-    )
-    parser.add_argument(
-        "--dataset",
-        type=str,
-        default=None,
-        help="Override dataset name (for smoke tests on different data)",
+        help="Root directory of MASS data (e.g. /path/to/MASS/Original)",
     )
     parser.add_argument(
         "--max_epochs",
         type=int,
         default=None,
-        help="Override max training epochs (for smoke tests)",
+        help="Override max training epochs",
     )
     parser.add_argument(
         "--early_stopping_patience",
@@ -105,22 +101,23 @@ def main():
         default=None,
         help="Override early stopping patience",
     )
+    parser.add_argument(
+        "--num_workers",
+        type=int,
+        default=0,
+        help="DataLoader workers (0 = main process)",
+    )
     args = parser.parse_args()
 
     os.makedirs(args.output_dir, exist_ok=True)
 
-    # ── CLI overrides ────────────────────────────────────────────
-    if args.dataset is not None:
-        TRAIN_CONFIG["dataset"] = args.dataset
-        # Clear dataset_kwargs when overriding dataset
-        TRAIN_CONFIG.pop("dataset_kwargs", None)
     if args.max_epochs is not None:
         TRAIN_CONFIG["max_epochs"] = args.max_epochs
     if args.early_stopping_patience is not None:
         TRAIN_CONFIG["early_stopping_patience"] = args.early_stopping_patience
 
-    # ── Dataset ──────────────────────────────────────────────────────────
-    SleepEDF = get_dataset("sleepedf")
+    # ── Dataset: MASS all cohorts combined ───────────────────────────────
+    MASS = get_dataset("mass")
     ds_kwargs = dict(
         channels=TRAIN_CONFIG["channels"],
         pipelines=TRAIN_CONFIG["pipeline_preset"],
@@ -128,12 +125,23 @@ def main():
     )
     if args.dataset_root:
         ds_kwargs["root"] = args.dataset_root
-    dataset = SleepEDF(**ds_kwargs)
+
+    cohort_datasets = []
+    for cohort in TRAIN_CONFIG["dataset_cohorts"]:
+        ds = MASS(cohort=cohort, **ds_kwargs)
+        n = ds.get_n_subjects()
+        print(f"  MASS SS{cohort:02d}: {n} subjects")
+        if n > 0:
+            cohort_datasets.append(ds)
+
+    dataset = MultiDataset(cohort_datasets)
+    print(f"Combined: {dataset}")
 
     # ── Model ────────────────────────────────────────────────────────────
     model = SeqSleepNet(**MODEL_KWARGS)
 
     # ── Train ────────────────────────────────────────────────────────────
+    nw = args.num_workers
     model = Trainer.train(
         model=model,
         dataset=dataset,
@@ -144,23 +152,27 @@ def main():
         fold=TRAIN_CONFIG["fold"],
         gpu_id=args.gpu_id,
         checkpoint_path=os.path.join(args.output_dir, "checkpoints"),
+        early_stopping_patience=TRAIN_CONFIG.get("early_stopping_patience"),
+        num_workers=nw,
+        pin_memory=nw > 0,
+        persistent_workers=nw > 0,
+        prefetch_factor=2,
     )
 
     # ── Evaluate ─────────────────────────────────────────────────────────
-    results = Trainer.evaluate(
+    results = Trainer.voting_evaluate(
         model=model,
         dataset=dataset,
+        L=TRAIN_CONFIG["sequence_length"],
         fold=TRAIN_CONFIG["fold"],
         gpu_id=args.gpu_id,
     )
 
     # ── Save artifacts ───────────────────────────────────────────────────
-    # model.pt — pure state_dict
     model_path = os.path.join(args.output_dir, "model.pt")
     torch.save(model.cpu().state_dict(), model_path)
     print(f"Saved model weights to {model_path}")
 
-    # config.json
     config = {
         "model_class": "physioex.models.seqsleepnet:SeqSleepNet",
         "model_kwargs": MODEL_KWARGS,
@@ -172,17 +184,16 @@ def main():
         json.dump(config, f, indent=2)
     print(f"Saved config to {config_path}")
 
-    # metrics.json
     metrics = {k: v.tolist() if hasattr(v, "tolist") else v for k, v in results.items()}
     metrics_path = os.path.join(args.output_dir, "metrics.json")
     with open(metrics_path, "w") as f:
         json.dump(metrics, f, indent=2)
     print(f"Saved metrics to {metrics_path}")
     print(
-        f"Results: accuracy={results['accuracy']:.4f}, f1={results['f1_score']:.4f}, kappa={results['cohen_kappa']:.4f}"
+        f"Results: accuracy={results['accuracy']:.4f}, "
+        f"f1={results['f1_score']:.4f}, kappa={results['cohen_kappa']:.4f}"
     )
 
-    # ── Upload to HuggingFace ────────────────────────────────────────────
     if args.upload:
         from huggingface_hub import HfApi
 
@@ -196,7 +207,6 @@ def main():
                 repo_type="model",
             )
             print(f"Uploaded {fname} to {HF_REPO_ID}/{MODEL_NAME}/")
-        print("Upload complete.")
 
 
 if __name__ == "__main__":

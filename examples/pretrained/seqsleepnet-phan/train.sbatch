@@ -31,7 +31,8 @@ mkdir -p "${PROJECT}/logs/pretrained"
 
 cd "${GUIDO}/physioex"
 
-python examples/pretrained/seqsleepnet/train.py \
+python examples/pretrained/seqsleepnet-phan/train.py \
     --gpu_id 0 \
     --output_dir "$OUTDIR" \
-    --dataset_root "${PROJECT}/data/Guido/physionet-sleep-data"
+    --dataset_root "${PROJECT}/data/Guido/mass/MASS/Original" \
+    --num_workers 8
