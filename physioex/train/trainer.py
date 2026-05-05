@@ -916,7 +916,7 @@ class Trainer:
 
                 scheduler.step(val_loss)
 
-                progress.set_lr(scheduler.get_last_lr()[0])
+                progress.set_lr(scheduler.get_last_lr()[0] if hasattr(scheduler, 'get_last_lr') else optimizer.param_groups[0]['lr'])
 
                 if loss_tracker is not None:
                     validation_global_step = epoch * steps_per_epoch + step
@@ -930,7 +930,7 @@ class Trainer:
                     )
                     loss_tracker.log_learning_rate(
                         step=validation_global_step,
-                        value=scheduler.get_last_lr()[0],
+                        value=scheduler.get_last_lr()[0] if hasattr(scheduler, 'get_last_lr') else optimizer.param_groups[0]['lr'],
                     )
                     loss_tracker.update()
 
