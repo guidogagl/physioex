@@ -85,8 +85,9 @@ class Trainer:
         collate_fn = None
         try:
             from physioex.data.base import BasePhysioDataset as _Base
+            from physioex.data.multi import MultiDataset as _Multi
 
-            if isinstance(dataset, _Base):
+            if isinstance(dataset, (_Base, _Multi)):
                 _is_base_dataset = True
                 from physioex.data.collate import dict_collate_fn
 
@@ -264,8 +265,9 @@ class Trainer:
         _is_base_dataset = False
         try:
             from physioex.data.base import BasePhysioDataset as _Base
+            from physioex.data.multi import MultiDataset as _Multi
 
-            if isinstance(dataset, _Base):
+            if isinstance(dataset, (_Base, _Multi)):
                 _is_base_dataset = True
         except ImportError:
             pass
@@ -427,8 +429,9 @@ class Trainer:
         _is_base_dataset_v = False
         try:
             from physioex.data.base import BasePhysioDataset as _Base
+            from physioex.data.multi import MultiDataset as _Multi
 
-            if isinstance(dataset, _Base):
+            if isinstance(dataset, (_Base, _Multi)):
                 _is_base_dataset_v = True
         except ImportError:
             pass
@@ -652,8 +655,9 @@ class Trainer:
         _is_base_dataset_t = False
         try:
             from physioex.data.base import BasePhysioDataset as _Base
+            from physioex.data.multi import MultiDataset as _Multi
 
-            if isinstance(dataset, _Base):
+            if isinstance(dataset, (_Base, _Multi)):
                 _is_base_dataset_t = True
         except ImportError:
             pass
