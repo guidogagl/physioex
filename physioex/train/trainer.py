@@ -45,26 +45,48 @@ def seed_everything(seed: int = 42):
 
 
 class _BasePhysioEvalDataset(torch.utils.data.Dataset):
-    """Wraps a BasePhysioDataset for subject-level evaluation.
+    """Wraps a BasePhysioDataset (or MultiDataset) for subject-level evaluation.
 
     Each ``__getitem__`` returns the **full recording** (entire night) for
     one subject, regardless of the base dataset's ``sequence_length``.
     Used by the Trainer for validation and testing so that evaluation is
     performed per-subject with voting, not per-sequence-window.
+
+    For MultiDataset, ``subject_ids`` are ``(dataset_idx, subject_id)``
+    tuples; each subject is looked up in its originating dataset.
     """
 
     def __init__(self, base_dataset, subject_ids: list):
         self.base = base_dataset
         self.subject_ids = list(subject_ids)
+        # Detect MultiDataset
+        try:
+            from physioex.data.multi import MultiDataset
+            self._is_multi = isinstance(base_dataset, MultiDataset)
+        except ImportError:
+            self._is_multi = False
 
     def __len__(self):
         return len(self.subject_ids)
 
     def __getitem__(self, idx):
-        sid = self.subject_ids[idx]
-        spec = next(s for s in self.base._subjects if s.subject_id == sid)
-        n_epochs = self.base._n_epochs[sid]
-        return self.base._build_item(spec, 0, n_epochs)
+        entry = self.subject_ids[idx]
+
+        if self._is_multi:
+            # entry is (dataset_idx, subject_id)
+            ds_idx, sid = entry
+            ds = self.base._datasets[ds_idx]
+        else:
+            # entry is just subject_id (or (_, subject_id) from split)
+            if isinstance(entry, tuple):
+                _, sid = entry
+            else:
+                sid = entry
+            ds = self.base
+
+        spec = next(s for s in ds._subjects if s.subject_id == sid)
+        n_epochs = ds._n_epochs[sid]
+        return ds._build_item(spec, 0, n_epochs)
 
 
 class Trainer:
@@ -109,10 +131,22 @@ class Trainer:
 
             train_dataset = Subset(dataset, train_indexes.tolist())
             # Validation/test: full-recording per subject (for voting evaluation)
-            valid_ids = [sid for _, sid in valid_subjects]
-            test_ids = [sid for _, sid in test_subjects]
-            valid_dataset = _BasePhysioEvalDataset(dataset, valid_ids)
-            test_dataset = _BasePhysioEvalDataset(dataset, test_ids)
+            # For MultiDataset, pass (ds_idx, sid) tuples directly;
+            # for BasePhysioDataset, extract just the sid.
+            try:
+                from physioex.data.multi import MultiDataset as _MultiDS
+                _is_multi = isinstance(dataset, _MultiDS)
+            except ImportError:
+                _is_multi = False
+
+            if _is_multi:
+                valid_dataset = _BasePhysioEvalDataset(dataset, valid_subjects)
+                test_dataset = _BasePhysioEvalDataset(dataset, test_subjects)
+            else:
+                valid_ids = [sid for _, sid in valid_subjects]
+                test_ids = [sid for _, sid in test_subjects]
+                valid_dataset = _BasePhysioEvalDataset(dataset, valid_ids)
+                test_dataset = _BasePhysioEvalDataset(dataset, test_ids)
         else:
             train_dataset = _PhysioExTrainDataset(dataset, train_indexes)
             valid_dataset = _PhysioExEvalDataset(dataset, valid_subjects)
