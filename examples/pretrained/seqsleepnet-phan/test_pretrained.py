@@ -31,15 +31,18 @@ MODEL_NAME = "seqsleepnet-phan"
 SCALAR_METRICS = ["accuracy", "f1_score", "cohen_kappa", "precision", "recall"]
 
 
-def evaluate_on_dataset(model, dataset_name, gpu_id=None):
+def evaluate_on_dataset(model, dataset_name, gpu_id=None, dataset_root=None):
     """Evaluate model on a single dataset. Returns metrics dict or None on failure."""
     try:
         DatasetClass = get_dataset(dataset_name)
-        dataset = DatasetClass(
+        kwargs = dict(
             channels=CHANNELS,
             pipelines=PIPELINE,
             sequence_length=SEQ_LEN,
         )
+        if dataset_root is not None:
+            kwargs["root"] = dataset_root
+        dataset = DatasetClass(**kwargs)
     except Exception as e:
         print(f"  [SKIP] {dataset_name}: cannot load dataset ({e})")
         return None
@@ -114,6 +117,12 @@ def main():
         help="Directory to save metrics.json",
     )
     parser.add_argument(
+        "--dataset_root",
+        type=str,
+        default=None,
+        help="Root directory for raw data (passed to each dataset constructor)",
+    )
+    parser.add_argument(
         "--upload",
         action="store_true",
         help="Upload metrics.json to HuggingFace Hub",
@@ -137,7 +146,7 @@ def main():
     all_results = {}
     for name in dataset_names:
         print(f"Evaluating on {name}...")
-        metrics = evaluate_on_dataset(model, name, gpu_id=args.gpu_id)
+        metrics = evaluate_on_dataset(model, name, gpu_id=args.gpu_id, dataset_root=args.dataset_root)
         if metrics is not None:
             all_results[name] = metrics
             acc = metrics.get("accuracy", 0)
