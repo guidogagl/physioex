@@ -40,6 +40,8 @@ def main():
                         help="STAGES site code (e.g. BOGN, GSBB)")
     parser.add_argument("--subset", type=str, default=None,
                         help="HPAP subset (lab-full, lab-split, home)")
+    parser.add_argument("--cohort", type=int, default=None,
+                        help="MASS cohort number (1-5)")
     args = parser.parse_args()
 
     device = f"cuda:{args.gpu_id}" if args.gpu_id is not None else "cpu"
@@ -68,6 +70,8 @@ def main():
                 ds_kwargs["site"] = args.site
             if args.subset is not None:
                 ds_kwargs["subset"] = args.subset
+            if args.cohort is not None:
+                ds_kwargs["cohort"] = args.cohort
             dataset = DatasetClass(**ds_kwargs)
         except Exception as e:
             print(f"  [SKIP] {ds_name}: {e}")
