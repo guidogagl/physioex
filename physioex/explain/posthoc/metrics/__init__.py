@@ -218,6 +218,8 @@ def _build_perturbations_freq(x, attr, fs, patch_value, patch_size):
     interpolating the attribution to rfft resolution, which would
     degrade the ranking for coarse-resolution methods.
 
+    Uses cumulative mask building to avoid O(n_steps^2) inner loops.
+
     Returns time-domain perturbed signals: (n_steps, B, N).
     """
     B, N = x.shape
@@ -233,21 +235,27 @@ def _build_perturbations_freq(x, attr, fs, patch_value, patch_size):
     # Rank attribution bands (not individual DFT bins)
     _, band_order = torch.sort(attr, dim=-1, descending=True)  # (B, n_attr)
 
+    # Precompute per-band DFT masks: band_masks[i] = which DFT bins belong to band i
+    band_masks = torch.zeros(n_attr, n_dft, dtype=torch.bool, device=x.device)
+    for i in range(n_attr):
+        band_masks[i] = band_of_bin == i
+
     steps = list(range(0, n_attr, patch_size))
     n_steps = len(steps)
 
     X_all = X.unsqueeze(0).expand(n_steps, -1, -1).clone()
 
-    for k, j in enumerate(steps):
-        end = min(j + patch_size, n_attr)
-        # For each sample, find which DFT bins belong to the top-end ablated bands
-        for b in range(B):
-            ablated_bands = band_order[b, :end]  # (end,) band indices
-            # Build mask: True for DFT bins in any ablated band
-            mask = torch.zeros(n_dft, dtype=torch.bool, device=x.device)
-            for bi in ablated_bands:
-                mask |= band_of_bin == bi
-            X_all[k, b, mask] = patch_value
+    # Build cumulative masks incrementally: O(n_steps * patch_size) instead of O(n_steps^2)
+    for b in range(B):
+        cum_mask = torch.zeros(n_dft, dtype=torch.bool, device=x.device)
+        prev_end = 0
+        for k, j in enumerate(steps):
+            end = min(j + patch_size, n_attr)
+            # Add only the NEW bands (prev_end..end) to the cumulative mask
+            for bi_idx in range(prev_end, end):
+                cum_mask |= band_masks[band_order[b, bi_idx]]
+            X_all[k, b, cum_mask] = patch_value
+            prev_end = end
 
     x_all = torch.fft.irfft(X_all.reshape(-1, n_dft), n=N, dim=-1)
     return x_all.reshape(n_steps, B, N)
