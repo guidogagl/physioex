@@ -10,10 +10,11 @@ Configuration (from the paper):
     - EEG: BP 0.3-40 Hz, resample 100 Hz, STFT 2s/1s
     - EOG: BP 0.3-23 Hz, resample 100 Hz, STFT 2s/1s
     - Sequence length: L = 21 epochs
-    - Optimizer: Adam, lr=1e-4, weight_decay=1e-4
+    - Optimizer: Adam, weight_decay=1e-4
+    - Scheduler: linear warmup (20K steps) to max_lr=0.03, cosine decay
     - Batch size: 16
     - Loss: CrossEntropyLoss
-    - Early stopping: patience 10
+    - Early stopping: patience 9 (~100K steps)
 
 Usage:
     python examples/pretrained/coresleep-kontras/train.py --gpu_id 0
@@ -51,7 +52,7 @@ TRAIN_CONFIG = {
     "pipeline_preset": "coresleep",
     "sequence_length": 21,
     "max_epochs": 50,
-    "lr": 1e-4,
+    "lr": 0.03,
     "weight_decay": 1e-4,
     "batch_size": 16,
     "loss": "CrossEntropyLoss",
@@ -154,12 +155,25 @@ def main():
     )
 
     # Paper: cosine annealing with max_lr=0.03, 20k warmup steps.
-    # We approximate with CosineAnnealingWarmRestarts after linear warmup.
-    # The Trainer's default ReduceLROnPlateau is overridden.
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+    # Trainer calls scheduler.step() every ~25K steps (10 intervals/epoch).
+    # 20K warmup ≈ 1 scheduler step.
+    warmup_steps = 1
+    total_sched_steps = TRAIN_CONFIG["max_epochs"] * 10  # 10 intervals/epoch
+
+    warmup = torch.optim.lr_scheduler.LinearLR(
         optimizer,
-        T_max=TRAIN_CONFIG["max_epochs"],
+        start_factor=1e-4 / 0.03,  # start at ~1e-4, ramp to 0.03
+        total_iters=warmup_steps,
+    )
+    cosine = torch.optim.lr_scheduler.CosineAnnealingLR(
+        optimizer,
+        T_max=total_sched_steps - warmup_steps,
         eta_min=1e-6,
+    )
+    scheduler = torch.optim.lr_scheduler.SequentialLR(
+        optimizer,
+        schedulers=[warmup, cosine],
+        milestones=[warmup_steps],
     )
 
     # ── Train ────────────────────────────────────────────────────────────

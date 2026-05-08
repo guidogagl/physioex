@@ -897,10 +897,10 @@ class Trainer:
                     )
                     progress._update_live()
 
-                progress.end_eval()
-
                 val_loss = sum(val_losses) / len(val_losses)
                 val_acc = sum(val_accs) / len(val_accs)
+
+                progress.end_eval(val_loss=val_loss, val_acc=val_acc)
 
                 val_extra_agg = None
                 if val_extras:
@@ -914,7 +914,10 @@ class Trainer:
                     for key in val_extra_agg:
                         val_extra_agg[key] /= count
 
-                scheduler.step(val_loss)
+                if isinstance(scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
+                    scheduler.step(val_loss)
+                else:
+                    scheduler.step()
 
                 progress.set_lr(scheduler.get_last_lr()[0] if hasattr(scheduler, 'get_last_lr') else optimizer.param_groups[0]['lr'])
 

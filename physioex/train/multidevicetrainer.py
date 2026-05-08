@@ -373,10 +373,10 @@ class Trainer(SingleDeviceTrainer):
                         )
                         progress._update_live()
 
-                    progress.end_eval()
-
                     val_loss = sum(val_losses) / len(val_losses)
                     val_acc = sum(val_accs) / len(val_accs)
+
+                    progress.end_eval(val_loss=val_loss, val_acc=val_acc)
 
                     val_extra_agg = None
                     if val_extras:
@@ -393,8 +393,11 @@ class Trainer(SingleDeviceTrainer):
                     loss_tensor.fill_(val_loss)
                     acc_tensor.fill_(val_acc)
 
-                    scheduler.step(val_loss)
-                    progress.set_lr(scheduler.get_last_lr()[0])
+                    if isinstance(scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
+                        scheduler.step(val_loss)
+                    else:
+                        scheduler.step()
+                    progress.set_lr(scheduler.get_last_lr()[0] if hasattr(scheduler, 'get_last_lr') else optimizer.param_groups[0]['lr'])
 
                     if loss_tracker is not None:
                         validation_global_step = epoch * steps_per_epoch + step
