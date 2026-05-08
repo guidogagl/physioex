@@ -1,27 +1,29 @@
-"""Extract contextualized embeddings for lseqsleepnet-phan.
+"""Extract contextualized embeddings for coresleep-kontras.
 
 Loads the pretrained model from HuggingFace, then extracts per-epoch
 embeddings for every subject in the specified dataset(s) using
-sliding-window encoding.  Results are cached to disk.
+sliding-window encoding.  Results are cached to disk.  After extraction,
+runs a 5-fold linear probe and saves results.
 
 Usage:
-    python examples/pretrained/lseqsleepnet-phan/extract_embeddings.py --gpu_id 0
-    python examples/pretrained/lseqsleepnet-phan/extract_embeddings.py --gpu_id 0 --datasets sleepedf hmc
+    python examples/pretrained/coresleep-kontras/extract_embeddings.py --gpu_id 0
+    python examples/pretrained/coresleep-kontras/extract_embeddings.py --gpu_id 0 --datasets sleepedf hmc
+    python examples/pretrained/coresleep-kontras/extract_embeddings.py --gpu_id 0 --datasets shhs --visit 1 --dataset_root /data/shhs
 """
 import argparse
 
 from physioex.data.datasets import available_datasets, get_dataset
 from physioex.models import extract_embeddings, linear_probe, load_from_pretrained
 
-MODEL_NAME = "lseqsleepnet-phan"
-CHANNELS = ["EEG"]
-PIPELINE = "seqsleepnet"
-SEQ_LEN = 200
+MODEL_NAME = "coresleep-kontras"
+CHANNELS = ["EEG", "EOG"]
+PIPELINE = "coresleep"
+SEQ_LEN = 21
 
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Extract embeddings for lseqsleepnet-phan"
+        description="Extract embeddings for coresleep-kontras"
     )
     parser.add_argument("--gpu_id", type=int, default=0)
     parser.add_argument("--datasets", nargs="+", default=None)
