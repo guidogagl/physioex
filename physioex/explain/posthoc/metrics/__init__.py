@@ -325,6 +325,7 @@ def _normalise_and_integrate(curve):
     as hard floor), and clamping the final integral to [0, 1].
     """
     curve = curve - curve[-1]  # shift baseline to 0
+    curve = curve.clamp(min=0)  # clamp to [baseline, ...]: values below baseline are not informative
     abs_ref = curve[0].abs().clamp(min=1e-6)
     denom = curve[0].sign() * abs_ref  # preserve sign, safe magnitude
     denom = torch.where(denom.abs() < 1e-6, torch.ones_like(denom), denom)
