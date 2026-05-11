@@ -139,13 +139,15 @@ class PhysioExTrainProgressBar:
         self.show_eval = True
         self._update_live()
 
-    def end_eval(self):
+    def end_eval(self, val_loss: float = None, val_acc: float = None):
         # Non-TTY: print a summary at end of eval
         if not self._is_tty and self.eval_progress is not None:
-            ep = self.eval_progress
+            # Use averaged values from Trainer if provided, else fall back to last step
+            vl = val_loss if val_loss is not None else self.eval_progress.step_loss
+            va = val_acc if val_acc is not None else self.eval_progress.step_acc
             print(
                 f"[Eval]  Epoch {self._current_epoch}/{self.num_epochs}  "
-                f"val_loss={ep.step_loss:.4f}  val_acc={ep.step_acc:.4f}",
+                f"val_loss={vl:.4f}  val_acc={va:.4f}",
                 flush=True,
             )
         self.show_eval = False

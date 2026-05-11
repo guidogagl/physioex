@@ -67,6 +67,52 @@ TRAIN_CONFIG = {
 }
 
 
+# ── Scheduler wrapper (Bug 2: Trainer steps scheduler per val-interval) ─
+
+
+class _PerEpochScheduler:
+    """Trainer calls step() per validation interval (~10x/epoch).
+    This wrapper accumulates calls and only advances the inner
+    scheduler once per real epoch, matching per-epoch semantics
+    expected by CosineAnnealingWarmRestarts(T_0=4, T_mult=2)."""
+
+    def __init__(self, inner, intervals_per_epoch: int = 10):
+        self.inner = inner
+        self.intervals_per_epoch = intervals_per_epoch
+        self._count = 0
+
+    def step(self):
+        self._count += 1
+        if self._count >= self.intervals_per_epoch:
+            self._count = 0
+            self.inner.step()
+
+    def get_last_lr(self):
+        return self.inner.get_last_lr()
+
+    def state_dict(self):
+        return self.inner.state_dict()
+
+    def load_state_dict(self, sd):
+        return self.inner.load_state_dict(sd)
+
+
+# ── Model wrapper for post-training evaluation (Bug 3) ──────────────────
+
+
+class _CombinedExtractor(nn.Module):
+    """Wraps CoReSleep to return only 'combined' logits as a tensor.
+    Trainer.voting_evaluate() expects tensor output from model()."""
+
+    def __init__(self, model):
+        super().__init__()
+        self.model = model
+
+    def forward(self, x):
+        out = self.model(x)
+        return out["combined"] if isinstance(out, dict) else out
+
+
 # ── Custom multi-task loss ──────────────────────────────────────────────
 
 
@@ -127,6 +173,7 @@ class CoReSleepLoss(nn.Module):
 
 
 _original_step = Trainer._step.__func__ if hasattr(Trainer._step, '__func__') else Trainer._step
+_original_voting_eval_step = Trainer._voting_eval_step.__func__ if hasattr(Trainer._voting_eval_step, '__func__') else Trainer._voting_eval_step
 
 
 @staticmethod
@@ -163,6 +210,134 @@ def _coresleep_step(model, batch, loss_fn, device):
 
     return loss, acc
 
+
+@torch.no_grad()
+def _coresleep_voting_eval_step(
+    model: torch.nn.Module,
+    batch: dict,
+    loss_fn: torch.nn.Module,
+    device: torch.device,
+    L: int = 21,
+) -> tuple[float, float, dict | None]:
+    """Evaluate a single full-night subject batch using sliding-window voting.
+
+    The model was trained with sequence_length=L. For a full-night recording
+    of N epochs, we slide L-sized windows at L different offsets, average the
+    overlapping predictions, and then compute loss and accuracy on the voted
+    output.  This gives a single (loss, accuracy) per subject.
+    """
+    # Extract inputs and targets from the batch
+    if isinstance(batch, dict) and "signals" in batch:
+        from physioex.data.collate import stack_channels
+
+        inputs = stack_channels(batch).to(device)
+        targets = batch["labels"].to(device)
+    elif isinstance(batch, dict) and "embeddings" in batch:
+        inputs = batch["embeddings"].to(device)
+        targets = batch["labels"].to(device)
+    else:
+        inputs, targets = batch
+        inputs = inputs.to(device)
+        targets = targets.to(device)
+
+    B, night_length = inputs.shape[0], inputs.shape[1]
+
+    # If the night is shorter than L, fall back to a single forward pass
+    if night_length <= L:
+        with torch.autocast(device.type if "cuda" in device.type else "cpu"):
+            outputs = model(inputs)
+
+        # Handle dict-output models (CoReSleep) and tensor-output models
+        if isinstance(outputs, dict):
+            combined = outputs["combined"]
+            n_classes = combined.shape[-1]
+            loss = loss_fn(outputs, targets)
+            combined_flat = combined.reshape(-1, n_classes)
+            targets_flat = targets.reshape(-1)
+            acc = accuracy_score(
+                combined_flat,
+                targets_flat,
+                ignore_index=getattr(loss_fn, "ignore_index", None),
+            )
+        else:
+            outputs_flat = outputs.reshape(-1, outputs.shape[-1])
+            targets_flat = targets.reshape(-1)
+            loss = loss_fn(outputs_flat, targets_flat)
+            acc = accuracy_score(
+                outputs_flat,
+                targets_flat,
+                ignore_index=getattr(loss_fn, "ignore_index", None),
+            )
+
+        return (
+            loss.detach().item(),
+            acc.detach().item() if isinstance(acc, torch.Tensor) else float(acc),
+            None,
+        )
+
+    # Probe n_classes from a small forward pass and detect dict-output
+    with torch.autocast(device.type if "cuda" in device.type else "cpu"):
+        probe = model(inputs[:, :L])
+
+    probe_is_dict = isinstance(probe, dict)
+    if probe_is_dict:
+        n_classes = probe["combined"].shape[-1]
+        dtype = probe["combined"].dtype
+    else:
+        n_classes = probe.shape[-1]
+        dtype = probe.dtype
+
+    votes = torch.zeros(B, night_length, n_classes, device=device, dtype=dtype)
+    counts = torch.zeros(B, night_length, device=device, dtype=torch.float32)
+
+    with torch.autocast(device.type if "cuda" in device.type else "cpu"):
+        for offset in range(L):
+            x = inputs[:, offset:]
+            usable = x.shape[1] - (x.shape[1] % L)
+            if usable == 0:
+                continue
+            x = x[:, :usable]
+            num_windows = usable // L
+            rest_dims = x.shape[2:]
+            x = x.reshape(B * num_windows, L, *rest_dims)
+
+            y = model(x)
+            # If model returns a dict, use the 'combined' prediction for voting
+            if isinstance(y, dict):
+                y_use = y["combined"]
+            else:
+                y_use = y
+
+            y_use = y_use.reshape(B, num_windows * L, n_classes)
+
+            votes[:, offset : offset + usable] += y_use
+            counts[:, offset : offset + usable] += 1
+
+    safe_counts = counts.clamp(min=1).unsqueeze(-1)
+    voted = votes / safe_counts  # (B, night_length, n_classes)
+
+    # Accuracy always computed on the combined logits
+    voted_flat = voted.reshape(-1, n_classes)
+    targets_flat = targets.reshape(-1)
+    acc = accuracy_score(
+        voted_flat,
+        targets_flat,
+        ignore_index=getattr(loss_fn, "ignore_index", None),
+    )
+
+    # For dict-aware losses (like CoReSleepLoss) call with a dict containing
+    # the voted combined logits; otherwise call the loss with flat logits.
+    if probe_is_dict:
+        outputs_dict = {"combined": voted}
+        loss = loss_fn(outputs_dict, targets)
+    else:
+        loss = loss_fn(voted_flat, targets_flat)
+
+    return (
+        loss.detach().item(),
+        acc.detach().item() if isinstance(acc, torch.Tensor) else float(acc),
+        None,
+    )
 
 def main():
     parser = argparse.ArgumentParser(
@@ -257,18 +432,23 @@ def main():
     )
 
     # Original repo: CosineAnnealingWarmRestarts(T_0=4, T_mult=2)
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
+    # Wrapped with _PerEpochScheduler because Trainer calls step() per
+    # validation interval (~10x/epoch), not per epoch.
+    raw_scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
         optimizer,
         T_0=4,
         T_mult=2,
         eta_min=1e-6,
     )
+    # valid_interval_ratio=0.1 (default) → 10 intervals per epoch
+    scheduler = _PerEpochScheduler(raw_scheduler, intervals_per_epoch=10)
 
     # ── Loss ─────────────────────────────────────────────────────────────
     loss_fn = CoReSleepLoss(n_classes=5, align_weight=0.1)
 
     # ── Monkey-patch Trainer._step for dict output ──────────────────────
     Trainer._step = _coresleep_step
+    Trainer._voting_eval_step = _coresleep_voting_eval_step
 
     # ── Train ────────────────────────────────────────────────────────────
     nw = args.num_workers
@@ -292,10 +472,14 @@ def main():
 
     # ── Restore original _step for voting evaluation ─────────────────────
     Trainer._step = _original_step
+    Trainer._voting_eval_step = _original_voting_eval_step
 
     # ── Evaluate ─────────────────────────────────────────────────────────
+    # Wrap model to extract "combined" tensor from dict output, because
+    # Trainer.voting_evaluate() expects tensor output from model().
+    eval_model = _CombinedExtractor(model)
     results = Trainer.voting_evaluate(
-        model=model,
+        model=eval_model,
         dataset=dataset,
         L=TRAIN_CONFIG["sequence_length"],
         fold=TRAIN_CONFIG["fold"],
