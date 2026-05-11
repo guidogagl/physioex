@@ -4,7 +4,14 @@ import physioex.explain.posthoc.gradients as grads
 
 
 class STFTLayer(torch.nn.Module):
-    """Compute the Short-Time Fourier Transform of the input."""
+    """Compute the Short-Time Fourier Transform of the input.
+
+    Args:
+        real_valued: If True, returns ``[Re(X), Im(X)]`` concatenated
+            along the frequency dimension (dim=-2) instead of a complex
+            tensor.  Output shape becomes ``(B, 2*F, T)`` instead of
+            ``(B, F, T)`` complex.
+    """
 
     def __init__(
         self,
@@ -15,6 +22,7 @@ class STFTLayer(torch.nn.Module):
         center: bool = True,
         normalized: bool = False,
         onesided: bool = True,
+        real_valued: bool = False,
     ):
         super().__init__()
         self.n_fft = n_fft
@@ -23,6 +31,7 @@ class STFTLayer(torch.nn.Module):
         self.center = center
         self.normalized = normalized
         self.onesided = onesided
+        self.real_valued = real_valued
 
         if window is None:
             window = torch.hann_window(self.win_length)
@@ -43,15 +52,21 @@ class STFTLayer(torch.nn.Module):
             onesided=self.onesided,
             return_complex=True,
         )
-        return X.reshape(*orig_shape, X.shape[-2], X.shape[-1])
+        X = X.reshape(*orig_shape, X.shape[-2], X.shape[-1])
+        if self.real_valued:
+            return torch.cat([X.real, X.imag], dim=-2)
+        return X
 
 
 class _ISTFTObserveFn(torch.autograd.Function):
     """Custom autograd for ISTFT with explicit backward (STFT of grad).
 
-    forward receives 9 inputs (after ctx):
-        x, n_fft, hop_length, win_length, window, center, normalized, onesided, length
-    backward must return exactly 9 gradient values.
+    forward receives 10 inputs (after ctx):
+        x, n_fft, hop_length, win_length, window, center, normalized, onesided, length, real_valued
+    backward must return exactly 10 gradient values.
+
+    When ``real_valued=True`` the input is a real tensor with
+    ``[Re(X), Im(X)]`` concatenated along dim=-2.
     """
 
     @staticmethod
@@ -66,6 +81,7 @@ class _ISTFTObserveFn(torch.autograd.Function):
         normalized,
         onesided,
         length,
+        real_valued,
     ):
         ctx.n_fft = n_fft
         ctx.hop_length = hop_length
@@ -74,13 +90,20 @@ class _ISTFTObserveFn(torch.autograd.Function):
         ctx.normalized = normalized
         ctx.onesided = onesided
         ctx.length = length
+        ctx.real_valued = real_valued
 
         if window is not None:
             window = window.to(device=x.device, dtype=x.real.dtype)
         ctx.save_for_backward(window)
 
+        if real_valued:
+            n_freq = x.shape[-2] // 2
+            x_complex = torch.complex(x[..., :n_freq, :], x[..., n_freq:, :])
+        else:
+            x_complex = x
+
         return torch.istft(
-            x,
+            x_complex,
             n_fft=n_fft,
             hop_length=hop_length,
             win_length=win_length,
@@ -109,13 +132,23 @@ class _ISTFTObserveFn(torch.autograd.Function):
             onesided=ctx.onesided,
             return_complex=True,
         )
-        grad_input = G.reshape(*grad_output.shape[:-1], G.shape[-2], G.shape[-1])
-        # 9 inputs → 9 return values: grad for x, then None for the 8 non-tensor args
-        return grad_input, None, None, None, None, None, None, None, None
+        G = G.reshape(*grad_output.shape[:-1], G.shape[-2], G.shape[-1])
+        if ctx.real_valued:
+            grad_input = torch.cat([G.real, G.imag], dim=-2)
+        else:
+            grad_input = G
+        # 10 inputs → 10 return values
+        return grad_input, None, None, None, None, None, None, None, None, None
 
 
 class ISTFTLayer(torch.nn.Module):
-    """Compute the inverse STFT with a differentiable backward pass."""
+    """Compute the inverse STFT with a differentiable backward pass.
+
+    Args:
+        real_valued: If True, expects ``[Re(X), Im(X)]`` concatenated
+            input along dim=-2 and produces real gradients in the same
+            format.
+    """
 
     def __init__(
         self,
@@ -127,6 +160,7 @@ class ISTFTLayer(torch.nn.Module):
         center: bool = True,
         normalized: bool = False,
         onesided: bool = True,
+        real_valued: bool = False,
     ):
         super().__init__()
         self.n_fft = n_fft
@@ -136,6 +170,7 @@ class ISTFTLayer(torch.nn.Module):
         self.center = center
         self.normalized = normalized
         self.onesided = onesided
+        self.real_valued = real_valued
 
         if window is None:
             window = torch.hann_window(self.win_length)
@@ -154,6 +189,7 @@ class ISTFTLayer(torch.nn.Module):
             self.normalized,
             self.onesided,
             self.length,
+            self.real_valued,
         )
         return y2d.reshape(*orig_shape, self.length)
 
@@ -161,6 +197,16 @@ class ISTFTLayer(torch.nn.Module):
 # ---------------------------------------------------------------------------
 # STFT-domain variants of the base gradient methods
 # ---------------------------------------------------------------------------
+
+
+def _fold_real_valued_2d(attr):
+    """Sum Re and Im relevances along freq dim: ``R_k = R_{k,Re} + R_{k,Im}``.
+
+    Input has shape ``(..., 2*F, T)`` with Re in the first half and
+    Im in the second half along dim=-2.  Returns ``(..., F, T)``.
+    """
+    n_freq = attr.shape[-2] // 2
+    return attr[..., :n_freq, :] + attr[..., n_freq:, :]
 
 
 def _stft_scalar_f(self, x):
@@ -191,6 +237,13 @@ def _stft_batched_scores(self, x_stft_batch):
 
 
 class STFTSaliency(grads.Saliency):
+    """Saliency in the STFT domain.
+
+    Args:
+        real_valued: If True, uses the real-valued STFT formulation
+            (Vielhaben et al. 2024) producing signed attributions.
+    """
+
     def __init__(
         self,
         f: callable,
@@ -202,27 +255,19 @@ class STFTSaliency(grads.Saliency):
         center: bool = True,
         normalized: bool = False,
         onesided: bool = True,
+        real_valued: bool = False,
         **kwargs,
     ):
         super(STFTSaliency, self).__init__(f, **kwargs)
         self.stft_layer = STFTLayer(
-            n_fft=n_fft,
-            hop_length=hop_length,
-            win_length=win_length,
-            window=window,
-            center=center,
-            normalized=normalized,
-            onesided=onesided,
+            n_fft=n_fft, hop_length=hop_length, win_length=win_length,
+            window=window, center=center, normalized=normalized,
+            onesided=onesided, real_valued=real_valued,
         )
         self.istft_layer = ISTFTLayer(
-            n_fft=n_fft,
-            length=length,
-            hop_length=hop_length,
-            win_length=win_length,
-            window=window,
-            center=center,
-            normalized=normalized,
-            onesided=onesided,
+            n_fft=n_fft, length=length, hop_length=hop_length,
+            win_length=win_length, window=window, center=center,
+            normalized=normalized, onesided=onesided, real_valued=real_valued,
         )
 
     _scalar_f = _stft_scalar_f
@@ -230,10 +275,20 @@ class STFTSaliency(grads.Saliency):
 
     def forward(self, x):
         x_stft = self.stft_layer(x)
-        return super(STFTSaliency, self).forward(x_stft)
+        attr = super(STFTSaliency, self).forward(x_stft)
+        if self.stft_layer.real_valued:
+            attr = _fold_real_valued_2d(attr)
+        return attr
 
 
 class STFTInputXGradient(grads.InputXGradient):
+    """Input x Gradient in the STFT domain.
+
+    Args:
+        real_valued: If True, uses the real-valued STFT formulation
+            producing signed attributions.
+    """
+
     def __init__(
         self,
         f: callable,
@@ -245,27 +300,19 @@ class STFTInputXGradient(grads.InputXGradient):
         center: bool = True,
         normalized: bool = False,
         onesided: bool = True,
+        real_valued: bool = False,
         **kwargs,
     ):
         super(STFTInputXGradient, self).__init__(f, **kwargs)
         self.stft_layer = STFTLayer(
-            n_fft=n_fft,
-            hop_length=hop_length,
-            win_length=win_length,
-            window=window,
-            center=center,
-            normalized=normalized,
-            onesided=onesided,
+            n_fft=n_fft, hop_length=hop_length, win_length=win_length,
+            window=window, center=center, normalized=normalized,
+            onesided=onesided, real_valued=real_valued,
         )
         self.istft_layer = ISTFTLayer(
-            n_fft=n_fft,
-            length=length,
-            hop_length=hop_length,
-            win_length=win_length,
-            window=window,
-            center=center,
-            normalized=normalized,
-            onesided=onesided,
+            n_fft=n_fft, length=length, hop_length=hop_length,
+            win_length=win_length, window=window, center=center,
+            normalized=normalized, onesided=onesided, real_valued=real_valued,
         )
 
     _scalar_f = _stft_scalar_f
@@ -273,10 +320,20 @@ class STFTInputXGradient(grads.InputXGradient):
 
     def forward(self, x):
         x_stft = self.stft_layer(x)
-        return super(STFTInputXGradient, self).forward(x_stft)
+        attr = super(STFTInputXGradient, self).forward(x_stft)
+        if self.stft_layer.real_valued:
+            attr = _fold_real_valued_2d(attr)
+        return attr
 
 
 class STFTIntegratedGradients(grads.IntegratedGradients):
+    """Integrated Gradients in the STFT domain.
+
+    Args:
+        real_valued: If True, uses the real-valued STFT formulation
+            producing signed attributions.
+    """
+
     def __init__(
         self,
         f: callable,
@@ -288,27 +345,19 @@ class STFTIntegratedGradients(grads.IntegratedGradients):
         center: bool = True,
         normalized: bool = False,
         onesided: bool = True,
+        real_valued: bool = False,
         **kwargs,
     ):
         super(STFTIntegratedGradients, self).__init__(f, **kwargs)
         self.stft_layer = STFTLayer(
-            n_fft=n_fft,
-            hop_length=hop_length,
-            win_length=win_length,
-            window=window,
-            center=center,
-            normalized=normalized,
-            onesided=onesided,
+            n_fft=n_fft, hop_length=hop_length, win_length=win_length,
+            window=window, center=center, normalized=normalized,
+            onesided=onesided, real_valued=real_valued,
         )
         self.istft_layer = ISTFTLayer(
-            n_fft=n_fft,
-            length=length,
-            hop_length=hop_length,
-            win_length=win_length,
-            window=window,
-            center=center,
-            normalized=normalized,
-            onesided=onesided,
+            n_fft=n_fft, length=length, hop_length=hop_length,
+            win_length=win_length, window=window, center=center,
+            normalized=normalized, onesided=onesided, real_valued=real_valued,
         )
 
     _scalar_f = _stft_scalar_f
@@ -320,12 +369,22 @@ class STFTIntegratedGradients(grads.IntegratedGradients):
             baseline_stft = self.stft_layer(baseline)
         else:
             baseline_stft = None
-        return super(STFTIntegratedGradients, self).forward(
+        attr = super(STFTIntegratedGradients, self).forward(
             x_stft, baseline=baseline_stft, steps=steps
         )
+        if self.stft_layer.real_valued:
+            attr = _fold_real_valued_2d(attr)
+        return attr
 
 
 class STFTExpectedGradients(grads.ExpectedGradients):
+    """Expected Gradients in the STFT domain.
+
+    Args:
+        real_valued: If True, uses the real-valued STFT formulation
+            producing signed attributions.
+    """
+
     def __init__(
         self,
         f: callable,
@@ -337,27 +396,19 @@ class STFTExpectedGradients(grads.ExpectedGradients):
         center: bool = True,
         normalized: bool = False,
         onesided: bool = True,
+        real_valued: bool = False,
         **kwargs,
     ):
         super(STFTExpectedGradients, self).__init__(f, **kwargs)
         self.stft_layer = STFTLayer(
-            n_fft=n_fft,
-            hop_length=hop_length,
-            win_length=win_length,
-            window=window,
-            center=center,
-            normalized=normalized,
-            onesided=onesided,
+            n_fft=n_fft, hop_length=hop_length, win_length=win_length,
+            window=window, center=center, normalized=normalized,
+            onesided=onesided, real_valued=real_valued,
         )
         self.istft_layer = ISTFTLayer(
-            n_fft=n_fft,
-            length=length,
-            hop_length=hop_length,
-            win_length=win_length,
-            window=window,
-            center=center,
-            normalized=normalized,
-            onesided=onesided,
+            n_fft=n_fft, length=length, hop_length=hop_length,
+            win_length=win_length, window=window, center=center,
+            normalized=normalized, onesided=onesided, real_valued=real_valued,
         )
 
     _scalar_f = _stft_scalar_f
@@ -371,7 +422,9 @@ class STFTExpectedGradients(grads.ExpectedGradients):
         elif (
             self.baselines is not None and self.baselines.shape[1:] != x_stft.shape[1:]
         ):
-            # Baselines were set in time domain at __init__; transform them now.
             baselines_stft = self.stft_layer(self.baselines)
             self.set_baselines(baselines_stft)
-        return super(STFTExpectedGradients, self).forward(x_stft)
+        attr = super(STFTExpectedGradients, self).forward(x_stft)
+        if self.stft_layer.real_valued:
+            attr = _fold_real_valued_2d(attr)
+        return attr
