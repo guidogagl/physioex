@@ -453,6 +453,88 @@ def tfle(
 
 
 @torch.no_grad()
+def tf_concentration(
+    attr: torch.Tensor,
+    fs: float,
+    band_frequencies: torch.Tensor,
+) -> dict:
+    """Unsupervised time-frequency concentration of an attribution map.
+
+    Measures how tightly focused a time-frequency attribution is around
+    its own peak — no ground-truth event location required.
+
+    For each sample the peak cell ``(f*, t*)`` is found from the
+    attribution itself, then:
+
+    - **time_spread**: effective temporal width ``exp(H(T | F=f*)) × dt``
+      in the peak's frequency band.
+    - **freq_spread**: effective frequency width ``exp(H(F | T=t*)) × df``
+      at the peak's time step.
+    - **tf_spread**: product ``time_spread × freq_spread`` (Hz·s).
+      Lower = more concentrated attribution.
+
+    Args:
+        attr: ``(B, n_freq, n_time)`` or ``(n_freq, n_time)``.
+        fs: Sampling frequency in Hz.
+        band_frequencies: 1-D tensor of center frequencies (Hz),
+            length ``n_freq``.
+
+    Returns:
+        Dictionary with ``time_spread``, ``freq_spread``, ``tf_spread``.
+    """
+    batched = True
+    if attr.dim() == 2:
+        attr = attr.unsqueeze(0)
+        batched = False
+
+    B, n_freq, n_time = attr.shape
+    attr_abs = attr.abs().float()
+
+    band_frequencies = band_frequencies.float()
+    dt = 1.0 / fs
+    df = (
+        (band_frequencies[1] - band_frequencies[0]).abs().item()
+        if n_freq > 1
+        else fs / 2
+    )
+
+    # Find peak cell per sample: argmax over the flattened TF map
+    flat_peak = attr_abs.reshape(B, -1).argmax(dim=-1)  # (B,)
+    peak_freq_idx = flat_peak // n_time  # (B,)
+    peak_time_idx = flat_peak % n_time   # (B,)
+
+    # Time spread: exp(H(T | F=f*)) × dt, per sample
+    # Gather the frequency band of each sample's peak
+    band_profiles = attr_abs[
+        torch.arange(B, device=attr.device), peak_freq_idx, :
+    ]  # (B, n_time)
+    p_t = band_profiles + 1e-10
+    p_t = p_t / p_t.sum(dim=-1, keepdim=True)
+    h_t = -(p_t * p_t.log()).sum(dim=-1)
+    time_spread = h_t.exp() * dt  # seconds
+
+    # Freq spread: exp(H(F | T=t*)) × df, per sample
+    time_profiles = attr_abs[
+        torch.arange(B, device=attr.device), :, peak_time_idx
+    ]  # (B, n_freq)
+    p_f = time_profiles + 1e-10
+    p_f = p_f / p_f.sum(dim=-1, keepdim=True)
+    h_f = -(p_f * p_f.log()).sum(dim=-1)
+    freq_spread = h_f.exp() * df  # Hz
+
+    tf_spread = time_spread * freq_spread  # Hz·s
+
+    def _maybe_squeeze(t):
+        return t.squeeze(0) if not batched else t
+
+    return {
+        "time_spread": _maybe_squeeze(time_spread),
+        "freq_spread": _maybe_squeeze(freq_spread),
+        "tf_spread": _maybe_squeeze(tf_spread),
+    }
+
+
+@torch.no_grad()
 def resolution_product(
     method: str,
     fs: float,
