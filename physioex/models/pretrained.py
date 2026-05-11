@@ -12,24 +12,16 @@ The ``config.json`` carries everything needed to reconstruct the model
 (class path, constructor kwargs) so the caller does not need to know
 the architecture in advance.
 
-Cached locally under ``$PHYSIOEX_CACHE_DIR/pretrained/{name}/``
-(defaults to ``~/.cache/physioex/pretrained/{name}/``).
+Cached locally under the standard HuggingFace cache directory.
 """
 from __future__ import annotations
 
 import importlib
 import json
-import os
-from pathlib import Path
 
 import torch
 
 HF_REPO_ID = "4rooms/physioex"
-
-
-def _cache_dir(name: str) -> Path:
-    root = os.environ.get("PHYSIOEX_CACHE_DIR", os.path.expanduser("~/.cache/physioex"))
-    return Path(root) / "pretrained" / name
 
 
 def _resolve_class(spec: str):
@@ -65,14 +57,10 @@ def load_from_pretrained(
     """
     from huggingface_hub import hf_hub_download
 
-    cache = _cache_dir(name)
-    cache.mkdir(parents=True, exist_ok=True)
-
     # 1. Download and read config
     config_path = hf_hub_download(
         repo_id=HF_REPO_ID,
         filename=f"{name}/config.json",
-        local_dir=str(cache),
     )
     with open(config_path) as f:
         config = json.load(f)
@@ -85,7 +73,6 @@ def load_from_pretrained(
     weights_path = hf_hub_download(
         repo_id=HF_REPO_ID,
         filename=f"{name}/model.pt",
-        local_dir=str(cache),
     )
 
     # 4. Instantiate and load
@@ -116,7 +103,6 @@ def load_from_pretrained(
             metrics_path = hf_hub_download(
                 repo_id=HF_REPO_ID,
                 filename=f"{name}/metrics.json",
-                local_dir=str(cache),
             )
             with open(metrics_path) as f:
                 metrics = json.load(f)
