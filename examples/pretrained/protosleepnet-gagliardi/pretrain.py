@@ -1,22 +1,37 @@
-"""Pretrain SleepTokenizer on SHHS (or any dataset).
+"""Pretrain SleepTokenizer on multi-dataset schema.
 
 Trains the epoch-level tokenizer with prototypical classification
 and per-channel auxiliary loss. Uses monkey-patched Trainer._step
 to handle dict-output models and modality-aware processing.
 
+Training schema defined in: docs/training_schema.md
+
 Usage:
     python examples/pretrained/protosleepnet-gagliardi/pretrain.py --gpu_id 0
-    python examples/pretrained/protosleepnet-gagliardi/pretrain.py --gpu_id 0 --datasets sleepedf hmc
+    python examples/pretrained/protosleepnet-gagliardi/pretrain.py --gpu_id 0 --data_root /path/to/data
 """
 import argparse
 import json
 import os
+import copy
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from physioex.data.datasets import available_datasets, get_dataset
+from physioex.data.datasets import (
+    SHHSDataset,
+    MESADataset,
+    STAGESDataset,
+    MrOSDataset,
+    WSCDataset,
+    ParkinsonsDataset,
+    AlzheimersDataset,
+    SleepEDFDataset,
+    HMCDataset,
+    HPAPDataset,
+)
+from physioex.data.multi import MultiDataset
 from physioex.models.sleep_tokenizer import (
     SleepTokenizer,
     build_modality_ids,
@@ -44,10 +59,75 @@ MODEL_KWARGS = {
     "p_modality_dropout": 0.3,
 }
 
+# Default data root: environment variable or fallback path
+DATA_ROOT_DEFAULT = os.environ.get(
+    "SLEEP_DATA_ROOT",
+    "/home/dev/sleep-data/raw-sleep/"
+)
+
+# Training datasets configuration
+# Based on docs/training_schema.md
+TRAINING_DATASETS = {
+    "shhs": {
+        "class": SHHSDataset,
+        "kwargs": {"visit": 1},
+        "name": "SHHS Visit 1",
+    },
+    "mesa": {
+        "class": MESADataset,
+        "kwargs": {},
+        "name": "MESA",
+    },
+    "stages": {
+        "class": STAGESDataset,
+        "kwargs": {},
+        "name": "STAGES",
+    },
+    "mros": {
+        "class": MrOSDataset,
+        "kwargs": {},
+        "name": "MrOS",
+    },
+    "wsc": {
+        "class": WSCDataset,
+        "kwargs": {"visit": 1},
+        "name": "WSC Visit 1",
+    },
+    "parkinsons": {
+        "class": ParkinsonsDataset,
+        "kwargs": {"recording": "night", "group": "HOA"},
+        "name": "Parkinson's (HOA night)",
+    },
+    "alzheimers": {
+        "class": AlzheimersDataset,
+        "kwargs": {"subset": "HC"},
+        "name": "Alzheimer's (HC)",
+    },
+    "sleepedf": {
+        "class": SleepEDFDataset,
+        "kwargs": {},
+        "name": "SleepEDF",
+    },
+    "hmc": {
+        "class": HMCDataset,
+        "kwargs": {},
+        "name": "HMC",
+    },
+    "homepap": {
+        "class": HPAPDataset,
+        "kwargs": {},
+        "name": "HomePAP",
+    },
+}
+
+# Dataset-specific channel configurations
+# Only SleepEDF needs explicit channel filtering (excludes 1Hz channels)
+DATASET_CHANNELS = {
+    "sleepedf": ["EEG Fpz-Cz", "EEG Pz-Oz", "EOG horizontal"],
+    # All other datasets: None = load all available channels
+}
+
 TRAIN_CONFIG = {
-    "dataset": "shhs",
-    "dataset_kwargs": {"visit": 1},
-    "channels": None,  # None = all available channels
     "pipeline_preset": "time_domain",
     "sequence_length": 1,  # epoch-to-epoch
     "max_epochs": 50,
@@ -56,6 +136,7 @@ TRAIN_CONFIG = {
     "batch_size": 64,
     "fold": 0,
     "early_stopping_patience": 10,
+    "memmap_cache_size": 1000,
 }
 
 LOSS_W_MAIN = 1.0
@@ -117,6 +198,11 @@ def _sleeptokenizer_step(model, batch, loss_fn, device):
     if isinstance(batch, dict) and "signals" in batch:
         from physioex.data.collate import stack_channels
 
+        channels = batch.get("channel_order", [])
+        for ch in channels:
+            if ch not in batch["signals"]:
+                raise ValueError(f"Channel '{ch}' in channel_order not found in signals keys: {list(batch['signals'].keys())}")
+
         inputs = stack_channels(batch).to(device)
         targets = batch["labels"].to(device)
         modality_ids = build_modality_ids(batch).to(device)
@@ -136,13 +222,12 @@ def _sleeptokenizer_step(model, batch, loss_fn, device):
     targets_flat = targets.reshape(-1)
     n_classes = out["logits"].shape[-1]
 
-    # Debug: check targets
+    # Check for valid targets
     valid_targets = targets_flat[targets_flat >= 0]
     if len(valid_targets) == 0:
-        print("WARNING: ALL targets are -1! No valid labels in this batch.")
         main_loss = torch.tensor(0.0, device=device)  # Skip loss if no valid targets
     else:
-        # Debug: check for NaN/Inf in embeddings or logits
+        # Check for NaN/Inf in embeddings or logits
         embeddings_flat = out["embedding"].reshape(-1, out["embedding"].shape[-1])
         if torch.isnan(embeddings_flat).any() or torch.isinf(embeddings_flat).any():
             print("WARNING: NaN/Inf in embeddings!")
@@ -225,77 +310,52 @@ def _sleeptokenizer_step(model, batch, loss_fn, device):
         **modality_acc,  # Add per-modality accuracies
     }
 
-    return loss, acc, extra
+    return loss.cpu(), acc, extra
 
 
 @torch.no_grad()
 def _sleeptokenizer_voting_eval_step(model, batch, loss_fn, device, L=1):
-    """Evaluation step — extract 'logits' from dict output."""
-    if isinstance(batch, dict) and "signals" in batch:
-        from physioex.data.collate import stack_channels
+    """Evaluation step with chunking to avoid OOM on long recordings."""
+    eval_batch_size = 128
+    channel_keys = [k for k in batch["signals"].keys()]
+    night_length = batch["signals"][channel_keys[0]].shape[1]  # B, L, C, T
 
-        inputs = stack_channels(batch).to(device)
-        targets = batch["labels"].to(device)
-        modality_ids = build_modality_ids(batch).to(device)
-    else:
-        inputs, targets = batch
-        inputs = inputs.to(device)
-        targets = targets.to(device)
-        C = inputs.shape[2] if inputs.ndim == 4 else inputs.shape[1]
-        modality_ids = torch.zeros(
-            inputs.shape[0], C, dtype=torch.long, device=device
-        )
+    loss, acc, extra = 0, 0, {}
 
-    B, night_length = inputs.shape[0], inputs.shape[1]
+    if night_length > eval_batch_size:
+        valid_steps = 0
+        for i in range(0, night_length, eval_batch_size):
+            step = eval_batch_size if i + eval_batch_size <= night_length else night_length - i
+            batch_chunk = copy.deepcopy(batch)
 
-    if night_length <= L:
-        with torch.autocast(device.type if "cuda" in device.type else "cpu"):
-            out = model(inputs, modality_ids=modality_ids)
-        logits = out["logits"]
-        n_classes = logits.shape[-1]
-        logits_flat = logits.reshape(-1, n_classes)
-        targets_flat = targets.reshape(-1)
-        loss = loss_fn(logits_flat, targets_flat)
-        acc = accuracy_score(logits_flat, targets_flat, ignore_index=-1)
-        return loss.detach().item(), float(acc), None
+            batch_chunk["labels"] = batch_chunk["labels"][:, i:i+step].contiguous()
 
-    # Probe n_classes
-    with torch.autocast(device.type if "cuda" in device.type else "cpu"):
-        probe = model(inputs[:, :L], modality_ids=modality_ids)
-    n_classes = probe["logits"].shape[-1]
-    dtype = probe["logits"].dtype
-
-    votes = torch.zeros(B, night_length, n_classes, device=device, dtype=dtype)
-    counts = torch.zeros(B, night_length, device=device, dtype=torch.float32)
-
-    with torch.autocast(device.type if "cuda" in device.type else "cpu"):
-        for offset in range(L):
-            x = inputs[:, offset:]
-            usable = x.shape[1] - (x.shape[1] % L)
-            if usable == 0:
+            # Skip chunks with all -1 labels to avoid NaN loss
+            if (batch_chunk["labels"] == -1).all():
                 continue
-            x = x[:, :usable]
-            num_windows = usable // L
-            rest_dims = x.shape[2:]
-            x = x.reshape(B * num_windows, L, *rest_dims)
-            mod_exp = modality_ids.unsqueeze(1).expand(B, num_windows, -1)
-            mod_exp = mod_exp.reshape(B * num_windows, -1)
 
-            y = model(x, modality_ids=mod_exp)
-            y_logits = y["logits"].reshape(B, num_windows * L, n_classes)
+            for k in channel_keys:
+                batch_chunk["signals"][k] = batch_chunk["signals"][k][:, i:i+step].contiguous()
 
-            votes[:, offset : offset + usable] += y_logits
-            counts[:, offset : offset + usable] += 1
+            loss_chunk, acc_chunk, extra_chunk = _sleeptokenizer_step(model, batch_chunk, loss_fn, device)
+            loss += loss_chunk
+            acc += acc_chunk
+            for k, v in extra_chunk.items():
+                extra[k] = extra.get(k, 0) + v
 
-    safe_counts = counts.clamp(min=1).unsqueeze(-1)
-    voted = votes / safe_counts
+            valid_steps += 1
 
-    voted_flat = voted.reshape(-1, n_classes)
-    targets_flat = targets.reshape(-1)
-    loss = loss_fn(voted_flat, targets_flat)
-    acc = accuracy_score(voted_flat, targets_flat, ignore_index=-1)
+        # Average the loss and accuracy over the chunks
+        n_chunks = valid_steps if valid_steps > 0 else 1
+        loss /= n_chunks
+        acc /= n_chunks
+        for k in extra:
+            extra[k] /= n_chunks
 
-    return loss.detach().item(), float(acc), None
+        return loss, acc, extra
+
+    # Short recording: process directly
+    return _sleeptokenizer_step(model, batch, loss_fn, device)
 
 
 # ── Main ──────────────────────────────────────────────────────────────
@@ -303,55 +363,101 @@ def _sleeptokenizer_voting_eval_step(model, batch, loss_fn, device, L=1):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Pretrain SleepTokenizer (protosleepnet-gagliardi)"
+        description=f"Pretrain {MODEL_NAME} on multi-dataset schema (see docs/training_schema.md)"
     )
     parser.add_argument("--gpu_id", type=int, default=0)
     parser.add_argument("--output_dir", type=str, default="pretrained_output/protosleepnet-gagliardi")
-    parser.add_argument("--dataset", type=str, default=None)
-    parser.add_argument("--dataset_root", type=str, default=None)
-    parser.add_argument("--channels", nargs="+", default=None)
+    parser.add_argument(
+        "--data_root",
+        type=str,
+        default=DATA_ROOT_DEFAULT,
+        help=f"Path to sleep data root (default: $SLEEP_DATA_ROOT or {DATA_ROOT_DEFAULT})",
+    )
     parser.add_argument("--max_epochs", type=int, default=None)
     parser.add_argument("--batch_size", type=int, default=None)
     parser.add_argument("--lr", type=float, default=None)
+    parser.add_argument("--weight_decay", type=float, default=None)
     parser.add_argument("--num_workers", type=int, default=0)
     parser.add_argument("--early_stopping_patience", type=int, default=None)
+    parser.add_argument("--memmap_cache_size", type=int, default=None)
+    parser.add_argument(
+        "--exclude_datasets",
+        nargs="+",
+        default=None,
+        help=f"Datasets to exclude from training (available: {', '.join(TRAINING_DATASETS.keys())})",
+    )
     args = parser.parse_args()
 
     os.makedirs(args.output_dir, exist_ok=True)
 
     # CLI overrides
-    if args.dataset is not None:
-        TRAIN_CONFIG["dataset"] = args.dataset
-        TRAIN_CONFIG.pop("dataset_kwargs", None)
-    if args.channels is not None:
-        TRAIN_CONFIG["channels"] = args.channels
     if args.max_epochs is not None:
         TRAIN_CONFIG["max_epochs"] = args.max_epochs
     if args.batch_size is not None:
         TRAIN_CONFIG["batch_size"] = args.batch_size
     if args.lr is not None:
         TRAIN_CONFIG["lr"] = args.lr
+    if args.weight_decay is not None:
+        TRAIN_CONFIG["weight_decay"] = args.weight_decay
     if args.early_stopping_patience is not None:
         TRAIN_CONFIG["early_stopping_patience"] = args.early_stopping_patience
+    if args.memmap_cache_size is not None:
+        TRAIN_CONFIG["memmap_cache_size"] = args.memmap_cache_size
 
-    # ── Dataset ──
-    DatasetClass = get_dataset(TRAIN_CONFIG["dataset"])
-    ds_kwargs = dict(
-        pipelines=TRAIN_CONFIG["pipeline_preset"],
-        sequence_length=TRAIN_CONFIG["sequence_length"],
-        **TRAIN_CONFIG.get("dataset_kwargs", {}),
-    )
-    if TRAIN_CONFIG["channels"] is not None:
-        ds_kwargs["channels"] = TRAIN_CONFIG["channels"]
-    if args.dataset_root:
-        ds_kwargs["root"] = args.dataset_root
-    dataset = DatasetClass(**ds_kwargs)
+    # ── Build MultiDataset from TRAINING_DATASETS ──
+    print(f"Loading training datasets from: {args.data_root}")
+    print(f"Memmap cache size: {TRAIN_CONFIG['memmap_cache_size']}")
+
+    dataset_list = []
+    excluded = set(args.exclude_datasets) if args.exclude_datasets else set()
+
+    for ds_key, ds_config in TRAINING_DATASETS.items():
+        if ds_key in excluded:
+            print(f"  [EXCLUDED] {ds_config['name']}")
+            continue
+
+        try:
+            DatasetClass = ds_config["class"]
+            ds_kwargs = dict(ds_config["kwargs"])
+            ds_kwargs["root"] = args.data_root
+            ds_kwargs["pipelines"] = TRAIN_CONFIG["pipeline_preset"]
+            ds_kwargs["sequence_length"] = TRAIN_CONFIG["sequence_length"]
+            ds_kwargs["memmap_cache_size"] = TRAIN_CONFIG["memmap_cache_size"]
+
+            # Apply dataset-specific channel filter if defined
+            if ds_key in DATASET_CHANNELS:
+                ds_kwargs["channels"] = DATASET_CHANNELS[ds_key]
+
+            ds = DatasetClass(**ds_kwargs)
+            n_subjects = ds.get_n_subjects()
+
+            if n_subjects > 0:
+                dataset_list.append(ds)
+                channel_info = f"channels: {ds_kwargs.get('channels', 'all available')}"
+                print(f"  [LOADED] {ds_config['name']}: {n_subjects} subjects ({channel_info})")
+            else:
+                print(f"  [SKIPPED] {ds_config['name']}: no subjects found")
+        except Exception as e:
+            print(f"  [ERROR] {ds_config['name']}: {e}")
+            import traceback
+            traceback.print_exc()
+
+    if not dataset_list:
+        raise ValueError("No datasets loaded successfully! Check data_root paths.")
+
+    dataset = MultiDataset(dataset_list)
+    total_subjects = dataset.get_n_subjects()
+    print(f"\nMultiDataset: {total_subjects} total subjects")
+    print(f"  Available channels: {dataset.available_channels()}")
 
     # ── Model ──
+    print("\nCreating model...")
     model = SleepTokenizer(**MODEL_KWARGS)
-    print(f"SleepTokenizer: {sum(p.numel() for p in model.parameters()):,} params")
+    n_params = sum(p.numel() for p in model.parameters())
+    print(f"SleepTokenizer: {n_params:,} parameters")
 
     # ── Optimizer ──
+    print("Creating optimizer...")
     optimizer = torch.optim.AdamW(
         model.parameters(),
         lr=TRAIN_CONFIG["lr"],
@@ -362,10 +468,18 @@ def main():
     loss_fn = nn.CrossEntropyLoss(ignore_index=-1)
 
     # ── Monkey-patch Trainer ──
+    print("Patching Trainer._step and Trainer._voting_eval_step...")
     Trainer._step = _sleeptokenizer_step
     Trainer._voting_eval_step = _sleeptokenizer_voting_eval_step
 
     # ── Train ──
+    print("\nStarting training...")
+    print(f"  Dataset: {len(dataset_list)} datasets, {total_subjects} subjects")
+    print(f"  Max epochs: {TRAIN_CONFIG['max_epochs']}")
+    print(f"  Batch size: {TRAIN_CONFIG['batch_size']}")
+    print(f"  LR: {TRAIN_CONFIG['lr']}")
+    print(f"  GPU: {args.gpu_id}")
+
     nw = args.num_workers
     model = Trainer.train(
         model=model,
@@ -382,6 +496,7 @@ def main():
         pin_memory=nw > 0,
         persistent_workers=nw > 0,
         prefetch_factor=2,
+        valid_interval_ratio=0.1,
     )
 
     # ── Restore original _step ──
@@ -391,12 +506,21 @@ def main():
     # ── Save model ──
     model_path = os.path.join(args.output_dir, "model.pt")
     torch.save(model.cpu().state_dict(), model_path)
-    print(f"Saved model to {model_path}")
+    print(f"\nSaved model to {model_path}")
 
+    # ── Save config ──
     config = {
+        "model_name": MODEL_NAME,
         "model_class": "physioex.models.sleep_tokenizer:SleepTokenizer",
         "model_kwargs": MODEL_KWARGS,
         "training": TRAIN_CONFIG,
+        "data_root": args.data_root,
+        "datasets": {
+            key: config["name"]
+            for key, config in TRAINING_DATASETS.items()
+            if key not in excluded
+        },
+        "excluded_datasets": list(excluded) if excluded else [],
     }
     config_path = os.path.join(args.output_dir, "config.json")
     with open(config_path, "w") as f:

@@ -20,14 +20,21 @@ class MultiDataset(Dataset):
     - Unified __getitem__ returning the same dict format as BasePhysioDataset
     - Cross-dataset split coordination via split(fold)
     - dataset_idx tracking in the returned dict's subject metadata
+    - Proportional memmap cache distribution across constituent datasets
     """
 
-    def __init__(self, datasets: List[BasePhysioDataset]) -> None:
+    def __init__(
+        self, datasets: List[BasePhysioDataset], memmap_cache_size: int = 1000
+    ) -> None:
         super().__init__()
         if not datasets:
             raise ValueError("MultiDataset requires at least one dataset")
         self._datasets = list(datasets)
-
+        
+        # all the datasets should have the same sequence length
+        assert all(ds.sequence_length == self._datasets[0].sequence_length for ds in self._datasets), "All datasets must have the same sequence length for MultiDataset"
+        self.sequence_length = self._datasets[0].sequence_length
+        
         # Build cumulative offset table for flat indexing.
         # Each entry is (dataset_index, cumulative_start, cumulative_end).
         self._offsets: List[Tuple[int, int, int]] = []
@@ -37,6 +44,10 @@ class MultiDataset(Dataset):
             self._offsets.append((i, running, running + length))
             running += length
         self._length = running
+
+        # Distribute memmap cache proportionally across datasets
+        if memmap_cache_size > 0:
+            self._distribute_memmap_cache(memmap_cache_size)
 
     # ------------------------------------------------------------------
     # Public API
@@ -148,3 +159,78 @@ class MultiDataset(Dataset):
     def __repr__(self) -> str:
         parts = ", ".join(f"{ds.DATASET_NAME}({len(ds)})" for ds in self._datasets)
         return f"MultiDataset(total={self._length}, datasets=[{parts}])"
+
+    # ------------------------------------------------------------------
+    # Memmap cache management
+    # ------------------------------------------------------------------
+
+    def _distribute_memmap_cache(self, total_cache_size: int) -> None:
+        """Distribute memmap cache proportionally across constituent datasets.
+
+        Each dataset gets a share proportional to its number of subjects.
+        This ensures that larger datasets get more cache while respecting
+        the total cache budget.
+
+        Args:
+            total_cache_size: Total number of memmap files to cache across all datasets.
+        """
+        if total_cache_size <= 0:
+            return
+
+        total_subjects = sum(ds.get_n_subjects() for ds in self._datasets)
+        if total_subjects == 0:
+            logger.warning("MultiDataset: no subjects found, skipping cache distribution")
+            return
+
+        for i, ds in enumerate(self._datasets):
+            n_subjects = ds.get_n_subjects()
+            # Proportional allocation: ensure at least 1 for non-empty datasets
+            if n_subjects > 0:
+                share = max(1, int(n_subjects / total_subjects * total_cache_size))
+                ds._memmap_cache_size = share
+                logger.info(
+                    f"MultiDataset: {ds.DATASET_NAME} (n={n_subjects}) "
+                    f"allocated memmap_cache_size={share}"
+                )
+
+    def memmap_cache_stats(self) -> Dict[str, Any]:
+        """Aggregate memmap cache statistics across all constituent datasets.
+
+        Returns:
+            Dict with aggregated stats (total_hits, total_misses, hit_rate, etc.)
+            and per-dataset breakdown.
+        """
+        total_hits = 0
+        total_misses = 0
+        per_dataset = {}
+
+        for i, ds in enumerate(self._datasets):
+            if hasattr(ds, "memmap_cache_stats"):
+                stats = ds.memmap_cache_stats()
+                total_hits += stats["hits"]
+                total_misses += stats["misses"]
+                per_dataset[ds.DATASET_NAME] = stats
+
+        total = total_hits + total_misses
+        hit_rate = (total_hits / total * 100) if total > 0 else 0.0
+
+        return {
+            "total_hits": total_hits,
+            "total_misses": total_misses,
+            "total_requests": total,
+            "hit_rate_percent": hit_rate,
+            "per_dataset": per_dataset,
+        }
+
+    def close(self) -> None:
+        """Close all memmap caches in constituent datasets."""
+        for ds in self._datasets:
+            if hasattr(ds, "close"):
+                ds.close()
+
+    def __del__(self) -> None:
+        """Cleanup memmap caches on deletion."""
+        try:
+            self.close()
+        except Exception:
+            pass

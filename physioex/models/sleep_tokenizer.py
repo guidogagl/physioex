@@ -34,28 +34,21 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+# Import modality types from shared data module
+from physioex.data.modality import (
+    ModalityType,
+    MODALITY_TYPES as _DATA_MODALITY_TYPES,
+    N_MODALITY_TYPES,
+    infer_channel_modality,
+)
+
 
 # ═══════════════════════════════════════════════════════════════════════
-# Modality type registry — 14 types, validated on 807 channels (98.4%)
+# Modality type registry — 15 types, validated on 807 channels (98.4%)
 # ═══════════════════════════════════════════════════════════════════════
 
-MODALITY_TYPES = {
-    "EEG": 0,
-    "EOG": 1,
-    "EMG": 2,
-    "ECG": 3,
-    "RESP": 4,
-    "SPO2": 5,
-    "HR": 6,
-    "LEG": 7,
-    "POS": 8,
-    "ACCEL": 9,
-    "LIGHT": 10,
-    "SOUND": 11,
-    "DEVICE": 12,
-    "OTHER": 13,
-}
-N_MODALITY_TYPES = len(MODALITY_TYPES)
+# Keep local copy for backward compatibility (same as shared module)
+MODALITY_TYPES = dict(_DATA_MODALITY_TYPES)
 
 
 def infer_modality(channel_name: str, hint: Optional[str] = None) -> int:
@@ -68,153 +61,38 @@ def infer_modality(channel_name: str, hint: Optional[str] = None) -> int:
 
     Returns:
         Integer index into :data:`MODALITY_TYPES`.
+
+    Note:
+        This function now wraps the shared implementation from
+        physioex.data.modality for consistency across the codebase.
     """
-    if hint and hint in MODALITY_TYPES:
-        return MODALITY_TYPES[hint]
-
-    n = channel_name.strip()
-    u = n.upper()
-    c = re.sub(r"[-_\s.()#/]", "", u)
-
-    # ── EEG ──
-    if (
-        c.startswith("EEG")
-        or "CLE" in u
-        or "LER" in u
-        or c.endswith("REF")
-        or c.endswith("AVG")
-    ):
-        return 0
-    if re.match(r"CH\d+\s*EEG", u):
-        return 0
-    eeg_re = (
-        r"^(FP[12Z]|AF[34789Z]|F[1-9]0?Z?|FZ|FC[1-6Z]|FT[789]0?|"
-        r"C[1-6Z]|CZ|T[3-9]0?|TP[789]0?|CP[1-6Z]|"
-        r"P[3489]0?Z?|PZ|PO[3478Z]|O[12Z]|OZ|A[12]|M[12])"
-    )
-    m = re.match(eeg_re, c)
-    if m:
-        rest = c[m.end() :]
-        if not re.match(
-            r"^(ULS|HON|HOD|AP|PG|TT|TL|DS|LM|OS|RES|RESS|ULSE)", rest
-        ):
-            return 0
-
-    # ── EOG ──
-    if "EOG" in c:
-        return 1
-    if re.match(r"^E[12](M[12]|$)", c):
-        return 1
-    if c in ("LOC", "ROC", "LEOG", "REOG"):
-        return 1
-    # MASS-specific EOG patterns (Left/Right Horiz, Upper/Lower Vertic)
-    if re.search(r"HORIZ|VERTIC|HORZ|VERT\.|H\.|V\.", c):
-        return 1
-
-    # ── EMG ──
-    if "EMG" in c or "CHIN" in c or "SUBMENTAL" in c:
-        return 2
-    if re.search(r"MASSETER|MASSAT|MASRL|SCALENE|SCM$", c):
-        return 2
-    if c.startswith("SUBR") or "SUBL" in c:
-        return 2
-
-    # ── ECG ──
-    if "ECG" in c or "EKG" in c:
-        return 3
-    if re.match(r"^RR\d*$", c):
-        return 3
-
-    # ── LEG ──
-    if re.search(r"LEG|TIBIAL|PLM|WPLM", c):
-        return 7
-    if re.match(r"^(L|R)?(ARM|FOOT)", c):
-        return 7
-    if re.match(r"^(LAT|RAT)\d", c) or c in ("LAT", "RAT"):
-        return 7
-    if c.startswith("ARM"):
-        return 7
-
-    # ── RESP ──
-    _resp_kw = (
-        "FLOW", "NASAL", "NAF", "ORAL", "THOR", "ABDO", "ABD", "CHEST",
-        "CANNULA", "THERM", "PTAF", "SNOR", "CPAP", "IPAP", "EPAP", "PAP",
-        "LEAK", "LEK", "PRESS", "PRES", "TIDAL", "TIDVOL", "VTOT", "VTINSP",
-        "RESP", "RES", "AIRFLOW", "CFLO", "XFLOW", "PFLOW", "SUM", "XSUM",
-        "RMI", "WAVE", "PHASE", "CO2", "ETC", "VAB", "VTH",
-        "FLATTEN", "DIA", "VENT", "VOLUME", "PUMP", "WINX", "NCPT",
-        "EFFORT", "EXOB", "BREATHRATE", "RESPRATE", "NASOR", "NEWAIR", "MV",
-    )
-    if any(k in c for k in _resp_kw):
-        return 4
-    if c in ("NP", "NPV", "TV"):
-        return 4
-
-    # ── SPO2 ──
-    if re.search(
-        r"SPO2|SAO2|SA02|OXSTAT|OXSTATUS|PLETH|PLTH|PPG|TCPPG|"
-        r"PLESMO|NONIN|PULSEAMP|RDPLETH|RDQUALITY",
-        c,
-    ):
-        return 5
-    if c.startswith("OX"):
-        return 5
-
-    # ── HR ──
-    if c in ("HR", "PULSE", "PR", "DHR", "PULSERATE", "HEARTRATE", "HRATE", "HEART"):
-        return 6
-
-    # ── POS ──
-    if re.search(r"POS(ITION)?$|BPOS|BODYPOS", c) or c in ("POS", "BODY"):
-        return 8
-
-    # ── ACCEL ──
-    if re.search(r"ACC|ACCEL|GRAVITY|MOVE|MVMT|ACCU", c):
-        return 9
-
-    # ── LIGHT ──
-    if re.search(r"LIGHT|PHODB", c):
-        return 10
-
-    # ── SOUND ──
-    if re.search(r"PHONO|SOUND|MIC", c):
-        return 11
-
-    # ── DEVICE ──
-    if re.search(
-        r"STAT$|BUTTN|MARKER|EVENT|BATTERY|ELEV|UNUSED|IMPEDAN|"
-        r"PROTECH|GRAPHICAL|^REG\d|^DC\d|^Z1$|^PTT$|^AMPP$|^PDOX$|"
-        r"^NDEC$|^PTL$|OTHER|^AUX|^MASK$|RCHON|^PES|^IC[12]|OFF$|"
-        r"TECHNICAL|ACTIVITY",
-        c,
-    ):
-        return 12
-    if re.match(r"^\d+$", c) or c in (
-        "LEFT", "RIGHT", "EPMS", "RIC", "TEMPRECTAL", "",
-    ):
-        return 12
-    if re.match(r"^[XLRC](\d+)?$", c):
-        return 12
-
-    return 13  # OTHER
+    result = infer_channel_modality(channel_name, hint)
+    return int(result)  # Convert ModalityType enum to int
 
 
 def build_modality_ids(batch: dict) -> torch.Tensor:
     """Build ``(B, C)`` modality-type index tensor from a collated batch.
 
-    Uses ``batch["channel_info"]`` (list of B dicts) and
-    ``batch["channel_order"]`` (list of C channel names).
+    With the new MODALITY_INDEX channel naming (e.g., "EEG_0", "EOG_1"),
+    this function simply parses the modality from the channel name.
+
+    Args:
+        batch: Dict with ``channel_order`` (list of C channel names).
+
+    Returns:
+        Tensor of shape ``(B, C)`` with modality type indices.
     """
     channel_order = batch["channel_order"]
-    channel_info_list = batch.get("channel_info")
-    B = len(channel_info_list) if channel_info_list else 1
+    B = batch["labels"].shape[0]
     C = len(channel_order)
     ids = torch.zeros(B, C, dtype=torch.long)
-    for b in range(B):
-        info = channel_info_list[b] if channel_info_list else {}
-        for c, name in enumerate(channel_order):
-            hint = info[name].get("modality") if name in info else None
-            ids[b, c] = infer_modality(name, hint)
+
+    # Parse modality from channel name: "EEG_0" -> "EEG" -> 0
+    for c, name in enumerate(channel_order):
+        modality_str = name.split("_")[0]  # Extract modality part
+        modality_idx = MODALITY_TYPES.get(modality_str, MODALITY_TYPES["OTHER"])
+        ids[:, c] = modality_idx
+
     return ids
 
 
@@ -645,17 +523,19 @@ class SleepTokenizer(nn.Module):
 
         # Modality-level dropout (training only)
         if self.training:
-            ch_emb = modality_dropout(
+            mix_emb = modality_dropout(
                 ch_emb, modality_ids,
                 self.p_batch_dropout, self.p_modality_dropout,
             )
+        else:    
+            mix_emb = ch_emb  # (N, C, d_model)
 
         # Cross-channel mixing (SAB)
         for sab in self.sab_layers:
-            ch_emb = sab(ch_emb)
+            mix_emb = sab(mix_emb)
 
         # PMA aggregation → fixed-size embedding
-        pooled = self.pma(ch_emb)  # (N, n_seeds, d_model)
+        pooled = self.pma(mix_emb)  # (N, n_seeds, d_model)
         embedding = self.pma_proj(pooled.flatten(1))  # (N, d_model)
 
         # L2 normalize onto unit hypersphere

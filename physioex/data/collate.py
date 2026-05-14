@@ -15,28 +15,54 @@ def dict_collate_fn(batch: List[Dict[str, Any]]) -> Dict[str, Any]:
       - 'channel_order': list[str]
       - 'labels': Tensor
     Optional fields: 'epoch_indices', 'channel_info', 'subject', 'recording_length'.
+
+    Note:
+        Channel names are expected to be in MODALITY_INDEX format (e.g., "EEG_0", "EOG_1").
+        The collate sorts channels by (modality, index) for deterministic ordering.
     """
     if not batch:
         raise ValueError("Empty batch")
 
     out: Dict[str, Any] = {}
 
-    # signals: stack per channel key
-    signal_keys = list(batch[0]["signals"].keys())
+    # signals: collect ALL unique channel keys across the entire batch
+    all_channels = set()
+    for b in batch:
+        all_channels.update(b["signals"].keys())
+
+    # Sort channels by (modality_type, index) for deterministic ordering
+    # Keys are in format "MODALITY_INDEX" (e.g., "EEG_0", "EOG_1")
+    # Sort by modality type index (EEG=0, EOG=1, EMG=2, ...), then by numeric index
+    from physioex.data.modality import MODALITY_TYPES
+
+    def sort_key(ch: str) -> tuple:
+        parts = ch.rsplit("_", 1)  # Split only on last underscore
+        if len(parts) == 2:
+            modality_name = parts[0]
+            # Get modality type index, default to OTHER (13) if not found
+            modality_idx = MODALITY_TYPES.get(modality_name, 13)
+            try:
+                return (modality_idx, int(parts[1]))
+            except ValueError:
+                return (modality_idx, 0)
+        return (13, 0)  # OTHER for malformed names
+
+    ref_order = sorted(all_channels, key=sort_key)
+    out["channel_order"] = ref_order
+
+    # zero-fill missing keys in each batch element
+    for b in batch:
+        for k in ref_order:
+            if k not in b["signals"]:
+                # determine the shape of the missing signal (use the shape of an existing signal)
+                example_signal = next(iter(b["signals"].values()))
+                b["signals"][k] = torch.zeros_like(example_signal)
+    
+    # Stack signals according to the sorted channel_order
     out["signals"] = {
-        k: torch.stack([b["signals"][k] for b in batch]) for k in signal_keys
+        k: torch.stack([b["signals"][k] for b in batch]) for k in ref_order
     }
-
-    # channel_order: must be identical across batch (assert)
-    ref_order = batch[0]["channel_order"]
-    for b in batch[1:]:
-        if b["channel_order"] != ref_order:
-            raise ValueError(
-                f"channel_order mismatch in batch: {b['channel_order']} vs {ref_order}. "
-                "All samples in a batch must share the same channel_order."
-            )
-    out["channel_order"] = list(ref_order)
-
+    
     # labels
     out["labels"] = torch.stack([b["labels"] for b in batch])
 
@@ -68,8 +94,15 @@ def stack_channels(batch: Dict[str, Any]) -> torch.Tensor:
     order = batch["channel_order"]
     if not order:
         raise ValueError("channel_order is empty")
-    # signals[name] after collate has shape (B, L, ...); stack adds a new dim 2 -> (B, L, C, ...)
-    return torch.stack([batch["signals"][name] for name in order], dim=2)
+    
+    try:
+        # signals[name] after collate has shape (B, L, ...); stack adds a new dim 2 -> (B, L, C, ...)
+        return torch.stack([batch["signals"][name] for name in order], dim=2)
+    except KeyError as e:
+        print( "Error stacking channels: missing channel in signals:", e )
+        print("Available channels in signals:", list(batch["signals"].keys()))
+        print("Requested channel order:", order)
+        exit(1)
 
 
 def is_dict_batch(batch: Any) -> bool:

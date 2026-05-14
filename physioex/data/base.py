@@ -6,6 +6,7 @@ import os
 import random
 import warnings
 from abc import abstractmethod
+from collections import OrderedDict
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
@@ -38,6 +39,7 @@ from physioex.data.events import (
     events_to_dicts,
     dicts_to_events,
 )
+from physioex.data.modality import infer_channel_modality, ModalityType, MODALITY_TYPES
 
 logger = logging.getLogger("physioex.data")
 
@@ -104,6 +106,7 @@ class BasePhysioDataset(Dataset):
         skip_subjects_without_channels: bool = True,
         stage_map: Optional[Dict] = None,
         trim_excess_wake: bool = True,
+        memmap_cache_size: int = 1000,
     ):
         super().__init__()
         self.root = str(root) if root is not None else None
@@ -134,6 +137,13 @@ class BasePhysioDataset(Dataset):
         # invalidation.
         self._labels_cache: Dict[str, np.ndarray] = {}
         self._events_cache: Dict[str, List[SleepEvent]] = {}
+        # LRU cache for open memmap file handles. Avoids repeated mmap() calls
+        # which are expensive on NFS (~0.16ms per call on network filesystems).
+        # Cache key is (subject_id, physical_channel, pipeline_hash).
+        self._memmap_cache: OrderedDict[str, np.ndarray] = OrderedDict()
+        self._memmap_cache_size = int(memmap_cache_size)
+        self._memmap_cache_hits = 0
+        self._memmap_cache_misses = 0
 
         self.cache = ChannelCache(cache_dir)
 
@@ -333,11 +343,13 @@ class BasePhysioDataset(Dataset):
         Guarantees the returned array has exactly ``end - start`` entries on
         the leading axis. Used to keep labels and signals aligned even when
         an EDF is truncated or a label array is shorter than expected.
+
+        NOTE: Avoids np.asarray() to preserve memmap lazy loading from cache.
         """
         length = int(end - start)
         if length <= 0:
             raise ValueError(f"_safe_slice requires end > start, got {start}..{end}")
-        arr = np.asarray(arr)
+        # arr is already np.ndarray or memmap from cache - no conversion needed
         # Clamp start and end to valid array bounds
         actual_start = max(0, min(start, arr.shape[0]))
         actual_end = max(actual_start, min(end, arr.shape[0]))
@@ -724,7 +736,24 @@ class BasePhysioDataset(Dataset):
             # If cache file exists, try to use it.
             if signal_path.exists():
                 try:
+                    # Check LRU cache first
+                    cache_key = f"{spec.subject_id}:{resolved.physical}:{pipeline_hash}"
+                    if cache_key in self._memmap_cache:
+                        # Move to end (most recently used)
+                        self._memmap_cache.move_to_end(cache_key)
+                        self._memmap_cache_hits += 1
+                        return self._memmap_cache[cache_key]
+
+                    # Cache miss - load from disk
                     memmap, meta = self.cache.load_memmap(signal_path)
+                    self._memmap_cache_misses += 1
+
+                    # Add to cache with LRU eviction
+                    self._memmap_cache[cache_key] = memmap
+                    if len(self._memmap_cache) > self._memmap_cache_size:
+                        # Remove oldest entry
+                        self._memmap_cache.popitem(last=False)
+
                     return memmap
                 except Exception as exc:
                     logger.warning(
@@ -775,6 +804,47 @@ class BasePhysioDataset(Dataset):
         else:
             # Return in-memory array directly (float32, not cast to cache dtype)
             return processed.astype(np.float32)
+
+    def close(self) -> None:
+        """Explicitly close all open memmap file handles.
+
+        This clears the LRU memmap cache and closes all file descriptors.
+        Normally not needed as Python's garbage collector will handle this,
+        but useful for explicit cleanup or when reusing the same dataset object.
+        """
+        self._memmap_cache.clear()
+
+    def __del__(self) -> None:
+        """Cleanup when dataset is destroyed."""
+        try:
+            self.close()
+        except Exception:
+            pass  # Ignore errors during cleanup
+
+    def memmap_cache_stats(self) -> Dict[str, Any]:
+        """Return LRU memmap cache statistics.
+
+        Returns:
+            Dict with:
+                - size: current number of cached memmaps
+                - max_size: maximum cache size
+                - hits: number of cache hits
+                - misses: number of cache misses
+                - hit_rate: hit rate as percentage
+        """
+        hits = self._memmap_cache_hits
+        misses = self._memmap_cache_misses
+        total = hits + misses
+        hit_rate = (hits / total * 100) if total > 0 else 0.0
+
+        return {
+            "size": len(self._memmap_cache),
+            "max_size": self._memmap_cache_size,
+            "hits": hits,
+            "misses": misses,
+            "total_requests": total,
+            "hit_rate": hit_rate,
+        }
 
     def _epoch_and_run_pipeline(
         self,
@@ -972,6 +1042,9 @@ class BasePhysioDataset(Dataset):
         channel_info: Dict[str, Dict[str, Any]] = {}
         channel_order: List[str] = []
 
+        # Modality counter for renaming channels as MODALITY_INDEX
+        modality_counters: Dict[ModalityType, int] = {}
+
         # Reference shape: needed to zero-fill channels that are missing
         # for this subject. We get the shape from the FIRST resolved channel,
         # or fall back to a sensible default.
@@ -979,15 +1052,25 @@ class BasePhysioDataset(Dataset):
 
         for i, rc in enumerate(resolved_list):
             req = self.channels[i] if i < len(self.channels) else f"ch{i}"
+            req_str = str(req)  # Original request as string
 
             if rc is None:
                 # Channel not available for this subject — zero-fill later
-                key = req if isinstance(req, str) else _encode_physical(req)
+                # Use modality-based naming for consistency
+                modality = infer_channel_modality(req_str)
+                if modality not in modality_counters:
+                    modality_counters[modality] = 0
+                idx = modality_counters[modality]
+                modality_counters[modality] += 1
+
+                key = f"{modality.name}_{idx}"
                 channel_order.append(key)
                 channel_info[key] = {
+                    "original_name": req,
+                    "modality": modality.name,
+                    "index": idx,
                     "request": req,
                     "physical": None,
-                    "modality": req if isinstance(req, str) else None,
                     "fs_in": 0,
                     "fs_out": 0,
                     "is_differential": False,
@@ -997,10 +1080,15 @@ class BasePhysioDataset(Dataset):
                 }
                 continue
 
-            # Use the user's request name as key (e.g. "EEG") rather than
-            # the resolved physical name (e.g. "EEG C3-LER") so that all
-            # subjects share the same keys — required for batching.
-            key = req if isinstance(req, str) else _encode_physical(rc.physical)
+            # ── NEW: Modality-based channel naming ──
+            # Infer modality from request name and create MODALITY_INDEX key
+            modality = infer_channel_modality(req_str)
+            if modality not in modality_counters:
+                modality_counters[modality] = 0
+            idx = modality_counters[modality]
+            modality_counters[modality] += 1
+
+            key = f"{modality.name}_{idx}"  # "EEG_0", "EEG_1", "EOG_0", etc.
             channel_order.append(key)
 
             signal_data = self._load_or_compute_channel(spec, rc)
@@ -1015,8 +1103,31 @@ class BasePhysioDataset(Dataset):
                 _ref_shape = tuple(signals_raw[key].shape)
 
             pipeline = self._pipeline_for_channel(rc)
-            compiled = pipeline.compile(rc.fs_in)
+            # Try to get fs_out from cache metadata to avoid recompiling
+            fs_out = None
+            if self.cache_enabled:
+                signal_path = self.cache.signal_path(
+                    self.DATASET_NAME, spec.subject_id, rc.physical, pipeline.hash()
+                )
+                if signal_path.exists():
+                    meta = self.cache.load_json(self.cache.signal_meta_path(
+                        self.DATASET_NAME, spec.subject_id, rc.physical, pipeline.hash()
+                    ))
+                    if meta:
+                        fs_out = meta.get("fs_out")
+
+            # Only compile if not found in cache metadata
+            if fs_out is None:
+                compile_key = (pipeline.hash(), rc.fs_in, spec.subject_id)
+                compiled = self._compiled_pipelines.get(compile_key)
+                if compiled is None:
+                    compiled = pipeline.compile(rc.fs_in)
+                    self._compiled_pipelines[compile_key] = compiled
+                fs_out = compiled.fs_out
             channel_info[key] = {
+                "original_name": req_str,  # Keep original for debugging
+                "modality": modality.name,  # Use inferred modality
+                "index": idx,  # Index within this modality
                 "request": (
                     rc.request
                     if not isinstance(rc.request, tuple)
@@ -1027,9 +1138,8 @@ class BasePhysioDataset(Dataset):
                     if not isinstance(rc.physical, tuple)
                     else list(rc.physical)
                 ),
-                "modality": rc.modality,
                 "fs_in": rc.fs_in,
-                "fs_out": compiled.fs_out,
+                "fs_out": fs_out,  # From cache metadata or compilation
                 "is_differential": rc.is_differential,
                 "unit": header.channel_units.get(
                     header.available_channels[rc._indices[0]] if rc._indices else "",
@@ -1038,6 +1148,24 @@ class BasePhysioDataset(Dataset):
                 "pipeline_hash": pipeline.hash(),
                 "available": True,
             }
+
+        # ── Sort channels by (modality_type, index) for consistent ordering ──
+        def _sort_key(ch: str) -> tuple:
+            """Sort key: (modality_type_index, channel_index)."""
+            parts = ch.rsplit("_", 1)
+            if len(parts) == 2:
+                modality_name = parts[0]
+                modality_idx = MODALITY_TYPES.get(modality_name, 14)  # OTHER=14
+                try:
+                    return (modality_idx, int(parts[1]))
+                except ValueError:
+                    return (modality_idx, 0)
+            return (14, 0)
+
+        channel_order = sorted(channel_order, key=_sort_key)
+
+        # Reorder channel_info to match sorted channel_order
+        channel_info = OrderedDict((k, channel_info[k]) for k in channel_order)
 
         # Fill in missing channels with zeros (same shape as resolved ones)
         if _ref_shape is None:
@@ -1066,7 +1194,7 @@ class BasePhysioDataset(Dataset):
                 arr = np.concatenate([arr, pad_arr], axis=0)
             elif arr.shape[0] > max_len:
                 arr = arr[:max_len]
-            signals[key] = torch.from_numpy(arr)
+            signals[key] = torch.from_numpy(arr.copy())
 
         if labels_tensor.shape[0] < max_len:
             pad_lbl = torch.full(
