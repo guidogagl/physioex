@@ -419,7 +419,20 @@ def main():
         try:
             DatasetClass = ds_config["class"]
             ds_kwargs = dict(ds_config["kwargs"])
-            ds_kwargs["root"] = args.data_root
+
+            if ds_key == "alzheimers":
+                dataset_path_name = "AlzheimerData"
+            elif ds_key =="sleepedf":
+                dataset_path_name = "physionet-sleep-data"
+            elif ds_key == "parkinsons":
+                dataset_path_name = "Parkinson_data"
+            elif ds_key == "hmc":
+                dataset_path_name = "hmc/physionet.org/files/hmc-sleep-staging/1.1/recordings"
+            else:
+                dataset_path_name = ds_key
+
+            ds_kwargs["root"] = args.data_root + dataset_path_name
+            
             ds_kwargs["pipelines"] = TRAIN_CONFIG["pipeline_preset"]
             ds_kwargs["sequence_length"] = TRAIN_CONFIG["sequence_length"]
             ds_kwargs["memmap_cache_size"] = TRAIN_CONFIG["memmap_cache_size"]
