@@ -8,7 +8,10 @@ Training schema defined in: docs/training_schema.md
 
 Usage:
     python examples/pretrained/protosleepnet-gagliardi/pretrain.py --gpu_id 0
-    python examples/pretrained/protosleepnet-gagliardi/pretrain.py --gpu_id 0 --data_root /path/to/data
+    python examples/pretrained/protosleepnet-gagliardi/pretrain.py --gpu_id 0 --exclude_datasets shhs mesa
+
+Environment:
+    PHYSIOEX_DATA: Root directory containing all dataset subdirectories
 """
 import argparse
 import json
@@ -58,12 +61,6 @@ MODEL_KWARGS = {
     "p_batch_dropout": 0.3,
     "p_modality_dropout": 0.3,
 }
-
-# Default data root: environment variable or fallback path
-DATA_ROOT_DEFAULT = os.environ.get(
-    "SLEEP_DATA_ROOT",
-    "/home/dev/sleep-data/raw-sleep/"
-)
 
 # Training datasets configuration
 # Based on docs/training_schema.md
@@ -367,12 +364,6 @@ def main():
     )
     parser.add_argument("--gpu_id", type=int, default=0)
     parser.add_argument("--output_dir", type=str, default="pretrained_output/protosleepnet-gagliardi")
-    parser.add_argument(
-        "--data_root",
-        type=str,
-        default=DATA_ROOT_DEFAULT,
-        help=f"Path to sleep data root (default: $SLEEP_DATA_ROOT or {DATA_ROOT_DEFAULT})",
-    )
     parser.add_argument("--max_epochs", type=int, default=None)
     parser.add_argument("--batch_size", type=int, default=None)
     parser.add_argument("--lr", type=float, default=None)
@@ -405,7 +396,7 @@ def main():
         TRAIN_CONFIG["memmap_cache_size"] = args.memmap_cache_size
 
     # ── Build MultiDataset from TRAINING_DATASETS ──
-    print(f"Loading training datasets from: {args.data_root}")
+    print(f"Loading training datasets (uses PHYSIOEX_DATA env var)")
     print(f"Memmap cache size: {TRAIN_CONFIG['memmap_cache_size']}")
 
     dataset_list = []
@@ -420,19 +411,8 @@ def main():
             DatasetClass = ds_config["class"]
             ds_kwargs = dict(ds_config["kwargs"])
 
-            if ds_key == "alzheimers":
-                dataset_path_name = "AlzheimerData"
-            elif ds_key =="sleepedf":
-                dataset_path_name = "physionet-sleep-data"
-            elif ds_key == "parkinsons":
-                dataset_path_name = "Parkinson_data"
-            elif ds_key == "hmc":
-                dataset_path_name = "hmc/physionet.org/files/hmc-sleep-staging/1.1/recordings"
-            else:
-                dataset_path_name = ds_key
-
-            ds_kwargs["root"] = args.data_root + dataset_path_name
-            
+            # Pass root=None to use default PHYSIOEX_DATA/{DATASET_SUBDIR} path
+            ds_kwargs["root"] = None
             ds_kwargs["pipelines"] = TRAIN_CONFIG["pipeline_preset"]
             ds_kwargs["sequence_length"] = TRAIN_CONFIG["sequence_length"]
             ds_kwargs["memmap_cache_size"] = TRAIN_CONFIG["memmap_cache_size"]
@@ -456,7 +436,10 @@ def main():
             traceback.print_exc()
 
     if not dataset_list:
-        raise ValueError("No datasets loaded successfully! Check data_root paths.")
+        raise ValueError(
+            "No datasets loaded successfully! Ensure PHYSIOEX_DATA environment variable "
+            "is set and points to the directory containing all dataset subdirectories."
+        )
 
     dataset = MultiDataset(dataset_list)
     total_subjects = dataset.get_n_subjects()
@@ -527,7 +510,6 @@ def main():
         "model_class": "physioex.models.sleep_tokenizer:SleepTokenizer",
         "model_kwargs": MODEL_KWARGS,
         "training": TRAIN_CONFIG,
-        "data_root": args.data_root,
         "datasets": {
             key: config["name"]
             for key, config in TRAINING_DATASETS.items()
