@@ -24,7 +24,7 @@ from typing import Any, Dict, List, Optional
 
 import numpy as np
 
-from physioex.data.base import BasePhysioDataset, SubjectSpec
+from physioex.data.base import BasePhysioDataset, SubjectSpec, get_data_root
 
 logger = logging.getLogger("physioex.data")
 
@@ -63,10 +63,11 @@ class WSCDataset(BasePhysioDataset):
     Args:
         visit: int (1, 2, or 3). Selects which visit's recordings to load.
         root: path to the WSC data directory
-              (default: ``/home/dev/sleep-data/raw-sleep/wsc``).
+              (default: ``$PHYSIOEX_DATA/wsc``).
     """
 
     DATASET_NAME = "wsc"
+    DATASET_SUBDIR = "wsc"
     DEFAULT_EPOCH_LENGTH_SEC = 30.0
 
     # Channel preferences: WSC uses non-standard channel names.
@@ -103,11 +104,13 @@ class WSCDataset(BasePhysioDataset):
     def __init__(
         self,
         visit: int = 1,
-        root: str = "/home/dev/sleep-data/raw-sleep/wsc",
+        root: Optional[str] = None,
         **kwargs,
     ):
         if visit not in (1, 2, 3, 4, 5):
             raise ValueError(f"visit must be 1, 2, 3, 4, or 5; got {visit}")
+        if root is None:
+            root = str(get_data_root() / self.DATASET_SUBDIR)
         self.visit = visit
         # Dynamic dataset name so cache dirs are separated per visit.
         self.DATASET_NAME = f"wsc_visit{visit}"

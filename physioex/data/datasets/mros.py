@@ -23,9 +23,9 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
-from physioex.data.base import SubjectSpec
+from physioex.data.base import SubjectSpec, get_data_root
 from physioex.data.datasets._nsrr import _NSRRBaseDataset
 
 logger = logging.getLogger("physioex.data")
@@ -35,6 +35,7 @@ class MrOSDataset(_NSRRBaseDataset):
     """MrOS sleep dataset (visit 1)."""
 
     DATASET_NAME = "mros"
+    DATASET_SUBDIR = "mros"
 
     CHANNEL_PREFERENCES: Dict[str, List] = {
         "EEG": [
@@ -63,9 +64,11 @@ class MrOSDataset(_NSRRBaseDataset):
 
     def __init__(
         self,
-        root: str = "/home/dev/sleep-data/raw-sleep/mros",
+        root: Optional[str] = None,
         **kwargs,
     ):
+        if root is None:
+            root = str(get_data_root() / self.DATASET_SUBDIR)
         self._metadata = self._load_metadata(root)
         super().__init__(root=root, **kwargs)
 

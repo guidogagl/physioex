@@ -214,12 +214,16 @@ def time_domain_preset(
     Returns a dict mapping each modality (EEG/EOG/EMG/ECG) to a modality-
     specific ``PreprocessingPipeline``. BasePhysioDataset will dispatch each
     channel to its modality's pipeline.
+
+    ``__default__`` provides a fallback that only resamples to target_fs,
+    ensuring all channels (including Resp, Temp, etc.) end up at the same rate.
     """
     return {
         "EEG": eeg_pipeline(target_fs=target_fs, notch_freq=notch_freq),
         "EOG": eog_pipeline(target_fs=target_fs, notch_freq=notch_freq),
         "EMG": emg_pipeline(target_fs=target_fs, notch_freq=notch_freq),
         "ECG": ecg_pipeline(target_fs=target_fs, notch_freq=notch_freq),
+        "__default__": PreprocessingPipeline([Resample(target_fs=target_fs)]),
     }
 
 

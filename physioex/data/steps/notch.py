@@ -1,12 +1,18 @@
+import logging
 import numpy as np
 from scipy.signal import iirnotch, sosfilt, sosfiltfilt
 from physioex.data.pipeline import PreprocessingStep, CompiledStep
+
+logger = logging.getLogger("physioex.data.steps")
 
 
 class NotchFilter(PreprocessingStep):
     """IIR notch filter (powerline removal).
 
     Uses second-order sections (SOS) for numerical stability on long signals.
+
+    If the notch frequency is out of range (freq >= Nyquist), returns the
+    unfiltered signal with a warning instead of raising an error.
     """
 
     def __init__(self, freq: float = 50.0, quality: float = 30.0):
@@ -19,7 +25,14 @@ class NotchFilter(PreprocessingStep):
     def compile(self, fs_in: float) -> CompiledStep:
         nyq = 0.5 * fs_in
         if not 0 < self.freq < nyq:
-            raise ValueError(f"Notch frequency {self.freq} out of range (0, {nyq})")
+            logger.warning(
+                f"NotchFilter(freq={self.freq}) skipped: freq >= "
+                f"Nyquist ({nyq} Hz at fs={fs_in}). Signal passed through unfiltered."
+            )
+            return CompiledStep(
+                apply=lambda x: np.asarray(x, dtype=np.float32),
+                fs_out=fs_in,
+            )
         # iirnotch returns ba-form; convert to SOS for stability
         b, a = iirnotch(self.freq, self.quality, fs_in)
         # For a 2nd-order notch, ba is already short (3 coefficients),

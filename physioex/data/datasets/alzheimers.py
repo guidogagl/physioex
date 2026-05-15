@@ -17,7 +17,7 @@ from typing import Dict, List, Optional
 
 import numpy as np
 
-from physioex.data.base import BasePhysioDataset, SubjectSpec
+from physioex.data.base import BasePhysioDataset, SubjectSpec, get_data_root
 
 
 # AASM 5-class mapping from TSV stage strings.
@@ -40,6 +40,7 @@ class AlzheimersDataset(BasePhysioDataset):
     """
 
     DATASET_NAME = "alzheimers"
+    DATASET_SUBDIR = "AlzheimerData"
     DEFAULT_EPOCH_LENGTH_SEC = 30.0
 
     # Channel preference lists -- average reference montage.
@@ -73,11 +74,13 @@ class AlzheimersDataset(BasePhysioDataset):
     def __init__(
         self,
         subset: Optional[str] = None,
-        root: str = "/home/dev/sleep-data/raw-sleep/AlzheimerData",
+        root: Optional[str] = None,
         **kwargs,
     ):
         if subset is not None and subset not in ("AD", "HC"):
             raise ValueError(f"subset must be 'AD', 'HC', or None; got {subset!r}")
+        if root is None:
+            root = str(get_data_root() / self.DATASET_SUBDIR)
         # Store before super().__init__ which calls _list_subjects.
         self._subset_filter = subset
         if subset:

@@ -801,7 +801,7 @@ class Trainer:
         progress: PhysioExTrainProgressBar = None,
         loss_tracker: typing.Optional[LossTracker] = None,
         accumulate_grad_batches: int = 1,
-        eval_sequence_length: int = None,
+        eval_sequence_length : int = None,
     ) -> torch.nn.Module:
 
         if progress is None:

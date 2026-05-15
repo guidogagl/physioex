@@ -34,9 +34,9 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
-from physioex.data.base import SubjectSpec
+from physioex.data.base import SubjectSpec, get_data_root
 from physioex.data.datasets._nsrr import _NSRRBaseDataset
 
 logger = logging.getLogger("physioex.data")
@@ -64,6 +64,7 @@ class SHHSDataset(_NSRRBaseDataset):
     """
 
     DATASET_NAME = "shhs_visit1"  # overridden dynamically in __init__
+    DATASET_SUBDIR = "shhs"
 
     # Channels present across both visits.
     #   EEG:  "EEG" = C4/A1 primary, "EEG(sec)" = C3/A2 secondary
@@ -91,7 +92,7 @@ class SHHSDataset(_NSRRBaseDataset):
 
     def __init__(
         self,
-        root: str = "/home/dev/sleep-data/raw-sleep/shhs",
+        root: Optional[str] = None,
         visit: int = 1,
         **kwargs,
     ):
@@ -99,6 +100,8 @@ class SHHSDataset(_NSRRBaseDataset):
             raise ValueError(
                 f"Unknown visit {visit!r}. Available: {sorted(_VISIT_DIRS)}"
             )
+        if root is None:
+            root = str(get_data_root() / self.DATASET_SUBDIR)
         self._visit = visit
         self.DATASET_NAME = f"shhs_visit{visit}"
         self._metadata = self._load_metadata(root, visit)

@@ -35,11 +35,11 @@ from __future__ import annotations
 import logging
 import warnings
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 
-from physioex.data.base import SubjectSpec
+from physioex.data.base import SubjectSpec, get_data_root
 from physioex.data.datasets._nsrr import _NSRRBaseDataset
 from physioex.data.readers.edf import EDFHeader, ResolvedChannel
 
@@ -50,6 +50,7 @@ class HPAPDataset(_NSRRBaseDataset):
     """HomePAP sleep dataset with subset selection."""
 
     DATASET_NAME = "hpap"
+    DATASET_SUBDIR = "homepap"
 
     CHANNEL_PREFERENCES: Dict[str, List] = {
         "EEG": [
@@ -122,10 +123,12 @@ class HPAPDataset(_NSRRBaseDataset):
 
     def __init__(
         self,
-        root: str = "/home/dev/sleep-data/raw-sleep/homepap",
+        root: Optional[str] = None,
         subset: str = "all",
         **kwargs,
     ):
+        if root is None:
+            root = str(get_data_root() / self.DATASET_SUBDIR)
         # Store the HPAP subset choice *before* calling super().__init__,
         # which calls _list_subjects.  We use _hpap_subset to avoid
         # colliding with the base class's generic ``subset`` parameter.

@@ -18,12 +18,14 @@ Usage::
 
     from physioex.explain.foundational import ConceptualSpectralDecomposition
     from physioex.explain.foundational import MarginSpecificity
-    from physioex.models.foundation import CBraModSleepNet
+    from physioex.models.embed import load_probe
 
-    model = CBraModSleepNet.from_probe("hmc", probe_path="...")
+    # Load encoder + trained probe
+    model, probe_weights = load_probe("cbramod", "hmc", probe_path="...")
 
     csd = ConceptualSpectralDecomposition(
-        model=model, fs=200.0, freq_step=4.0,
+        model=model, probe_weights=probe_weights,
+        fs=200.0, freq_step=4.0,
         specificity=MarginSpecificity(tau=0.5),
     )
 
@@ -128,7 +130,9 @@ class ConceptualSpectralDecomposition(nn.Module):
     attribution map. The class-level map is the weighted sum of all concept maps.
 
     Args:
-        model: FoundationModelWrapper with trained probe (encoder + head).
+        model: FoundationEncoder (pure encoder without head).
+        probe_weights: Dictionary containing 'ln' (LayerNorm) and 'W' (Linear weights)
+            from the trained linear probe.
         fs: Sampling rate of the preprocessed signal (Hz).
         freq_step: SpectralGradients band width (Hz). Default 4.0.
         steps: Integration steps per local IG. Default 10.
@@ -143,6 +147,7 @@ class ConceptualSpectralDecomposition(nn.Module):
     def __init__(
         self,
         model: nn.Module,
+        probe_weights: dict,
         fs: float,
         freq_step: float = 4.0,
         bands: Optional[List[FrequencyBand]] = None,
@@ -165,11 +170,9 @@ class ConceptualSpectralDecomposition(nn.Module):
             device or ("cuda:0" if torch.cuda.is_available() else "cpu")
         )
 
-        # Extract probe weights
-        head = model.head
-        self._ln = head[0]  # LayerNorm
-        self._linear = head[1]  # Linear
-        self._W = self._linear.weight.detach()  # (n_classes, D)
+        # Extract probe weights from dict
+        self._ln = probe_weights["ln"]  # LayerNorm
+        self._W = probe_weights["W"]  # Linear weight: (n_classes, D)
         self._n_classes = self._W.shape[0]
         self._D = self._W.shape[1]
 

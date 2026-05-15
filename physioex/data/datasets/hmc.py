@@ -11,7 +11,7 @@ from typing import List, Optional
 import numpy as np
 import pyedflib
 
-from physioex.data.base import BasePhysioDataset, SubjectSpec
+from physioex.data.base import BasePhysioDataset, SubjectSpec, get_data_root
 
 
 # Maps the stage strings from HMC sleepscoring EDF annotations to AASM 5-class.
@@ -38,6 +38,7 @@ class HMCDataset(BasePhysioDataset):
     """HMC sleep dataset."""
 
     DATASET_NAME = "hmc"
+    DATASET_SUBDIR = "hmc-sleep-staging/1.1/recordings"
     DEFAULT_EPOCH_LENGTH_SEC = 30.0
 
     # Preference lists for generic modality requests. Reuses inherited defaults
@@ -82,9 +83,11 @@ class HMCDataset(BasePhysioDataset):
 
     def __init__(
         self,
-        root: str = "/home/dev/sleep-data/raw-sleep/hmc/physionet.org/files/hmc-sleep-staging/1.1/recordings",
+        root: Optional[str] = None,
         **kwargs,
     ):
+        if root is None:
+            root = str(get_data_root() / self.DATASET_SUBDIR)
         super().__init__(root=root, **kwargs)
 
     def _list_subjects(self) -> List[SubjectSpec]:

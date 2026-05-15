@@ -28,7 +28,7 @@ from typing import Dict, List, Optional
 
 import numpy as np
 
-from physioex.data.base import BasePhysioDataset, SubjectSpec
+from physioex.data.base import BasePhysioDataset, SubjectSpec, get_data_root
 
 
 DCSM_STAGE_MAP: Dict[str, int] = {
@@ -47,6 +47,7 @@ class DCSMDataset(BasePhysioDataset):
     """Danish Center for Sleep Medicine dataset."""
 
     DATASET_NAME = "dcsm"
+    DATASET_SUBDIR = "DCSM"
     DEFAULT_EPOCH_LENGTH_SEC = 30.0
 
     CHANNEL_PREFERENCES: Dict[str, List] = {
@@ -58,9 +59,11 @@ class DCSMDataset(BasePhysioDataset):
 
     def __init__(
         self,
-        root: str = "/home/dev/sleep-data/raw-sleep/dcsm/extracted/data/sleep/DCSM",
+        root: Optional[str] = None,
         **kwargs,
     ):
+        if root is None:
+            root = str(get_data_root() / self.DATASET_SUBDIR)
         super().__init__(root=root, **kwargs)
 
     # ------------------------------------------------------------------

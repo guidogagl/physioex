@@ -40,7 +40,7 @@ class HighPassFilter(PreprocessingStep):
     def compile(self, fs_in: float) -> CompiledStep:
         nyq = 0.5 * fs_in
         if not 0 < self.cutoff < nyq:
-            logger.warning(
+            logger.debug(
                 f"HighPassFilter(cutoff={self.cutoff}) skipped: cutoff >= "
                 f"Nyquist ({nyq} Hz at fs={fs_in}). Signal passed through."
             )

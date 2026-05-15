@@ -24,7 +24,7 @@ from typing import Any, Dict, List, Optional
 
 import numpy as np
 
-from physioex.data.base import BasePhysioDataset, SubjectSpec
+from physioex.data.base import BasePhysioDataset, SubjectSpec, get_data_root
 
 logger = logging.getLogger("physioex.data")
 
@@ -53,6 +53,7 @@ class ParkinsonsDataset(BasePhysioDataset):
     """
 
     DATASET_NAME = "parkinsons"
+    DATASET_SUBDIR = "Parkinson_data"
     DEFAULT_EPOCH_LENGTH_SEC = 30.0
 
     # Channel preference lists -- bipolar montage.
@@ -95,7 +96,7 @@ class ParkinsonsDataset(BasePhysioDataset):
         self,
         recording: str = "night",
         group: Optional[str] = None,
-        root: str = "/home/dev/sleep-data/raw-sleep/Parkinson_data",
+        root: Optional[str] = None,
         **kwargs,
     ):
         if recording not in ("night", "nap", "all"):
@@ -104,6 +105,8 @@ class ParkinsonsDataset(BasePhysioDataset):
             )
         if group is not None and group not in ("HOA", "PD"):
             raise ValueError(f"group must be 'HOA', 'PD', or None; got {group!r}")
+        if root is None:
+            root = str(get_data_root() / self.DATASET_SUBDIR)
         self.recording = recording
         self.group = group
 

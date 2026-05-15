@@ -28,7 +28,7 @@ from typing import Dict, List, Optional
 
 import numpy as np
 
-from physioex.data.base import BasePhysioDataset, SubjectSpec
+from physioex.data.base import BasePhysioDataset, SubjectSpec, get_data_root
 
 
 # R&K / AASM stage mapping -- same convention as SleepEDF.
@@ -52,10 +52,11 @@ class MASSDataset(BasePhysioDataset):
     Args:
         cohort: int (1-5). Selects which cohort's recordings to load.
         root: path to the MASS data directory
-              (default: ``/home/dev/sleep-data/raw-sleep/mass/MASS/Original``).
+              (default: ``$PHYSIOEX_DATA/MASS/Original``).
     """
 
     DATASET_NAME = "mass"
+    DATASET_SUBDIR = "MASS/Original"
 
     # Epoch length varies by cohort (verified from on-disk annotation files).
     COHORT_EPOCH_SEC: Dict[int, float] = {
@@ -126,11 +127,13 @@ class MASSDataset(BasePhysioDataset):
     def __init__(
         self,
         cohort: int = 1,
-        root: str = "/home/dev/sleep-data/raw-sleep/mass/MASS/Original",
+        root: Optional[str] = None,
         **kwargs,
     ):
         if cohort not in (1, 2, 3, 4, 5):
             raise ValueError(f"cohort must be 1-5; got {cohort}")
+        if root is None:
+            root = str(get_data_root() / self.DATASET_SUBDIR)
         self.cohort = cohort
         self._is_20s = cohort in (2, 4, 5)
         # Dynamic dataset name so cache dirs are separated per cohort.

@@ -29,7 +29,7 @@ from typing import Any, Dict, List, Optional
 import numpy as np
 import pyedflib
 
-from physioex.data.base import BasePhysioDataset, SubjectSpec
+from physioex.data.base import BasePhysioDataset, SubjectSpec, get_data_root
 
 logger = logging.getLogger("physioex.data")
 
@@ -50,6 +50,7 @@ class SleepEDFDataset(BasePhysioDataset):
     """PhysioNet Sleep-EDF Cassette dataset (~153 recordings, ~78 subjects)."""
 
     DATASET_NAME = "sleepedf"
+    DATASET_SUBDIR = "physionet-sleep-data"
     DEFAULT_EPOCH_LENGTH_SEC = 30.0
 
     CHANNEL_PREFERENCES: Dict[str, List] = {
@@ -60,9 +61,11 @@ class SleepEDFDataset(BasePhysioDataset):
 
     def __init__(
         self,
-        root: str = "/home/dev/sleep-data/raw-sleep/physionet-sleep-data",
+        root: Optional[str] = None,
         **kwargs,
     ):
+        if root is None:
+            root = str(get_data_root() / self.DATASET_SUBDIR)
         super().__init__(root=root, **kwargs)
 
     # ------------------------------------------------------------------

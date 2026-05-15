@@ -20,7 +20,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 
-from physioex.data.base import BasePhysioDataset, SubjectSpec
+from physioex.data.base import BasePhysioDataset, SubjectSpec, get_data_root
 from physioex.data.readers.annotations import parse_stages_csv, STAGES_STAGE_MAP
 
 logger = logging.getLogger("physioex.data")
@@ -147,6 +147,7 @@ class STAGESDataset(BasePhysioDataset):
     """
 
     DATASET_NAME = "stages"
+    DATASET_SUBDIR = "stages"
     DEFAULT_EPOCH_LENGTH_SEC = 30.0
     CHANNEL_PREFERENCES = CHANNEL_PREFERENCES
 
@@ -154,7 +155,7 @@ class STAGESDataset(BasePhysioDataset):
         self,
         site: Optional[str] = None,
         recording: str = "first",
-        root: str = "/home/dev/sleep-data/raw-sleep/stages",
+        root: Optional[str] = None,
         **kwargs,
     ):
         if site is not None and site not in SITES:
@@ -163,6 +164,9 @@ class STAGESDataset(BasePhysioDataset):
             raise ValueError(
                 f"recording must be 'first', 'second', or 'all'; " f"got {recording!r}"
             )
+
+        if root is None:
+            root = str(get_data_root() / self.DATASET_SUBDIR)
 
         self.site = site
         self.recording = recording

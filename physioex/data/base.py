@@ -50,6 +50,22 @@ logger = logging.getLogger("physioex.data")
 AASM_VALID_LABELS = (-1, 0, 1, 2, 3, 4)
 
 
+def get_data_root() -> Path:
+    """Return the base data directory from PHYSIOEX_DATA env var.
+
+    Raises:
+        ValueError: If PHYSIOEX_DATA is not set.
+    """
+    env_root = os.environ.get("PHYSIOEX_DATA")
+    if env_root is None:
+        raise ValueError(
+            "PHYSIOEX_DATA environment variable is not set. "
+            "Set it to the root directory containing all datasets, "
+            "or pass the 'root' parameter explicitly."
+        )
+    return Path(env_root)
+
+
 @dataclass
 class SubjectSpec:
     """Metadata describing how to locate a single subject's raw data.
@@ -91,7 +107,7 @@ class BasePhysioDataset(Dataset):
 
     def __init__(
         self,
-        root: str,
+        root: Optional[str] = None,
         channels: Optional[List[Union[str, Dict]]] = None,
         pipelines: Union[
             PreprocessingPipeline, str, Dict[str, Union[PreprocessingPipeline, str]]
@@ -109,7 +125,12 @@ class BasePhysioDataset(Dataset):
         memmap_cache_size: int = 1000,
     ):
         super().__init__()
-        self.root = str(root) if root is not None else None
+        if root is None:
+            raise TypeError(
+                f"{self.__class__.__name__}.__init__() missing required argument: 'root'. "
+                "Set the PHYSIOEX_DATA environment variable or pass 'root' explicitly."
+            )
+        self.root = str(root)
         # channels=None means "load ALL channels found across the dataset".
         # Resolved after header probing in _init_headers_and_resolution.
         self._channels_request = channels  # raw user input (may be None)
