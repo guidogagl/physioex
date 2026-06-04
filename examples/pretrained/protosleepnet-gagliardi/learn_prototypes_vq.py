@@ -162,6 +162,9 @@ def main():
         model, config = load_model(args.model_dir, device)
         downstream_fn = build_downstream_fn(model, device)
 
+        suffix = f"vq_m{args.n_prototypes}"
+        save_path = os.path.join(output_dir, f"codebook_{suffix}.npy")
+
         codebook = train_codebook(
             Z_train=Z_train,
             Y_train=Y_train,
@@ -176,6 +179,7 @@ def main():
             commitment_weight=args.commitment_weight,
             device=str(device),
             sequence_length=SEQ_LEN,
+            save_path=save_path,
         )
 
         # Post-training stats

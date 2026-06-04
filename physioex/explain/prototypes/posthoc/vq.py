@@ -146,6 +146,7 @@ def train_codebook(
     commitment_weight: float = 0.25,
     device: str = "cpu",
     sequence_length: int = 21,
+    save_path: Optional[str] = None,
 ) -> np.ndarray:
     """Supervised codebook refinement (Stage 2).
 
@@ -172,6 +173,8 @@ def train_codebook(
         commitment_weight: beta for commitment loss.
         device: Torch device string.
         sequence_length: L, sequence length to reshape embeddings into.
+        save_path: If set, save best codebook to this path on every
+            val improvement. Allows recovery if the job crashes.
 
     Returns:
         codebook: (M, d_model) best codebook as numpy array.
@@ -275,6 +278,8 @@ def train_codebook(
                 best_val_loss = val_loss
                 best_codebook = vq.codebook.detach().cpu().numpy().copy()
                 epochs_no_improve = 0
+                if save_path is not None:
+                    np.save(save_path, best_codebook)
             else:
                 epochs_no_improve += 1
 
