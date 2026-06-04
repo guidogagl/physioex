@@ -132,25 +132,50 @@ class VQBottleneck(nn.Module):
         return z_q, vq_loss
 
 
-def _unfold_subject(
-    Z: torch.Tensor, Y: torch.Tensor, L: int,
-) -> tuple[torch.Tensor, torch.Tensor]:
-    """Create stride-1 sliding windows from one subject's embeddings.
+class _WindowIndex:
+    """Maps a flat window index to (subject_idx, start_epoch).
 
-    Args:
-        Z: (N_epochs, d_model) consecutive epoch embeddings.
-        Y: (N_epochs,) labels.
-        L: Sequence length.
-
-    Returns:
-        Z_win: (N_epochs - L + 1, L, d_model)
-        Y_win: (N_epochs - L + 1, L)
+    Avoids materializing all windows in memory. Each subject with N epochs
+    contributes max(0, N - L + 1) windows.
     """
-    if Z.shape[0] < L:
-        return Z.unsqueeze(0), Y.unsqueeze(0)
-    Z_win = Z.unfold(0, L, 1).permute(0, 2, 1)  # (N-L+1, L, d_model)
-    Y_win = Y.unfold(0, L, 1)                    # (N-L+1, L)
-    return Z_win, Y_win
+
+    def __init__(self, subjects: list[tuple[np.ndarray, np.ndarray]], L: int):
+        self.subjects = subjects
+        self.L = L
+        self.offsets = []  # (cumulative_start, subject_idx)
+        total = 0
+        for i, (Z, _) in enumerate(subjects):
+            n_win = max(0, Z.shape[0] - L + 1)
+            if n_win > 0:
+                self.offsets.append((total, i))
+                total += n_win
+        self.n_windows = total
+
+    def get_batch(self, indices: np.ndarray, device: torch.device):
+        """Fetch a batch of windows by flat indices.
+
+        Returns (B, L, d_model) and (B, L) tensors.
+        """
+        L = self.L
+        z_list, y_list = [], []
+        for idx in indices:
+            # Binary search for subject
+            lo, hi = 0, len(self.offsets) - 1
+            while lo < hi:
+                mid = (lo + hi + 1) // 2
+                if self.offsets[mid][0] <= idx:
+                    lo = mid
+                else:
+                    hi = mid - 1
+            cum_start, subj_i = self.offsets[lo]
+            win_start = idx - cum_start
+            Z_s, Y_s = self.subjects[subj_i]
+            z_list.append(Z_s[win_start : win_start + L])
+            y_list.append(Y_s[win_start : win_start + L])
+
+        z = torch.from_numpy(np.stack(z_list)).float().to(device)
+        y = torch.from_numpy(np.stack(y_list)).long().to(device)
+        return z, y
 
 
 def train_codebook(
@@ -173,7 +198,8 @@ def train_codebook(
     through the frozen downstream model, preserve classification accuracy.
 
     Uses stride-1 sliding windows on real per-subject recordings so the
-    sequence encoder sees coherent temporal context.
+    sequence encoder sees coherent temporal context. Windows are fetched
+    on-the-fly (no pre-materialization) to avoid OOM on large datasets.
 
     Args:
         train_subjects: List of (Z, Y) tuples per subject.
@@ -196,32 +222,14 @@ def train_codebook(
     dev = torch.device(device)
     L = sequence_length
 
-    # Pre-compute all training windows
-    train_windows_z = []
-    train_windows_y = []
-    for Z_subj, Y_subj in train_subjects:
-        z = torch.from_numpy(Z_subj).float()
-        y = torch.from_numpy(Y_subj).long()
-        zw, yw = _unfold_subject(z, y, L)
-        train_windows_z.append(zw)
-        train_windows_y.append(yw)
-    all_z = torch.cat(train_windows_z, dim=0)  # (N_win, L, d_model)
-    all_y = torch.cat(train_windows_y, dim=0)  # (N_win, L)
-    n_windows = all_z.shape[0]
-    print(f"  Train: {n_windows} windows from {len(train_subjects)} subjects")
+    train_idx = _WindowIndex(train_subjects, L)
+    print(f"  Train: {train_idx.n_windows} windows from {len(train_subjects)} subjects")
 
     has_val = val_subjects is not None and len(val_subjects) > 0
+    val_idx = None
     if has_val:
-        val_z_list, val_y_list = [], []
-        for Z_subj, Y_subj in val_subjects:
-            z = torch.from_numpy(Z_subj).float()
-            y = torch.from_numpy(Y_subj).long()
-            zw, yw = _unfold_subject(z, y, L)
-            val_z_list.append(zw)
-            val_y_list.append(yw)
-        val_z = torch.cat(val_z_list, dim=0)
-        val_y = torch.cat(val_y_list, dim=0)
-        print(f"  Valid: {val_z.shape[0]} windows from {len(val_subjects)} subjects")
+        val_idx = _WindowIndex(val_subjects, L)
+        print(f"  Valid: {val_idx.n_windows} windows from {len(val_subjects)} subjects")
 
     vq = VQBottleneck(codebook_init, commitment_weight).to(dev)
     optimizer = torch.optim.Adam(vq.parameters(), lr=lr)
@@ -234,25 +242,23 @@ def train_codebook(
     for epoch in range(n_epochs):
         # --- Train ---
         vq.train()
-        perm = torch.randperm(n_windows)
+        perm = np.random.permutation(train_idx.n_windows)
 
         total_loss = 0.0
         total_ce = 0.0
         total_vq = 0.0
         n_batches = 0
 
-        for i in range(0, n_windows - batch_size + 1, batch_size):
-            idx = perm[i : i + batch_size]
-            z = all_z[idx].to(dev)         # (B, L, d_model)
-            y = all_y[idx].to(dev)         # (B, L)
+        for i in range(0, train_idx.n_windows - batch_size + 1, batch_size):
+            batch_idx = perm[i : i + batch_size]
+            z, y = train_idx.get_batch(batch_idx, dev)  # (B, L, D), (B, L)
 
             # Quantize each epoch independently
             B, Lw, D = z.shape
-            z_flat = z.reshape(B * Lw, D)
-            z_q_flat, vq_loss = vq(z_flat)
+            z_q_flat, vq_loss = vq(z.reshape(B * Lw, D))
             z_q = z_q_flat.reshape(B, Lw, D)
 
-            logits = downstream_fn(z_q)     # (B, L, n_classes)
+            logits = downstream_fn(z_q)
             logits_flat = logits.reshape(-1, logits.shape[-1])
             y_flat = y.reshape(-1)
 
@@ -281,17 +287,16 @@ def train_codebook(
             val_total = 0
             val_n = 0
             with torch.no_grad():
-                for i in range(0, val_z.shape[0] - batch_size + 1, batch_size):
-                    z = val_z[i : i + batch_size].to(dev)
-                    y = val_y[i : i + batch_size].to(dev)
-
+                for i in range(0, val_idx.n_windows - batch_size + 1, batch_size):
+                    z, y = val_idx.get_batch(
+                        np.arange(i, i + batch_size), dev
+                    )
                     B, Lw, D = z.shape
                     z_q_flat, _ = vq(z.reshape(B * Lw, D))
                     logits = downstream_fn(z_q_flat.reshape(B, Lw, D))
                     logits_flat = logits.reshape(-1, logits.shape[-1])
                     y_flat = y.reshape(-1)
 
-                    # Ignore unscored epochs
                     scored = y_flat >= 0
                     if scored.any():
                         val_ce_total += loss_fn(logits_flat, y_flat).item()
