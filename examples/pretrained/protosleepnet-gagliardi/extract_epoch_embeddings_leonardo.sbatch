@@ -5,8 +5,8 @@
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=128G
 #SBATCH --account=IscrC_SELFEEG
-#SBATCH --qos=boost_qos_bprod
-#SBATCH --time=04:00:00
+#SBATCH --qos=boost_qos_lprod
+#SBATCH --time=06:00:00
 #SBATCH --job-name=extract-emb
 #SBATCH --output=/leonardo_work/IscrC_SELFEEG/logs/%x_%j.out
 
