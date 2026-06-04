@@ -18,17 +18,41 @@ def load_epoch_embeddings(
 ) -> tuple[np.ndarray, np.ndarray]:
     """Load pre-extracted epoch embeddings and labels for a split.
 
-    Expects files ``{split}_embeddings.npy`` and ``{split}_labels.npy``
-    in *emb_dir*.
+    Supports two layouts:
+
+    1. **Per-subject** (preferred)::
+
+           emb_dir/{split}/{subject_id}_embeddings.npy
+           emb_dir/{split}/{subject_id}_labels.npy
+
+    2. **Flat** (legacy)::
+
+           emb_dir/{split}_embeddings.npy
+           emb_dir/{split}_labels.npy
 
     Args:
-        emb_dir: Directory containing the .npy files.
-        split: One of ``"train"``, ``"val"``, ``"test"``.
+        emb_dir: Directory containing the embeddings.
+        split: One of ``"train"``, ``"valid"``, ``"test"``.
 
     Returns:
         Tuple of (Z, Y) where Z is (N, d_model) float32 and Y is (N,) int64.
     """
     emb_dir = Path(emb_dir)
+    split_dir = emb_dir / split
+
+    # Per-subject layout
+    if split_dir.is_dir():
+        emb_files = sorted(split_dir.glob("*_embeddings.npy"))
+        if not emb_files:
+            raise FileNotFoundError(f"No *_embeddings.npy files in {split_dir}")
+        all_Z, all_Y = [], []
+        for ef in emb_files:
+            lf = ef.parent / ef.name.replace("_embeddings.npy", "_labels.npy")
+            all_Z.append(np.load(str(ef)).astype(np.float32))
+            all_Y.append(np.load(str(lf)).astype(np.int64))
+        return np.concatenate(all_Z, axis=0), np.concatenate(all_Y, axis=0)
+
+    # Flat layout (legacy)
     Z = np.load(emb_dir / f"{split}_embeddings.npy").astype(np.float32)
     Y = np.load(emb_dir / f"{split}_labels.npy").astype(np.int64)
     return Z, Y

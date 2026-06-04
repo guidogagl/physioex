@@ -2,15 +2,20 @@
 
 For each baseline model (sleeptransformer-gagliardi, seqsleepnet-gagliardi),
 extracts the epoch encoder output (before the sequence encoder) for every
-epoch in the SHHS train and test splits.
+epoch in the SHHS train, valid, and test splits.
 
-The baselines are ProtoSleepTransformer / ProtoSeqSleepNet with
-use_channel_mixer=False, use_prototypes=False (per-channel encoding + mean pool).
+Output layout::
 
-h(x) pipeline:
-  (B, L, C, T, F) → per-channel epoch encoder → (B*L, C, d_model) → mean → (B*L, d_model)
+    {output_dir}/{model_name}/
+        train/
+            {subject_id}_embeddings.npy   (n_epochs, d_model)
+            {subject_id}_labels.npy       (n_epochs,)
+        valid/
+            ...
+        test/
+            ...
 
-Each epoch maps to exactly one embedding vector (no sequence context).
+Subjects already extracted are skipped automatically (resume-safe).
 
 Usage:
     python examples/pretrained/protosleepnet-gagliardi/extract_epoch_embeddings.py \
@@ -25,10 +30,11 @@ import os
 
 import numpy as np
 import torch
+from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from physioex.data.datasets import get_dataset
-from physioex.train.trainer import Trainer
+from physioex.train.trainer import _BasePhysioEvalDataset
 
 CHANNELS = ["EEG", "EOG", "EMG"]
 PIPELINE = "seqsleepnet"
@@ -63,8 +69,8 @@ def load_model(model_dir, device):
 def extract_epoch_encoder(model, x):
     """Extract epoch-level embeddings h(x) from the epoch encoder.
 
-    Handles both ProtoSleepTransformer and ProtoSeqSleepNet (per-channel
-    encoding + mean pool), as well as plain SleepTransformer / SeqSleepNet.
+    Handles ProtoSleepTransformer, ProtoSeqSleepNet (per-channel + mean pool),
+    and plain SleepTransformer / SeqSleepNet.
 
     Args:
         model: A model instance (any variant).
@@ -82,40 +88,65 @@ def extract_epoch_encoder(model, x):
         embs = embs.reshape(N, C, -1)        # (N, C, d_model)
         return embs.mean(dim=1)              # (N, d_model)
 
-    # Plain SleepTransformer: epoch_encoder expects (B, C, T, F) → (B, d_model)
+    # Plain SleepTransformer
     if hasattr(model, "epoch_encoder"):
-        return model.epoch_encoder(x)        # (N, d_model)
+        return model.epoch_encoder(x)
 
-    # Plain SeqSleepNet: filterbank → seqn1 → attention
+    # Plain SeqSleepNet
     if hasattr(model, "filterbank") and hasattr(model, "seqn1"):
-        z = model.filterbank(x)              # (N, C, T, D)
+        z = model.filterbank(x)
         z = z.permute(0, 2, 1, 3)
         N2, T2, C2, D = z.shape
         z = z.reshape(N2, T2, C2 * D)
         z, _ = model.seqn1(z)
-        z = model.attention(z)               # (N, hidden)
+        z = model.attention(z)
         return z
 
     raise ValueError(f"Unknown model type: {type(model).__name__}")
 
 
-def extract_split(model, dataloader, device, batch_size=256):
-    """Extract epoch embeddings for all subjects in a dataloader.
+def extract_split(model, dataloader, split_dir, device, batch_size=256):
+    """Extract and save per-subject epoch embeddings for one split.
+
+    Skips subjects whose embeddings already exist on disk.
 
     Args:
         model: Frozen model in eval mode.
-        dataloader: DataLoader yielding full-night recordings (batch_size=1).
+        dataloader: DataLoader yielding full-night dicts (batch_size=1).
+        split_dir: Output directory for this split.
         device: Torch device.
-        batch_size: Number of epochs per forward pass.
+        batch_size: Epochs per forward pass.
 
     Returns:
-        Z: (N_total, d_model) embeddings
-        Y: (N_total,) labels
+        (n_extracted, n_skipped, n_total_epochs)
     """
-    all_embs = []
-    all_labels = []
+    os.makedirs(split_dir, exist_ok=True)
 
-    for batch in tqdm(dataloader, desc="Extracting"):
+    n_extracted = 0
+    n_skipped = 0
+    n_total_epochs = 0
+
+    for batch in tqdm(dataloader, desc=os.path.basename(split_dir)):
+        # Get subject ID
+        if isinstance(batch, dict) and "subject" in batch:
+            subject_id = batch["subject"]["id"]
+            # Collated as list of length 1 (batch_size=1)
+            if isinstance(subject_id, (list, tuple)):
+                subject_id = subject_id[0]
+        else:
+            subject_id = f"subject_{n_extracted + n_skipped:05d}"
+
+        emb_path = os.path.join(split_dir, f"{subject_id}_embeddings.npy")
+        lbl_path = os.path.join(split_dir, f"{subject_id}_labels.npy")
+
+        # Skip if already extracted
+        if os.path.exists(emb_path) and os.path.exists(lbl_path):
+            n_skipped += 1
+            existing = np.load(emb_path, mmap_mode="r")
+            n_total_epochs += existing.shape[0]
+            continue
+
+        # Extract signals and labels
         if isinstance(batch, dict) and "signals" in batch:
             from physioex.data.collate import stack_channels
             inputs = stack_channels(batch)    # (1, night_len, C, T, F)
@@ -123,11 +154,10 @@ def extract_split(model, dataloader, device, batch_size=256):
         else:
             inputs, targets = batch
 
-        # Flatten to per-epoch: (night_len, C, T, F)
-        x = inputs.squeeze(0).to(device)
-        y = targets.squeeze(0).numpy()
+        x = inputs.squeeze(0).to(device)   # (night_len, C, T, F)
+        y = targets.squeeze(0).numpy()     # (night_len,)
 
-        # Process in batches to avoid OOM
+        # Forward in batches
         N = x.shape[0]
         embs = []
         for i in range(0, N, batch_size):
@@ -135,14 +165,15 @@ def extract_split(model, dataloader, device, batch_size=256):
             e = extract_epoch_encoder(model, chunk)
             embs.append(e.cpu().numpy())
 
-        embs = np.concatenate(embs, axis=0)  # (night_len, d_model)
-        all_embs.append(embs)
-        all_labels.append(y)
+        embs = np.concatenate(embs, axis=0).astype(np.float32)
 
-    Z = np.concatenate(all_embs, axis=0).astype(np.float32)
-    Y = np.concatenate(all_labels, axis=0).astype(np.int64)
+        np.save(emb_path, embs)
+        np.save(lbl_path, y.astype(np.int64))
 
-    return Z, Y
+        n_extracted += 1
+        n_total_epochs += embs.shape[0]
+
+    return n_extracted, n_skipped, n_total_epochs
 
 
 def main():
@@ -181,47 +212,32 @@ def main():
         **ds_kwargs,
     )
 
-    # Build dataloaders (batch_size=1, one subject per batch)
-    train_loader, _, test_loader = Trainer.build_dataloaders(
-        dataset=dataset,
-        train_batch_size=1,
-        eval_batch_size=1,
-        num_workers=0,
-        pin_memory=False,
-        fold=args.fold,
-    )
+    # Get split subject IDs
+    train_ids, valid_ids, test_ids = dataset.get_splits(fold=args.fold)
+    print(f"  Splits: train={len(train_ids)}, valid={len(valid_ids)}, test={len(test_ids)}")
 
-    # Output directory
+    # Build per-subject dataloaders for all splits
     out_dir = os.path.join(args.output_dir, model_name)
-    os.makedirs(out_dir, exist_ok=True)
 
-    # Extract train embeddings
-    print(f"\nExtracting train embeddings ({len(train_loader)} subjects)...")
-    Z_train, Y_train = extract_split(model, train_loader, device, args.batch_size)
-    print(f"  Train: {Z_train.shape[0]} epochs, d_model={Z_train.shape[1]}")
+    for split_name, subject_ids in [
+        ("train", train_ids),
+        ("valid", valid_ids),
+        ("test", test_ids),
+    ]:
+        split_dir = os.path.join(out_dir, split_name)
+        print(f"\n{'='*60}")
+        print(f"Extracting {split_name} ({len(subject_ids)} subjects) -> {split_dir}")
+        print(f"{'='*60}")
 
-    train_valid = Y_train >= 0
-    print(f"  Valid epochs: {train_valid.sum()} / {len(Y_train)}")
+        eval_ds = _BasePhysioEvalDataset(dataset, subject_ids)
+        loader = DataLoader(eval_ds, batch_size=1, shuffle=False, num_workers=0)
 
-    np.save(os.path.join(out_dir, "train_embeddings.npy"), Z_train)
-    np.save(os.path.join(out_dir, "train_labels.npy"), Y_train)
+        n_ext, n_skip, n_epochs = extract_split(
+            model, loader, split_dir, device, args.batch_size
+        )
+        print(f"  Extracted: {n_ext}, Skipped: {n_skip}, Total epochs: {n_epochs}")
 
-    # Extract test embeddings
-    print(f"\nExtracting test embeddings ({len(test_loader)} subjects)...")
-    Z_test, Y_test = extract_split(model, test_loader, device, args.batch_size)
-    print(f"  Test: {Z_test.shape[0]} epochs, d_model={Z_test.shape[1]}")
-
-    test_valid = Y_test >= 0
-    print(f"  Valid epochs: {test_valid.sum()} / {len(Y_test)}")
-
-    np.save(os.path.join(out_dir, "test_embeddings.npy"), Z_test)
-    np.save(os.path.join(out_dir, "test_labels.npy"), Y_test)
-
-    print(f"\nSaved to {out_dir}/")
-    print(f"  train_embeddings.npy: {Z_train.shape}")
-    print(f"  train_labels.npy:     {Y_train.shape}")
-    print(f"  test_embeddings.npy:  {Z_test.shape}")
-    print(f"  test_labels.npy:      {Y_test.shape}")
+    print(f"\nDone. Output at {out_dir}/")
 
 
 if __name__ == "__main__":
