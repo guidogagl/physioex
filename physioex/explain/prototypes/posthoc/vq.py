@@ -137,7 +137,10 @@ def train_codebook(
     Y_train: np.ndarray,
     downstream_fn: Callable[[torch.Tensor], torch.Tensor],
     codebook_init: np.ndarray,
+    Z_val: Optional[np.ndarray] = None,
+    Y_val: Optional[np.ndarray] = None,
     n_epochs: int = 20,
+    patience: int = 5,
     batch_size: int = 2048,
     lr: float = 1e-3,
     commitment_weight: float = 0.25,
@@ -149,39 +152,44 @@ def train_codebook(
     Optimizes the codebook so that quantized embeddings, when passed
     through the frozen downstream model, preserve classification accuracy.
 
-    The training loop:
-      1. Sample batch of (z, y) from training embeddings
-      2. Quantize: z_q = VQBottleneck(z) with STE
-      3. Reshape to sequences of length L, forward through downstream_fn
-      4. Loss = CE(logits, y) + β * vq_loss
-      5. Update only the codebook parameters
+    Monitors validation loss for early stopping and returns the best
+    codebook (lowest val loss).
 
     Args:
         Z_train: (N, d_model) training epoch embeddings.
         Y_train: (N,) training labels.
         downstream_fn: Callable that takes (B, L, d_model) quantized
             embeddings and returns (B, L, n_classes) logits.
-            Typically: sequence_encoder → classifier (both frozen).
+            Typically: sequence_encoder -> classifier (both frozen).
         codebook_init: (M, d_model) initial codebook from K-Means.
-        n_epochs: Training epochs.
+        Z_val: (N_val, d_model) validation embeddings. If None, no
+            early stopping — runs all n_epochs.
+        Y_val: (N_val,) validation labels.
+        n_epochs: Maximum training epochs.
+        patience: Early stopping patience (epochs without val improvement).
         batch_size: Must be divisible by sequence_length.
         lr: Learning rate for codebook.
-        commitment_weight: β for commitment loss.
+        commitment_weight: beta for commitment loss.
         device: Torch device string.
         sequence_length: L, sequence length to reshape embeddings into.
 
     Returns:
-        codebook: (M, d_model) optimized codebook as numpy array.
+        codebook: (M, d_model) best codebook as numpy array.
     """
     dev = torch.device(device)
+    L = sequence_length
 
     # Filter unscored
-    valid = Y_train >= 0
-    Z_train = Z_train[valid]
-    Y_train = Y_train[valid]
+    valid_mask = Y_train >= 0
+    Z_train, Y_train = Z_train[valid_mask], Y_train[valid_mask]
+
+    has_val = Z_val is not None and Y_val is not None
+    if has_val:
+        val_mask = Y_val >= 0
+        Z_val, Y_val = Z_val[val_mask], Y_val[val_mask]
 
     # Ensure batch_size is divisible by L
-    batch_size = (batch_size // sequence_length) * sequence_length
+    batch_size = (batch_size // L) * L
 
     vq = VQBottleneck(codebook_init, commitment_weight).to(dev)
     optimizer = torch.optim.Adam(vq.parameters(), lr=lr)
@@ -189,11 +197,21 @@ def train_codebook(
 
     Z_t = torch.from_numpy(Z_train).float()
     Y_t = torch.from_numpy(Y_train).long()
-
     n_samples = len(Z_t)
 
+    if has_val:
+        Z_v = torch.from_numpy(Z_val).float()
+        Y_v = torch.from_numpy(Y_val).long()
+        n_val = len(Z_v)
+        val_batch = (n_val // L) * L  # trim to multiple of L
+
+    best_val_loss = float("inf")
+    best_codebook = codebook_init.copy()
+    epochs_no_improve = 0
+
     for epoch in range(n_epochs):
-        # Shuffle
+        # --- Train ---
+        vq.train()
         perm = torch.randperm(n_samples)
         Z_t = Z_t[perm]
         Y_t = Y_t[perm]
@@ -207,22 +225,12 @@ def train_codebook(
             z = Z_t[i : i + batch_size].to(dev)
             y = Y_t[i : i + batch_size].to(dev)
 
-            # Quantize with STE
             z_q, vq_loss = vq(z)
 
-            # Reshape to sequences and forward through frozen downstream
-            B = batch_size // sequence_length
-            z_seq = z_q.reshape(B, sequence_length, -1)
-            y_seq = y.reshape(B, sequence_length)
-
-            with torch.no_grad():
-                logits = downstream_fn(z_seq)  # (B, L, n_classes)
-
-            # Classification loss (needs gradients through z_q → codebook)
-            # Re-run with gradients enabled for the quantized input
-            logits = downstream_fn(z_seq)
+            B = batch_size // L
+            logits = downstream_fn(z_q.reshape(B, L, -1))
             logits_flat = logits.reshape(-1, logits.shape[-1])
-            y_flat = y_seq.reshape(-1)
+            y_flat = y.reshape(B, L).reshape(-1)
 
             ce_loss = loss_fn(logits_flat, y_flat)
             loss = ce_loss + vq_loss
@@ -236,13 +244,50 @@ def train_codebook(
             total_vq += vq_loss.item()
             n_batches += 1
 
-        if n_batches > 0:
-            avg_loss = total_loss / n_batches
-            avg_ce = total_ce / n_batches
-            avg_vq = total_vq / n_batches
-            print(
-                f"  Epoch {epoch+1}/{n_epochs}: "
-                f"loss={avg_loss:.4f} (CE={avg_ce:.4f}, VQ={avg_vq:.4f})"
-            )
+        avg_loss = total_loss / max(n_batches, 1)
+        avg_ce = total_ce / max(n_batches, 1)
+        avg_vq = total_vq / max(n_batches, 1)
 
-    return vq.codebook.detach().cpu().numpy()
+        # --- Validation ---
+        val_str = ""
+        if has_val:
+            vq.eval()
+            val_ce_total = 0.0
+            val_n = 0
+            with torch.no_grad():
+                for i in range(0, val_batch - batch_size + 1, batch_size):
+                    z = Z_v[i : i + batch_size].to(dev)
+                    y = Y_v[i : i + batch_size].to(dev)
+
+                    z_q, _ = vq(z)
+                    B = batch_size // L
+                    logits = downstream_fn(z_q.reshape(B, L, -1))
+                    logits_flat = logits.reshape(-1, logits.shape[-1])
+                    y_flat = y.reshape(B, L).reshape(-1)
+
+                    val_ce_total += loss_fn(logits_flat, y_flat).item()
+                    val_n += 1
+
+            val_loss = val_ce_total / max(val_n, 1)
+            val_str = f", val_CE={val_loss:.4f}"
+
+            if val_loss < best_val_loss:
+                best_val_loss = val_loss
+                best_codebook = vq.codebook.detach().cpu().numpy().copy()
+                epochs_no_improve = 0
+            else:
+                epochs_no_improve += 1
+
+        print(
+            f"  Epoch {epoch+1}/{n_epochs}: "
+            f"loss={avg_loss:.4f} (CE={avg_ce:.4f}, VQ={avg_vq:.4f}){val_str}"
+        )
+
+        if has_val and epochs_no_improve >= patience:
+            print(f"  Early stopping at epoch {epoch+1} (patience={patience})")
+            break
+
+    if not has_val:
+        best_codebook = vq.codebook.detach().cpu().numpy()
+
+    return best_codebook

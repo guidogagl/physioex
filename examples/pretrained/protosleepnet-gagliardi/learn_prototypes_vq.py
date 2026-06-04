@@ -103,8 +103,10 @@ def main():
     parser.add_argument("--emb_dir", type=str, required=True,
                         help="Directory with train/ embeddings")
     parser.add_argument("--n_prototypes", type=int, default=50)
-    parser.add_argument("--n_epochs", type=int, default=20,
+    parser.add_argument("--n_epochs", type=int, default=50,
                         help="Supervised refinement epochs (0 = K-Means only)")
+    parser.add_argument("--patience", type=int, default=5,
+                        help="Early stopping patience on val loss")
     parser.add_argument("--lr", type=float, default=1e-3)
     parser.add_argument("--batch_size", type=int, default=2048)
     parser.add_argument("--commitment_weight", type=float, default=0.25)
@@ -122,12 +124,21 @@ def main():
         else torch.device("cpu")
     )
 
-    # Load training embeddings
-    print(f"Loading training embeddings from {args.emb_dir}")
+    # Load training + validation embeddings
+    print(f"Loading embeddings from {args.emb_dir}")
     Z_train, Y_train = load_epoch_embeddings(args.emb_dir, split="train")
     valid = Y_train >= 0
     Z_train, Y_train = Z_train[valid], Y_train[valid]
-    print(f"  {Z_train.shape[0]} valid epochs, d_model={Z_train.shape[1]}")
+    print(f"  Train: {Z_train.shape[0]} valid epochs, d_model={Z_train.shape[1]}")
+
+    Z_val, Y_val = None, None
+    try:
+        Z_val, Y_val = load_epoch_embeddings(args.emb_dir, split="valid")
+        val_mask = Y_val >= 0
+        Z_val, Y_val = Z_val[val_mask], Y_val[val_mask]
+        print(f"  Valid: {Z_val.shape[0]} valid epochs")
+    except FileNotFoundError:
+        print("  Valid split not found — no early stopping")
 
     # Stage 1: K-Means initialization
     print(f"\nStage 1: K-Means with M={args.n_prototypes} clusters...")
@@ -156,7 +167,10 @@ def main():
             Y_train=Y_train,
             downstream_fn=downstream_fn,
             codebook_init=codebook,
+            Z_val=Z_val,
+            Y_val=Y_val,
             n_epochs=args.n_epochs,
+            patience=args.patience,
             batch_size=args.batch_size,
             lr=args.lr,
             commitment_weight=args.commitment_weight,
