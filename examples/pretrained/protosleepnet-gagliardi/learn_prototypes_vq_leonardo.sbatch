@@ -38,7 +38,7 @@ python examples/pretrained/protosleepnet-gagliardi/learn_prototypes_vq.py \
     --n_prototypes $M \
     --n_epochs $N_EPOCHS \
     --lr 1e-4 \
-    --batch_size 2058 \
+    --batch_size 32 \
     --gpu_id 0 \
     --output_dir $OUTPUT_DIR
 
