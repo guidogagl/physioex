@@ -35,13 +35,6 @@ OUTPUT_DIR=$EMB_DIR
 echo "VQ test: model=$MODEL, M=$M"
 echo "Codebook: $CODEBOOK"
 
-# Run baseline + VQ test
-python examples/pretrained/protosleepnet-gagliardi/test_posthoc_prototypes.py \
-    --model_dir $PRETRAINED/$MODEL \
-    --method baseline \
-    --output_dir $OUTPUT_DIR \
-    --gpu_id 0
-
 python examples/pretrained/protosleepnet-gagliardi/test_posthoc_prototypes.py \
     --model_dir $PRETRAINED/$MODEL \
     --method vq \
