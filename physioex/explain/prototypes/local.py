@@ -2,30 +2,24 @@ import torch
 import torch.nn as nn
 
 from physioex.explain.posthoc import gradients as gradients_module
-from physioex.models.protosleepnet import ProtoSleepNet
+from physioex.models.prosleepnet import ProtoSleepTransformer
 
 
-def proj_fn(model: ProtoSleepNet, x: torch.Tensor) -> torch.Tensor:
+def proj_fn(model: ProtoSleepTransformer, x: torch.Tensor) -> torch.Tensor:
 
-    # x shape : ( batch_size, in_chans, ... )
+    # x shape : ( batch_size, in_chans, T, F )
     batch_size, in_chans, T, F = x.shape
-    x = x.reshape(
-        batch_size * in_chans, 1, T, F
-    )  # shape ( batch_size*in_chans, 1, T, F )
-    x = model.filterbank(x)
 
-    x = x.permute(0, 2, 1, 3)  # shape ( batch_size*L*in_chan, T, 1, D )
+    # Per-channel epoch encoding
+    x = x.reshape(batch_size * in_chans, 1, T, F)
+    x = model.epoch_encoder(x)  # (B*C, d_model)
 
-    x = x.reshape(batch_size * in_chans, T, -1)
+    x = x.reshape(batch_size, in_chans, -1)  # (B, C, d_model)
 
-    x, _ = model.seqn1(x)
-    x, _ = model.time_masking(x)
-
-    x = x.reshape(batch_size, in_chans, -1)
-
+    # Channel mixer (residual)
     x = x + model.channel_mixer(x)
 
-    return x.mean(dim=1)  # shape ( batch_size, tmhidden )
+    return x.mean(dim=1)  # (batch_size, d_model)
 
 
 def get_prototypes(model: torch.nn.Module, index: int = None) -> torch.Tensor:
@@ -44,7 +38,7 @@ def get_prototypes(model: torch.nn.Module, index: int = None) -> torch.Tensor:
 class PrototypeRelevance(gradients_module.IntegratedGradients):
     def __init__(
         self,
-        model: ProtoSleepNet,
+        model: ProtoSleepTransformer,
         index: int = 0,
         steps: int = 64,
         create_graph: bool = False,
@@ -84,6 +78,4 @@ class PrototypeRelevance(gradients_module.IntegratedGradients):
         if baseline is None:
             baseline = torch.zeros_like(x)
 
-        # Keep model frozen; disable cuDNN to allow RNN backward in eval mode
-        with torch.backends.cudnn.flags(enabled=False):
-            return super().forward(x, baseline=baseline, steps=steps)
+        return super().forward(x, baseline=baseline, steps=steps)

@@ -9,12 +9,12 @@ from physioex.explain.prototypes.local import (
     PrototypeRelevance,
 )
 
-from physioex.models.protosleepnet import ProtoSleepNet
+from physioex.models.prosleepnet import ProtoSleepTransformer
 
 
 def data_driven_reconstruction(
     loader: torch.utils.data.DataLoader,
-    model: ProtoSleepNet,
+    model: ProtoSleepTransformer,
     index: int = 0,
     device: torch.device = torch.device("cpu"),
     n: int = 1,
@@ -22,11 +22,6 @@ def data_driven_reconstruction(
     was_training = model.training
     model.eval()
     model.to(device)
-
-    # cuDNN RNN backward requires training mode, but keep the rest frozen
-    for module in model.modules():
-        if isinstance(module, nn.RNNBase):
-            module.train()
 
     prototypes = get_prototypes(model).to(device)
     prototype = prototypes[index].unsqueeze(0)
@@ -89,7 +84,7 @@ def data_driven_reconstruction(
 
 
 def model_driven_reconstructions(
-    model: ProtoSleepNet,
+    model: ProtoSleepTransformer,
     index: int = 0,
     device: torch.device = torch.device("cpu"),
     n: int = 1,
@@ -106,27 +101,16 @@ def model_driven_reconstructions(
         return None
 
     def infer_input_shape():
-        in_chans = None
-        F = None
-        if hasattr(model, "filterbank"):
-            fb = model.filterbank
-            if hasattr(fb, "S"):
-                in_chans = int(fb.S.shape[0])
-                F = int(fb.S.shape[1])
-            elif hasattr(fb, "W"):
-                in_chans = int(fb.W.shape[0])
-                F = int(fb.W.shape[1])
-
-        T = None
-        if hasattr(model, "time_masking") and hasattr(model.time_masking, "L"):
-            T = int(model.time_masking.L)
+        in_chans = getattr(model, "in_chan", None)
+        T = getattr(model, "T", None)
+        F = getattr(model, "F", None)
 
         if in_chans is None or T is None or F is None:
             raise ValueError(
                 "Cannot infer input shape; provide init with shape (n, in_chans, T, F)."
             )
 
-        return in_chans, T, F
+        return int(in_chans), int(T), int(F)
 
     if init is None:
         in_chans, T, F = infer_input_shape()
@@ -155,18 +139,17 @@ def model_driven_reconstructions(
     optimizer = torch.optim.Adam([params], lr=lr)
     progress = tqdm(range(int(steps)), desc="Reconstructing", leave=False)
 
-    with torch.backends.cudnn.flags(enabled=False):
-        for _ in progress:
-            optimizer.zero_grad(set_to_none=True)
-            sims = torch.nn.functional.cosine_similarity(
-                proj_fn(model, params),
-                prototype,
-            )
-            mean_sim = sims.mean()
-            loss = -mean_sim
-            loss.backward()
-            optimizer.step()
-            progress.set_postfix({"mean_sim": f"{mean_sim.item():.4f}"})
+    for _ in progress:
+        optimizer.zero_grad(set_to_none=True)
+        sims = torch.nn.functional.cosine_similarity(
+            proj_fn(model, params),
+            prototype,
+        )
+        mean_sim = sims.mean()
+        loss = -mean_sim
+        loss.backward()
+        optimizer.step()
+        progress.set_postfix({"mean_sim": f"{mean_sim.item():.4f}"})
 
     recon = params.detach().cpu()
 

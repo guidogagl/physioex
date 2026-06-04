@@ -3,4 +3,4 @@ physioex.models.seqsleepnet:SeqSleepNet,seqsleepnet,21,1,cel,seqsleepnet-EEG-L=2
 physioex.models.seqsleepnet:SeqSleepNet,seqsleepnet,21,3,cel,seqsleepnet-EEG-EOG-EMG-L=21-test_acc=0.877.ckpt,
 physioex.models.tinysleepnet:TinySleepNet,tinysleepnet,21,1,cel,tiny-EEG-L=21-test_acc=0.871.ckpt,
 physioex.models.tinysleepnet:TinySleepNet,tinysleepnet,21,3,cel,tiny-EEG-EOG-EMG-L=21-test_acc=0.885.ckpt,
-physioex.models.protosleepnet:ProtoSleepNet,protosleepnet,21,3,cel,protosleepnet-EEG-EOG-EMG-L=21-test_acc=0.87.ckpt,
+physioex.models.prosleepnet:ProtoSleepTransformer,protosleeptransformer,21,3,cel,prosleepnet-EEG-EOG-EMG-L=21-test_acc=0.87.ckpt,
