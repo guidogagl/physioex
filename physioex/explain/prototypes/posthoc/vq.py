@@ -256,6 +256,8 @@ def train_codebook(
         if has_val:
             vq.eval()
             val_ce_total = 0.0
+            val_correct = 0
+            val_total = 0
             val_n = 0
             with torch.no_grad():
                 for i in range(0, val_batch - batch_size + 1, batch_size):
@@ -269,10 +271,13 @@ def train_codebook(
                     y_flat = y.reshape(B, L).reshape(-1)
 
                     val_ce_total += loss_fn(logits_flat, y_flat).item()
+                    val_correct += (logits_flat.argmax(dim=1) == y_flat).sum().item()
+                    val_total += y_flat.shape[0]
                     val_n += 1
 
             val_loss = val_ce_total / max(val_n, 1)
-            val_str = f", val_CE={val_loss:.4f}"
+            val_acc = val_correct / max(val_total, 1)
+            val_str = f", val_CE={val_loss:.4f}, val_acc={val_acc:.4f}"
 
             if val_loss < best_val_loss:
                 best_val_loss = val_loss
