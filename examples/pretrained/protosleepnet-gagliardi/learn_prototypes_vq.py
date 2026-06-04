@@ -102,10 +102,20 @@ def main():
     parser.add_argument("--output_dir", type=str, default=None)
     parser.add_argument("--gpu_id", type=int, default=0)
     parser.add_argument("--max_iter_kmeans", type=int, default=300)
+    parser.add_argument("--force", action="store_true",
+                        help="Force re-training even if codebook exists")
     args = parser.parse_args()
 
     output_dir = args.output_dir or args.emb_dir
     os.makedirs(output_dir, exist_ok=True)
+    suffix = f"vq_m{args.n_prototypes}"
+    codebook_path = os.path.join(output_dir, f"codebook_{suffix}.npy")
+    meta_path = os.path.join(output_dir, f"codebook_{suffix}_meta.json")
+
+    # Skip if already trained
+    if not args.force and os.path.exists(codebook_path) and os.path.exists(meta_path):
+        print(f"SKIP: {codebook_path} already exists (use --force to retrain)")
+        return
 
     device = (
         torch.device(f"cuda:{args.gpu_id}")
@@ -113,13 +123,13 @@ def main():
         else torch.device("cpu")
     )
 
-    # Load training embeddings (flat for K-Means, per-subject for VQ training)
+    # Load training embeddings (flat for K-Means)
     print(f"Loading embeddings from {args.emb_dir}")
     Z_train_flat, Y_train_flat = load_epoch_embeddings(args.emb_dir, split="train")
     valid = Y_train_flat >= 0
     print(f"  Train: {valid.sum()} valid epochs, d_model={Z_train_flat.shape[1]}")
 
-    # Stage 1: K-Means initialization (on flat embeddings)
+    # Stage 1: K-Means initialization
     print(f"\nStage 1: K-Means with M={args.n_prototypes} clusters...")
     codebook = learn_codebook_kmeans(
         Z_train_flat[valid], n_prototypes=args.n_prototypes,
@@ -140,7 +150,6 @@ def main():
         model, config = load_model(args.model_dir, device)
         downstream_fn = build_downstream_fn(model, device)
 
-        # Load per-subject for real sliding windows
         train_subjects = load_epoch_embeddings_per_subject(args.emb_dir, split="train")
 
         val_subjects = None
@@ -149,9 +158,6 @@ def main():
             print(f"  Valid: {len(val_subjects)} subjects")
         except FileNotFoundError:
             print("  Valid split not found — no early stopping")
-
-        suffix = f"vq_m{args.n_prototypes}"
-        save_path = os.path.join(output_dir, f"codebook_{suffix}.npy")
 
         codebook = train_codebook(
             train_subjects=train_subjects,
@@ -165,7 +171,7 @@ def main():
             commitment_weight=args.commitment_weight,
             device=str(device),
             sequence_length=SEQ_LEN,
-            save_path=save_path,
+            save_path=codebook_path,
         )
 
         # Post-training stats
@@ -174,9 +180,8 @@ def main():
         print(f"  Post-training recon error: {recon_error2:.4f}")
         print(f"  Active clusters: {len(np.unique(assignments2))} / {args.n_prototypes}")
 
-    # Save final codebook
-    suffix = f"vq_m{args.n_prototypes}"
-    np.save(os.path.join(output_dir, f"codebook_{suffix}.npy"), codebook)
+    # Save final codebook + metadata
+    np.save(codebook_path, codebook)
 
     meta = {
         "method": "vq_supervised" if args.n_epochs > 0 else "vq_kmeans",
@@ -188,10 +193,10 @@ def main():
         "batch_size": args.batch_size,
         "sequence_length": SEQ_LEN,
     }
-    with open(os.path.join(output_dir, f"codebook_{suffix}_meta.json"), "w") as f:
+    with open(meta_path, "w") as f:
         json.dump(meta, f, indent=2)
 
-    print(f"\nSaved to {output_dir}/codebook_{suffix}.npy")
+    print(f"\nSaved to {codebook_path}")
 
 
 if __name__ == "__main__":
