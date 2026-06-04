@@ -132,17 +132,36 @@ class VQBottleneck(nn.Module):
         return z_q, vq_loss
 
 
+def _unfold_subject(
+    Z: torch.Tensor, Y: torch.Tensor, L: int,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """Create stride-1 sliding windows from one subject's embeddings.
+
+    Args:
+        Z: (N_epochs, d_model) consecutive epoch embeddings.
+        Y: (N_epochs,) labels.
+        L: Sequence length.
+
+    Returns:
+        Z_win: (N_epochs - L + 1, L, d_model)
+        Y_win: (N_epochs - L + 1, L)
+    """
+    if Z.shape[0] < L:
+        return Z.unsqueeze(0), Y.unsqueeze(0)
+    Z_win = Z.unfold(0, L, 1).permute(0, 2, 1)  # (N-L+1, L, d_model)
+    Y_win = Y.unfold(0, L, 1)                    # (N-L+1, L)
+    return Z_win, Y_win
+
+
 def train_codebook(
-    Z_train: np.ndarray,
-    Y_train: np.ndarray,
+    train_subjects: list[tuple[np.ndarray, np.ndarray]],
     downstream_fn: Callable[[torch.Tensor], torch.Tensor],
     codebook_init: np.ndarray,
-    Z_val: Optional[np.ndarray] = None,
-    Y_val: Optional[np.ndarray] = None,
-    n_epochs: int = 20,
+    val_subjects: Optional[list[tuple[np.ndarray, np.ndarray]]] = None,
+    n_epochs: int = 50,
     patience: int = 5,
-    batch_size: int = 2048,
-    lr: float = 1e-3,
+    batch_size: int = 32,
+    lr: float = 1e-4,
     commitment_weight: float = 0.25,
     device: str = "cpu",
     sequence_length: int = 21,
@@ -153,28 +172,23 @@ def train_codebook(
     Optimizes the codebook so that quantized embeddings, when passed
     through the frozen downstream model, preserve classification accuracy.
 
-    Monitors validation loss for early stopping and returns the best
-    codebook (lowest val loss).
+    Uses stride-1 sliding windows on real per-subject recordings so the
+    sequence encoder sees coherent temporal context.
 
     Args:
-        Z_train: (N, d_model) training epoch embeddings.
-        Y_train: (N,) training labels.
-        downstream_fn: Callable that takes (B, L, d_model) quantized
-            embeddings and returns (B, L, n_classes) logits.
-            Typically: sequence_encoder -> classifier (both frozen).
+        train_subjects: List of (Z, Y) tuples per subject.
+            Z: (n_epochs, d_model), Y: (n_epochs,).
+        downstream_fn: Takes (B, L, d_model) -> (B, L, n_classes) logits.
         codebook_init: (M, d_model) initial codebook from K-Means.
-        Z_val: (N_val, d_model) validation embeddings. If None, no
-            early stopping — runs all n_epochs.
-        Y_val: (N_val,) validation labels.
+        val_subjects: Optional list of (Z, Y) per subject for validation.
         n_epochs: Maximum training epochs.
-        patience: Early stopping patience (epochs without val improvement).
-        batch_size: Must be divisible by sequence_length.
+        patience: Early stopping patience.
+        batch_size: Number of L-length windows per optimization step.
         lr: Learning rate for codebook.
         commitment_weight: beta for commitment loss.
         device: Torch device string.
-        sequence_length: L, sequence length to reshape embeddings into.
-        save_path: If set, save best codebook to this path on every
-            val improvement. Allows recovery if the job crashes.
+        sequence_length: L, window length for sliding windows.
+        save_path: Save best codebook here on every val improvement.
 
     Returns:
         codebook: (M, d_model) best codebook as numpy array.
@@ -182,31 +196,36 @@ def train_codebook(
     dev = torch.device(device)
     L = sequence_length
 
-    # Filter unscored
-    valid_mask = Y_train >= 0
-    Z_train, Y_train = Z_train[valid_mask], Y_train[valid_mask]
+    # Pre-compute all training windows
+    train_windows_z = []
+    train_windows_y = []
+    for Z_subj, Y_subj in train_subjects:
+        z = torch.from_numpy(Z_subj).float()
+        y = torch.from_numpy(Y_subj).long()
+        zw, yw = _unfold_subject(z, y, L)
+        train_windows_z.append(zw)
+        train_windows_y.append(yw)
+    all_z = torch.cat(train_windows_z, dim=0)  # (N_win, L, d_model)
+    all_y = torch.cat(train_windows_y, dim=0)  # (N_win, L)
+    n_windows = all_z.shape[0]
+    print(f"  Train: {n_windows} windows from {len(train_subjects)} subjects")
 
-    has_val = Z_val is not None and Y_val is not None
+    has_val = val_subjects is not None and len(val_subjects) > 0
     if has_val:
-        val_mask = Y_val >= 0
-        Z_val, Y_val = Z_val[val_mask], Y_val[val_mask]
-
-    # Ensure batch_size is divisible by L
-    batch_size = (batch_size // L) * L
+        val_z_list, val_y_list = [], []
+        for Z_subj, Y_subj in val_subjects:
+            z = torch.from_numpy(Z_subj).float()
+            y = torch.from_numpy(Y_subj).long()
+            zw, yw = _unfold_subject(z, y, L)
+            val_z_list.append(zw)
+            val_y_list.append(yw)
+        val_z = torch.cat(val_z_list, dim=0)
+        val_y = torch.cat(val_y_list, dim=0)
+        print(f"  Valid: {val_z.shape[0]} windows from {len(val_subjects)} subjects")
 
     vq = VQBottleneck(codebook_init, commitment_weight).to(dev)
     optimizer = torch.optim.Adam(vq.parameters(), lr=lr)
-    loss_fn = nn.CrossEntropyLoss()
-
-    Z_t = torch.from_numpy(Z_train).float()
-    Y_t = torch.from_numpy(Y_train).long()
-    n_samples = len(Z_t)
-
-    if has_val:
-        Z_v = torch.from_numpy(Z_val).float()
-        Y_v = torch.from_numpy(Y_val).long()
-        n_val = len(Z_v)
-        val_batch = (n_val // L) * L  # trim to multiple of L
+    loss_fn = nn.CrossEntropyLoss(ignore_index=-1)
 
     best_val_loss = float("inf")
     best_codebook = codebook_init.copy()
@@ -215,25 +234,27 @@ def train_codebook(
     for epoch in range(n_epochs):
         # --- Train ---
         vq.train()
-        perm = torch.randperm(n_samples)
-        Z_t = Z_t[perm]
-        Y_t = Y_t[perm]
+        perm = torch.randperm(n_windows)
 
         total_loss = 0.0
         total_ce = 0.0
         total_vq = 0.0
         n_batches = 0
 
-        for i in range(0, n_samples - batch_size + 1, batch_size):
-            z = Z_t[i : i + batch_size].to(dev)
-            y = Y_t[i : i + batch_size].to(dev)
+        for i in range(0, n_windows - batch_size + 1, batch_size):
+            idx = perm[i : i + batch_size]
+            z = all_z[idx].to(dev)         # (B, L, d_model)
+            y = all_y[idx].to(dev)         # (B, L)
 
-            z_q, vq_loss = vq(z)
+            # Quantize each epoch independently
+            B, Lw, D = z.shape
+            z_flat = z.reshape(B * Lw, D)
+            z_q_flat, vq_loss = vq(z_flat)
+            z_q = z_q_flat.reshape(B, Lw, D)
 
-            B = batch_size // L
-            logits = downstream_fn(z_q.reshape(B, L, -1))
+            logits = downstream_fn(z_q)     # (B, L, n_classes)
             logits_flat = logits.reshape(-1, logits.shape[-1])
-            y_flat = y.reshape(B, L).reshape(-1)
+            y_flat = y.reshape(-1)
 
             ce_loss = loss_fn(logits_flat, y_flat)
             loss = ce_loss + vq_loss
@@ -260,19 +281,22 @@ def train_codebook(
             val_total = 0
             val_n = 0
             with torch.no_grad():
-                for i in range(0, val_batch - batch_size + 1, batch_size):
-                    z = Z_v[i : i + batch_size].to(dev)
-                    y = Y_v[i : i + batch_size].to(dev)
+                for i in range(0, val_z.shape[0] - batch_size + 1, batch_size):
+                    z = val_z[i : i + batch_size].to(dev)
+                    y = val_y[i : i + batch_size].to(dev)
 
-                    z_q, _ = vq(z)
-                    B = batch_size // L
-                    logits = downstream_fn(z_q.reshape(B, L, -1))
+                    B, Lw, D = z.shape
+                    z_q_flat, _ = vq(z.reshape(B * Lw, D))
+                    logits = downstream_fn(z_q_flat.reshape(B, Lw, D))
                     logits_flat = logits.reshape(-1, logits.shape[-1])
-                    y_flat = y.reshape(B, L).reshape(-1)
+                    y_flat = y.reshape(-1)
 
-                    val_ce_total += loss_fn(logits_flat, y_flat).item()
-                    val_correct += (logits_flat.argmax(dim=1) == y_flat).sum().item()
-                    val_total += y_flat.shape[0]
+                    # Ignore unscored epochs
+                    scored = y_flat >= 0
+                    if scored.any():
+                        val_ce_total += loss_fn(logits_flat, y_flat).item()
+                        val_correct += (logits_flat[scored].argmax(dim=1) == y_flat[scored]).sum().item()
+                        val_total += scored.sum().item()
                     val_n += 1
 
             val_loss = val_ce_total / max(val_n, 1)

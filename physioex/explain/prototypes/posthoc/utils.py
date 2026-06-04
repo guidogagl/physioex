@@ -12,6 +12,37 @@ from typing import List, Optional, Sequence
 import numpy as np
 
 
+def load_epoch_embeddings_per_subject(
+    emb_dir: str | Path,
+    split: str = "train",
+) -> list[tuple[np.ndarray, np.ndarray]]:
+    """Load per-subject epoch embeddings and labels for a split.
+
+    Returns a list of (Z_subj, Y_subj) tuples, one per subject,
+    preserving the temporal order within each subject.
+
+    Args:
+        emb_dir: Directory containing per-subject .npy files.
+        split: One of ``"train"``, ``"valid"``, ``"test"``.
+
+    Returns:
+        List of (Z, Y) tuples where Z is (n_epochs, d_model) and Y is (n_epochs,).
+    """
+    split_dir = Path(emb_dir) / split
+    if not split_dir.is_dir():
+        raise FileNotFoundError(f"Split directory not found: {split_dir}")
+    emb_files = sorted(split_dir.glob("*_embeddings.npy"))
+    if not emb_files:
+        raise FileNotFoundError(f"No *_embeddings.npy files in {split_dir}")
+    subjects = []
+    for ef in emb_files:
+        lf = ef.parent / ef.name.replace("_embeddings.npy", "_labels.npy")
+        Z = np.load(str(ef)).astype(np.float32)
+        Y = np.load(str(lf)).astype(np.int64)
+        subjects.append((Z, Y))
+    return subjects
+
+
 def load_epoch_embeddings(
     emb_dir: str | Path,
     split: str = "train",

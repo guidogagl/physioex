@@ -7,6 +7,7 @@ from physioex.explain.prototypes.posthoc.vq import (
 )
 from physioex.explain.prototypes.posthoc.utils import (
     load_epoch_embeddings,
+    load_epoch_embeddings_per_subject,
     nearest_prototype_classify,
     evaluate_metrics,
 )
@@ -18,6 +19,7 @@ __all__ = [
     "train_codebook",
     "VQBottleneck",
     "load_epoch_embeddings",
+    "load_epoch_embeddings_per_subject",
     "nearest_prototype_classify",
     "evaluate_metrics",
 ]

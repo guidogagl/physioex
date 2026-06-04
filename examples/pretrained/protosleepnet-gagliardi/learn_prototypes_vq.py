@@ -2,8 +2,8 @@
 
 Two stages:
   1. K-Means initialization on training embeddings (CPU)
-  2. Supervised refinement: optimize codebook with classification loss
-     through the frozen sequence_encoder + classifier (GPU)
+  2. Supervised refinement with stride-1 sliding windows through the
+     frozen sequence_encoder + classifier (GPU)
 
 Reference: Rymarczyk et al., "ProtoQuant", 2025 (arXiv:2602.06592)
 
@@ -11,8 +11,7 @@ Usage:
     python examples/pretrained/protosleepnet-gagliardi/learn_prototypes_vq.py \
         --model_dir /path/to/pretrained/st-baseline \
         --emb_dir /path/to/embeddings/st-baseline \
-        --n_prototypes 50 \
-        --n_epochs 20 \
+        --n_prototypes 48 \
         --gpu_id 0
 """
 import argparse
@@ -28,6 +27,7 @@ from physioex.explain.prototypes.posthoc import (
     quantize_embeddings,
     train_codebook,
     load_epoch_embeddings,
+    load_epoch_embeddings_per_subject,
 )
 
 CLASS_NAMES = ["W", "N1", "N2", "N3", "REM"]
@@ -59,31 +59,23 @@ def load_model(model_dir, device):
 
 
 def build_downstream_fn(model, device):
-    """Build a frozen downstream function: seq_encoder -> classifier.
-
-    Takes (B, L, d_model) quantized embeddings, returns (B, L, n_classes) logits.
-    """
-    # Freeze all parameters
+    """Build a frozen downstream function: seq_encoder -> classifier."""
     for p in model.parameters():
         p.requires_grad_(False)
 
     def downstream_fn(z_seq):
-        # z_seq: (B, L, d_model)
         B, L, D = z_seq.shape
 
-        # ProtoSleepTransformer / SleepTransformer
         if hasattr(model, "sequence_encoder") and hasattr(model, "classifier"):
             z = model.sequence_encoder(z_seq)
             z = z.reshape(B * L, -1)
             return model.classifier(z).reshape(B, L, -1)
 
-        # ProtoSeqSleepNet
         if hasattr(model, "seqn2") and hasattr(model, "classifier"):
             z, _ = model.seqn2(z_seq)
             z = z.reshape(B * L, -1)
             return model.classifier(z).reshape(B, L, -1)
 
-        # Plain SeqSleepNet
         if hasattr(model, "seqn2") and hasattr(model, "clf"):
             z, _ = model.seqn2(z_seq)
             z = z.reshape(B * L, -1)
@@ -96,19 +88,16 @@ def build_downstream_fn(model, device):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Learn VQ codebook from epoch embeddings (K-Means init + supervised refinement)"
+        description="Learn VQ codebook (K-Means init + supervised refinement)"
     )
-    parser.add_argument("--model_dir", type=str, required=True,
-                        help="Directory with config.json + model.pt (for downstream)")
-    parser.add_argument("--emb_dir", type=str, required=True,
-                        help="Directory with train/ embeddings")
-    parser.add_argument("--n_prototypes", type=int, default=50)
-    parser.add_argument("--n_epochs", type=int, default=50,
-                        help="Supervised refinement epochs (0 = K-Means only)")
-    parser.add_argument("--patience", type=int, default=5,
-                        help="Early stopping patience on val loss")
-    parser.add_argument("--lr", type=float, default=1e-3)
-    parser.add_argument("--batch_size", type=int, default=2048)
+    parser.add_argument("--model_dir", type=str, required=True)
+    parser.add_argument("--emb_dir", type=str, required=True)
+    parser.add_argument("--n_prototypes", type=int, default=48)
+    parser.add_argument("--n_epochs", type=int, default=50)
+    parser.add_argument("--patience", type=int, default=5)
+    parser.add_argument("--lr", type=float, default=1e-4)
+    parser.add_argument("--batch_size", type=int, default=32,
+                        help="Number of L-length windows per step")
     parser.add_argument("--commitment_weight", type=float, default=0.25)
     parser.add_argument("--output_dir", type=str, default=None)
     parser.add_argument("--gpu_id", type=int, default=0)
@@ -124,54 +113,51 @@ def main():
         else torch.device("cpu")
     )
 
-    # Load training + validation embeddings
+    # Load training embeddings (flat for K-Means, per-subject for VQ training)
     print(f"Loading embeddings from {args.emb_dir}")
-    Z_train, Y_train = load_epoch_embeddings(args.emb_dir, split="train")
-    valid = Y_train >= 0
-    Z_train, Y_train = Z_train[valid], Y_train[valid]
-    print(f"  Train: {Z_train.shape[0]} valid epochs, d_model={Z_train.shape[1]}")
+    Z_train_flat, Y_train_flat = load_epoch_embeddings(args.emb_dir, split="train")
+    valid = Y_train_flat >= 0
+    print(f"  Train: {valid.sum()} valid epochs, d_model={Z_train_flat.shape[1]}")
 
-    Z_val, Y_val = None, None
-    try:
-        Z_val, Y_val = load_epoch_embeddings(args.emb_dir, split="valid")
-        val_mask = Y_val >= 0
-        Z_val, Y_val = Z_val[val_mask], Y_val[val_mask]
-        print(f"  Valid: {Z_val.shape[0]} valid epochs")
-    except FileNotFoundError:
-        print("  Valid split not found — no early stopping")
-
-    # Stage 1: K-Means initialization
+    # Stage 1: K-Means initialization (on flat embeddings)
     print(f"\nStage 1: K-Means with M={args.n_prototypes} clusters...")
     codebook = learn_codebook_kmeans(
-        Z_train, n_prototypes=args.n_prototypes, max_iter=args.max_iter_kmeans,
+        Z_train_flat[valid], n_prototypes=args.n_prototypes,
+        max_iter=args.max_iter_kmeans,
     )
     print(f"  Codebook: {codebook.shape}")
 
-    # Stats
-    Z_q, assignments = quantize_embeddings(Z_train, codebook)
-    recon_error = np.sqrt(((Z_train - Z_q) ** 2).sum(axis=1).mean())
-    unique = np.unique(assignments)
+    Z_q, assignments = quantize_embeddings(Z_train_flat[valid], codebook)
+    recon_error = np.sqrt(((Z_train_flat[valid] - Z_q) ** 2).sum(axis=1).mean())
     print(f"  Reconstruction error (L2): {recon_error:.4f}")
-    print(f"  Active clusters: {len(unique)} / {args.n_prototypes}")
+    print(f"  Active clusters: {len(np.unique(assignments))} / {args.n_prototypes}")
 
-    # Stage 2: Supervised refinement
+    # Stage 2: Supervised refinement (per-subject sliding windows)
     if args.n_epochs > 0:
-        print(f"\nStage 2: Supervised refinement ({args.n_epochs} epochs)...")
+        print(f"\nStage 2: Supervised refinement ({args.n_epochs} epochs, patience={args.patience})...")
         print(f"  Loading model from {args.model_dir}")
 
         model, config = load_model(args.model_dir, device)
         downstream_fn = build_downstream_fn(model, device)
 
+        # Load per-subject for real sliding windows
+        train_subjects = load_epoch_embeddings_per_subject(args.emb_dir, split="train")
+
+        val_subjects = None
+        try:
+            val_subjects = load_epoch_embeddings_per_subject(args.emb_dir, split="valid")
+            print(f"  Valid: {len(val_subjects)} subjects")
+        except FileNotFoundError:
+            print("  Valid split not found — no early stopping")
+
         suffix = f"vq_m{args.n_prototypes}"
         save_path = os.path.join(output_dir, f"codebook_{suffix}.npy")
 
         codebook = train_codebook(
-            Z_train=Z_train,
-            Y_train=Y_train,
+            train_subjects=train_subjects,
             downstream_fn=downstream_fn,
             codebook_init=codebook,
-            Z_val=Z_val,
-            Y_val=Y_val,
+            val_subjects=val_subjects,
             n_epochs=args.n_epochs,
             patience=args.patience,
             batch_size=args.batch_size,
@@ -183,13 +169,12 @@ def main():
         )
 
         # Post-training stats
-        Z_q2, assignments2 = quantize_embeddings(Z_train, codebook)
-        recon_error2 = np.sqrt(((Z_train - Z_q2) ** 2).sum(axis=1).mean())
-        unique2 = np.unique(assignments2)
+        Z_q2, assignments2 = quantize_embeddings(Z_train_flat[valid], codebook)
+        recon_error2 = np.sqrt(((Z_train_flat[valid] - Z_q2) ** 2).sum(axis=1).mean())
         print(f"  Post-training recon error: {recon_error2:.4f}")
-        print(f"  Active clusters: {len(unique2)} / {args.n_prototypes}")
+        print(f"  Active clusters: {len(np.unique(assignments2))} / {args.n_prototypes}")
 
-    # Save
+    # Save final codebook
     suffix = f"vq_m{args.n_prototypes}"
     np.save(os.path.join(output_dir, f"codebook_{suffix}.npy"), codebook)
 
@@ -197,10 +182,11 @@ def main():
         "method": "vq_supervised" if args.n_epochs > 0 else "vq_kmeans",
         "n_prototypes": args.n_prototypes,
         "d_model": int(codebook.shape[1]),
-        "n_train_epochs": int(len(Z_train)),
         "n_refinement_epochs": args.n_epochs,
         "lr": args.lr,
         "commitment_weight": args.commitment_weight,
+        "batch_size": args.batch_size,
+        "sequence_length": SEQ_LEN,
     }
     with open(os.path.join(output_dir, f"codebook_{suffix}_meta.json"), "w") as f:
         json.dump(meta, f, indent=2)
