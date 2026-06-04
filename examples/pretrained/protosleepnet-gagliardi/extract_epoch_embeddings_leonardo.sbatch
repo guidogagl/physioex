@@ -18,13 +18,10 @@ export PYTHONUNBUFFERED=1
 export HF_HUB_OFFLINE=1
 export CUDA_VISIBLE_DEVICES=0
 
-# Copy SHHS cache to /dev/shm for fast I/O
-echo "Copying shhs_visit1 cache to /dev/shm..."
-CACHE_SRC=/leonardo_scratch/fast/IscrC_SELFEEG/cache/physioex
-mkdir -p /dev/shm/physioex_cache/v1
-cp -r $CACHE_SRC/v1/shhs_visit1 /dev/shm/physioex_cache/v1/
-export PHYSIOEX_CACHE_DIR=/dev/shm/physioex_cache
-echo "Cache copied: $(du -sh /dev/shm/physioex_cache | cut -f1)"
+# SHHS cache is 124 GB — too large for /dev/shm with 128G RAM.
+# Read directly from FAST filesystem instead.
+export PHYSIOEX_CACHE_DIR=/leonardo_scratch/fast/IscrC_SELFEEG/cache/physioex
+echo "Using cache at: $PHYSIOEX_CACHE_DIR"
 
 cd /leonardo_work/IscrC_SELFEEG/code/physioex
 
