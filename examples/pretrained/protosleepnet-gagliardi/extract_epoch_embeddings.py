@@ -1,8 +1,10 @@
 """Extract pre-sequence epoch embeddings h(x) from baseline models.
 
-For each baseline model (sleeptransformer-gagliardi, seqsleepnet-gagliardi),
-extracts the epoch encoder output (before the sequence encoder) for every
-epoch in the SHHS train, valid, and test splits.
+For each baseline model, extracts the epoch encoder output (before the
+sequence encoder) for every epoch in the SHHS train, valid, and test splits.
+
+Uses the PhysioEx dataset directly in recording mode (sequence_length=0)
+with batch_size=1, so each batch is one full-night recording.
 
 Output layout::
 
@@ -34,11 +36,10 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from physioex.data.datasets import get_dataset
-from physioex.train.trainer import _BasePhysioEvalDataset
+from physioex.data.collate import dict_collate_fn, stack_channels
 
 CHANNELS = ["EEG", "EOG", "EMG"]
 PIPELINE = "seqsleepnet"
-SEQ_LEN = 21
 
 
 def load_model(model_dir, device):
@@ -105,14 +106,14 @@ def extract_epoch_encoder(model, x):
     raise ValueError(f"Unknown model type: {type(model).__name__}")
 
 
-def extract_split(model, dataloader, split_dir, device, batch_size=256):
+def extract_split(model, loader, split_dir, device, batch_size=256):
     """Extract and save per-subject epoch embeddings for one split.
 
     Skips subjects whose embeddings already exist on disk.
 
     Args:
         model: Frozen model in eval mode.
-        dataloader: DataLoader yielding full-night dicts (batch_size=1).
+        loader: DataLoader yielding collated dict batches (batch_size=1).
         split_dir: Output directory for this split.
         device: Torch device.
         batch_size: Epochs per forward pass.
@@ -126,15 +127,9 @@ def extract_split(model, dataloader, split_dir, device, batch_size=256):
     n_skipped = 0
     n_total_epochs = 0
 
-    for batch in tqdm(dataloader, desc=os.path.basename(split_dir)):
-        # Get subject ID
-        if isinstance(batch, dict) and "subject" in batch:
-            subject_id = batch["subject"]["id"]
-            # Collated as list of length 1 (batch_size=1)
-            if isinstance(subject_id, (list, tuple)):
-                subject_id = subject_id[0]
-        else:
-            subject_id = f"subject_{n_extracted + n_skipped:05d}"
+    for batch in tqdm(loader, desc=os.path.basename(split_dir)):
+        # Subject ID from collated metadata (list of length 1)
+        subject_id = batch["subject"][0]["id"]
 
         emb_path = os.path.join(split_dir, f"{subject_id}_embeddings.npy")
         lbl_path = os.path.join(split_dir, f"{subject_id}_labels.npy")
@@ -146,24 +141,12 @@ def extract_split(model, dataloader, split_dir, device, batch_size=256):
             n_total_epochs += existing.shape[0]
             continue
 
-        # Extract signals and labels from dict batch
-        if isinstance(batch, dict) and "signals" in batch:
-            signals = batch["signals"]
-            # channel_order may contain tuples or strings — normalize to strings
-            order = batch.get("channel_order", list(signals.keys()))
-            ch_tensors = []
-            for key in order:
-                k = key[0] if isinstance(key, tuple) else key
-                ch_tensors.append(signals[k])
-            # Stack channels: (night_len, C, T, F)
-            x = torch.stack(ch_tensors, dim=1).to(device)
-            y = batch["labels"].numpy()
-        else:
-            inputs, targets = batch
-            x = inputs.squeeze(0).to(device)
-            y = targets.squeeze(0).numpy()
+        # Stack channels: (1, night_len, C, T, F) -> (night_len, C, T, F)
+        inputs = stack_channels(batch)
+        x = inputs.squeeze(0).to(device)
+        y = batch["labels"].squeeze(0).numpy()
 
-        # Forward in batches
+        # Forward in batches to avoid OOM
         N = x.shape[0]
         embs = []
         for i in range(0, N, batch_size):
@@ -208,21 +191,22 @@ def main():
     print(f"  Class: {config['model_class']}")
     print(f"  Params: {sum(p.numel() for p in model.parameters()):,}")
 
-    # Load dataset
+    # Load dataset in recording mode (sequence_length=0 -> 1 subject per item)
     ds_kwargs = {"visit": 1} if args.dataset == "shhs" else {}
     DatasetClass = get_dataset(args.dataset)
     dataset = DatasetClass(
         channels=CHANNELS,
         pipelines=PIPELINE,
-        sequence_length=SEQ_LEN,
+        sequence_length=0,
         **ds_kwargs,
     )
 
     # Get split subject IDs
     train_ids, valid_ids, test_ids = dataset.get_splits(fold=args.fold)
-    print(f"  Splits: train={len(train_ids)}, valid={len(valid_ids)}, test={len(test_ids)}")
+    print(f"  Subjects: train={len(train_ids)}, valid={len(valid_ids)}, test={len(test_ids)}")
+    print(f"  Total: {len(dataset)} recordings")
 
-    # Build per-subject dataloaders for all splits
+    # Output directory
     out_dir = os.path.join(args.output_dir, model_name)
 
     for split_name, subject_ids in [
@@ -232,11 +216,21 @@ def main():
     ]:
         split_dir = os.path.join(out_dir, split_name)
         print(f"\n{'='*60}")
-        print(f"Extracting {split_name} ({len(subject_ids)} subjects) -> {split_dir}")
+        print(f"Extracting {split_name} ({len(subject_ids)} subjects)")
         print(f"{'='*60}")
 
-        eval_ds = _BasePhysioEvalDataset(dataset, subject_ids)
-        loader = DataLoader(eval_ds, batch_size=1, shuffle=False, num_workers=0)
+        # Build a subset dataset for this split
+        from torch.utils.data import Subset
+        # Map subject_ids to dataset indices
+        all_subjects = dataset.get_subjects()
+        id_to_idx = {sid: i for i, sid in enumerate(all_subjects)}
+        indices = [id_to_idx[sid] for sid in subject_ids if sid in id_to_idx]
+
+        subset = Subset(dataset, indices)
+        loader = DataLoader(
+            subset, batch_size=1, shuffle=False,
+            num_workers=0, collate_fn=dict_collate_fn,
+        )
 
         n_ext, n_skip, n_epochs = extract_split(
             model, loader, split_dir, device, args.batch_size
