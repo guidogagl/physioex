@@ -31,7 +31,8 @@ def _resolve_class(spec: str):
 
 
 def load_from_pretrained(
-    name: str, device: str = "cpu", verbose: bool = False
+    name: str, device: str = "cpu", verbose: bool = False,
+    repo_id: str = None,
 ) -> torch.nn.Module:
     """Load a pretrained model from HuggingFace Hub.
 
@@ -57,9 +58,11 @@ def load_from_pretrained(
     """
     from huggingface_hub import hf_hub_download
 
+    repo = repo_id or HF_REPO_ID
+
     # 1. Download and read config
     config_path = hf_hub_download(
-        repo_id=HF_REPO_ID,
+        repo_id=repo,
         filename=f"{name}/config.json",
     )
     with open(config_path) as f:
@@ -71,7 +74,7 @@ def load_from_pretrained(
 
     # 3. Download weights
     weights_path = hf_hub_download(
-        repo_id=HF_REPO_ID,
+        repo_id=repo,
         filename=f"{name}/model.pt",
     )
 
@@ -101,7 +104,7 @@ def load_from_pretrained(
         # Download and display per-dataset metrics
         try:
             metrics_path = hf_hub_download(
-                repo_id=HF_REPO_ID,
+                repo_id=repo,
                 filename=f"{name}/metrics.json",
             )
             with open(metrics_path) as f:

@@ -1,21 +1,27 @@
-"""Extract contextualized embeddings for protosleepnet-gagliardi.
+"""Extract contextualized embeddings and run linear probing.
 
-Loads the pretrained model from HuggingFace, then extracts per-epoch
+Loads a pretrained model from HuggingFace, then extracts per-epoch
 embeddings for every subject in the specified dataset(s) using
-sliding-window encoding.  Results are cached to disk.
+sliding-window encoding. Runs linear probing (5-fold CV) on each dataset.
 
 Usage:
-    python examples/pretrained/protosleepnet-gagliardi/extract_embeddings.py --gpu_id 0
-    python examples/pretrained/protosleepnet-gagliardi/extract_embeddings.py --gpu_id 0 --datasets sleepedf hmc
-    python examples/pretrained/protosleepnet-gagliardi/extract_embeddings.py --gpu_id 0 --datasets shhs --visit 1
-    python examples/pretrained/protosleepnet-gagliardi/extract_embeddings.py --gpu_id 0 --datasets mass --cohort 3
+    python examples/pretrained/protosleepnet-gagliardi/extract_embeddings.py \
+        --model_name sleeptransformer-gagliardi --repo_id 4rooms/sleep-prototypes --gpu_id 0
+    python examples/pretrained/protosleepnet-gagliardi/extract_embeddings.py \
+        --model_name seqsleepnet-gagliardi --repo_id 4rooms/sleep-prototypes \
+        --gpu_id 0 --datasets sleepedf hmc
+    python examples/pretrained/protosleepnet-gagliardi/extract_embeddings.py \
+        --model_name sleeptransformer-gagliardi --repo_id 4rooms/sleep-prototypes \
+        --gpu_id 0 --datasets shhs --visit 2
+    python examples/pretrained/protosleepnet-gagliardi/extract_embeddings.py \
+        --model_name sleeptransformer-gagliardi --repo_id 4rooms/sleep-prototypes \
+        --gpu_id 0 --datasets mass --cohort 3
 """
 import argparse
 
 from physioex.data.datasets import available_datasets, get_dataset
 from physioex.models import extract_embeddings, linear_probe, load_from_pretrained
 
-MODEL_NAME = "prosleepnet-gagliardi"
 CHANNELS = ["EEG", "EOG", "EMG"]
 PIPELINE = "seqsleepnet"
 SEQ_LEN = 21
@@ -23,8 +29,12 @@ SEQ_LEN = 21
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Extract embeddings for protosleepnet-gagliardi"
+        description="Extract embeddings and run linear probing"
     )
+    parser.add_argument("--model_name", type=str, required=True,
+                        help="Model name on HuggingFace (e.g. sleeptransformer-gagliardi)")
+    parser.add_argument("--repo_id", type=str, default=None,
+                        help="HuggingFace repo ID (default: 4rooms/physioex)")
     parser.add_argument("--gpu_id", type=int, default=0)
     parser.add_argument("--datasets", nargs="+", default=None)
     parser.add_argument("--overwrite", action="store_true")
@@ -37,11 +47,15 @@ def main():
     parser.add_argument("--subset", type=str, default=None)
     parser.add_argument("--cohort", type=int, default=None,
                         help="MASS cohort (1-5)")
+    parser.add_argument("--recording", type=str, default=None,
+                        help="Parkinsons recording (night, nap)")
+    parser.add_argument("--group", type=str, default=None,
+                        help="Parkinsons group (HOA, PD)")
     args = parser.parse_args()
 
     device = f"cuda:{args.gpu_id}" if args.gpu_id is not None else "cpu"
 
-    model = load_from_pretrained(MODEL_NAME)
+    model = load_from_pretrained(args.model_name, repo_id=args.repo_id)
     print(
         f"Model: {type(model).__name__}, params={sum(p.numel() for p in model.parameters()):,}"
     )
@@ -67,6 +81,10 @@ def main():
                 ds_kwargs["subset"] = args.subset
             if args.cohort is not None:
                 ds_kwargs["cohort"] = args.cohort
+            if args.recording is not None:
+                ds_kwargs["recording"] = args.recording
+            if args.group is not None:
+                ds_kwargs["group"] = args.group
             dataset = DatasetClass(**ds_kwargs)
         except Exception as e:
             print(f"  [SKIP] {ds_name}: {e}")
@@ -81,7 +99,7 @@ def main():
         path = extract_embeddings(
             model=model,
             dataset=dataset,
-            model_name=MODEL_NAME,
+            model_name=args.model_name,
             dataset_name=cache_name,
             L=SEQ_LEN,
             device=device,
@@ -90,7 +108,7 @@ def main():
         print(f"  Saved to {path}")
 
         linear_probe(
-            model_name=MODEL_NAME,
+            model_name=args.model_name,
             dataset_name=cache_name,
             device=device,
             upload=args.upload,

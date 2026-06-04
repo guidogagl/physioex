@@ -382,6 +382,34 @@ class ProtoSleepTransformer(nn.Module):
 
         return x
 
+    def encode(self, x):
+        """Encode input to contextualized per-epoch embeddings.
+
+        Same as forward() but stops before the final classifier.
+
+        Args:
+            x: (B, L, C, T, F) spectrogram input.
+
+        Returns:
+            (B, L, d_model) contextualized epoch embeddings.
+        """
+        batch_size, L, in_chans, T, F = x.size()
+
+        x_flat = x.reshape(batch_size * L * in_chans, 1, T, F)
+        x = self.epoch_encoder(x_flat)
+
+        x = x.reshape(batch_size * L, in_chans, -1)
+
+        if self.use_channel_mixer:
+            x = x + self.channel_mixer(x)
+
+        x = x.mean(dim=1)
+
+        x = x.reshape(batch_size, L, -1)
+        x = self.sequence_encoder(x)
+
+        return x
+
     def get_metrics(self):
         return {
             "mcy": self.mcy,
