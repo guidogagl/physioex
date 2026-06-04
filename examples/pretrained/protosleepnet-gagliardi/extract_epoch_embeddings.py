@@ -146,16 +146,22 @@ def extract_split(model, dataloader, split_dir, device, batch_size=256):
             n_total_epochs += existing.shape[0]
             continue
 
-        # Extract signals and labels
+        # Extract signals and labels from dict batch
         if isinstance(batch, dict) and "signals" in batch:
-            from physioex.data.collate import stack_channels
-            inputs = stack_channels(batch)    # (1, night_len, C, T, F)
-            targets = batch["labels"]         # (1, night_len)
+            signals = batch["signals"]
+            # channel_order may contain tuples or strings — normalize to strings
+            order = batch.get("channel_order", list(signals.keys()))
+            ch_tensors = []
+            for key in order:
+                k = key[0] if isinstance(key, tuple) else key
+                ch_tensors.append(signals[k])
+            # Stack channels: (night_len, C, T, F)
+            x = torch.stack(ch_tensors, dim=1).to(device)
+            y = batch["labels"].numpy()
         else:
             inputs, targets = batch
-
-        x = inputs.squeeze(0).to(device)   # (night_len, C, T, F)
-        y = targets.squeeze(0).numpy()     # (night_len,)
+            x = inputs.squeeze(0).to(device)
+            y = targets.squeeze(0).numpy()
 
         # Forward in batches
         N = x.shape[0]
