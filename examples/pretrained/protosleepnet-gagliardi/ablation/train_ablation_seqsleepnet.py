@@ -142,10 +142,19 @@ def main():
     parser.add_argument("--max_epochs", type=int, default=None)
     parser.add_argument("--early_stopping_patience", type=int, default=None)
     parser.add_argument("--num_workers", type=int, default=0)
+    parser.add_argument(
+        "--n_prototypes", type=int, default=None,
+        help="Override number of prototypes (only for protosleepnet variant)",
+    )
     args = parser.parse_args()
 
     variant = VARIANTS[args.variant]
     hf_name = variant["hf_name"]
+
+    # Override n_prototypes for protosleepnet variant
+    if args.n_prototypes is not None and args.variant == "protosleepnet":
+        variant["model_kwargs"]["n_prototypes"] = args.n_prototypes
+        hf_name = f"protoseqsleepnet-gagliardi-m{args.n_prototypes}"
 
     if args.output_dir is None:
         args.output_dir = f"pretrained_output/{hf_name}"
