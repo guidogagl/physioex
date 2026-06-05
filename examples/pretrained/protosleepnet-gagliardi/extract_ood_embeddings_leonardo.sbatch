@@ -24,20 +24,31 @@ cd /leonardo_work/IscrC_SELFEEG/code/physioex
 # Parameters (override via --export)
 MODEL="${MODEL:-st-baseline}"
 DS="${DS:-hmc}"
-DS_KWARGS="${DS_KWARGS:-{}}"
-DS_NAME="${DS_NAME:-$DS}"
+# Optional flat params (empty string = not set)
+VISIT="${VISIT:-}"
+COHORT="${COHORT:-}"
+SUBSET="${SUBSET:-}"
+RECORDING="${RECORDING:-}"
+GROUP="${GROUP:-}"
 
 PRETRAINED=/leonardo_work/IscrC_SELFEEG/pretrained
 OUTPUT_DIR=$PRETRAINED/posthoc_embeddings
 
-echo "OOD embedding extraction: model=$MODEL, dataset=$DS_NAME"
+# Build extra args
+EXTRA_ARGS=""
+[ -n "$VISIT" ] && EXTRA_ARGS="$EXTRA_ARGS --visit $VISIT"
+[ -n "$COHORT" ] && EXTRA_ARGS="$EXTRA_ARGS --cohort $COHORT"
+[ -n "$SUBSET" ] && EXTRA_ARGS="$EXTRA_ARGS --subset $SUBSET"
+[ -n "$RECORDING" ] && EXTRA_ARGS="$EXTRA_ARGS --recording $RECORDING"
+[ -n "$GROUP" ] && EXTRA_ARGS="$EXTRA_ARGS --group $GROUP"
+
+echo "OOD embedding extraction: model=$MODEL, dataset=$DS $EXTRA_ARGS"
 
 python examples/pretrained/protosleepnet-gagliardi/extract_epoch_embeddings.py \
     --model_dir $PRETRAINED/$MODEL \
     --output_dir $OUTPUT_DIR \
     --dataset $DS \
-    --dataset_kwargs "$DS_KWARGS" \
-    --dataset_name $DS_NAME \
+    $EXTRA_ARGS \
     --gpu_id 0 \
     --batch_size 512
 

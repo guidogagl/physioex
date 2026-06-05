@@ -25,9 +25,12 @@ Usage:
     python extract_epoch_embeddings.py --model_dir /path/to/st-baseline --output_dir /out \
         --dataset hmc --dataset_name hmc
 
-    # Dataset with kwargs
+    # Dataset with params
     python extract_epoch_embeddings.py --model_dir /path/to/st-baseline --output_dir /out \
-        --dataset mass --dataset_kwargs '{"cohort": 1}' --dataset_name mass_cohort1
+        --dataset mass --cohort 1
+
+    python extract_epoch_embeddings.py --model_dir /path/to/st-baseline --output_dir /out \
+        --dataset parkinsons --recording night --group HOA
 """
 import argparse
 import importlib
@@ -158,12 +161,21 @@ def main():
     parser.add_argument("--output_dir", type=str, required=True)
     parser.add_argument("--gpu_id", type=int, default=0)
     parser.add_argument("--dataset", type=str, default="shhs")
-    parser.add_argument("--dataset_kwargs", type=str, default="{}",
-                        help="JSON string of dataset constructor kwargs")
     parser.add_argument("--dataset_name", type=str, default=None,
-                        help="Name for output subdir (default: dataset arg)")
+                        help="Name for output subdir (default: auto from dataset + params)")
     parser.add_argument("--fold", type=int, default=0)
     parser.add_argument("--batch_size", type=int, default=256)
+    # Dataset-specific parameters (flat, no JSON)
+    parser.add_argument("--visit", type=int, default=None,
+                        help="SHHS/WSC visit number")
+    parser.add_argument("--cohort", type=int, default=None,
+                        help="MASS cohort number (1-5)")
+    parser.add_argument("--subset", type=str, default=None,
+                        help="HPAP subset (lab-full, lab-split, home) or Alzheimers (AD, HC)")
+    parser.add_argument("--recording", type=str, default=None,
+                        help="Parkinsons recording type (night, nap, all)")
+    parser.add_argument("--group", type=str, default=None,
+                        help="Parkinsons group (HOA, PD)")
     args = parser.parse_args()
 
     device = (
@@ -172,8 +184,35 @@ def main():
         else torch.device("cpu")
     )
 
-    ds_kwargs = json.loads(args.dataset_kwargs)
-    dataset_name = args.dataset_name or args.dataset
+    # Build dataset kwargs from flat args
+    ds_kwargs = {}
+    if args.visit is not None:
+        ds_kwargs["visit"] = args.visit
+    if args.cohort is not None:
+        ds_kwargs["cohort"] = args.cohort
+    if args.subset is not None:
+        ds_kwargs["subset"] = args.subset
+    if args.recording is not None:
+        ds_kwargs["recording"] = args.recording
+    if args.group is not None:
+        ds_kwargs["group"] = args.group
+
+    # Auto-generate dataset_name from dataset + params
+    if args.dataset_name:
+        dataset_name = args.dataset_name
+    else:
+        parts = [args.dataset]
+        if args.visit is not None:
+            parts.append(f"visit{args.visit}")
+        if args.cohort is not None:
+            parts.append(f"cohort{args.cohort}")
+        if args.subset is not None:
+            parts.append(args.subset)
+        if args.recording is not None:
+            parts.append(args.recording)
+        if args.group is not None:
+            parts.append(args.group)
+        dataset_name = "_".join(parts)
 
     # Detect mode: SHHS in-domain (train/valid/test) vs out-of-domain (all)
     is_shhs_indomain = (args.dataset == "shhs"
