@@ -433,6 +433,7 @@ def linear_probe(
     device: str = "cpu",
     upload: bool = False,
     cache_dir: Optional[str] = None,
+    save_predictions: bool = False,
 ) -> dict:
     """5-fold subject-wise cross-validated linear probe on cached embeddings.
 
@@ -465,6 +466,10 @@ def linear_probe(
         device: Device string (``"cpu"`` or ``"cuda:0"``).
         upload: If True, upload results to HuggingFace Hub.
         cache_dir: Override cache root directory.
+        save_predictions: If True, save per-subject softmax probabilities
+            and labels to ``linear_probe_predictions.json``. Each entry
+            contains subject_id, fold index, proba (n_epochs, n_classes),
+            and labels (n_epochs,).
 
     Returns:
         Results dict with ``per_fold``, ``pooled``, and ``mean_std`` keys.
@@ -523,6 +528,7 @@ def linear_probe(
     per_fold = []
     all_logits_list = []
     all_targets_list = []
+    subject_predictions = []  # for save_predictions
 
     print(
         f"\nLinear probe: {n_subjects} subjects, {n_folds}-fold CV, "
@@ -593,6 +599,24 @@ def linear_probe(
                 chunk = X_test[i : i + batch_size].to(dev)
                 test_logits_chunks.append(probe_model(chunk).cpu())
         test_logits = torch.cat(test_logits_chunks, dim=0)
+
+        # Collect per-subject predictions if requested
+        if save_predictions:
+            offset = 0
+            for subj_i in test_idx:
+                subj = subjects[subj_i]
+                subj_labels = subj["labels"]
+                valid_mask_subj = subj_labels >= 0
+                n_valid = int(valid_mask_subj.sum())
+                subj_logits = test_logits[offset : offset + n_valid]
+                subj_proba = torch.nn.functional.softmax(subj_logits, dim=-1)
+                subject_predictions.append({
+                    "subject_id": subj["id"],
+                    "fold": fold_idx,
+                    "proba": subj_proba.tolist(),
+                    "labels": subj_labels[valid_mask_subj].tolist(),
+                })
+                offset += n_valid
 
         # Metrics (functions expect logits and do argmax internally)
         acc = _accuracy_score(test_logits, y_test, ignore_index=None)
@@ -720,6 +744,12 @@ def linear_probe(
     with open(results_path, "w") as f:
         json.dump(results, f, indent=2)
     print(f"  Results saved to {results_path}")
+
+    if save_predictions:
+        predictions_path = emb_dir / "linear_probe_predictions.json"
+        with open(predictions_path, "w") as f:
+            json.dump(subject_predictions, f)
+        print(f"  Predictions saved to {predictions_path}")
 
     if upload:
         _upload_to_hf(emb_dir, model_name, dataset_name)

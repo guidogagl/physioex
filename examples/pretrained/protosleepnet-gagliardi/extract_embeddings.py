@@ -18,6 +18,11 @@ Usage:
         --gpu_id 0 --datasets mass --cohort 3
 """
 import argparse
+import importlib
+import json
+import os
+
+import torch
 
 from physioex.data.datasets import available_datasets, get_dataset
 from physioex.models import extract_embeddings, linear_probe, load_from_pretrained
@@ -32,14 +37,20 @@ def main():
         description="Extract embeddings and run linear probing"
     )
     parser.add_argument("--model_name", type=str, required=True,
-                        help="Model name on HuggingFace (e.g. sleeptransformer-gagliardi)")
+                        help="Model name (e.g. sleeptransformer-gagliardi)")
     parser.add_argument("--repo_id", type=str, default=None,
                         help="HuggingFace repo ID (default: 4rooms/physioex)")
+    parser.add_argument("--model_dir", type=str, default=None,
+                        help="Local model dir with model.pt + config.json (offline, skips HF)")
     parser.add_argument("--gpu_id", type=int, default=0)
     parser.add_argument("--datasets", nargs="+", default=None)
     parser.add_argument("--overwrite", action="store_true")
     parser.add_argument(
         "--upload", action="store_true", help="Upload to HuggingFace Hub"
+    )
+    parser.add_argument(
+        "--save_predictions", action="store_true",
+        help="Save per-subject softmax predictions to linear_probe_predictions.json"
     )
     parser.add_argument("--dataset_root", type=str, default=None)
     parser.add_argument("--visit", type=int, default=None)
@@ -112,6 +123,7 @@ def main():
             dataset_name=cache_name,
             device=device,
             upload=args.upload,
+            save_predictions=args.save_predictions,
         )
 
 
