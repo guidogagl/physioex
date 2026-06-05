@@ -1,17 +1,15 @@
 #!/bin/bash
-#SBATCH --partition=boost_usr_prod
-#SBATCH --gres=gpu:1
+#SBATCH --partition=dcgp_usr_prod
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=8
-#SBATCH --mem=64G
+#SBATCH --mem=32G
 #SBATCH --account=IscrC_SELFEEG
-#SBATCH --qos=boost_qos_dbg
+#SBATCH --qos=dcgp_qos_dbg
 #SBATCH --time=00:25:00
 #SBATCH --job-name=vq-kmeans
 #SBATCH --output=/leonardo_work/IscrC_SELFEEG/logs/%x_%j.out
 
 module load python/3.11.7
-module load cuda/12.1
 source /leonardo_work/IscrC_SELFEEG/.venv/physioex-torch2x/bin/activate
 
 export PYTHONUNBUFFERED=1
