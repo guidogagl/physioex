@@ -249,8 +249,9 @@ def test_vq(args, device):
     )
     print(f"Test subjects: {len(test_loader)}")
 
+    subject_predictions = []
     all_proba, all_targets = [], []
-    for batch in tqdm(test_loader, desc="VQ eval"):
+    for subj_idx, batch in enumerate(tqdm(test_loader, desc="VQ eval")):
         if isinstance(batch, dict) and "signals" in batch:
             from physioex.data.collate import stack_channels
             inputs = stack_channels(batch)
@@ -258,8 +259,15 @@ def test_vq(args, device):
         else:
             inputs, targets = batch
         proba = evaluate_subject(vq_model, inputs, SEQ_LEN, device)
+        targets_flat = targets.reshape(-1)
+
+        subject_predictions.append({
+            "subject_idx": subj_idx,
+            "proba": proba.tolist(),
+            "labels": targets_flat.tolist(),
+        })
         all_proba.append(proba)
-        all_targets.append(targets.reshape(-1))
+        all_targets.append(targets_flat)
 
     preds = torch.cat(all_proba, dim=0)
     targets = torch.cat(all_targets, dim=0)
@@ -269,7 +277,7 @@ def test_vq(args, device):
 
     metrics = evaluate_metrics(Y_true, Y_pred, CLASS_NAMES)
     _print_metrics(metrics, "VQ Prototype")
-    return metrics
+    return metrics, subject_predictions
 
 
 def test_baseline(args, device):
@@ -358,6 +366,8 @@ def main():
     model_name = os.path.basename(args.model_dir)
     print(f"Model: {model_name}")
 
+    subject_predictions = None
+
     if args.method == "nmf":
         if not args.emb_dir or not args.prototypes_path:
             parser.error("--emb_dir and --prototypes_path required for nmf")
@@ -365,16 +375,29 @@ def main():
     elif args.method == "vq":
         if not args.codebook_path:
             parser.error("--codebook_path required for vq")
-        metrics = test_vq(args, device)
+        metrics, subject_predictions = test_vq(args, device)
     elif args.method == "baseline":
         metrics = test_baseline(args, device)
 
     # Save results
     if args.output_dir:
         os.makedirs(args.output_dir, exist_ok=True)
-        out_path = os.path.join(
+
+        # Determine suffix from method + params
+        if args.method == "vq" and args.codebook_path:
+            # Extract M from codebook filename (codebook_vq_m48.npy -> m48)
+            cb_stem = os.path.splitext(os.path.basename(args.codebook_path))[0]
+            suffix = cb_stem.replace("codebook_", "")  # vq_m48
+        elif args.method == "nmf" and args.prototypes_path:
+            p_stem = os.path.splitext(os.path.basename(args.prototypes_path))[0]
+            suffix = p_stem.replace("prototypes_", "")
+        else:
+            suffix = args.method
+
+        # Metrics JSON
+        metrics_path = os.path.join(
             args.output_dir,
-            f"results_{model_name}_{args.method}.json",
+            f"metrics_{model_name}_{suffix}.json",
         )
         result = {
             "model_name": model_name,
@@ -385,9 +408,19 @@ def main():
             result["prototypes_path"] = args.prototypes_path
         if args.codebook_path:
             result["codebook_path"] = args.codebook_path
-        with open(out_path, "w") as f:
+        with open(metrics_path, "w") as f:
             json.dump(result, f, indent=2)
-        print(f"Results saved to {out_path}")
+        print(f"Metrics saved to {metrics_path}")
+
+        # Per-subject predictions JSON
+        if subject_predictions is not None:
+            preds_path = os.path.join(
+                args.output_dir,
+                f"predictions_{model_name}_{suffix}.json",
+            )
+            with open(preds_path, "w") as f:
+                json.dump(subject_predictions, f)
+            print(f"Predictions saved to {preds_path}")
 
 
 if __name__ == "__main__":
