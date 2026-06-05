@@ -1,8 +1,8 @@
 #!/bin/bash
 #SBATCH --partition=lrd_all_serial
 #SBATCH --ntasks-per-node=1
-#SBATCH --cpus-per-task=8
-#SBATCH --mem=32G
+#SBATCH --cpus-per-task=4
+#SBATCH --mem=8G
 #SBATCH --time=00:30:00
 #SBATCH --job-name=vq-kmeans
 #SBATCH --output=/leonardo_work/IscrC_SELFEEG/logs/%x_%j.out
