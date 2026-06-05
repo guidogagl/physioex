@@ -10,9 +10,8 @@
 #SBATCH --job-name=train-st-protosleepnet
 #SBATCH --output=/leonardo_work/IscrC_SELFEEG/logs/%x_%j.out
 
-module load profile/deeplrn
-module load cineca-ai/4.0.0
-source /leonardo_work/IscrC_SELFEEG/.venv/physioex/bin/activate
+# Use torch2x venv (PyTorch 2.4+cu121) — required for SimVQ/einx
+source /leonardo_work/IscrC_SELFEEG/.venv/physioex-torch2x/bin/activate
 
 export PYTHONUNBUFFERED=1
 export HF_HUB_OFFLINE=1
