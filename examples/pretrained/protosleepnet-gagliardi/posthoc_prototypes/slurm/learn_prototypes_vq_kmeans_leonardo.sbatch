@@ -7,7 +7,7 @@
 #SBATCH --account=IscrC_SELFEEG
 #SBATCH --qos=boost_qos_dbg
 #SBATCH --time=00:25:00
-#SBATCH --job-name=nmf-proto
+#SBATCH --job-name=vq-kmeans
 #SBATCH --output=/leonardo_work/IscrC_SELFEEG/logs/%x_%j.out
 
 module load python/3.11.7
@@ -19,17 +19,14 @@ export PYTHONUNBUFFERED=1
 cd /leonardo_work/IscrC_SELFEEG/code/physioex
 
 MODEL="${MODEL:-st-baseline}"
-K="${K:-10}"
+M="${M:-48}"
 
 PRETRAINED=/leonardo_work/IscrC_SELFEEG/pretrained
 EMB_DIR=$PRETRAINED/posthoc_embeddings/$MODEL
 
-echo "NMF prototype discovery: model=$MODEL, k_per_class=$K"
+echo "VQ K-Means: model=$MODEL, M=$M"
 
-python examples/pretrained/protosleepnet-gagliardi/posthoc_prototypes/learn_prototypes_nmf.py \
+python examples/pretrained/protosleepnet-gagliardi/posthoc_prototypes/learn_prototypes_vq_kmeans.py \
     --emb_dir $EMB_DIR \
-    --k_per_class $K \
-    --max_iter 500
-
-echo "Done."
-ls -lh $EMB_DIR/prototypes_nmf_k${K}*
+    --n_prototypes $M \
+    --output_dir $EMB_DIR
