@@ -27,7 +27,7 @@ cd /leonardo_work/IscrC_SELFEEG/code/physioex
 
 PRETRAINED=/leonardo_work/IscrC_SELFEEG/pretrained
 OUTPUT_DIR=/leonardo_work/IscrC_SELFEEG/pretrained/posthoc_embeddings
-SCRIPT=examples/pretrained/protosleepnet-gagliardi/extract_epoch_embeddings.py
+SCRIPT=examples/pretrained/protosleepnet-gagliardi/posthoc_prototypes/extract_epoch_embeddings.py
 
 # Extract epoch embeddings from both baselines
 echo ""

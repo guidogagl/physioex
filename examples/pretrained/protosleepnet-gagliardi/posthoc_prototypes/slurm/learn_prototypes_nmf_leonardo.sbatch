@@ -26,7 +26,7 @@ EMB_DIR=$PRETRAINED/posthoc_embeddings/$MODEL
 
 echo "NMF prototype discovery: model=$MODEL, k_per_class=$K"
 
-python examples/pretrained/protosleepnet-gagliardi/learn_prototypes_nmf.py \
+python examples/pretrained/protosleepnet-gagliardi/posthoc_prototypes/learn_prototypes_nmf.py \
     --emb_dir $EMB_DIR \
     --k_per_class $K \
     --max_iter 500

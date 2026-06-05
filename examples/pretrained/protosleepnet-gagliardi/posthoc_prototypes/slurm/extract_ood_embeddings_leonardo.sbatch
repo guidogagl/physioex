@@ -44,7 +44,7 @@ EXTRA_ARGS=""
 
 echo "OOD embedding extraction: model=$MODEL, dataset=$DS $EXTRA_ARGS"
 
-python examples/pretrained/protosleepnet-gagliardi/extract_epoch_embeddings.py \
+python examples/pretrained/protosleepnet-gagliardi/posthoc_prototypes/extract_epoch_embeddings.py \
     --model_dir $PRETRAINED/$MODEL \
     --output_dir $OUTPUT_DIR \
     --dataset $DS \
