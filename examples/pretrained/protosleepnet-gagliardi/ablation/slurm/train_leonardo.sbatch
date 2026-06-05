@@ -5,9 +5,9 @@
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=256G
 #SBATCH --account=IscrC_SELFEEG
-#SBATCH --qos=boost_qos_dbg
-#SBATCH --time=00:20:00
-#SBATCH --job-name=smoke-ablation
+#SBATCH --qos=boost_qos_lprod
+#SBATCH --time=24:00:00
+#SBATCH --job-name=train-ablation
 #SBATCH --output=/leonardo_work/IscrC_SELFEEG/logs/%x_%j.out
 
 module load profile/deeplrn
@@ -29,21 +29,21 @@ echo "Cache copied: $(du -sh /dev/shm/physioex_cache | cut -f1)"
 cd /leonardo_work/IscrC_SELFEEG/code/physioex
 
 VARIANT="${VARIANT:-baseline}"
-echo "Running smoke test for variant: $VARIANT"
+echo "Training variant: $VARIANT"
 
 if [ "$VARIANT" = "prosleepnet" ]; then
     python examples/pretrained/protosleepnet-gagliardi/train.py \
         --datasets shhs \
-        --max_epochs 1 \
         --gpu_id 0 \
         --num_workers 14 \
-        --output_dir /leonardo_work/IscrC_SELFEEG/pretrained/smoke/protosleepnet-gagliardi
+        --output_dir /leonardo_work/IscrC_SELFEEG/pretrained/protosleepnet-gagliardi \
+        --upload
 else
-    python examples/pretrained/protosleepnet-gagliardi/train_ablation.py \
+    python examples/pretrained/protosleepnet-gagliardi/ablation/train_ablation.py \
         --variant "$VARIANT" \
         --datasets shhs \
-        --max_epochs 1 \
         --gpu_id 0 \
         --num_workers 14 \
-        --output_dir "/leonardo_work/IscrC_SELFEEG/pretrained/smoke/$VARIANT"
+        --output_dir "/leonardo_work/IscrC_SELFEEG/pretrained/$VARIANT" \
+        --upload
 fi

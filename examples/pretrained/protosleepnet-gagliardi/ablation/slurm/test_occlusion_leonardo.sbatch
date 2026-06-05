@@ -32,7 +32,7 @@ MODEL="${MODEL:-st-baseline}"
 MODEL_DIR="/leonardo_work/IscrC_SELFEEG/pretrained/$MODEL"
 echo "Testing occlusion robustness for: $MODEL"
 
-python examples/pretrained/protosleepnet-gagliardi/test_occlusion.py \
+python examples/pretrained/protosleepnet-gagliardi/ablation/test_occlusion.py \
     --model_dir "$MODEL_DIR" \
     --gpu_id 0 \
     --num_workers 14

@@ -95,12 +95,12 @@ VARIANTS = {
             "cm_n_heads": 4,
             "cm_d_ff": 256,
             "cm_n_layers": 1,
-            "n_prototypes": 100,
+            "n_prototypes": 48,
             "use_channel_mixer": True,
             "use_prototypes": True,
         },
         "trainer_class": ProtoSeqSleepNetTrainer,
-        "description": "Per-channel SeqSleepNet 3ch + dropout + mixer + SimVQ 100 prototypes",
+        "description": "Per-channel SeqSleepNet 3ch + dropout + mixer + SimVQ 48 prototypes",
     },
 }
 

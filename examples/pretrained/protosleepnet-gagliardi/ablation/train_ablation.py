@@ -23,7 +23,7 @@ import os
 import torch
 
 from physioex.data.datasets import get_dataset
-from physioex.models.prosleepnet import ProtoSleepTransformer, AblationTrainer
+from physioex.models.prosleepnet import ProtoSleepTransformer, ProtoSleepTransformerTrainer, AblationTrainer
 from physioex.train.trainer import Trainer
 
 HF_REPO_ID = "4rooms/physioex"
@@ -85,6 +85,21 @@ VARIANTS = {
         },
         "trainer_class": AblationTrainer,
         "description": "Per-channel SleepTransformer 3ch + accuracy-weighted dropout + ChannelMixer",
+    },
+    "protosleepnet": {
+        "hf_name": "protosleeptransformer-gagliardi",
+        "model_kwargs": {
+            **_COMMON_MODEL_KWARGS,
+            "cdropout": 0.5,
+            "cm_n_heads": 4,
+            "cm_d_ff": 256,
+            "cm_n_layers": 1,
+            "n_prototypes": 48,
+            "use_channel_mixer": True,
+            "use_prototypes": True,
+        },
+        "trainer_class": ProtoSleepTransformerTrainer,
+        "description": "Per-channel SleepTransformer 3ch + dropout + mixer + SimVQ 48 prototypes",
     },
 }
 
