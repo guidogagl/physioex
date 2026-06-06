@@ -38,6 +38,17 @@ elif [ "$METHOD" = "vq_learned" ]; then
         --batch_size 32 \
         --gpu_id 0 \
         --output_dir $EMB_DIR
+elif [ "$METHOD" = "vq" ]; then
+    python examples/pretrained/protosleepnet-gagliardi/posthoc_prototypes/learn_prototypes_vq.py \
+        --model_name $MODEL_NAME \
+        --emb_dir $EMB_DIR \
+        --n_prototypes $M \
+        --n_epochs 50 \
+        --patience 5 \
+        --lr 1e-4 \
+        --batch_size 32 \
+        --gpu_id 0 \
+        --output_dir $EMB_DIR
 fi
 
 echo "Done."
