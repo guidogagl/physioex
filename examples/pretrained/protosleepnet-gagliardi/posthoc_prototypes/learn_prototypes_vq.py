@@ -90,7 +90,7 @@ def main():
     parser = argparse.ArgumentParser(
         description="Learn VQ codebook (K-Means init + supervised refinement)"
     )
-    parser.add_argument("--model_dir", type=str, required=True)
+    parser.add_argument("--model_dir", type=str, default=None)
     parser.add_argument("--emb_dir", type=str, required=True)
     parser.add_argument("--n_prototypes", type=int, default=48)
     parser.add_argument("--n_epochs", type=int, default=50)
