@@ -88,6 +88,7 @@ class EpochTransformer(nn.Module):
     def __init__(
         self,
         d_model: int = 128,
+        in_chan: int = 1,
         n_heads: int = 8,
         n_layers: int = 4,
         d_ff: int = 1024,
@@ -95,30 +96,29 @@ class EpochTransformer(nn.Module):
         attention_size: int = 128,
     ):
         super().__init__()
-        self.d_model = d_model
+        self.in_chan = in_chan
+        self.freq_dim = d_model              # per-channel truncation target
+        self.d_model = d_model * in_chan      # transformer hidden dimension
 
-        self.pe = PositionalEncoding(d_model)
+        self.pe = PositionalEncoding(self.d_model)
 
         encoder_layer = nn.TransformerEncoderLayer(
-            d_model=d_model,
+            d_model=self.d_model,
             nhead=n_heads,
             dim_feedforward=d_ff,
             dropout=dropout,
             batch_first=True,
         )
         self.encoder = nn.TransformerEncoder(encoder_layer, num_layers=n_layers)
-        self.attention_pool = AttentionPooling(d_model, attention_size)
+        self.attention_pool = AttentionPooling(self.d_model, attention_size)
 
     def forward(self, x):
         # x: (B, C, T, F) — spectrogram
         B, C, T, F = x.shape
 
-        # Truncate to d_model frequency bins and merge channels
-        x = x[..., : self.d_model]  # (B, C, T, d_model)
-        x = x.permute(0, 2, 1, 3).reshape(B, T, C * self.d_model)  # (B, T, C*d_model)
-
-        # For single channel: (B, T, 128) — matches paper exactly
-        # Multi-channel: features are concatenated (not in original paper)
+        # Truncate frequency bins per channel, then concatenate
+        x = x[..., : self.freq_dim]  # (B, C, T, freq_dim)
+        x = x.permute(0, 2, 1, 3).reshape(B, T, C * self.freq_dim)  # (B, T, d_model)
 
         x = self.pe(x)
         x = self.encoder(x)  # (B, T, d_model)
@@ -204,12 +204,14 @@ class SleepTransformer(nn.Module):
         super().__init__()
         self.n_classes = n_classes
         self.d_model = d_model
+        self.in_chan = in_chan
 
-        # For multi-channel, epoch transformer sees C*d_model features
-        epoch_d = d_model * in_chan
+        # Epoch transformer: truncates each channel to d_model, concatenates → d_model*in_chan
+        hidden_d = d_model * in_chan
 
         self.epoch_encoder = EpochTransformer(
-            d_model=epoch_d,
+            d_model=d_model,
+            in_chan=in_chan,
             n_heads=n_heads,
             n_layers=n_epoch_layers,
             d_ff=d_ff,
@@ -218,7 +220,7 @@ class SleepTransformer(nn.Module):
         )
 
         self.sequence_encoder = SequenceTransformer(
-            d_model=epoch_d,
+            d_model=hidden_d,
             n_heads=n_heads,
             n_layers=n_seq_layers,
             d_ff=d_ff,
@@ -227,7 +229,7 @@ class SleepTransformer(nn.Module):
 
         # Paper: two FC layers of 1024 with ReLU, then linear to n_classes
         self.classifier = nn.Sequential(
-            nn.Linear(epoch_d, d_clf),
+            nn.Linear(hidden_d, d_clf),
             nn.ReLU(inplace=True),
             nn.Dropout(dropout),
             nn.Linear(d_clf, d_clf),
