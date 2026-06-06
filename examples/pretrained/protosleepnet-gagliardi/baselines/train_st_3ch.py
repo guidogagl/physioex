@@ -121,7 +121,7 @@ def main():
     print(f"Model: {MODEL_NAME}, params: {n_params:,}")
 
     # ── Compute valid_interval_ratio from --valid_every ──────────────────
-    n_train = len(dataset.get_splits(fold=TRAIN_CONFIG["fold"])[0])
+    n_train = len(dataset.split(fold=TRAIN_CONFIG["fold"])[0])
     steps_per_epoch = max(1, n_train // TRAIN_CONFIG["batch_size"])
     valid_interval_ratio = args.valid_every / steps_per_epoch
     print(f"Validation every {args.valid_every} steps (ratio={valid_interval_ratio:.4f}, ~{steps_per_epoch} steps/epoch)")
