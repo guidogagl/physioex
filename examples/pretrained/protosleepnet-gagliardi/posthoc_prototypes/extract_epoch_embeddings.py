@@ -133,24 +133,28 @@ def extract_split(model, loader, split_dir, device, batch_size=256):
             n_total_epochs += existing.shape[0]
             continue
 
-        inputs = stack_channels(batch)
-        x = inputs.squeeze(0).to(device)
-        y = batch["labels"].squeeze(0).numpy()
+        try:
+            inputs = stack_channels(batch)
+            x = inputs.squeeze(0).to(device)
+            y = batch["labels"].squeeze(0).numpy()
 
-        N = x.shape[0]
-        embs = []
-        for i in range(0, N, batch_size):
-            chunk = x[i : i + batch_size]
-            e = extract_epoch_encoder(model, chunk)
-            embs.append(e.cpu().numpy())
+            N = x.shape[0]
+            embs = []
+            for i in range(0, N, batch_size):
+                chunk = x[i : i + batch_size]
+                e = extract_epoch_encoder(model, chunk)
+                embs.append(e.cpu().numpy())
 
-        embs = np.concatenate(embs, axis=0).astype(np.float32)
+            embs = np.concatenate(embs, axis=0).astype(np.float32)
 
-        np.save(emb_path, embs)
-        np.save(lbl_path, y.astype(np.int64))
+            np.save(emb_path, embs)
+            np.save(lbl_path, y.astype(np.int64))
 
-        n_extracted += 1
-        n_total_epochs += embs.shape[0]
+            n_extracted += 1
+            n_total_epochs += embs.shape[0]
+        except Exception as e:
+            print(f"  [SKIP] {subject_id}: {e}")
+            continue
 
     return n_extracted, n_skipped, n_total_epochs
 
