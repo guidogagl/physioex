@@ -90,6 +90,9 @@ def extract_epoch_encoder(model, x):
         x_flat = x.reshape(N * C, 1, T, F)
         embs = model.epoch_encoder(x_flat)
         embs = embs.reshape(N, C, -1)
+        # Apply channel mixer if present (mixer/protosleepnet variants)
+        if hasattr(model, "channel_mixer"):
+            embs = embs + model.channel_mixer(embs)
         return embs.mean(dim=1)
 
     if hasattr(model, "epoch_encoder"):
