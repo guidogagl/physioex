@@ -231,17 +231,26 @@ def test_vq(args, device):
     print("VQ Prototype Test")
     print("=" * 60)
 
-    model, config = load_model(args.model_dir, device)
+    if args.model_name:
+        from physioex.models import load_from_pretrained
+        kwargs = {"device": str(device)}
+        if args.repo_id:
+            kwargs["repo_id"] = args.repo_id
+        model = load_from_pretrained(args.model_name, **kwargs)
+        model.eval()
+    else:
+        model, config = load_model(args.model_dir, device)
     codebook = np.load(args.codebook_path)
     print(f"Codebook: {codebook.shape}")
 
     vq_model = VQWrappedModel(model, codebook).to(device).eval()
 
+    channels = args.channels if args.channels else CHANNELS
     ds_kwargs = {"visit": 1} if args.dataset == "shhs" else {}
     DatasetClass = get_dataset(args.dataset)
     dataset = DatasetClass(
-        channels=CHANNELS, pipelines=PIPELINE,
-        sequence_length=SEQ_LEN, **ds_kwargs,
+        channels=channels, pipelines=PIPELINE,
+        sequence_length=args.seq_len, **ds_kwargs,
     )
     _, _, test_loader = Trainer.build_dataloaders(
         dataset=dataset, train_batch_size=1, eval_batch_size=1,
@@ -258,7 +267,7 @@ def test_vq(args, device):
             targets = batch["labels"]
         else:
             inputs, targets = batch
-        proba = evaluate_subject(vq_model, inputs, SEQ_LEN, device)
+        proba = evaluate_subject(vq_model, inputs, args.seq_len, device)
         targets_flat = targets.reshape(-1)
 
         subject_predictions.append({
@@ -286,13 +295,22 @@ def test_baseline(args, device):
     print("Baseline Test")
     print("=" * 60)
 
-    model, config = load_model(args.model_dir, device)
+    if args.model_name:
+        from physioex.models import load_from_pretrained
+        kwargs = {"device": str(device)}
+        if args.repo_id:
+            kwargs["repo_id"] = args.repo_id
+        model = load_from_pretrained(args.model_name, **kwargs)
+        model.eval()
+    else:
+        model, config = load_model(args.model_dir, device)
 
+    channels = args.channels if args.channels else CHANNELS
     ds_kwargs = {"visit": 1} if args.dataset == "shhs" else {}
     DatasetClass = get_dataset(args.dataset)
     dataset = DatasetClass(
-        channels=CHANNELS, pipelines=PIPELINE,
-        sequence_length=SEQ_LEN, **ds_kwargs,
+        channels=channels, pipelines=PIPELINE,
+        sequence_length=args.seq_len, **ds_kwargs,
     )
     _, _, test_loader = Trainer.build_dataloaders(
         dataset=dataset, train_batch_size=1, eval_batch_size=1,
@@ -308,7 +326,7 @@ def test_baseline(args, device):
             targets = batch["labels"]
         else:
             inputs, targets = batch
-        proba = evaluate_subject(model, inputs, SEQ_LEN, device)
+        proba = evaluate_subject(model, inputs, args.seq_len, device)
         all_proba.append(proba)
         all_targets.append(targets.reshape(-1))
 
@@ -341,8 +359,12 @@ def main():
     parser = argparse.ArgumentParser(
         description="Test accuracy loss with post-hoc prototypes"
     )
-    parser.add_argument("--model_dir", type=str, required=True,
+    parser.add_argument("--model_dir", type=str, default=None,
                         help="Directory with config.json + model.pt")
+    parser.add_argument("--model_name", type=str, default=None,
+                        help="HF model name for load_from_pretrained")
+    parser.add_argument("--repo_id", type=str, default=None,
+                        help="HF repo ID")
     parser.add_argument("--method", type=str, required=True,
                         choices=["nmf", "vq", "baseline"])
     parser.add_argument("--emb_dir", type=str, default=None,
@@ -354,6 +376,10 @@ def main():
     parser.add_argument("--output_dir", type=str, default=None)
     parser.add_argument("--gpu_id", type=int, default=0)
     parser.add_argument("--dataset", type=str, default="shhs")
+    parser.add_argument("--channels", nargs="+", default=None,
+                        help="Channel list (default: EEG EOG EMG)")
+    parser.add_argument("--seq_len", type=int, default=21,
+                        help="Sequence length for voting (default: 21)")
     parser.add_argument("--fold", type=int, default=0)
     args = parser.parse_args()
 
@@ -363,7 +389,12 @@ def main():
         else torch.device("cpu")
     )
 
-    model_name = os.path.basename(args.model_dir)
+    if args.model_name:
+        model_name = args.model_name
+    elif args.model_dir:
+        model_name = os.path.basename(args.model_dir)
+    else:
+        parser.error("--model_dir or --model_name required")
     print(f"Model: {model_name}")
 
     subject_predictions = None
