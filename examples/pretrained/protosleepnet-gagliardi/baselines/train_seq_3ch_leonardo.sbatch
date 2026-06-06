@@ -33,7 +33,7 @@ mkdir -p "$OUTDIR"
 
 cd /leonardo_work/IscrC_SELFEEG/code/physioex
 
-python examples/pretrained/sleeptransformer-phan/baselines/train_seq_3ch.py \
+python examples/pretrained/protosleepnet-gagliardi/baselines/train_seq_3ch.py \
     --gpu_id 0 \
     --output_dir "$OUTDIR" \
     --num_workers 6
