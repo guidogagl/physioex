@@ -201,12 +201,17 @@ def main():
     parser = argparse.ArgumentParser(
         description="Linear probe on VQ-quantized epoch embeddings + sequence encoder"
     )
-    parser.add_argument("--model_dir", type=str, required=True)
+    parser.add_argument("--model_dir", type=str, default=None)
+    parser.add_argument("--model_name", type=str, default=None,
+                        help="HF model name for load_from_pretrained")
+    parser.add_argument("--repo_id", type=str, default=None)
     parser.add_argument("--codebook_path", type=str, required=True)
     parser.add_argument("--emb_dir", type=str, required=True,
                         help="Directory with per-subject epoch embeddings")
     parser.add_argument("--output_dir", type=str, required=True)
     parser.add_argument("--gpu_id", type=int, default=0)
+    parser.add_argument("--seq_len", type=int, default=21,
+                        help="Sequence length for voting (default: 21)")
     parser.add_argument("--n_folds", type=int, default=5)
     parser.add_argument("--max_epochs", type=int, default=100)
     parser.add_argument("--lr", type=float, default=1e-3)
@@ -221,9 +226,21 @@ def main():
     )
 
     # Load model (frozen, for sequence encoder only)
-    model_name = os.path.basename(args.model_dir)
-    print(f"Loading model: {model_name}")
-    model = load_model(args.model_dir, device)
+    if args.model_name:
+        from physioex.models import load_from_pretrained
+        model_name = args.model_name
+        kwargs = {"device": str(device)}
+        if args.repo_id:
+            kwargs["repo_id"] = args.repo_id
+        model = load_from_pretrained(args.model_name, **kwargs)
+        model.eval()
+        for p in model.parameters():
+            p.requires_grad_(False)
+    elif args.model_dir:
+        model_name = os.path.basename(args.model_dir)
+        model = load_model(args.model_dir, device)
+    else:
+        parser.error("--model_dir or --model_name required")
     seq_encoder_fn = build_sequence_encoder_fn(model)
 
     # Load codebook
@@ -239,10 +256,10 @@ def main():
     print(f"  {len(subjects)} subjects loaded")
 
     # Step 1: VQ + sequence encode all subjects
-    print(f"\nVQ quantization + sequence encoding (L={SEQ_LEN})...")
+    print(f"\nVQ quantization + sequence encoding (L={args.seq_len})...")
     for subj in tqdm(subjects, desc="Encoding"):
         subj["embeddings"] = encode_subject_vq(
-            subj["embeddings"], codebook, seq_encoder_fn, SEQ_LEN, device
+            subj["embeddings"], codebook, seq_encoder_fn, args.seq_len, device
         )
 
     # Determine n_classes
