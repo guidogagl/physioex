@@ -88,6 +88,12 @@ def main():
         default=0,
         help="DataLoader workers (0 = main process)",
     )
+    parser.add_argument(
+        "--valid_every",
+        type=int,
+        default=1000,
+        help="Validate every N training steps",
+    )
     args = parser.parse_args()
 
     os.makedirs(args.output_dir, exist_ok=True)
@@ -114,6 +120,12 @@ def main():
     n_params = sum(p.numel() for p in model.parameters())
     print(f"Model: {MODEL_NAME}, params: {n_params:,}")
 
+    # ── Compute valid_interval_ratio from --valid_every ──────────────────
+    n_train = len(dataset.get_splits(fold=TRAIN_CONFIG["fold"])[0])
+    steps_per_epoch = max(1, n_train // TRAIN_CONFIG["batch_size"])
+    valid_interval_ratio = args.valid_every / steps_per_epoch
+    print(f"Validation every {args.valid_every} steps (ratio={valid_interval_ratio:.4f}, ~{steps_per_epoch} steps/epoch)")
+
     # ── Train ────────────────────────────────────────────────────────────
     nw = args.num_workers
     model = Trainer.train(
@@ -127,6 +139,7 @@ def main():
         gpu_id=args.gpu_id,
         checkpoint_path=os.path.join(args.output_dir, "checkpoints"),
         early_stopping_patience=TRAIN_CONFIG["early_stopping_patience"],
+        valid_interval_ratio=valid_interval_ratio,
         num_workers=nw,
         pin_memory=nw > 0,
         persistent_workers=nw > 0,
