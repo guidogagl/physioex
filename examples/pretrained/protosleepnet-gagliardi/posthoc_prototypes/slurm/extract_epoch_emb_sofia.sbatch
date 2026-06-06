@@ -38,6 +38,8 @@ EXTRA_ARGS=""
 [ -n "$VISIT" ] && EXTRA_ARGS="$EXTRA_ARGS --visit $VISIT"
 [ -n "$COHORT" ] && EXTRA_ARGS="$EXTRA_ARGS --cohort $COHORT"
 [ -n "$SUBSET" ] && EXTRA_ARGS="$EXTRA_ARGS --subset $SUBSET"
+[ -n "$RECORDING" ] && EXTRA_ARGS="$EXTRA_ARGS --recording $RECORDING"
+[ -n "$GROUP" ] && EXTRA_ARGS="$EXTRA_ARGS --group $GROUP"
 [ -n "$DATASET_NAME" ] && EXTRA_ARGS="$EXTRA_ARGS --dataset_name $DATASET_NAME"
 
 echo "Epoch embedding extraction: model=$MODEL_NAME, dataset=$DS, channels=$CHANNELS $EXTRA_ARGS"
