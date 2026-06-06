@@ -56,14 +56,16 @@ class ResidualSequenceWrapper(nn.Module):
     Args:
         epoch_encoder: maps (N, C, T, F) → (N, d_model)
         sequence_encoder: maps (B, L, d_model) → (B, L, d_model)
-        classifier: maps (B*L, d_model) → (B*L, n_classes) — shared
+        classifier: maps (B*L, d_model) → (B*L, n_classes) — final output
+        epoch_classifier: maps (B*L, d_model) → (B*L, n_classes) — epoch-level auxiliary
     """
 
-    def __init__(self, epoch_encoder, sequence_encoder, classifier):
+    def __init__(self, epoch_encoder, sequence_encoder, classifier, epoch_classifier):
         super().__init__()
         self.epoch_encoder = epoch_encoder
         self.sequence_encoder = sequence_encoder
         self.classifier = classifier
+        self.epoch_classifier = epoch_classifier
 
         # Zero-init sequence encoder
         if isinstance(sequence_encoder, nn.TransformerEncoder):
@@ -96,9 +98,9 @@ class ResidualSequenceWrapper(nn.Module):
         h = self.epoch_encoder(x.reshape(B * L, C, T, F_dim))
         h = h.reshape(B, L, -1)  # (B, L, d_model)
 
-        # Epoch-level classification (auxiliary, same classifier)
+        # Epoch-level classification (auxiliary, separate classifier)
         d = h.shape[-1]
-        self._epoch_logits = self.classifier(h.reshape(B * L, d)).reshape(B, L, -1)
+        self._epoch_logits = self.epoch_classifier(h.reshape(B * L, d)).reshape(B, L, -1)
 
         # Residual sequence encoding
         if isinstance(self.sequence_encoder, nn.GRU):

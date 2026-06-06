@@ -55,7 +55,8 @@ def build_model():
         batch_first=True, bidirectional=True,
     )
     classifier = nn.Linear(D_SEQ, N_CLASSES)
-    return ResidualSequenceWrapper(epoch_encoder, sequence_encoder, classifier)
+    epoch_classifier = nn.Linear(D_MODEL, N_CLASSES)
+    return ResidualSequenceWrapper(epoch_encoder, sequence_encoder, classifier, epoch_classifier)
 
 
 def main():

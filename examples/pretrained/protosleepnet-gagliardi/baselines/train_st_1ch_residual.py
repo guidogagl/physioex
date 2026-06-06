@@ -63,7 +63,16 @@ def build_model():
         nn.Dropout(DROPOUT),
         nn.Linear(D_CLF, N_CLASSES),
     )
-    return ResidualSequenceWrapper(epoch_encoder, sequence_encoder, classifier)
+    epoch_classifier = nn.Sequential(
+        nn.Linear(D_MODEL, D_CLF),
+        nn.ReLU(inplace=True),
+        nn.Dropout(DROPOUT),
+        nn.Linear(D_CLF, D_CLF),
+        nn.ReLU(inplace=True),
+        nn.Dropout(DROPOUT),
+        nn.Linear(D_CLF, N_CLASSES),
+    )
+    return ResidualSequenceWrapper(epoch_encoder, sequence_encoder, classifier, epoch_classifier)
 
 
 def main():
