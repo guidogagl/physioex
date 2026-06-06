@@ -2,7 +2,7 @@
 #SBATCH --partition=zen4_h200
 #SBATCH --gres=gpu:nvidia_h200:1
 #SBATCH --account=pilot_2026_0042
-#SBATCH --time=01:00:00
+#SBATCH --time=03:00:00
 #SBATCH --job-name=vq-test
 #SBATCH --output=/sofia/scratch/pilot/pilot_2026_0042/WORK/logs/%x_%j.out
 
@@ -11,7 +11,19 @@ source /sofia/scratch/pilot/pilot_2026_0042/WORK/.venv/physioex-pip/bin/activate
 export PYTHONUNBUFFERED=1
 export HF_HUB_OFFLINE=1
 export CUDA_VISIBLE_DEVICES=0
-export PHYSIOEX_CACHE_DIR=/sofia/scratch/pilot/pilot_2026_0042/cache
+
+# Copy dataset cache to /dev/shm if SHM_DATASET is set
+CACHE_SRC=/sofia/scratch/pilot/pilot_2026_0042/cache
+SHM=/dev/shm/physioex_cache
+if [ -n "$SHM_DATASET" ] && [ -d "$CACHE_SRC/v1/$SHM_DATASET" ]; then
+    echo "Copying $SHM_DATASET cache to /dev/shm..."
+    mkdir -p $SHM/v1
+    cp -r $CACHE_SRC/v1/$SHM_DATASET $SHM/v1/
+    export PHYSIOEX_CACHE_DIR=$SHM
+    echo "Cache copied: $(du -sh $SHM | cut -f1)"
+else
+    export PHYSIOEX_CACHE_DIR=$CACHE_SRC
+fi
 
 cd /sofia/scratch/pilot/pilot_2026_0042/WORK/physioex
 
