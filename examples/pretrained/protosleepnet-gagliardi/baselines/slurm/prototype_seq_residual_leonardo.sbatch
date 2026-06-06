@@ -12,9 +12,7 @@
 
 # Usage: sbatch --export=MODEL_DIR=/path/to/model,BUILD_MODULE=train_seq_1ch_residual prototype_seq_residual_leonardo.sbatch
 
-module load profile/deeplrn
-module load cineca-ai/4.0.0
-source /leonardo_work/IscrC_SELFEEG/.venv/physioex/bin/activate
+source /leonardo_work/IscrC_SELFEEG/.venv/physioex-torch2x/bin/activate
 
 export PYTHONUNBUFFERED=1
 export HF_HUB_OFFLINE=1
