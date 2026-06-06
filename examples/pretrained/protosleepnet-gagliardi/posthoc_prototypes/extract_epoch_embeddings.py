@@ -156,9 +156,15 @@ def main():
     parser = argparse.ArgumentParser(
         description="Extract pre-sequence epoch embeddings from baseline models"
     )
-    parser.add_argument("--model_dir", type=str, required=True,
+    parser.add_argument("--model_dir", type=str, default=None,
                         help="Directory with config.json + model.pt")
+    parser.add_argument("--model_name", type=str, default=None,
+                        help="HF model name for load_from_pretrained (e.g. seqsleepnet-phan)")
+    parser.add_argument("--repo_id", type=str, default=None,
+                        help="HF repo ID (default: 4rooms/physioex)")
     parser.add_argument("--output_dir", type=str, required=True)
+    parser.add_argument("--channels", nargs="+", default=None,
+                        help="Channel list (default: EEG EOG EMG)")
     parser.add_argument("--gpu_id", type=int, default=0)
     parser.add_argument("--dataset", type=str, default="shhs")
     parser.add_argument("--dataset_name", type=str, default=None,
@@ -214,22 +220,36 @@ def main():
             parts.append(args.group)
         dataset_name = "_".join(parts)
 
-    # Detect mode: SHHS in-domain (train/valid/test) vs out-of-domain (all)
-    is_shhs_indomain = (args.dataset == "shhs"
-                        and ds_kwargs.get("visit", 1) == 1
-                        and args.dataset_name is None)
+    # Detect mode: in-domain (train/valid/test) vs out-of-domain (all)
+    is_indomain = args.dataset_name is None
 
     # Load model
-    model_name = os.path.basename(args.model_dir)
-    print(f"Loading model: {model_name} from {args.model_dir}")
-    model, config = load_model(args.model_dir, device)
-    print(f"  Class: {config['model_class']}")
-    print(f"  Params: {sum(p.numel() for p in model.parameters()):,}")
+    if args.model_name:
+        from physioex.models import load_from_pretrained
+        model_name = args.model_name
+        kwargs = {"device": str(device)}
+        if args.repo_id:
+            kwargs["repo_id"] = args.repo_id
+        model = load_from_pretrained(args.model_name, **kwargs)
+        model.eval()
+        print(f"Loading model: {model_name} from HF")
+        print(f"  Params: {sum(p.numel() for p in model.parameters()):,}")
+    elif args.model_dir:
+        model_name = os.path.basename(args.model_dir)
+        print(f"Loading model: {model_name} from {args.model_dir}")
+        model, config = load_model(args.model_dir, device)
+        print(f"  Class: {config['model_class']}")
+        print(f"  Params: {sum(p.numel() for p in model.parameters()):,}")
+    else:
+        parser.error("--model_dir or --model_name required")
+
+    # Channels
+    channels = args.channels if args.channels else CHANNELS
 
     # Load dataset in recording mode
     DatasetClass = get_dataset(args.dataset)
     dataset = DatasetClass(
-        channels=CHANNELS,
+        channels=channels,
         pipelines=PIPELINE,
         sequence_length=0,
         **ds_kwargs,
@@ -238,7 +258,7 @@ def main():
 
     model_out_dir = os.path.join(args.output_dir, model_name)
 
-    if is_shhs_indomain:
+    if is_indomain:
         # SHHS in-domain: extract train/valid/test separately
         train_ids, valid_ids, test_ids = dataset.get_splits(fold=args.fold)
         all_subjects = dataset.get_subjects()
