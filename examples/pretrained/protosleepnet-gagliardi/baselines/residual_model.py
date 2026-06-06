@@ -67,18 +67,13 @@ class ResidualSequenceWrapper(nn.Module):
         self.classifier = classifier
         self.epoch_classifier = epoch_classifier
 
-        # Zero-init sequence encoder
+        # Zero-init sequence encoder (only for Transformer, not GRU)
         if isinstance(sequence_encoder, nn.TransformerEncoder):
             zero_init_transformer(sequence_encoder)
-        elif isinstance(sequence_encoder, nn.GRU):
-            zero_init_gru(sequence_encoder)
         else:
-            # Try to find the inner transformer/gru
             for module in sequence_encoder.modules():
                 if isinstance(module, nn.TransformerEncoder):
                     zero_init_transformer(module)
-                elif isinstance(module, nn.GRU):
-                    zero_init_gru(module)
 
         self._epoch_logits = None
 
