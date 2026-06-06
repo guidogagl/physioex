@@ -1,0 +1,184 @@
+"""Learn VQ codebook (K-Means init + supervised refinement) for residual models.
+
+Two modes:
+  - Default: K-Means init → supervised refinement (codebook_vq_m{M}.npy)
+  - --no_kmeans_init: Kaiming init → supervised refinement (codebook_vq_learned_m{M}.npy)
+
+Usage:
+    python baselines/learn_residual_prototypes_vq.py \
+        --build_module train_seq_1ch_residual \
+        --checkpoint /path/to/checkpoint.pt \
+        --emb_dir /path/to/embeddings \
+        --n_prototypes 48 --gpu_id 0
+"""
+import argparse
+import importlib
+import json
+import os
+import sys
+
+import numpy as np
+import torch
+import torch.nn as nn
+
+sys.path.insert(0, os.path.dirname(__file__))
+
+from physioex.explain.prototypes.posthoc import (
+    learn_codebook_kmeans,
+    quantize_embeddings,
+    train_codebook,
+    load_epoch_embeddings,
+    load_epoch_embeddings_per_subject,
+)
+
+SEQ_LEN = 20
+
+
+def load_residual_model(build_module, checkpoint_path, device):
+    mod = importlib.import_module(build_module)
+    model = mod.build_model()
+    ckpt = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
+    if isinstance(ckpt, dict) and "model_state_dict" in ckpt:
+        model.load_state_dict(ckpt["model_state_dict"])
+    else:
+        model.load_state_dict(ckpt)
+    return model.to(device).eval()
+
+
+def build_residual_downstream_fn(model, device):
+    """Build frozen downstream: z_q + seq_encoder(z_q) → classifier."""
+    for p in model.parameters():
+        p.requires_grad_(False)
+
+    def downstream_fn(z_seq):
+        # z_seq: (B, L, D)
+        B, L, D = z_seq.shape
+        if isinstance(model.sequence_encoder, nn.GRU):
+            seq_out, _ = model.sequence_encoder(z_seq)
+        else:
+            seq_out = model.sequence_encoder(z_seq)
+        z = z_seq + seq_out  # residual
+        z = z.reshape(B * L, -1)
+        return model.classifier(z).reshape(B, L, -1)
+
+    return downstream_fn
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Learn VQ codebook for residual models"
+    )
+    parser.add_argument("--build_module", type=str, required=True)
+    parser.add_argument("--checkpoint", type=str, required=True)
+    parser.add_argument("--emb_dir", type=str, required=True)
+    parser.add_argument("--n_prototypes", type=int, default=48)
+    parser.add_argument("--n_epochs", type=int, default=50)
+    parser.add_argument("--patience", type=int, default=5)
+    parser.add_argument("--lr", type=float, default=1e-4)
+    parser.add_argument("--batch_size", type=int, default=32)
+    parser.add_argument("--commitment_weight", type=float, default=0.25)
+    parser.add_argument("--output_dir", type=str, default=None)
+    parser.add_argument("--gpu_id", type=int, default=0)
+    parser.add_argument("--max_iter_kmeans", type=int, default=300)
+    parser.add_argument("--no_kmeans_init", action="store_true")
+    parser.add_argument("--force", action="store_true")
+    parser.add_argument("--seq_len", type=int, default=20)
+    args = parser.parse_args()
+
+    output_dir = args.output_dir or args.emb_dir
+    os.makedirs(output_dir, exist_ok=True)
+    suffix = f"vq_learned_m{args.n_prototypes}" if args.no_kmeans_init else f"vq_m{args.n_prototypes}"
+    codebook_path = os.path.join(output_dir, f"codebook_{suffix}.npy")
+    meta_path = os.path.join(output_dir, f"codebook_{suffix}_meta.json")
+
+    if not args.force and os.path.exists(codebook_path) and os.path.exists(meta_path):
+        print(f"SKIP: {codebook_path} already exists (use --force to retrain)")
+        return
+
+    device = (
+        torch.device(f"cuda:{args.gpu_id}")
+        if args.gpu_id is not None and torch.cuda.is_available()
+        else torch.device("cpu")
+    )
+
+    # Load training embeddings
+    print(f"Loading embeddings from {args.emb_dir}")
+    Z_train_flat, Y_train_flat = load_epoch_embeddings(args.emb_dir, split="train")
+    valid = Y_train_flat >= 0
+    print(f"  Train: {valid.sum()} valid epochs, d_model={Z_train_flat.shape[1]}")
+
+    # Stage 1: Codebook initialization
+    if args.no_kmeans_init:
+        print(f"\nStage 1: Kaiming uniform init with M={args.n_prototypes}...")
+        d_model = Z_train_flat.shape[1]
+        codebook_param = torch.empty(args.n_prototypes, d_model)
+        nn.init.kaiming_uniform_(codebook_param)
+        codebook = codebook_param.numpy().astype(np.float32)
+    else:
+        print(f"\nStage 1: K-Means with M={args.n_prototypes} clusters...")
+        codebook = learn_codebook_kmeans(
+            Z_train_flat[valid], n_prototypes=args.n_prototypes,
+            max_iter=args.max_iter_kmeans,
+        )
+
+        Z_q, assignments = quantize_embeddings(Z_train_flat[valid], codebook)
+        recon_error = np.sqrt(((Z_train_flat[valid] - Z_q) ** 2).sum(axis=1).mean())
+        print(f"  Reconstruction error (L2): {recon_error:.4f}")
+        print(f"  Active clusters: {len(np.unique(assignments))} / {args.n_prototypes}")
+
+    print(f"  Codebook: {codebook.shape}")
+
+    # Stage 2: Supervised refinement
+    if args.n_epochs > 0:
+        print(f"\nStage 2: Supervised refinement ({args.n_epochs} epochs, patience={args.patience})...")
+        model = load_residual_model(args.build_module, args.checkpoint, device)
+        downstream_fn = build_residual_downstream_fn(model, device)
+
+        train_subjects = load_epoch_embeddings_per_subject(args.emb_dir, split="train")
+
+        val_subjects = None
+        try:
+            val_subjects = load_epoch_embeddings_per_subject(args.emb_dir, split="valid")
+            print(f"  Valid: {len(val_subjects)} subjects")
+        except FileNotFoundError:
+            print("  Valid split not found — no early stopping")
+
+        codebook = train_codebook(
+            train_subjects=train_subjects,
+            downstream_fn=downstream_fn,
+            codebook_init=codebook,
+            val_subjects=val_subjects,
+            n_epochs=args.n_epochs,
+            patience=args.patience,
+            batch_size=args.batch_size,
+            lr=args.lr,
+            commitment_weight=args.commitment_weight,
+            device=str(device),
+            sequence_length=args.seq_len,
+            save_path=codebook_path,
+        )
+
+        Z_q2, assignments2 = quantize_embeddings(Z_train_flat[valid], codebook)
+        recon_error2 = np.sqrt(((Z_train_flat[valid] - Z_q2) ** 2).sum(axis=1).mean())
+        print(f"  Post-training recon error: {recon_error2:.4f}")
+        print(f"  Active clusters: {len(np.unique(assignments2))} / {args.n_prototypes}")
+
+    # Save
+    np.save(codebook_path, codebook)
+    meta = {
+        "method": "vq_supervised" if args.n_epochs > 0 else "vq_kmeans",
+        "init": "kaiming" if args.no_kmeans_init else "kmeans",
+        "n_prototypes": args.n_prototypes,
+        "d_model": int(codebook.shape[1]),
+        "n_refinement_epochs": args.n_epochs,
+        "lr": args.lr,
+        "commitment_weight": args.commitment_weight,
+        "sequence_length": args.seq_len,
+    }
+    with open(meta_path, "w") as f:
+        json.dump(meta, f, indent=2)
+    print(f"\nSaved to {codebook_path}")
+
+
+if __name__ == "__main__":
+    main()
