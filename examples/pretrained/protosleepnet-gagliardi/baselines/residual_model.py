@@ -142,14 +142,8 @@ class ResidualTrainer(Trainer):
         outputs_flat = outputs.reshape(-1, n_classes)
         targets_flat = targets.reshape(-1)
 
-        # Main loss
+        # Main loss only (no epoch auxiliary loss)
         loss = loss_fn(outputs_flat, targets_flat)
-
-        # Epoch-level auxiliary loss (same classifier, pre-sequence)
-        metrics = model.get_metrics()
-        epoch_logits = metrics["epoch_logits"]
-        epoch_flat = epoch_logits.reshape(-1, n_classes)
-        loss = loss + loss_fn(epoch_flat, targets_flat)
 
         acc = accuracy_score(
             outputs_flat, targets_flat,
