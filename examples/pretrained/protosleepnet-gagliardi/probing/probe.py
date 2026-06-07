@@ -618,7 +618,8 @@ def _source_group_key(sid, subjects):
     return get_group_key(sid)
 
 
-def probe_source_discrimination(subjects, task_name, output_dir, n_folds=5):
+def probe_source_discrimination(subjects, task_name, output_dir, n_folds=5,
+                                dir_label_map=None):
     """Classify subjects by their source directory (cohort/visit/site)."""
     print(f"\n{'='*60}")
     print(f"Source discrimination: {task_name}")
@@ -626,7 +627,12 @@ def probe_source_discrimination(subjects, task_name, output_dir, n_folds=5):
 
     embs, labels, sids, groups = [], [], [], []
     for sid, info in subjects.items():
-        label = _dir_label(info["dir"])
+        if dir_label_map:
+            label = dir_label_map.get(os.path.abspath(info["dir"]))
+            if label is None:
+                label = _dir_label(info["dir"])
+        else:
+            label = _dir_label(info["dir"])
         emb = np.load(info["emb_path"]).astype(np.float32)
         mean_emb = emb.mean(axis=0)
 
@@ -762,6 +768,10 @@ def main():
     parser.add_argument("--label_from_dir", action="store_true",
                         help="Label subjects by their source directory for "
                              "cohort/visit/site discrimination probing")
+    parser.add_argument("--dir_labels", nargs="+", default=None,
+                        help="Explicit label per --emb_dirs entry (same order). "
+                             "E.g. --emb_dirs train valid test visit2/all "
+                             "--dir_labels visit1 visit1 visit1 visit2")
     args = parser.parse_args()
 
     subjects = load_subjects(args.emb_dirs)
@@ -773,10 +783,22 @@ def main():
 
     # Source discrimination mode
     if args.label_from_dir:
+        # Build dir -> label mapping
+        dir_label_map = None
+        if args.dir_labels:
+            if len(args.dir_labels) != len(args.emb_dirs):
+                print(f"ERROR: --dir_labels ({len(args.dir_labels)}) must match "
+                      f"--emb_dirs ({len(args.emb_dirs)})")
+                return
+            dir_label_map = {
+                os.path.abspath(d): l
+                for d, l in zip(args.emb_dirs, args.dir_labels)
+            }
         task_name = args.task or "source"
         task_output_dir = os.path.join(args.output_dir, args.source_name, task_name)
         probe_source_discrimination(
-            subjects, task_name, task_output_dir, args.n_folds
+            subjects, task_name, task_output_dir, args.n_folds,
+            dir_label_map=dir_label_map,
         )
         print(f"\nResults: {task_output_dir}/")
         return
