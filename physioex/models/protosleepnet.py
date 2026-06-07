@@ -309,14 +309,19 @@ class ProtoSleepNet(nn.Module):
             "epoch_logits": self._epoch_logits,  # (B, L, n_classes)
         }
 
-    def forward(self, x, quantize=False):
-        """
+    def encode(self, x, quantize=False):
+        """Encode input spectrograms to contextualized per-epoch embeddings.
+
+        Full pipeline: epoch encoding → [channel mixer] → [VQ] →
+        deep supervision → residual sequence encoding.
+
         Args:
-            x: (B, L, C, T, F)
+            x: (B, L, C, T, F) spectrogram input.
             quantize: if True, replace epoch embeddings with nearest
                       codebook entry. Requires set_codebook() first.
+
         Returns:
-            (B, L, n_classes)
+            (B, L, d_model) contextualized epoch embeddings.
         """
         B, L, C, T, F_dim = x.shape
 
@@ -364,8 +369,23 @@ class ProtoSleepNet(nn.Module):
 
         z = h + seq_out  # RESIDUAL 2
 
-        # ── Classification ───────────────────────────────────────
-        logits = self.classifier(z.reshape(B * L, d)).reshape(B, L, -1)
+        return z
+
+    def forward(self, x, quantize=False):
+        """Forward pass: encode → classify.
+
+        Args:
+            x: (B, L, C, T, F) spectrogram input.
+            quantize: if True, replace epoch embeddings with nearest
+                      codebook entry. Requires set_codebook() first.
+
+        Returns:
+            (B, L, n_classes) per-epoch logits.
+        """
+        embeddings = self.encode(x, quantize=quantize)  # (B, L, d_model)
+
+        B, L, D = embeddings.shape
+        logits = self.classifier(embeddings.reshape(B * L, D)).reshape(B, L, -1)
 
         return logits
 
