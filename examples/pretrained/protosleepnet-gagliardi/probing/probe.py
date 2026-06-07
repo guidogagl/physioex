@@ -146,16 +146,13 @@ def discover_tasks(subjects):
         if any(et in info["event_files"] for info in subjects.values()):
             tasks.append(("event_wise", et, {"label_file": f"_{et}.npy", "n_classes": 2}))
 
-    # Subject-wise: scan up to 50 subjects to discover all available metadata fields
+    # Subject-wise: scan ALL subjects to discover metadata fields with non-null values
+    # (CVD outcomes are rare ~2-5%, need full scan to find them)
     all_meta_keys = set()
-    sample_metas = []
-    for i, info in enumerate(subjects.values()):
-        if i >= 50:
-            break
+    for info in subjects.values():
         if os.path.exists(info["metadata_path"]):
             with open(info["metadata_path"]) as f:
                 meta = json.load(f)
-            sample_metas.append(meta)
             for k, v in meta.items():
                 if v is not None:
                     all_meta_keys.add(k)
