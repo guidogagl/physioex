@@ -43,7 +43,7 @@ if [ -n "$LABEL_FROM_DIR" ]; then
 else
     # ── Standard probing: discover tasks, iterate ─────────────────
     TASKS=$(python $SCRIPT --emb_dirs $EMB_DIRS --source_name $SOURCE_NAME \
-            --discover 2>&1 | grep '^\s*\[' | awk '{print $2}')
+            --output_dir $OUTPUT_DIR --discover 2>&1 | grep '^\s*\[' | awk '{print $2}')
 
     if [ -z "$TASKS" ]; then
         echo "ERROR: no tasks discovered"
