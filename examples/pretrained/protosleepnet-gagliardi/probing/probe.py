@@ -183,17 +183,20 @@ def discover_tasks(subjects):
 def load_event_wise_data(subjects, label_key):
     """Load epoch embeddings + labels for event-wise probing.
 
-    Returns: embeddings (N, D), labels (N,), groups (N,) [subject group per epoch]
+    Returns: embeddings (N, D) float32, labels (N,) int64,
+             groups (N,) int, subject_ids_per_epoch (N,) object
     """
-    all_emb, all_lbl, all_grp = [], [], []
+    all_emb, all_lbl, all_grp, all_sids = [], [], [], []
     skipped = 0
+
+    # Build group mapping upfront
+    unique_group_keys = sorted(set(get_group_key(sid) for sid in subjects))
+    grp_key_to_int = {g: i for i, g in enumerate(unique_group_keys)}
 
     for sid, info in subjects.items():
         if label_key == "_labels.npy":
             lbl_path = info["labels_path"]
         else:
-            et = label_key.replace("_", "").replace(".npy", "")
-            # e.g. "_arousal.npy" -> "arousal"
             et = label_key[1:].replace(".npy", "")
             lbl_path = info["event_files"].get(et)
             if lbl_path is None:
@@ -204,7 +207,7 @@ def load_event_wise_data(subjects, label_key):
             skipped += 1
             continue
 
-        emb = np.load(info["emb_path"])
+        emb = np.load(info["emb_path"]).astype(np.float32)
         lbl = np.load(lbl_path)
 
         # Align lengths
@@ -213,17 +216,16 @@ def load_event_wise_data(subjects, label_key):
 
         # Filter invalid labels (staging: -1 = unscored)
         valid = lbl >= 0
-        if valid.sum() == 0:
+        n_valid = int(valid.sum())
+        if n_valid == 0:
             skipped += 1
             continue
 
-        emb, lbl = emb[valid], lbl[valid]
-        grp_key = get_group_key(sid)
-        grp = np.full(len(emb), grp_key, dtype=object)
-
-        all_emb.append(emb)
-        all_lbl.append(lbl)
-        all_grp.append(grp)
+        all_emb.append(emb[valid])
+        all_lbl.append(lbl[valid])
+        grp_int = grp_key_to_int[get_group_key(sid)]
+        all_grp.append(np.full(n_valid, grp_int, dtype=np.int32))
+        all_sids.append(np.full(n_valid, sid, dtype=object))
 
     if skipped:
         print(f"  Skipped {skipped} subjects (missing labels)")
@@ -232,6 +234,8 @@ def load_event_wise_data(subjects, label_key):
         np.concatenate(all_emb, axis=0),
         np.concatenate(all_lbl, axis=0).astype(np.int64),
         np.concatenate(all_grp, axis=0),
+        np.concatenate(all_sids, axis=0),
+        unique_group_keys,
     )
 
 
@@ -308,35 +312,12 @@ def probe_event_wise(subjects, task_name, task_info, output_dir, n_folds=5):
     label_key = task_info["label_file"]
     n_classes = task_info["n_classes"]
 
-    X, y, groups = load_event_wise_data(subjects, label_key)
-    print(f"  Data: {X.shape[0]} epochs, {len(np.unique(groups))} groups, "
+    X, y, group_ids, epoch_to_subject, unique_group_keys = load_event_wise_data(
+        subjects, label_key
+    )
+    print(f"  Data: {X.shape[0]} epochs, {len(unique_group_keys)} groups, "
           f"{n_classes} classes, class dist: {np.bincount(y, minlength=n_classes).tolist()}")
-
-    # Build group indices for GroupKFold
-    unique_groups = np.unique(groups)
-    group_to_int = {g: i for i, g in enumerate(unique_groups)}
-    group_ids = np.array([group_to_int[g] for g in groups])
-
-    # Map each epoch back to its subject_id for per-subject predictions
-    # We need to rebuild this mapping
-    epoch_to_subject = []
-    for sid, info in subjects.items():
-        if label_key == "_labels.npy":
-            lbl_path = info["labels_path"]
-        else:
-            et = label_key[1:].replace(".npy", "")
-            lbl_path = info["event_files"].get(et)
-            if lbl_path is None:
-                continue
-        if not os.path.exists(lbl_path):
-            continue
-        lbl = np.load(lbl_path)
-        emb = np.load(info["emb_path"], mmap_mode="r")
-        n = min(len(emb), len(lbl))
-        lbl = lbl[:n]
-        valid = lbl >= 0
-        epoch_to_subject.extend([sid] * int(valid.sum()))
-    epoch_to_subject = np.array(epoch_to_subject, dtype=object)
+    print(f"  Memory: X={X.nbytes / 1e9:.1f}GB ({X.dtype})")
 
     os.makedirs(output_dir, exist_ok=True)
 
@@ -403,7 +384,7 @@ def probe_event_wise(subjects, task_name, task_info, output_dir, n_folds=5):
         summary[key] = {"mean": float(np.mean(vals)), "std": float(np.std(vals))}
     summary["n_folds"] = n_folds
     summary["n_epochs"] = int(X.shape[0])
-    summary["n_groups"] = int(len(unique_groups))
+    summary["n_groups"] = int(len(unique_group_keys))
     summary["task"] = task_name
     summary["type"] = "event_wise"
 
