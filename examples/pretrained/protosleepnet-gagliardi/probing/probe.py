@@ -592,6 +592,151 @@ def probe_subject_wise(subjects, task_name, task_info, output_dir, n_folds=5):
     return summary
 
 
+# ── Source discrimination ─────────────────────────────────────────────
+
+def _dir_label(emb_dir):
+    """Extract source label from directory path.
+
+    mass_cohort1/all → mass_cohort1
+    train            → train
+    """
+    base = os.path.basename(emb_dir)
+    if base == "all":
+        return os.path.basename(os.path.dirname(emb_dir))
+    return base
+
+
+def _source_group_key(sid, subjects):
+    """Group key for source discrimination, using metadata base_subject_id if available."""
+    info = subjects[sid]
+    # Parkinsons: same person has night + nap recordings
+    if os.path.exists(info["metadata_path"]):
+        with open(info["metadata_path"]) as f:
+            meta = json.load(f)
+        if "base_subject_id" in meta and meta["base_subject_id"]:
+            return str(meta["base_subject_id"])
+    return get_group_key(sid)
+
+
+def probe_source_discrimination(subjects, task_name, output_dir, n_folds=5):
+    """Classify subjects by their source directory (cohort/visit/site)."""
+    print(f"\n{'='*60}")
+    print(f"Source discrimination: {task_name}")
+    print(f"{'='*60}")
+
+    embs, labels, sids, groups = [], [], [], []
+    for sid, info in subjects.items():
+        label = _dir_label(info["dir"])
+        emb = np.load(info["emb_path"]).astype(np.float32)
+        mean_emb = emb.mean(axis=0)
+
+        embs.append(mean_emb)
+        labels.append(label)
+        sids.append(sid)
+        groups.append(_source_group_key(sid, subjects))
+
+    X = np.array(embs)
+    sids = np.array(sids)
+    groups_arr = np.array(groups)
+
+    unique_labels = sorted(set(labels))
+    label_to_int = {l: i for i, l in enumerate(unique_labels)}
+    y = np.array([label_to_int[l] for l in labels], dtype=np.int64)
+    n_classes = len(unique_labels)
+
+    unique_groups = np.unique(groups_arr)
+    group_to_int = {g: i for i, g in enumerate(unique_groups)}
+    group_ids = np.array([group_to_int[g] for g in groups_arr])
+
+    print(f"  Data: {len(X)} subjects, {len(unique_groups)} groups, "
+          f"{n_classes} classes: {unique_labels}")
+    print(f"  Class dist: {np.bincount(y, minlength=n_classes).tolist()}")
+
+    if n_classes < 2:
+        print("  SKIP: only 1 source")
+        return None
+    if len(unique_groups) < n_folds:
+        n_folds = len(unique_groups)
+        print(f"  Reducing n_folds to {n_folds}")
+    if n_folds < 2:
+        print("  SKIP: not enough groups")
+        return None
+
+    os.makedirs(output_dir, exist_ok=True)
+
+    cv = StratifiedGroupKFold(n_splits=n_folds, shuffle=True, random_state=42)
+    fold_assignments = {}
+    fold_metrics = []
+
+    for fold_idx, (train_idx, test_idx) in enumerate(cv.split(X, y, group_ids)):
+        print(f"\n  Fold {fold_idx}: train={len(train_idx)}, test={len(test_idx)}")
+        fold_dir = os.path.join(output_dir, f"fold_{fold_idx}")
+        os.makedirs(fold_dir, exist_ok=True)
+
+        X_train, X_test = X[train_idx], X[test_idx]
+        y_train, y_test = y[train_idx], y[test_idx]
+
+        if len(np.unique(y_train)) < 2:
+            print(f"    SKIP fold {fold_idx}: single class in train")
+            continue
+
+        fold_assignments[f"fold_{fold_idx}"] = {
+            "train": sids[train_idx].tolist(),
+            "test": sids[test_idx].tolist(),
+        }
+
+        clf = LogisticRegression(max_iter=1000, C=1.0, solver="lbfgs", n_jobs=-1)
+        clf.fit(X_train, y_train)
+        y_pred = clf.predict(X_test)
+        y_proba = clf.predict_proba(X_test)
+
+        predictions = {}
+        for i, idx in enumerate(test_idx):
+            predictions[sids[idx]] = {
+                "y_true": int(y_test[i]),
+                "y_pred": int(y_pred[i]),
+                "y_proba": y_proba[i].tolist(),
+            }
+
+        acc = accuracy_score(y_test, y_pred)
+        f1 = f1_score(y_test, y_pred, average="macro", zero_division=0)
+        kappa = cohen_kappa_score(y_test, y_pred)
+        metrics = {"accuracy": acc, "f1_macro": f1, "kappa": kappa}
+        fold_metrics.append(metrics)
+        print(f"    acc={acc:.4f}  f1={f1:.4f}  kappa={kappa:.4f}")
+
+        joblib.dump(clf, os.path.join(fold_dir, "classifier.joblib"))
+        with open(os.path.join(fold_dir, "predictions.json"), "w") as f:
+            json.dump(predictions, f)
+        with open(os.path.join(fold_dir, "metrics.json"), "w") as f:
+            json.dump(metrics, f, indent=2)
+
+    with open(os.path.join(output_dir, "fold_assignments.json"), "w") as f:
+        json.dump(fold_assignments, f)
+
+    if not fold_metrics:
+        print("  No valid folds")
+        return None
+
+    summary = {}
+    for key in fold_metrics[0]:
+        vals = [m[key] for m in fold_metrics]
+        summary[key] = {"mean": float(np.mean(vals)), "std": float(np.std(vals))}
+    summary["n_folds"] = len(fold_metrics)
+    summary["n_subjects"] = int(len(X))
+    summary["n_groups"] = int(len(unique_groups))
+    summary["task"] = task_name
+    summary["type"] = "source_discrimination"
+    summary["classes"] = unique_labels
+
+    with open(os.path.join(output_dir, "summary.json"), "w") as f:
+        json.dump(summary, f, indent=2)
+
+    print(f"\n  Summary: acc={summary['accuracy']['mean']:.4f}±{summary['accuracy']['std']:.4f}, "
+          f"f1={summary['f1_macro']['mean']:.4f}±{summary['f1_macro']['std']:.4f}")
+    return summary
+
+
 # ── Main ─────────────────────────────────────────────────────────────
 
 def main():
@@ -613,6 +758,10 @@ def main():
     parser.add_argument("--task_type", type=str, default=None,
                         choices=["classification", "regression"],
                         help="Override task type")
+    # Source discrimination
+    parser.add_argument("--label_from_dir", action="store_true",
+                        help="Label subjects by their source directory for "
+                             "cohort/visit/site discrimination probing")
     args = parser.parse_args()
 
     subjects = load_subjects(args.emb_dirs)
@@ -620,6 +769,16 @@ def main():
 
     if not subjects:
         print("No subjects found.")
+        return
+
+    # Source discrimination mode
+    if args.label_from_dir:
+        task_name = args.task or "source"
+        task_output_dir = os.path.join(args.output_dir, args.source_name, task_name)
+        probe_source_discrimination(
+            subjects, task_name, task_output_dir, args.n_folds
+        )
+        print(f"\nResults: {task_output_dir}/")
         return
 
     available = discover_tasks(subjects)
