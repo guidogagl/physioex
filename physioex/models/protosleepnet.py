@@ -270,6 +270,33 @@ class ProtoSleepNet(nn.Module):
         self._last_mcy = None
         self._epoch_logits = None
 
+        # VQ codebook (optional, set via set_codebook())
+        self.register_buffer("codebook", None)
+
+    def set_codebook(self, codebook):
+        """Set VQ codebook for prototype quantization.
+
+        Args:
+            codebook: (M, d_model) numpy array or torch tensor.
+        """
+        import numpy as np
+        if isinstance(codebook, np.ndarray):
+            codebook = torch.from_numpy(codebook).float()
+        self.codebook = codebook
+
+    @torch.no_grad()
+    def _quantize(self, h):
+        """Replace each embedding with its nearest codebook entry.
+
+        Args:
+            h: (N, d_model) epoch embeddings.
+        Returns:
+            (N, d_model) quantized embeddings.
+        """
+        dist = torch.cdist(h.unsqueeze(0), self.codebook.unsqueeze(0)).squeeze(0)
+        idx = dist.argmin(dim=1)
+        return self.codebook[idx]
+
     def update_channel_acc(self, acc_list):
         if self.channel_mixer is not None:
             self.channel_mixer.update_channel_acc(acc_list)
@@ -280,10 +307,12 @@ class ProtoSleepNet(nn.Module):
             "epoch_logits": self._epoch_logits,  # (B, L, n_classes)
         }
 
-    def forward(self, x):
+    def forward(self, x, quantize=False):
         """
         Args:
             x: (B, L, C, T, F)
+            quantize: if True, replace epoch embeddings with nearest
+                      codebook entry. Requires set_codebook() first.
         Returns:
             (B, L, n_classes)
         """
@@ -312,6 +341,13 @@ class ProtoSleepNet(nn.Module):
             x_flat = x.reshape(B * L, C, T, F_dim)
             h = self.epoch_encoder(x_flat)  # (B*L, d_model)
             self._last_mcy = None
+
+        # ── VQ quantization (optional, no grad) ─────────────────
+        if quantize:
+            assert self.codebook is not None, "Call set_codebook() before quantize=True"
+            h = h.reshape(B * L, -1)
+            h = self._quantize(h)
+            h = h.reshape(B, L, -1)
 
         # ── Epoch-level classification (deep supervision) ────────
         h = h.reshape(B, L, -1)
