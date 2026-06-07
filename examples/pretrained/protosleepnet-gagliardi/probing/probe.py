@@ -341,7 +341,8 @@ def probe_event_wise(subjects, task_name, task_info, output_dir, n_folds=5):
             "test": test_subs,
         }
 
-        clf = LogisticRegression(max_iter=1000, C=1.0, solver="lbfgs", n_jobs=-1)
+        # saga solver: stochastic, memory-efficient for large N
+        clf = LogisticRegression(max_iter=200, C=1.0, solver="saga", n_jobs=-1)
         clf.fit(X_train, y_train)
 
         y_pred = clf.predict(X_test)
@@ -357,6 +358,9 @@ def probe_event_wise(subjects, task_name, task_info, output_dir, n_folds=5):
                 "y_pred": y_pred[mask].tolist(),
                 "y_proba": y_proba[mask].tolist(),
             }
+
+        # Free test arrays
+        del X_train, X_test
 
         # Metrics
         acc = accuracy_score(y_test, y_pred)
