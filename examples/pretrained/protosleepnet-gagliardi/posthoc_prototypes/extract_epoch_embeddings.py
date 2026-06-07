@@ -59,7 +59,11 @@ def load_model(model_dir, device):
     mod = importlib.import_module(module_path)
     ModelClass = getattr(mod, class_name)
 
-    model = ModelClass(**config["model_kwargs"])
+    if "factory" in config:
+        factory = getattr(ModelClass, config["factory"])
+        model = factory(**config.get("factory_kwargs", {}))
+    else:
+        model = ModelClass(**config["model_kwargs"])
     weights_path = os.path.join(model_dir, "model.pt")
     checkpoint = torch.load(weights_path, map_location="cpu", weights_only=False)
 
@@ -85,6 +89,11 @@ def extract_epoch_encoder(model, x):
         (N, d_model) epoch embeddings (mean-pooled across channels).
     """
     N, C, T, F = x.shape
+
+    # ProtoSleepNet: use epoch_encode() which handles per-channel + mixer + attn pool
+    if hasattr(model, "epoch_encode"):
+        h = model.epoch_encode(x.unsqueeze(0))  # (1, N, C, T, F) → (1, N, d)
+        return h.squeeze(0)  # (N, d)
 
     if hasattr(model, "epoch_encoder") and hasattr(model, "in_chan"):
         x_flat = x.reshape(N * C, 1, T, F)
