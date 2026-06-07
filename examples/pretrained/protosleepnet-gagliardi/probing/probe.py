@@ -127,38 +127,58 @@ def load_subjects(emb_dirs):
 
 
 def discover_tasks(subjects):
-    """Auto-discover available tasks from the data."""
+    """Auto-discover available tasks from the data.
+
+    Checks multiple subjects to avoid missing tasks when the first subject
+    has null values for some fields (e.g. CVD outcomes).
+    """
     tasks = []
 
-    # Check first subject for available files
+    # Check first subject for event files
     sample = next(iter(subjects.values()))
 
     # Event-wise: staging (always available)
     if os.path.exists(sample["labels_path"]):
         tasks.append(("event_wise", "staging", {"label_file": "_labels.npy", "n_classes": 5}))
 
-    # Event-wise: events
+    # Event-wise: events — check if ANY subject has the event file
     for et in ["arousal", "respiratory", "desaturation", "limb_movement"]:
-        if et in sample["event_files"]:
+        if any(et in info["event_files"] for info in subjects.values()):
             tasks.append(("event_wise", et, {"label_file": f"_{et}.npy", "n_classes": 2}))
 
-    # Subject-wise: from metadata
-    if os.path.exists(sample["metadata_path"]):
-        with open(sample["metadata_path"]) as f:
-            meta = json.load(f)
+    # Subject-wise: scan up to 50 subjects to discover all available metadata fields
+    all_meta_keys = set()
+    sample_metas = []
+    for i, info in enumerate(subjects.values()):
+        if i >= 50:
+            break
+        if os.path.exists(info["metadata_path"]):
+            with open(info["metadata_path"]) as f:
+                meta = json.load(f)
+            sample_metas.append(meta)
+            for k, v in meta.items():
+                if v is not None:
+                    all_meta_keys.add(k)
 
+    if all_meta_keys:
         # Known subject-wise tasks
         field_tasks = [
             ("nsrr_sex", "sex", "classification"),
             ("sex", "sex", "classification"),
             ("nsrr_age", "age_regression", "regression"),
             ("age", "age_regression", "regression"),
+            ("age_msl_testing", "age_regression", "regression"),
             ("nsrr_age", "age_group", "classification"),
             ("age", "age_group", "classification"),
+            ("age_msl_testing", "age_group", "classification"),
             ("nsrr_bmi", "bmi_regression", "regression"),
+            ("bmi", "bmi_regression", "regression"),
             ("nsrr_bmi", "bmi_group", "classification"),
+            ("bmi", "bmi_group", "classification"),
             ("nsrr_ahi_hp3u", "ahi_severity", "classification"),
+            ("ahi", "ahi_severity", "classification"),
             ("nsrr_ahi_hp3u", "ahi_regression", "regression"),
+            ("ahi", "ahi_regression", "regression"),
             ("group", "diagnosis", "classification"),
             ("prev_mi", "prev_mi", "classification"),
             ("prev_stk", "prev_stk", "classification"),
@@ -170,7 +190,7 @@ def discover_tasks(subjects):
         ]
         seen = set()
         for field, name, task_type in field_tasks:
-            if field in meta and meta[field] is not None and name not in seen:
+            if field in all_meta_keys and name not in seen:
                 seen.add(name)
                 tasks.append(("subject_wise", name, {
                     "metadata_field": field,
@@ -315,9 +335,20 @@ def probe_event_wise(subjects, task_name, task_info, output_dir, n_folds=5):
     X, y, group_ids, epoch_to_subject, unique_group_keys = load_event_wise_data(
         subjects, label_key
     )
+    actual_classes = len(np.unique(y))
     print(f"  Data: {X.shape[0]} epochs, {len(unique_group_keys)} groups, "
-          f"{n_classes} classes, class dist: {np.bincount(y, minlength=n_classes).tolist()}")
+          f"{actual_classes} classes, class dist: {np.bincount(y, minlength=n_classes).tolist()}")
     print(f"  Memory: X={X.nbytes / 1e9:.1f}GB ({X.dtype})")
+
+    if actual_classes < 2:
+        print("  SKIP: only 1 class in data")
+        return None
+    if len(unique_group_keys) < n_folds:
+        n_folds = len(unique_group_keys)
+        print(f"  Reducing n_folds to {n_folds} (not enough groups)")
+    if n_folds < 2:
+        print("  SKIP: not enough groups for CV")
+        return None
 
     os.makedirs(output_dir, exist_ok=True)
 
@@ -332,6 +363,11 @@ def probe_event_wise(subjects, task_name, task_info, output_dir, n_folds=5):
 
         X_train, X_test = X[train_idx], X[test_idx]
         y_train, y_test = y[train_idx], y[test_idx]
+
+        # Check train has >= 2 classes
+        if len(np.unique(y_train)) < 2:
+            print(f"    SKIP fold {fold_idx}: only 1 class in training data")
+            continue
 
         # Fold assignments (subject-level)
         train_subs = sorted(set(epoch_to_subject[train_idx]))
@@ -449,6 +485,16 @@ def probe_subject_wise(subjects, task_name, task_info, output_dir, n_folds=5):
         print(f"  Target: {metadata_field}, mean={y.mean():.2f}, std={y.std():.2f}")
     else:
         print(f"  Classes: {unique_labels}, dist: {np.bincount(y, minlength=n_classes).tolist()}")
+        if n_classes < 2:
+            print("  SKIP: only 1 class in data")
+            return None
+
+    if len(unique_groups) < n_folds:
+        n_folds = len(unique_groups)
+        print(f"  Reducing n_folds to {n_folds} (not enough groups)")
+    if n_folds < 2:
+        print("  SKIP: not enough groups for CV")
+        return None
 
     os.makedirs(output_dir, exist_ok=True)
 
