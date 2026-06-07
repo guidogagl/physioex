@@ -67,14 +67,6 @@ class ResidualSequenceWrapper(nn.Module):
         self.classifier = classifier
         self.epoch_classifier = epoch_classifier
 
-        # Zero-init sequence encoder (only for Transformer, not GRU)
-        if isinstance(sequence_encoder, nn.TransformerEncoder):
-            zero_init_transformer(sequence_encoder)
-        else:
-            for module in sequence_encoder.modules():
-                if isinstance(module, nn.TransformerEncoder):
-                    zero_init_transformer(module)
-
         self._epoch_logits = None
 
     def get_metrics(self):
@@ -113,41 +105,54 @@ class ResidualSequenceWrapper(nn.Module):
 # ── ResidualTrainer ──────────────────────────────────────────────────
 
 
-class ResidualTrainer(Trainer):
-    """Trainer that adds epoch-level auxiliary loss from get_metrics()."""
+def _residual_step(model, batch, loss_fn, device, double_loss=True):
+    """Shared step logic for residual trainers."""
+    if isinstance(batch, dict) and "signals" in batch:
+        from physioex.data.collate import stack_channels
+        inputs = stack_channels(batch).to(device)
+        targets = batch["labels"].to(device)
+    elif isinstance(batch, dict) and "embeddings" in batch:
+        inputs = batch["embeddings"].to(device)
+        targets = batch["labels"].to(device)
+    else:
+        inputs, targets = batch
+        inputs = inputs.to(device)
+        targets = targets.to(device)
 
-    @staticmethod
-    def _step(model, batch, loss_fn, device):
-        if isinstance(batch, dict) and "signals" in batch:
-            from physioex.data.collate import stack_channels
-            inputs = stack_channels(batch).to(device)
-            targets = batch["labels"].to(device)
-        elif isinstance(batch, dict) and "embeddings" in batch:
-            inputs = batch["embeddings"].to(device)
-            targets = batch["labels"].to(device)
-        else:
-            inputs, targets = batch
-            inputs = inputs.to(device)
-            targets = targets.to(device)
+    with torch.autocast(device.type if "cuda" in device.type else "cpu"):
+        outputs = model(inputs)
 
-        with torch.autocast(device.type if "cuda" in device.type else "cpu"):
-            outputs = model(inputs)
+    B, L, n_classes = outputs.shape
+    outputs_flat = outputs.reshape(-1, n_classes)
+    targets_flat = targets.reshape(-1)
 
-        B, L, n_classes = outputs.shape
-        outputs_flat = outputs.reshape(-1, n_classes)
-        targets_flat = targets.reshape(-1)
+    loss = loss_fn(outputs_flat, targets_flat)
 
-        # Main loss + epoch auxiliary loss
-        loss = loss_fn(outputs_flat, targets_flat)
-
+    if double_loss:
         metrics = model.get_metrics()
         epoch_logits = metrics["epoch_logits"]
         epoch_flat = epoch_logits.reshape(-1, n_classes)
         loss = loss + loss_fn(epoch_flat, targets_flat)
 
-        acc = accuracy_score(
-            outputs_flat, targets_flat,
-            ignore_index=getattr(loss_fn, "ignore_index", None),
-        )
+    acc = accuracy_score(
+        outputs_flat, targets_flat,
+        ignore_index=getattr(loss_fn, "ignore_index", None),
+    )
 
-        return loss, acc
+    return loss, acc
+
+
+class ResidualTrainer(Trainer):
+    """Trainer with epoch-level auxiliary loss (double loss)."""
+
+    @staticmethod
+    def _step(model, batch, loss_fn, device):
+        return _residual_step(model, batch, loss_fn, device, double_loss=True)
+
+
+class ResidualTrainerSingleLoss(Trainer):
+    """Trainer with only final output loss (single loss)."""
+
+    @staticmethod
+    def _step(model, batch, loss_fn, device):
+        return _residual_step(model, batch, loss_fn, device, double_loss=False)
