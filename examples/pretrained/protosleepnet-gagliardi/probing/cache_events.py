@@ -191,9 +191,11 @@ def main():
             try:
                 with open(meta_path) as f:
                     existing = json.load(f)
-                # Check if any extra CSV key is missing
-                sample_key = next(iter(next(iter(extra_meta.values())).keys()))
-                if sample_key not in existing:
+                # Check if ANY extra CSV column is missing from existing metadata
+                # (skip the key column itself since it may already be present)
+                sample_entry = next(iter(extra_meta.values()))
+                extra_keys = set(sample_entry.keys()) - {args.extra_csv_key}
+                if extra_keys and not extra_keys.issubset(existing.keys()):
                     needs_meta_update = True
             except Exception:
                 needs_meta_update = True
