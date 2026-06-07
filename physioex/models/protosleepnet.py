@@ -309,11 +309,11 @@ class ProtoSleepNet(nn.Module):
             "epoch_logits": self._epoch_logits,  # (B, L, n_classes)
         }
 
-    def encode(self, x, quantize=False):
-        """Encode input spectrograms to contextualized per-epoch embeddings.
+    def epoch_encode(self, x, quantize=False):
+        """Encode input spectrograms to per-epoch embeddings.
 
-        Full pipeline: epoch encoding → [channel mixer] → [VQ] →
-        deep supervision → residual sequence encoding.
+        Pipeline: per-channel epoch encoding → [channel mixer] → [VQ] →
+        deep supervision (epoch_logits stored in metrics).
 
         Args:
             x: (B, L, C, T, F) spectrogram input.
@@ -321,7 +321,7 @@ class ProtoSleepNet(nn.Module):
                       codebook entry. Requires set_codebook() first.
 
         Returns:
-            (B, L, d_model) contextualized epoch embeddings.
+            (B, L, d_model) epoch embeddings (pre-sequence).
         """
         B, L, C, T, F_dim = x.shape
 
@@ -350,25 +350,48 @@ class ProtoSleepNet(nn.Module):
             self._last_mcy = None
 
         # ── VQ quantization (optional, no grad) ─────────────────
+        h = h.reshape(B, L, -1)
         if quantize:
             assert self.codebook is not None, "Call set_codebook() before quantize=True"
-            h = h.reshape(B * L, -1)
-            h = self._quantize(h)
-            h = h.reshape(B, L, -1)
+            h = self._quantize(h.reshape(B * L, -1)).reshape(B, L, -1)
 
         # ── Epoch-level classification (deep supervision) ────────
-        h = h.reshape(B, L, -1)
         d = h.shape[-1]
         self._epoch_logits = self.classifier(h.reshape(B * L, d)).reshape(B, L, -1)
 
-        # ── Residual sequence encoding ───────────────────────────
+        return h
+
+    def sequence_encode(self, h):
+        """Contextualize epoch embeddings with residual sequence encoding.
+
+        Args:
+            h: (B, L, d_model) epoch embeddings.
+
+        Returns:
+            (B, L, d_model) contextualized embeddings: h + seq(h).
+        """
         if isinstance(self.sequence_encoder, nn.GRU):
             seq_out, _ = self.sequence_encoder(h)
         else:
             seq_out = self.sequence_encoder(h)
 
-        z = h + seq_out  # RESIDUAL 2
+        return h + seq_out  # RESIDUAL 2
 
+    def encode(self, x, quantize=False):
+        """Encode input spectrograms to contextualized per-epoch embeddings.
+
+        Calls epoch_encode → sequence_encode.
+
+        Args:
+            x: (B, L, C, T, F) spectrogram input.
+            quantize: if True, replace epoch embeddings with nearest
+                      codebook entry. Requires set_codebook() first.
+
+        Returns:
+            (B, L, d_model) contextualized epoch embeddings.
+        """
+        h = self.epoch_encode(x, quantize=quantize)
+        z = self.sequence_encode(h)
         return z
 
     def forward(self, x, quantize=False):
