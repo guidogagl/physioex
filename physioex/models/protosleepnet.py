@@ -268,13 +268,17 @@ class ProtoSleepNet(nn.Module):
             )
 
         self._last_mcy = None
+        self._epoch_logits = None
 
     def update_channel_acc(self, acc_list):
         if self.channel_mixer is not None:
             self.channel_mixer.update_channel_acc(acc_list)
 
     def get_metrics(self):
-        return {"mcy": self._last_mcy}
+        return {
+            "mcy": self._last_mcy,             # (B, L, C, n_classes) or None
+            "epoch_logits": self._epoch_logits,  # (B, L, n_classes)
+        }
 
     def forward(self, x):
         """
@@ -309,9 +313,12 @@ class ProtoSleepNet(nn.Module):
             h = self.epoch_encoder(x_flat)  # (B*L, d_model)
             self._last_mcy = None
 
-        # ── Residual sequence encoding ───────────────────────────
+        # ── Epoch-level classification (deep supervision) ────────
         h = h.reshape(B, L, -1)
+        d = h.shape[-1]
+        self._epoch_logits = self.classifier(h.reshape(B * L, d)).reshape(B, L, -1)
 
+        # ── Residual sequence encoding ───────────────────────────
         if isinstance(self.sequence_encoder, nn.GRU):
             seq_out, _ = self.sequence_encoder(h)
         else:
@@ -320,7 +327,6 @@ class ProtoSleepNet(nn.Module):
         z = h + seq_out  # RESIDUAL 2
 
         # ── Classification ───────────────────────────────────────
-        d = z.shape[-1]
         logits = self.classifier(z.reshape(B * L, d)).reshape(B, L, -1)
 
         return logits
@@ -468,11 +474,17 @@ class ProtoSleepNetTrainer(Trainer):
         outputs_flat = outputs.reshape(-1, n_classes)
         targets_flat = targets.reshape(-1)
 
-        # Main loss
+        # Main loss (post-residual 2)
         loss = loss_fn(outputs_flat, targets_flat)
 
-        # Per-channel auxiliary loss (if mixer active)
+        # Epoch-level loss (deep supervision on h, pre-sequence)
         metrics = model.get_metrics()
+        epoch_logits = metrics.get("epoch_logits")
+        if epoch_logits is not None:
+            epoch_flat = epoch_logits.reshape(-1, n_classes)
+            loss = loss + loss_fn(epoch_flat, targets_flat)
+
+        # Per-channel auxiliary loss (if mixer active)
         mcy = metrics.get("mcy")
         if mcy is not None:
             C = mcy.shape[2]
