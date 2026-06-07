@@ -38,7 +38,7 @@ def _json_serializable(v):
     """Convert numpy/non-serializable types for JSON."""
     if isinstance(v, (np.integer,)):
         return int(v)
-    if isinstance(v, (np.floating,)):
+    if isinstance(v, (float, np.floating)):
         f = float(v)
         if np.isnan(f) or np.isinf(f):
             return None
@@ -101,6 +101,8 @@ def main():
                         help="Key column in extra CSV")
     parser.add_argument("--extra_csv_filter", nargs="*", default=None,
                         help="Filter expressions like 'visitnumber=1'")
+    parser.add_argument("--force_metadata", action="store_true",
+                        help="Re-write all _metadata.json even if they exist")
     args = parser.parse_args()
 
     # Build dataset kwargs
@@ -185,9 +187,9 @@ def main():
         meta_exists = os.path.exists(meta_path)
         events_exist = has_events and all(os.path.exists(p) for p in event_paths.values())
 
-        # If extra_csv is provided, re-check if metadata needs updating
-        needs_meta_update = False
-        if meta_exists and extra_meta:
+        # If --force_metadata or extra_csv with missing keys, re-write metadata
+        needs_meta_update = args.force_metadata and meta_exists
+        if meta_exists and not needs_meta_update and extra_meta:
             try:
                 with open(meta_path) as f:
                     existing = json.load(f)
