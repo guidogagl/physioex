@@ -33,6 +33,7 @@ EXTRA=""
 [ -n "$EXTRA_CSV" ] && EXTRA="$EXTRA --extra_csv $EXTRA_CSV"
 [ -n "$EXTRA_CSV_KEY" ] && EXTRA="$EXTRA --extra_csv_key $EXTRA_CSV_KEY"
 [ -n "$EXTRA_CSV_FILTER" ] && EXTRA="$EXTRA --extra_csv_filter $EXTRA_CSV_FILTER"
+[ -n "$FORCE_METADATA" ] && EXTRA="$EXTRA --force_metadata"
 
 SCRIPT=examples/pretrained/protosleepnet-gagliardi/probing/cache_events.py
 
