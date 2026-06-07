@@ -282,7 +282,9 @@ class ProtoSleepNet(nn.Module):
         import numpy as np
         if isinstance(codebook, np.ndarray):
             codebook = torch.from_numpy(codebook).float()
-        self.codebook = codebook
+        # Ensure codebook is on the same device as the model
+        device = next(self.parameters()).device
+        self.codebook = codebook.to(device)
 
     @torch.no_grad()
     def _quantize(self, h):
