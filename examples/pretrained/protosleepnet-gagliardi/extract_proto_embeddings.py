@@ -34,8 +34,7 @@ def load_model(backbone, checkpoint_path, device):
 
 
 def build_dataset_and_loaders(dataset_name, channels, pipeline, fold=0):
-    from torch.utils.data import DataLoader, Subset
-    from physioex.data.collate import dict_collate_fn
+    from physioex.train.trainer import Trainer
 
     if dataset_name == "mass":
         from physioex.data.multi import MultiDataset
@@ -51,13 +50,12 @@ def build_dataset_and_loaders(dataset_name, channels, pipeline, fold=0):
         ds_kwargs = {"visit": 1} if dataset_name == "shhs" else {}
         dataset = DatasetClass(channels=channels, pipelines=pipeline, sequence_length=0, **ds_kwargs)
 
-    train_ids, valid_ids, test_ids = dataset.split(fold=fold)
+    train_loader, valid_loader, test_loader = Trainer.build_dataloaders(
+        dataset=dataset, train_batch_size=1, eval_batch_size=1,
+        num_workers=0, fold=fold,
+    )
 
-    def make_loader(indices):
-        subset = Subset(dataset, indices.tolist() if hasattr(indices, 'tolist') else list(indices))
-        return DataLoader(subset, batch_size=1, shuffle=False, num_workers=0, collate_fn=dict_collate_fn)
-
-    return dataset, make_loader(train_ids), make_loader(valid_ids), make_loader(test_ids)
+    return dataset, train_loader, valid_loader, test_loader
 
 
 @torch.no_grad()
