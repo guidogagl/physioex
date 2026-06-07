@@ -185,7 +185,20 @@ def main():
         meta_exists = os.path.exists(meta_path)
         events_exist = has_events and all(os.path.exists(p) for p in event_paths.values())
 
-        if meta_exists and (not has_events or events_exist):
+        # If extra_csv is provided, re-check if metadata needs updating
+        needs_meta_update = False
+        if meta_exists and extra_meta:
+            try:
+                with open(meta_path) as f:
+                    existing = json.load(f)
+                # Check if any extra CSV key is missing
+                sample_key = next(iter(next(iter(extra_meta.values())).keys()))
+                if sample_key not in existing:
+                    needs_meta_update = True
+            except Exception:
+                needs_meta_update = True
+
+        if meta_exists and not needs_meta_update and (not has_events or events_exist):
             n_skipped += 1
             continue
 
@@ -194,7 +207,7 @@ def main():
             continue
 
         # --- Metadata ---
-        if not meta_exists:
+        if not meta_exists or needs_meta_update:
             try:
                 meta = dataset.get_subject_metadata(subject_id)
                 # Merge extra CSV data
