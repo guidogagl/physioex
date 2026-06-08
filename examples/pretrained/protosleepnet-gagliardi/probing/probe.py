@@ -374,7 +374,9 @@ def probe_event_wise(subjects, task_name, task_info, output_dir, n_folds=5, max_
             "test": test_subs,
         }
 
-        clf = LogisticRegression(max_iter=max_iter, C=1.0, solver="lbfgs", n_jobs=-1)
+        # saga for large datasets (fast, converges with enough data), lbfgs for small
+        solver = "saga" if len(X_train) > 500_000 else "lbfgs"
+        clf = LogisticRegression(max_iter=max_iter, C=1.0, solver=solver, n_jobs=-1)
         clf.fit(X_train, y_train)
 
         y_pred = clf.predict(X_test)
