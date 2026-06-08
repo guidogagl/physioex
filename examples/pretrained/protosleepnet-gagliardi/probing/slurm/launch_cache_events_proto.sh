@@ -18,12 +18,12 @@ sbatch --job-name=cache-mass-indomain \
 
 # ── SHHS visit 1 (with CVD outcomes) ──────────────────────────────
 sbatch --job-name=cache-shhs-v1 \
-    --export=ALL,DS=shhs,VISIT=1,EMB_SUBDIRS="shhs_visit1/all",EXTRA_CSV=$CVD_CSV,EXTRA_CSV_KEY=nsrrid,EXTRA_CSV_FILTER="visitnumber=1" \
+    --export=ALL,DS=shhs,VISIT=1,EMB_SUBDIRS="shhs_visit1/all",EXTRA_CSV=$CVD_CSV,EXTRA_CSV_KEY=nsrrid \
     $SBATCH
 
 # ── SHHS visit 2 (with CVD outcomes) ──────────────────────────────
 sbatch --job-name=cache-shhs-v2 \
-    --export=ALL,DS=shhs,VISIT=2,EMB_SUBDIRS="shhs_visit2/all",EXTRA_CSV=$CVD_CSV,EXTRA_CSV_KEY=nsrrid,EXTRA_CSV_FILTER="visitnumber=2" \
+    --export=ALL,DS=shhs,VISIT=2,EMB_SUBDIRS="shhs_visit2/all",EXTRA_CSV=$CVD_CSV,EXTRA_CSV_KEY=nsrrid \
     $SBATCH
 
 # ── MESA ───────────────────────────────────────────────────────────
