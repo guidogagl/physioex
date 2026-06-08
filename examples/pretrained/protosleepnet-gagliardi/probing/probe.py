@@ -320,7 +320,7 @@ def load_subject_wise_data(subjects, metadata_field, transform=None):
 
 # ── Probing ──────────────────────────────────────────────────────────
 
-def probe_event_wise(subjects, task_name, task_info, output_dir, n_folds=5):
+def probe_event_wise(subjects, task_name, task_info, output_dir, n_folds=5, max_iter=1000):
     """Run event-wise linear probing."""
     print(f"\n{'='*60}")
     print(f"Event-wise probing: {task_name}")
@@ -375,7 +375,7 @@ def probe_event_wise(subjects, task_name, task_info, output_dir, n_folds=5):
         }
 
         # saga solver: stochastic, memory-efficient for large N
-        clf = LogisticRegression(max_iter=200, C=1.0, solver="saga", n_jobs=-1)
+        clf = LogisticRegression(max_iter=max_iter, C=1.0, solver="saga", n_jobs=-1)
         clf.fit(X_train, y_train)
 
         y_pred = clf.predict(X_test)
@@ -433,7 +433,7 @@ def probe_event_wise(subjects, task_name, task_info, output_dir, n_folds=5):
     return summary
 
 
-def probe_subject_wise(subjects, task_name, task_info, output_dir, n_folds=5):
+def probe_subject_wise(subjects, task_name, task_info, output_dir, n_folds=5, max_iter=1000):
     """Run subject-wise linear probing."""
     print(f"\n{'='*60}")
     print(f"Subject-wise probing: {task_name}")
@@ -533,7 +533,7 @@ def probe_subject_wise(subjects, task_name, task_info, output_dir, n_folds=5):
             metrics = {"mae": mae, "r2": r2}
             print(f"    MAE={mae:.4f}  R2={r2:.4f}")
         else:
-            clf = LogisticRegression(max_iter=1000, C=1.0, solver="lbfgs", n_jobs=-1)
+            clf = LogisticRegression(max_iter=max_iter, C=1.0, solver="lbfgs", n_jobs=-1)
             clf.fit(X_train, y_train)
             y_pred = clf.predict(X_test)
             y_proba = clf.predict_proba(X_test)
@@ -615,7 +615,7 @@ def _source_group_key(sid, subjects):
     return get_group_key(sid)
 
 
-def probe_source_discrimination(subjects, task_name, output_dir, n_folds=5,
+def probe_source_discrimination(subjects, task_name, output_dir, n_folds=5, max_iter=1000,
                                 dir_label_map=None):
     """Classify subjects by their source directory (cohort/visit/site)."""
     print(f"\n{'='*60}")
@@ -688,7 +688,7 @@ def probe_source_discrimination(subjects, task_name, output_dir, n_folds=5,
             "test": sids[test_idx].tolist(),
         }
 
-        clf = LogisticRegression(max_iter=1000, C=1.0, solver="lbfgs", n_jobs=-1)
+        clf = LogisticRegression(max_iter=max_iter, C=1.0, solver="lbfgs", n_jobs=-1)
         clf.fit(X_train, y_train)
         y_pred = clf.predict(X_test)
         y_proba = clf.predict_proba(X_test)
@@ -753,6 +753,8 @@ def main():
                              "Use --discover to list available tasks.")
     parser.add_argument("--output_dir", type=str, required=True)
     parser.add_argument("--n_folds", type=int, default=5)
+    parser.add_argument("--max_iter", type=int, default=1000,
+                        help="Max iterations for LogisticRegression (default: 1000)")
     parser.add_argument("--discover", action="store_true",
                         help="List available tasks and exit")
     # Override for subject-wise tasks
@@ -795,7 +797,7 @@ def main():
         task_output_dir = os.path.join(args.output_dir, args.source_name, task_name)
         probe_source_discrimination(
             subjects, task_name, task_output_dir, args.n_folds,
-            dir_label_map=dir_label_map,
+            max_iter=args.max_iter, dir_label_map=dir_label_map,
         )
         print(f"\nResults: {task_output_dir}/")
         return
@@ -835,9 +837,9 @@ def main():
     task_output_dir = os.path.join(args.output_dir, args.source_name, task_name)
 
     if task_type == "event_wise":
-        probe_event_wise(subjects, task_name, task_info, task_output_dir, args.n_folds)
+        probe_event_wise(subjects, task_name, task_info, task_output_dir, args.n_folds, args.max_iter)
     else:
-        probe_subject_wise(subjects, task_name, task_info, task_output_dir, args.n_folds)
+        probe_subject_wise(subjects, task_name, task_info, task_output_dir, args.n_folds, args.max_iter)
 
     print(f"\nResults: {task_output_dir}/")
 
