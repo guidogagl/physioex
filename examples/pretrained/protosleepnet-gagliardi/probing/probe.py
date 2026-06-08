@@ -43,6 +43,7 @@ import os
 
 import joblib
 import numpy as np
+from scipy.spatial.distance import cdist
 from sklearn.linear_model import LogisticRegression, Ridge
 from sklearn.model_selection import StratifiedGroupKFold, GroupKFold
 from sklearn.metrics import (
@@ -85,6 +86,27 @@ def get_group_key(sid):
         if sid.startswith(prefix):
             return fn(sid)
     return _group_identity(sid)
+
+
+# ── Vector quantization ──────────────────────────────────────────────
+
+def quantize_embeddings(emb, codebook):
+    """Replace each embedding with its nearest codebook entry.
+    Args: emb (N, D), codebook (M, D)
+    Returns: quantized (N, D)
+    """
+    dists = cdist(emb, codebook)  # (N, M)
+    indices = dists.argmin(axis=1)  # (N,)
+    return codebook[indices]
+
+
+def medoid_pool(emb, codebook):
+    """Pool subject embeddings via medoid: codebook entry with min mean distance.
+    Args: emb (N, D) quantized embeddings, codebook (M, D)
+    Returns: (D,) codebook entry
+    """
+    dists = cdist(codebook, emb)  # (M, N)
+    return codebook[dists.mean(axis=1).argmin()]
 
 
 # ── Binning transforms for subject-wise tasks ────────────────────────
@@ -197,7 +219,7 @@ def discover_tasks(subjects):
     return tasks
 
 
-def load_event_wise_data(subjects, label_key):
+def load_event_wise_data(subjects, label_key, codebook=None):
     """Load epoch embeddings + labels for event-wise probing.
 
     Returns: embeddings (N, D) float32, labels (N,) int64,
@@ -225,6 +247,8 @@ def load_event_wise_data(subjects, label_key):
             continue
 
         emb = np.load(info["emb_path"]).astype(np.float32)
+        if codebook is not None:
+            emb = quantize_embeddings(emb, codebook)
         lbl = np.load(lbl_path)
 
         # Align lengths
@@ -256,7 +280,7 @@ def load_event_wise_data(subjects, label_key):
     )
 
 
-def load_subject_wise_data(subjects, metadata_field, transform=None):
+def load_subject_wise_data(subjects, metadata_field, transform=None, codebook=None):
     """Load mean-pooled embeddings + metadata labels for subject-wise probing.
 
     Returns: embeddings (N_subj, D), labels (N_subj,), subject_ids list, groups list
@@ -307,10 +331,14 @@ def load_subject_wise_data(subjects, metadata_field, transform=None):
         else:
             label = val
 
-        emb = np.load(info["emb_path"])
-        mean_emb = emb.mean(axis=0)
+        emb = np.load(info["emb_path"]).astype(np.float32)
+        if codebook is not None:
+            emb = quantize_embeddings(emb, codebook)
+            pooled_emb = medoid_pool(emb, codebook)
+        else:
+            pooled_emb = emb.mean(axis=0)
 
-        embs.append(mean_emb)
+        embs.append(pooled_emb)
         labels.append(label)
         sids.append(sid)
         groups.append(get_group_key(sid))
@@ -320,7 +348,7 @@ def load_subject_wise_data(subjects, metadata_field, transform=None):
 
 # ── Probing ──────────────────────────────────────────────────────────
 
-def probe_event_wise(subjects, task_name, task_info, output_dir, n_folds=5, max_iter=1000):
+def probe_event_wise(subjects, task_name, task_info, output_dir, n_folds=5, max_iter=1000, codebook=None):
     """Run event-wise linear probing."""
     print(f"\n{'='*60}")
     print(f"Event-wise probing: {task_name}")
@@ -330,7 +358,7 @@ def probe_event_wise(subjects, task_name, task_info, output_dir, n_folds=5, max_
     n_classes = task_info["n_classes"]
 
     X, y, group_ids, epoch_to_subject, unique_group_keys = load_event_wise_data(
-        subjects, label_key
+        subjects, label_key, codebook=codebook
     )
     actual_classes = len(np.unique(y))
     print(f"  Data: {X.shape[0]} epochs, {len(unique_group_keys)} groups, "
@@ -434,7 +462,7 @@ def probe_event_wise(subjects, task_name, task_info, output_dir, n_folds=5, max_
     return summary
 
 
-def probe_subject_wise(subjects, task_name, task_info, output_dir, n_folds=5, max_iter=1000):
+def probe_subject_wise(subjects, task_name, task_info, output_dir, n_folds=5, max_iter=1000, codebook=None):
     """Run subject-wise linear probing."""
     print(f"\n{'='*60}")
     print(f"Subject-wise probing: {task_name}")
@@ -454,7 +482,7 @@ def probe_subject_wise(subjects, task_name, task_info, output_dir, n_folds=5, ma
         transform = "classification"
 
     X, labels, sids, groups = load_subject_wise_data(
-        subjects, metadata_field, transform=transform
+        subjects, metadata_field, transform=transform, codebook=codebook
     )
 
     if len(X) == 0:
@@ -616,7 +644,7 @@ def _source_group_key(sid, subjects):
     return get_group_key(sid)
 
 
-def probe_source_discrimination(subjects, task_name, output_dir, n_folds=5, max_iter=1000,
+def probe_source_discrimination(subjects, task_name, output_dir, n_folds=5, max_iter=1000, codebook=None,
                                 dir_label_map=None):
     """Classify subjects by their source directory (cohort/visit/site)."""
     print(f"\n{'='*60}")
@@ -632,9 +660,13 @@ def probe_source_discrimination(subjects, task_name, output_dir, n_folds=5, max_
         else:
             label = _dir_label(info["dir"])
         emb = np.load(info["emb_path"]).astype(np.float32)
-        mean_emb = emb.mean(axis=0)
+        if codebook is not None:
+            emb = quantize_embeddings(emb, codebook)
+            pooled_emb = medoid_pool(emb, codebook)
+        else:
+            pooled_emb = emb.mean(axis=0)
 
-        embs.append(mean_emb)
+        embs.append(pooled_emb)
         labels.append(label)
         sids.append(sid)
         groups.append(_source_group_key(sid, subjects))
@@ -772,7 +804,14 @@ def main():
                         help="Explicit label per --emb_dirs entry (same order). "
                              "E.g. --emb_dirs train valid test visit2/all "
                              "--dir_labels visit1 visit1 visit1 visit2")
+    parser.add_argument("--quantize", type=str, default=None,
+                        help="Path to codebook.npy (M, D) for vector quantization")
     args = parser.parse_args()
+
+    codebook = None
+    if args.quantize:
+        codebook = np.load(args.quantize).astype(np.float32)
+        print(f"Quantizing with codebook: {codebook.shape}")
 
     subjects = load_subjects(args.emb_dirs)
     print(f"Loaded {len(subjects)} subjects from {len(args.emb_dirs)} dir(s)")
@@ -798,7 +837,7 @@ def main():
         task_output_dir = os.path.join(args.output_dir, args.source_name, task_name)
         probe_source_discrimination(
             subjects, task_name, task_output_dir, args.n_folds,
-            max_iter=args.max_iter, dir_label_map=dir_label_map,
+            max_iter=args.max_iter, codebook=codebook, dir_label_map=dir_label_map,
         )
         print(f"\nResults: {task_output_dir}/")
         return
@@ -838,9 +877,9 @@ def main():
     task_output_dir = os.path.join(args.output_dir, args.source_name, task_name)
 
     if task_type == "event_wise":
-        probe_event_wise(subjects, task_name, task_info, task_output_dir, args.n_folds, args.max_iter)
+        probe_event_wise(subjects, task_name, task_info, task_output_dir, args.n_folds, args.max_iter, codebook)
     else:
-        probe_subject_wise(subjects, task_name, task_info, task_output_dir, args.n_folds, args.max_iter)
+        probe_subject_wise(subjects, task_name, task_info, task_output_dir, args.n_folds, args.max_iter, codebook)
 
     print(f"\nResults: {task_output_dir}/")
 
