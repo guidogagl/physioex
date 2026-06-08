@@ -4,7 +4,8 @@
 #
 # NOT an sbatch script — run this from the login node.
 
-MODEL_DIR=${1:?Usage: bash extract_proto_embeddings_leonardo.sh /path/to/model_dir}
+MODEL_DIR=${1:?Usage: bash extract_proto_embeddings_leonardo.sh /path/to/model_dir [seq|st]}
+BACKBONE=${2:-seq}
 
 SCRIPT=examples/pretrained/protosleepnet-gagliardi/posthoc_prototypes/extract_epoch_embeddings.py
 OUTDIR=${MODEL_DIR}/posthoc_embeddings
@@ -29,11 +30,18 @@ python $SCRIPT --model_dir $MODEL_DIR --output_dir $OUTDIR --channels $CHANNELS 
 }
 
 echo "Model: $MODEL_DIR"
+echo "Backbone: $BACKBONE"
 echo "Output: $OUTDIR"
 echo ""
 
-# In-domain: MASS (train/valid/test)
-submit "mass-indomain" --dataset mass
+# In-domain (train/valid/test split)
+if [ "$BACKBONE" = "seq" ]; then
+    submit "mass-indomain" --dataset mass
+elif [ "$BACKBONE" = "st" ]; then
+    submit "shhs-indomain" --dataset shhs --visit 1
+else
+    echo "ERROR: backbone must be seq or st"; exit 1
+fi
 
 # Simple OOD datasets
 for DS in sleepedf hmc dcsm mesa mros; do
