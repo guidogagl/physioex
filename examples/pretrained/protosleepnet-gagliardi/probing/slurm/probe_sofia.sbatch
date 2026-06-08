@@ -25,10 +25,15 @@ SCRIPT=examples/pretrained/protosleepnet-gagliardi/probing/probe.py
 #   OUTPUT_DIR   — probing output root
 #   LABEL_FROM_DIR — if non-empty, source discrimination mode
 #   TASK         — task name (required for source discrimination)
+#   QUANTIZE     — (optional) path to codebook.npy for vector quantization
+
+QUANTIZE_FLAG=""
+[ -n "$QUANTIZE" ] && QUANTIZE_FLAG="--quantize $QUANTIZE"
 
 echo "probe: source=$SOURCE_NAME"
 echo "  emb_dirs=$EMB_DIRS"
 echo "  output=$OUTPUT_DIR"
+[ -n "$QUANTIZE" ] && echo "  quantize=$QUANTIZE"
 echo ""
 
 if [ -n "$LABEL_FROM_DIR" ]; then
@@ -38,7 +43,7 @@ if [ -n "$LABEL_FROM_DIR" ]; then
         echo "  Already done, skipping"
     else
         python $SCRIPT --emb_dirs $EMB_DIRS --source_name $SOURCE_NAME \
-            --task $TASK --label_from_dir --output_dir $OUTPUT_DIR
+            --task $TASK --label_from_dir $QUANTIZE_FLAG --output_dir $OUTPUT_DIR
     fi
 else
     # ── Standard probing: discover tasks, iterate ─────────────────
@@ -60,7 +65,7 @@ else
         fi
         echo "=== $T ==="
         python $SCRIPT --emb_dirs $EMB_DIRS --source_name $SOURCE_NAME \
-            --task $T --output_dir $OUTPUT_DIR
+            --task $T $QUANTIZE_FLAG --output_dir $OUTPUT_DIR
         echo ""
     done
 fi
