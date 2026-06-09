@@ -348,7 +348,32 @@ def load_subject_wise_data(subjects, metadata_field, transform=None, codebook=No
 
 # ── Probing ──────────────────────────────────────────────────────────
 
-def probe_event_wise(subjects, task_name, task_info, output_dir, n_folds=5, max_iter=1000, codebook=None):
+def merge_fold_results(output_dir, task_name, task_type):
+    """Read existing fold_*/metrics.json and create summary.json."""
+    fold_dirs = sorted(glob.glob(os.path.join(output_dir, "fold_*")))
+    fold_metrics = []
+    for fd in fold_dirs:
+        mp = os.path.join(fd, "metrics.json")
+        if os.path.isfile(mp):
+            with open(mp) as f:
+                fold_metrics.append(json.load(f))
+    if not fold_metrics:
+        print(f"  No fold metrics found in {output_dir}")
+        return None
+    summary = {}
+    for key in fold_metrics[0]:
+        vals = [m[key] for m in fold_metrics]
+        summary[key] = {"mean": float(np.mean(vals)), "std": float(np.std(vals))}
+    summary["n_folds"] = len(fold_metrics)
+    summary["task"] = task_name
+    summary["type"] = task_type
+    with open(os.path.join(output_dir, "summary.json"), "w") as f:
+        json.dump(summary, f, indent=2)
+    print(f"  Merged {len(fold_metrics)} folds -> summary.json")
+    return summary
+
+
+def probe_event_wise(subjects, task_name, task_info, output_dir, n_folds=5, max_iter=1000, codebook=None, fold=None):
     """Run event-wise linear probing."""
     print(f"\n{'='*60}")
     print(f"Event-wise probing: {task_name}")
@@ -378,10 +403,15 @@ def probe_event_wise(subjects, task_name, task_info, output_dir, n_folds=5, max_
     os.makedirs(output_dir, exist_ok=True)
 
     cv = StratifiedGroupKFold(n_splits=n_folds, shuffle=True, random_state=42)
+    all_splits = list(cv.split(X, y, group_ids))
     fold_assignments = {}
     fold_metrics = []
 
-    for fold_idx, (train_idx, test_idx) in enumerate(cv.split(X, y, group_ids)):
+    # Select folds to run
+    folds_to_run = [fold] if fold is not None else range(len(all_splits))
+
+    for fold_idx in folds_to_run:
+        train_idx, test_idx = all_splits[fold_idx]
         print(f"\n  Fold {fold_idx}: train={len(train_idx)}, test={len(test_idx)}")
         fold_dir = os.path.join(output_dir, f"fold_{fold_idx}")
         os.makedirs(fold_dir, exist_ok=True)
@@ -443,7 +473,13 @@ def probe_event_wise(subjects, task_name, task_info, output_dir, n_folds=5, max_
     with open(os.path.join(output_dir, "fold_assignments.json"), "w") as f:
         json.dump(fold_assignments, f)
 
+    # Skip summary if running single fold
+    if fold is not None:
+        return None
+
     # Summary
+    if not fold_metrics:
+        return None
     summary = {}
     for key in fold_metrics[0]:
         vals = [m[key] for m in fold_metrics]
@@ -462,7 +498,7 @@ def probe_event_wise(subjects, task_name, task_info, output_dir, n_folds=5, max_
     return summary
 
 
-def probe_subject_wise(subjects, task_name, task_info, output_dir, n_folds=5, max_iter=1000, codebook=None):
+def probe_subject_wise(subjects, task_name, task_info, output_dir, n_folds=5, max_iter=1000, codebook=None, fold=None):
     """Run subject-wise linear probing."""
     print(f"\n{'='*60}")
     print(f"Subject-wise probing: {task_name}")
@@ -529,10 +565,13 @@ def probe_subject_wise(subjects, task_name, task_info, output_dir, n_folds=5, ma
     else:
         cv = StratifiedGroupKFold(n_splits=n_folds, shuffle=True, random_state=42)
 
+    all_splits = list(cv.split(X, y, group_ids))
     fold_assignments = {}
     fold_metrics = []
+    folds_to_run = [fold] if fold is not None else range(len(all_splits))
 
-    for fold_idx, (train_idx, test_idx) in enumerate(cv.split(X, y, group_ids)):
+    for fold_idx in folds_to_run:
+        train_idx, test_idx = all_splits[fold_idx]
         print(f"\n  Fold {fold_idx}: train={len(train_idx)}, test={len(test_idx)}")
         fold_dir = os.path.join(output_dir, f"fold_{fold_idx}")
         os.makedirs(fold_dir, exist_ok=True)
@@ -593,6 +632,9 @@ def probe_subject_wise(subjects, task_name, task_info, output_dir, n_folds=5, ma
     with open(os.path.join(output_dir, "fold_assignments.json"), "w") as f:
         json.dump(fold_assignments, f)
 
+    if fold is not None:
+        return None
+
     # Summary
     summary = {}
     for key in fold_metrics[0]:
@@ -644,7 +686,7 @@ def _source_group_key(sid, subjects):
     return get_group_key(sid)
 
 
-def probe_source_discrimination(subjects, task_name, output_dir, n_folds=5, max_iter=1000, codebook=None,
+def probe_source_discrimination(subjects, task_name, output_dir, n_folds=5, max_iter=1000, codebook=None, fold=None,
                                 dir_label_map=None):
     """Classify subjects by their source directory (cohort/visit/site)."""
     print(f"\n{'='*60}")
@@ -701,10 +743,13 @@ def probe_source_discrimination(subjects, task_name, output_dir, n_folds=5, max_
     os.makedirs(output_dir, exist_ok=True)
 
     cv = StratifiedGroupKFold(n_splits=n_folds, shuffle=True, random_state=42)
+    all_splits = list(cv.split(X, y, group_ids))
     fold_assignments = {}
     fold_metrics = []
+    folds_to_run = [fold] if fold is not None else range(len(all_splits))
 
-    for fold_idx, (train_idx, test_idx) in enumerate(cv.split(X, y, group_ids)):
+    for fold_idx in folds_to_run:
+        train_idx, test_idx = all_splits[fold_idx]
         print(f"\n  Fold {fold_idx}: train={len(train_idx)}, test={len(test_idx)}")
         fold_dir = os.path.join(output_dir, f"fold_{fold_idx}")
         os.makedirs(fold_dir, exist_ok=True)
@@ -749,6 +794,9 @@ def probe_source_discrimination(subjects, task_name, output_dir, n_folds=5, max_
 
     with open(os.path.join(output_dir, "fold_assignments.json"), "w") as f:
         json.dump(fold_assignments, f)
+
+    if fold is not None:
+        return None
 
     if not fold_metrics:
         print("  No valid folds")
@@ -806,6 +854,10 @@ def main():
                              "--dir_labels visit1 visit1 visit1 visit2")
     parser.add_argument("--quantize", type=str, default=None,
                         help="Path to codebook.npy (M, D) for vector quantization")
+    parser.add_argument("--fold", type=int, default=None,
+                        help="Run only this fold (0-indexed). Skips summary generation.")
+    parser.add_argument("--merge", action="store_true",
+                        help="Merge existing fold results into summary.json and exit")
     args = parser.parse_args()
 
     codebook = None
@@ -835,10 +887,14 @@ def main():
             }
         task_name = args.task or "source"
         task_output_dir = os.path.join(args.output_dir, args.source_name, task_name)
-        probe_source_discrimination(
-            subjects, task_name, task_output_dir, args.n_folds,
-            max_iter=args.max_iter, codebook=codebook, dir_label_map=dir_label_map,
-        )
+        if args.merge:
+            merge_fold_results(task_output_dir, task_name, "source_discrimination")
+        else:
+            probe_source_discrimination(
+                subjects, task_name, task_output_dir, args.n_folds,
+                max_iter=args.max_iter, codebook=codebook, fold=args.fold,
+                dir_label_map=dir_label_map,
+            )
         print(f"\nResults: {task_output_dir}/")
         return
 
@@ -876,10 +932,12 @@ def main():
     task_type, task_name, task_info = task_match
     task_output_dir = os.path.join(args.output_dir, args.source_name, task_name)
 
-    if task_type == "event_wise":
-        probe_event_wise(subjects, task_name, task_info, task_output_dir, args.n_folds, args.max_iter, codebook)
+    if args.merge:
+        merge_fold_results(task_output_dir, task_name, task_type)
+    elif task_type == "event_wise":
+        probe_event_wise(subjects, task_name, task_info, task_output_dir, args.n_folds, args.max_iter, codebook, args.fold)
     else:
-        probe_subject_wise(subjects, task_name, task_info, task_output_dir, args.n_folds, args.max_iter, codebook)
+        probe_subject_wise(subjects, task_name, task_info, task_output_dir, args.n_folds, args.max_iter, codebook, args.fold)
 
     print(f"\nResults: {task_output_dir}/")
 
