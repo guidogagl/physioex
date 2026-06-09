@@ -120,8 +120,8 @@ class MultiModelWrapper(nn.Module):
             for p in m.parameters():
                 p.requires_grad_(False)
 
-    def forward(self, x):
-        """Returns list of logits from all models."""
+    def _forward_all(self, x):
+        """Returns list of logits from all models (for per-model loss)."""
         x_t = self.transform(x)  # (B, L, 3, T, F)
 
         all_logits = []
@@ -131,6 +131,11 @@ class MultiModelWrapper(nn.Module):
             all_logits.append(m(x_t[:, :, 0:1]))  # EEG only
 
         return all_logits
+
+    def forward(self, x):
+        """Returns mean logits across all models (Trainer-compatible)."""
+        all_logits = self._forward_all(x)
+        return torch.stack(all_logits).mean(dim=0)
 
 
 # ── SingleModelWithTransform ─────────────────────────────────────────
@@ -170,7 +175,7 @@ class MultiModelTrainer(Trainer):
             targets = targets.to(device)
 
         with torch.autocast(device.type if "cuda" in device.type else "cpu"):
-            all_logits = model(inputs)
+            all_logits = model._forward_all(inputs)
 
         targets_flat = targets.reshape(-1)
         n_classes = all_logits[0].shape[-1]
