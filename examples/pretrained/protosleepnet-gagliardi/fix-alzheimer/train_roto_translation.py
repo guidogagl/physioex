@@ -44,20 +44,51 @@ MODELS_DIR = os.environ.get(
 
 
 class SpectrogramTransform(nn.Module):
-    """Learnable per-channel roto-translation on STFT spectrograms."""
+    """Learnable per-channel band-diagonal transform on STFT spectrograms.
 
-    def __init__(self, n_channels=3, F=129):
+    Each frequency bin interacts only with its bandwidth nearest neighbors.
+    Initialized to identity (diagonal=1, off-diagonal=0).
+
+    Parameters per channel: F * (2*bandwidth+1) + F (bias) ≈ F*7 for bw=3.
+    Total for 3 channels with F=129, bw=3: 3 * (129*7 + 129) = 3,096 params.
+    """
+
+    def __init__(self, n_channels=3, F=129, bandwidth=3):
         super().__init__()
         self.n_channels = n_channels
-        self.A = nn.ParameterList(
-            [nn.Parameter(torch.eye(F)) for _ in range(n_channels)]
-        )
+        self.F = F
+        self.bandwidth = bandwidth
+
+        # Store band-diagonal entries as (F, 2*bandwidth+1) per channel
+        # Initialized: center (diagonal) = 1, off-diags = 0
+        w = 2 * bandwidth + 1
+        self.bands = nn.ParameterList()
+        for _ in range(n_channels):
+            band = torch.zeros(F, w)
+            band[:, bandwidth] = 1.0  # diagonal = 1 (identity)
+            self.bands.append(nn.Parameter(band))
+
         self.b = nn.ParameterList(
             [nn.Parameter(torch.zeros(F)) for _ in range(n_channels)]
         )
 
+    def _build_matrix(self, band):
+        """Build sparse (F, F) matrix from band-diagonal entries (F, 2*bw+1)."""
+        F = self.F
+        bw = self.bandwidth
+        A = torch.zeros(F, F, device=band.device, dtype=band.dtype)
+        for k in range(-bw, bw + 1):
+            col = k + bw  # index in band tensor
+            if k >= 0:
+                A[range(F - k), range(k, F)] = band[:F - k, col]
+            else:
+                A[range(-k, F), range(F + k)] = band[-k:, col]
+        return A
+
     def forward(self, x):
         """Transform spectrograms: x_out[c] = x_in[c] @ A[c] + b[c]
+
+        A[c] is a band-diagonal matrix with bandwidth=self.bandwidth.
 
         Args:
             x: (B, L, C, T, F) spectrograms.
@@ -67,7 +98,8 @@ class SpectrogramTransform(nn.Module):
         x = x.clone()
         C = min(x.shape[2], self.n_channels)
         for c in range(C):
-            x[:, :, c] = x[:, :, c] @ self.A[c] + self.b[c]
+            A = self._build_matrix(self.bands[c])
+            x[:, :, c] = x[:, :, c] @ A + self.b[c]
         return x
 
 
