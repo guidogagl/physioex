@@ -95,15 +95,7 @@ def extract_epoch_encoder(model, x):
         h = model.epoch_encode(x.unsqueeze(0))  # (1, N, C, T, F) → (1, N, d)
         return h.squeeze(0)  # (N, d)
 
-    if hasattr(model, "epoch_encoder") and hasattr(model, "in_chan"):
-        x_flat = x.reshape(N * C, 1, T, F)
-        embs = model.epoch_encoder(x_flat)
-        embs = embs.reshape(N, C, -1)
-        # Apply channel mixer if present (mixer/protosleepnet variants)
-        if hasattr(model, "channel_mixer"):
-            embs = embs + model.channel_mixer(embs)
-        return embs.mean(dim=1)
-
+    # SleepTransformer / SeqSleepNet (any in_chan): feed all channels together
     if hasattr(model, "epoch_encoder"):
         return model.epoch_encoder(x)
 
