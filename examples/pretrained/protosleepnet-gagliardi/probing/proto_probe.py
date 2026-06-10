@@ -116,24 +116,21 @@ def run_fold(subjects_data, train_sids, test_sids, K, seed, fold_dir):
         json.dump({"classes": classes, "prototype_class": prototype_classes,
                     "K_per_class": K, "n_prototypes": n_protos}, f, indent=2)
 
-    # Step 2: Compute histograms for all subjects
-    def compute_histogram(emb):
+    # Step 2: Compute mean-distance features for all subjects
+    def compute_features(emb):
         dists = cdist(emb, prototypes)  # (N_epochs, 2K)
-        assignments = dists.argmin(axis=1)  # (N_epochs,)
-        hist = np.bincount(assignments, minlength=n_protos).astype(np.float32)
-        hist /= hist.sum()  # normalize
-        return hist
+        return dists.mean(axis=0)  # (2K,) mean distance to each prototype
 
     X_train, y_train = [], []
     for sid in train_sids:
-        X_train.append(compute_histogram(subjects_data[sid]["emb"]))
+        X_train.append(compute_features(subjects_data[sid]["emb"]))
         y_train.append(classes.index(subjects_data[sid]["label"]))
     X_train = np.array(X_train)
     y_train = np.array(y_train)
 
     X_test, y_test, test_ids = [], [], []
     for sid in test_sids:
-        X_test.append(compute_histogram(subjects_data[sid]["emb"]))
+        X_test.append(compute_features(subjects_data[sid]["emb"]))
         y_test.append(classes.index(subjects_data[sid]["label"]))
         test_ids.append(sid)
     X_test = np.array(X_test)
