@@ -299,7 +299,7 @@ def main():
     summary["n_subjects"] = len(X)
     summary["C"] = args.C
     summary["seed"] = args.seed
-    summary["feat_dim"] = feat_dim
+    summary["feat_dim"] = int(X.shape[1])
     summary["add_proportions"] = add_proportions
     summary["classes"] = unique_labels
     summary["type"] = "stage_conditioned"
