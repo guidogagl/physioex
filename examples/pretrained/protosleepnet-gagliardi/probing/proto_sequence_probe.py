@@ -6,6 +6,8 @@ then extracts permanence and transition features from that sequence.
 
 Feature levels:
   compact    — proportions + mean/std bout length + frag + entropy  (3K+2 dim)
+  extended   — compact + intra-proto std + temporal dynamics +
+               compactness + PCA spectral features                  (5K+19 dim)
   transition — compact + K×K transition probability matrix          (K²+3K+2 dim)
   full       — transition + per-slot mean/std embeddings            (+256K dim)
   local      — transition + local centroid deviations               (+128K dim)
@@ -230,6 +232,103 @@ def compute_transition_matrix(assignments, K):
     return T.flatten()
 
 
+def compute_extended_features(emb, assignments, centroids, K):
+    """Compute statistically-validated discriminative features.
+
+    Includes per-prototype embedding variability, temporal dynamics,
+    compactness, and PCA spectral features — all shown to have
+    significant Cohen's d (0.5-0.95) for HOA vs PD discrimination.
+
+    Returns: (2K + 17,) vector:
+      - per-proto intra-cluster std mean (K dim)
+      - per-proto distance to centroid (K dim)
+      - temporal: step mean/std/median/max, autocorr mean/std,
+                  drift, drift_q mean/max (9 dim)
+      - compactness: mean/std/max (3 dim)
+      - PCA: top-5 variance ratios + effective dim (6 dim)
+      - n_visited prototypes (1 dim)
+    """
+    N, D = emb.shape
+
+    # ── Per-prototype embedding variability ──
+    proto_std_mean = np.zeros(K, dtype=np.float32)
+    proto_dist_to_centroid = np.zeros(K, dtype=np.float32)
+    for p in range(K):
+        mask = assignments == p
+        if mask.sum() > 1:
+            proto_std_mean[p] = emb[mask].std(axis=0).mean()
+            proto_dist_to_centroid[p] = float(
+                np.linalg.norm(emb[mask].mean(axis=0) - centroids[p]))
+        elif mask.sum() == 1:
+            proto_dist_to_centroid[p] = float(
+                np.linalg.norm(emb[mask][0] - centroids[p]))
+
+    # ── Temporal dynamics ──
+    temporal = np.zeros(9, dtype=np.float32)
+    if N > 1:
+        consec_dists = np.linalg.norm(emb[1:] - emb[:-1], axis=1)
+        temporal[0] = consec_dists.mean()       # step_mean
+        temporal[1] = consec_dists.std()         # step_std
+        temporal[2] = np.median(consec_dists)    # step_median
+        temporal[3] = consec_dists.max()         # step_max
+
+        # Autocorrelation at lag 1 (mean across dims)
+        autocorr = np.array([np.corrcoef(emb[:-1, d], emb[1:, d])[0, 1]
+                             for d in range(D)])
+        autocorr = autocorr[~np.isnan(autocorr)]
+        if len(autocorr) > 0:
+            temporal[4] = autocorr.mean()        # autocorr_mean
+            temporal[5] = autocorr.std()          # autocorr_std
+
+        # Drift: first-half vs second-half
+        half = N // 2
+        temporal[6] = float(np.linalg.norm(
+            emb[:half].mean(axis=0) - emb[half:].mean(axis=0)))
+
+        # Quarter-wise drift
+        q = N // 4
+        if q > 0:
+            q_means = [emb[i*q:(i+1)*q].mean(axis=0) for i in range(4)]
+            q_drifts = [np.linalg.norm(q_means[i+1] - q_means[i]) for i in range(3)]
+            temporal[7] = np.mean(q_drifts)      # drift_q_mean
+            temporal[8] = np.max(q_drifts)        # drift_q_max
+
+    # ── Compactness ──
+    subject_centroid = emb.mean(axis=0)
+    dists_to_center = np.linalg.norm(emb - subject_centroid, axis=1)
+    compactness = np.array([
+        dists_to_center.mean(),
+        dists_to_center.std(),
+        dists_to_center.max(),
+    ], dtype=np.float32)
+
+    # ── PCA spectral features ──
+    pca_feats = np.zeros(6, dtype=np.float32)
+    if N > 10:
+        from sklearn.decomposition import PCA as PCA_
+        n_comp = min(5, D, N)
+        pca_model = PCA_(n_components=n_comp)
+        pca_model.fit(emb)
+        ratios = pca_model.explained_variance_ratio_
+        for i in range(min(5, len(ratios))):
+            pca_feats[i] = ratios[i]
+        # Effective dimensionality (inverse participation ratio)
+        all_ratios = pca_model.explained_variance_ratio_
+        pca_feats[5] = 1.0 / np.sum(all_ratios ** 2)
+
+    # ── N visited prototypes ──
+    n_visited = np.array([float((np.unique(assignments).shape[0]))], dtype=np.float32)
+
+    return np.concatenate([
+        proto_std_mean,            # K
+        proto_dist_to_centroid,    # K
+        temporal,                  # 9
+        compactness,               # 3
+        pca_feats,                 # 6
+        n_visited,                 # 1
+    ])
+
+
 def compute_embedding_features(emb, assignments, K):
     """Compute per-slot mean and std embeddings.
 
@@ -286,6 +385,7 @@ def compute_subject_features(emb, assignments, global_centroids, K,
     """Orchestrate feature computation based on feature level.
 
     All levels include: permanence (3K) + frag + entropy (2) = 3K+2
+    extended: adds intra-proto std + temporal + compactness + PCA (2K+19)
     transition+: adds K×K transition matrix
     full: adds per-slot mean/std embeddings
     local: adds local centroid deviations
@@ -296,6 +396,9 @@ def compute_subject_features(emb, assignments, global_centroids, K,
         compute_permanence_features(assignments, K),
         compute_global_stats(assignments, K),
     ]
+
+    if feature_level in ("extended",):
+        parts.append(compute_extended_features(emb, assignments, global_centroids, K))
 
     if feature_level in ("transition", "full", "local"):
         parts.append(compute_transition_matrix(assignments, K))
@@ -492,7 +595,7 @@ def main():
     parser.add_argument("--k", type=int, default=5,
                         help="Number of local prototypes per subject (feature_level=local)")
     parser.add_argument("--feature_level", type=str, default="compact",
-                        choices=["compact", "transition", "full", "local"])
+                        choices=["compact", "extended", "transition", "full", "local"])
     parser.add_argument("--n_folds", type=int, default=5)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--output_dir", type=str, required=True)
