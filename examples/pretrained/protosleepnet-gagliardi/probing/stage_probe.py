@@ -64,16 +64,18 @@ def load_subjects(emb_dirs):
 
 # ── Feature computation ─────────────────────────────────────────────
 
-def compute_stage_features(emb, labels, add_proportions=True):
-    """Compute per-stage mean embeddings + optional stage proportions.
+def compute_stage_features(emb, labels, add_std=False, add_proportions=True, add_fragmentation=False):
+    """Compute per-stage mean embeddings + optional std, proportions, fragmentation.
 
     Args:
         emb: (N, 128) epoch embeddings
         labels: (N,) sleep stage labels (0-4, -1=unscored)
+        add_std: if True, append per-stage std embeddings (+640 dim)
         add_proportions: if True, append 5-dim stage proportion vector
+        add_fragmentation: if True, append fragmentation features (+7 dim)
 
     Returns:
-        feature vector (640,) or (645,) if add_proportions
+        feature vector of variable length depending on flags
     """
     # Filter out unscored epochs
     valid = labels >= 0
@@ -81,11 +83,18 @@ def compute_stage_features(emb, labels, add_proportions=True):
     labels = labels[valid]
 
     if len(emb) == 0:
-        dim = N_STAGES * D + (N_STAGES if add_proportions else 0)
+        dim = N_STAGES * D
+        if add_std:
+            dim += N_STAGES * D
+        if add_proportions:
+            dim += N_STAGES
+        if add_fragmentation:
+            dim += 2 + N_STAGES  # frag_index, n_transitions, 5 mean_bout
         return np.zeros(dim, dtype=np.float32)
 
     # Per-stage mean embeddings
     stage_means = np.zeros((N_STAGES, D), dtype=np.float32)
+    stage_stds = np.zeros((N_STAGES, D), dtype=np.float32)
     stage_counts = np.zeros(N_STAGES, dtype=np.float32)
 
     for s in range(N_STAGES):
@@ -94,15 +103,46 @@ def compute_stage_features(emb, labels, add_proportions=True):
         stage_counts[s] = count
         if count > 0:
             stage_means[s] = emb[mask].mean(axis=0)
+        if count > 1:
+            stage_stds[s] = emb[mask].std(axis=0)
 
-    features = stage_means.flatten()  # (640,)
+    parts = [stage_means.flatten()]  # (640,)
+
+    if add_std:
+        parts.append(stage_stds.flatten())  # (640,)
 
     if add_proportions:
         total = stage_counts.sum()
         proportions = stage_counts / total if total > 0 else stage_counts
-        features = np.concatenate([features, proportions])  # (645,)
+        parts.append(proportions)  # (5,)
 
-    return features
+    if add_fragmentation:
+        # Fragmentation index + transition count
+        transitions = 0
+        for i in range(1, len(labels)):
+            if labels[i] != labels[i - 1]:
+                transitions += 1
+        frag_index = transitions / len(labels) if len(labels) > 0 else 0.0
+
+        # Mean bout length per stage
+        bouts = {s: [] for s in range(N_STAGES)}
+        current_stage = labels[0]
+        bout_len = 1
+        for i in range(1, len(labels)):
+            if labels[i] == current_stage:
+                bout_len += 1
+            else:
+                bouts[current_stage].append(bout_len)
+                current_stage = labels[i]
+                bout_len = 1
+        bouts[current_stage].append(bout_len)
+        mean_bouts = np.array([np.mean(bouts[s]) if bouts[s] else 0.0 for s in range(N_STAGES)],
+                              dtype=np.float32)
+
+        parts.append(np.array([frag_index, float(transitions)], dtype=np.float32))
+        parts.append(mean_bouts)  # (5,)
+
+    return np.concatenate(parts)
 
 
 # ── Main ────────────────────────────────────────────────────────────
@@ -120,14 +160,19 @@ def main():
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--no_proportions", action="store_true",
                         help="Disable stage proportion features")
+    parser.add_argument("--add_std", action="store_true",
+                        help="Add per-stage std embeddings (+640 dim)")
+    parser.add_argument("--add_frag", action="store_true",
+                        help="Add fragmentation features (+7 dim)")
+    parser.add_argument("--pca", type=int, default=0,
+                        help="PCA components before classification (0=disabled)")
     parser.add_argument("--output_dir", type=str, required=True)
     args = parser.parse_args()
 
     add_proportions = not args.no_proportions
-    feat_dim = N_STAGES * D + (N_STAGES if add_proportions else 0)
 
     print(f"Stage probe: C={args.C}, seed={args.seed}, source={args.source_name}, "
-          f"feat_dim={feat_dim}, proportions={add_proportions}")
+          f"std={args.add_std}, frag={args.add_frag}, pca={args.pca}")
 
     subjects = load_subjects(args.emb_dirs)
     print(f"Loaded {len(subjects)} subjects")
@@ -150,7 +195,10 @@ def main():
         n = min(len(emb), len(stage_labels))
         emb, stage_labels = emb[:n], stage_labels[:n]
 
-        features = compute_stage_features(emb, stage_labels, add_proportions)
+        features = compute_stage_features(emb, stage_labels,
+                                          add_std=args.add_std,
+                                          add_proportions=add_proportions,
+                                          add_fragmentation=args.add_frag)
 
         sids.append(sid)
         X_all.append(features)
@@ -186,6 +234,18 @@ def main():
     for fold_idx, (train_idx, test_idx) in enumerate(cv.split(X, y, group_ids)):
         X_train, X_test = X[train_idx], X[test_idx]
         y_train, y_test = y[train_idx], y[test_idx]
+
+        # Optional PCA (fit on train, transform both)
+        if args.pca > 0:
+            from sklearn.decomposition import PCA
+            from sklearn.preprocessing import StandardScaler
+            scaler = StandardScaler()
+            X_train = scaler.fit_transform(X_train)
+            X_test = scaler.transform(X_test)
+            n_comp = min(args.pca, X_train.shape[0], X_train.shape[1])
+            pca = PCA(n_components=n_comp, random_state=args.seed)
+            X_train = pca.fit_transform(X_train)
+            X_test = pca.transform(X_test)
 
         fold_dir = os.path.join(output_dir, f"fold_{fold_idx}")
         os.makedirs(fold_dir, exist_ok=True)
