@@ -130,7 +130,7 @@ def align_centroids(local_centroids, global_centroids):
     return aligned
 
 
-def build_features(subjects, task, K):
+def build_features(subjects, task, K, seed=42):
     """Build feature matrix using local K-Means + global alignment.
 
     Returns: X (N, K*D), labels list, sids list, groups list
@@ -168,7 +168,7 @@ def build_features(subjects, task, K):
     # Step 2: Global K-Means on all embeddings concatenated
     print(f"  Fitting global K-Means (K={K})...")
     all_concat = np.concatenate(all_embs, axis=0)
-    global_km = MiniBatchKMeans(n_clusters=K, random_state=42, batch_size=4096, n_init=3)
+    global_km = MiniBatchKMeans(n_clusters=K, random_state=seed, batch_size=4096, n_init=3)
     global_km.fit(all_concat)
     global_centroids = global_km.cluster_centers_  # (K, D)
     del all_concat
@@ -179,7 +179,7 @@ def build_features(subjects, task, K):
     X = np.zeros((len(all_embs), K * D), dtype=np.float32)
 
     for i, emb in enumerate(all_embs):
-        local_km = KMeans(n_clusters=K, random_state=42, n_init=3, max_iter=100)
+        local_km = KMeans(n_clusters=K, random_state=seed, n_init=3, max_iter=100)
         local_km.fit(emb)
         local_centroids = local_km.cluster_centers_  # (K, D)
 
@@ -192,7 +192,7 @@ def build_features(subjects, task, K):
 
 # ── Probing ─────────────────────────────────────────────────────────
 
-def probe(X, labels, sids, groups, task_type, output_dir, n_folds=5):
+def probe(X, labels, sids, groups, task_type, output_dir, n_folds=5, seed=42):
     """Run 5-fold CV probing."""
     sids = np.array(sids)
     groups_arr = np.array(groups)
@@ -216,7 +216,7 @@ def probe(X, labels, sids, groups, task_type, output_dir, n_folds=5):
             print("  SKIP: only 1 class")
             return None
         cv = StratifiedGroupKFold(n_splits=min(n_folds, len(unique_groups)),
-                                   shuffle=True, random_state=42)
+                                   shuffle=True, random_state=seed)
 
     if len(unique_groups) < 2:
         print("  SKIP: not enough groups")
@@ -315,10 +315,11 @@ def main():
                         choices=list(TASK_CONFIG.keys()))
     parser.add_argument("--k", type=int, default=3, help="Number of local clusters")
     parser.add_argument("--n_folds", type=int, default=5)
+    parser.add_argument("--seed", type=int, default=42, help="Random seed for K-Means and CV splits")
     parser.add_argument("--output_dir", type=str, required=True)
     args = parser.parse_args()
 
-    print(f"Local K-Means probing: K={args.k}, task={args.task}, source={args.source_name}")
+    print(f"Local K-Means probing: K={args.k}, task={args.task}, source={args.source_name}, seed={args.seed}")
 
     subjects = load_subjects(args.emb_dirs)
     print(f"Loaded {len(subjects)} subjects from {len(args.emb_dirs)} dir(s)")
@@ -330,13 +331,13 @@ def main():
     task_cfg = TASK_CONFIG[args.task]
     task_type = task_cfg["task_type"]
 
-    X, labels, sids, groups = build_features(subjects, args.task, args.k)
+    X, labels, sids, groups = build_features(subjects, args.task, args.k, seed=args.seed)
     if X is None:
         print("No valid subjects found.")
         return
 
     task_output_dir = os.path.join(args.output_dir, args.source_name, args.task)
-    summary = probe(X, labels, sids, groups, task_type, task_output_dir, args.n_folds)
+    summary = probe(X, labels, sids, groups, task_type, task_output_dir, args.n_folds, seed=args.seed)
 
     print(f"\nResults: {task_output_dir}/")
 
