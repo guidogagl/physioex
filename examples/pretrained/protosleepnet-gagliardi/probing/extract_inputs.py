@@ -35,7 +35,7 @@ def main():
     elif args.dataset == "alzheimers":
         from physioex.data.datasets import AlzheimersDataset
         ds = AlzheimersDataset(
-            group=args.group,
+            subset=args.group,
             channels=["EEG", "EOG", "EMG"],
             pipelines="seqsleepnet",
             sequence_length=0,
