@@ -90,19 +90,19 @@ def load_all_subjects(emb_dirs):
 
             emb = np.load(emb_path).astype(np.float32)
 
-            # Load or compute spectral features
+            # Load or compute spectral features (optional)
             if os.path.exists(spectral_path):
                 spectral = np.load(spectral_path).astype(np.float32)
+                n = min(len(emb), len(spectral))
+                features = np.concatenate([emb[:n], spectral[:n]], axis=1)
             elif os.path.exists(inputs_path):
                 inp = np.load(inputs_path).astype(np.float32)
                 n = min(len(emb), len(inp))
                 spectral = compute_spectral_features(inp[:n])
                 np.save(spectral_path, spectral)
+                features = np.concatenate([emb[:n], spectral[:n]], axis=1)
             else:
-                continue
-
-            n = min(len(emb), len(spectral))
-            features = np.concatenate([emb[:n], spectral[:n]], axis=1)  # (N, 143)
+                features = emb  # embeddings only
 
             subjects.append({
                 "sid": sid,
@@ -117,26 +117,46 @@ def load_all_subjects(emb_dirs):
 # ── Model ───────────────────────────────────────────────────────────
 
 class PrototypeMIL(nn.Module):
-    def __init__(self, input_dim=143, proj_dim=32, n_prototypes=5):
+    def __init__(self, input_dim=143, proj_dim=32, n_prototypes=20,
+                 temperature=1.0, sim_threshold=None):
         super().__init__()
         self.proj = nn.Linear(input_dim, proj_dim)
         self.prototypes = nn.Parameter(torch.randn(n_prototypes, proj_dim))
-        self.temperature = nn.Parameter(torch.ones(1))
+        self.temperature = temperature
+        self.sim_threshold = sim_threshold  # max distance to include an epoch
         self.classifier = nn.Linear(n_prototypes * proj_dim, 1)
 
-    def init_prototypes(self, features_list, device):
-        """Initialize prototypes via K-Means on projected train features."""
+    def init_prototypes(self, features_list, device, method="random"):
+        """Initialize prototypes from train features.
+
+        Args:
+            method: "random" — pick K random projected epochs
+                    "kmeans" — K-Means on projected epochs
+        """
         with torch.no_grad():
             all_feat = np.concatenate(features_list, axis=0)
-            # Project through current projection layer
             x = torch.from_numpy(all_feat).to(device)
             z = self.proj(x).cpu().numpy()
             K = self.prototypes.shape[0]
-            km = MiniBatchKMeans(n_clusters=K, n_init=3, batch_size=4096)
-            km.fit(z)
+
+            if method == "kmeans":
+                km = MiniBatchKMeans(n_clusters=K, n_init=3, batch_size=4096)
+                km.fit(z)
+                centers = km.cluster_centers_
+            else:
+                idx = np.random.choice(len(z), K, replace=False)
+                centers = z[idx]
+
             self.prototypes.data = torch.from_numpy(
-                km.cluster_centers_.astype(np.float32)
+                centers.astype(np.float32)
             ).to(device)
+
+            # Set threshold as p75 of distances to nearest center
+            if self.sim_threshold is None:
+                from scipy.spatial.distance import cdist as sp_cdist
+                dists = sp_cdist(z, centers).min(axis=1)
+                self.sim_threshold = float(np.percentile(dists, 75))
+                print(f"    Auto threshold (p75): {self.sim_threshold:.3f}")
 
     def forward(self, x):
         """Forward pass for a single subject.
@@ -151,9 +171,18 @@ class PrototypeMIL(nn.Module):
         # Distance to prototypes
         dists = torch.cdist(z.unsqueeze(0), self.prototypes.unsqueeze(0)).squeeze(0)  # (N, K)
 
-        # Attention: per prototype, softmax over epochs
-        tau = self.temperature.clamp(min=0.1)
-        attn = F.softmax(-dists / tau, dim=0)  # (N, K)
+        # Threshold mask: only epochs within sim_threshold of each prototype
+        if self.sim_threshold is not None:
+            mask = (dists < self.sim_threshold).float()  # (N, K)
+        else:
+            mask = torch.ones_like(dists)
+
+        # Similarity-based attention with threshold mask
+        sim = (-dists / self.temperature) + torch.log(mask + 1e-8)  # masked entries → -inf
+        attn = F.softmax(sim, dim=0)  # (N, K) — per-prototype attention over epochs
+
+        # Zero out prototypes with no nearby epochs
+        attn = attn * mask
 
         # Weighted aggregation per prototype
         proto_repr = torch.mm(attn.T, z)  # (K, D)
@@ -165,57 +194,30 @@ class PrototypeMIL(nn.Module):
 
 # ── Training ────────────────────────────────────────────────────────
 
-def train_fold(model, train_data, val_data, device, lr, weight_decay,
-               max_epochs, patience):
-    """Train model for one fold with early stopping on val loss."""
+def train_fold(model, train_data, device, lr, weight_decay,
+               n_epochs, accum_steps=4):
+    """Train model for fixed number of epochs with gradient accumulation."""
     optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
     criterion = nn.BCEWithLogitsLoss()
 
-    best_val_loss = float("inf")
-    best_state = None
-    wait = 0
-
-    for epoch in range(max_epochs):
-        # Train
+    for epoch in range(n_epochs):
         model.train()
-        train_loss = 0.0
         indices = list(range(len(train_data)))
         np.random.shuffle(indices)
 
-        for i in indices:
+        optimizer.zero_grad()
+        for step, i in enumerate(indices):
             x = torch.from_numpy(train_data[i]["features"]).to(device)
             y = torch.tensor([train_data[i]["y"]], dtype=torch.float32, device=device)
             logit = model(x)
-            loss = criterion(logit.unsqueeze(0), y)
-            optimizer.zero_grad()
+            loss = criterion(logit.unsqueeze(0), y) / accum_steps
             loss.backward()
-            optimizer.step()
-            train_loss += loss.item()
 
-        # Validate
-        model.eval()
-        val_loss = 0.0
-        with torch.no_grad():
-            for d in val_data:
-                x = torch.from_numpy(d["features"]).to(device)
-                y = torch.tensor([d["y"]], dtype=torch.float32, device=device)
-                logit = model(x)
-                val_loss += criterion(logit.unsqueeze(0), y).item()
+            if (step + 1) % accum_steps == 0 or (step + 1) == len(indices):
+                optimizer.step()
+                optimizer.zero_grad()
 
-        val_loss /= max(len(val_data), 1)
-
-        if val_loss < best_val_loss:
-            best_val_loss = val_loss
-            best_state = {k: v.clone() for k, v in model.state_dict().items()}
-            wait = 0
-        else:
-            wait += 1
-            if wait >= patience:
-                break
-
-    if best_state is not None:
-        model.load_state_dict(best_state)
-    return epoch + 1
+    return n_epochs
 
 
 def evaluate(model, test_data, device):
@@ -248,11 +250,12 @@ def main():
     parser.add_argument("--emb_dirs", nargs="+", required=True)
     parser.add_argument("--source_name", required=True)
     parser.add_argument("--D", type=int, default=32, help="Projection dim")
-    parser.add_argument("--K", type=int, default=5, help="Number of prototypes")
+    parser.add_argument("--K", type=int, default=20, help="Number of prototypes")
     parser.add_argument("--lr", type=float, default=1e-3)
     parser.add_argument("--weight_decay", type=float, default=1e-2)
-    parser.add_argument("--max_epochs", type=int, default=200)
-    parser.add_argument("--patience", type=int, default=20)
+    parser.add_argument("--n_epochs", type=int, default=100)
+    parser.add_argument("--accum_steps", type=int, default=4)
+    parser.add_argument("--temperature", type=float, default=1.0)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--n_folds", type=int, default=5)
     parser.add_argument("--output_dir", required=True)
@@ -260,6 +263,7 @@ def main():
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"PrototypeMIL: D={args.D}, K={args.K}, lr={args.lr}, wd={args.weight_decay}, "
+          f"epochs={args.n_epochs}, accum={args.accum_steps}, tau={args.temperature}, "
           f"seed={args.seed}, device={device}")
 
     torch.manual_seed(args.seed)
@@ -292,41 +296,34 @@ def main():
     fold_metrics = []
     fold_assignments = {}
 
-    for fold_idx, (train_val_idx, test_idx) in enumerate(
+    for fold_idx, (train_idx, test_idx) in enumerate(
             cv.split(np.zeros(len(subjects)), y, group_ids)):
 
         fold_dir = os.path.join(output_dir, f"fold_{fold_idx}")
         os.makedirs(fold_dir, exist_ok=True)
 
-        # Split train_val into train/val (80/20)
-        n_tv = len(train_val_idx)
-        perm = np.random.RandomState(args.seed + fold_idx).permutation(n_tv)
-        n_train = int(0.8 * n_tv)
-        train_idx = train_val_idx[perm[:n_train]]
-        val_idx = train_val_idx[perm[n_train:]]
-
         train_data = [subjects[i] for i in train_idx]
-        val_data = [subjects[i] for i in val_idx]
         test_data = [subjects[i] for i in test_idx]
 
         fold_assignments[f"fold_{fold_idx}"] = {
             "train": [sids[i] for i in train_idx],
-            "val": [sids[i] for i in val_idx],
             "test": [sids[i] for i in test_idx],
         }
 
         # Create model
         input_dim = subjects[0]["features"].shape[1]
         model = PrototypeMIL(input_dim=input_dim, proj_dim=args.D,
-                              n_prototypes=args.K).to(device)
+                              n_prototypes=args.K,
+                              temperature=args.temperature).to(device)
 
-        # Init prototypes via K-Means
-        model.init_prototypes([s["features"] for s in train_data], device)
+        # Init prototypes
+        model.init_prototypes([s["features"] for s in train_data], device,
+                              method="random")
 
         # Train
-        n_epochs = train_fold(model, train_data, val_data, device,
+        n_epochs = train_fold(model, train_data, device,
                                args.lr, args.weight_decay,
-                               args.max_epochs, args.patience)
+                               args.n_epochs, args.accum_steps)
 
         # Evaluate
         metrics, y_true, y_pred, y_proba = evaluate(model, test_data, device)
@@ -367,6 +364,8 @@ def main():
     summary["K"] = args.K
     summary["lr"] = args.lr
     summary["weight_decay"] = args.weight_decay
+    summary["n_epochs"] = args.n_epochs
+    summary["temperature"] = args.temperature
     summary["seed"] = args.seed
     summary["classes"] = classes
     summary["type"] = "prototype_mil"
