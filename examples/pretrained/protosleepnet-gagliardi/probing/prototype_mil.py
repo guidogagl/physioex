@@ -256,6 +256,9 @@ def main():
     parser.add_argument("--n_epochs", type=int, default=100)
     parser.add_argument("--accum_steps", type=int, default=4)
     parser.add_argument("--temperature", type=float, default=1.0)
+    parser.add_argument("--no_threshold", action="store_true",
+                        help="Disable similarity threshold (use all epochs)")
+    parser.add_argument("--init_method", default="kmeans", choices=["kmeans", "random"])
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--n_folds", type=int, default=5)
     parser.add_argument("--output_dir", required=True)
@@ -312,40 +315,74 @@ def main():
 
         # Create model
         input_dim = subjects[0]["features"].shape[1]
+        sim_thresh = 999.0 if args.no_threshold else None
         model = PrototypeMIL(input_dim=input_dim, proj_dim=args.D,
                               n_prototypes=args.K,
-                              temperature=args.temperature).to(device)
+                              temperature=args.temperature,
+                              sim_threshold=sim_thresh).to(device)
 
         # Init prototypes
         model.init_prototypes([s["features"] for s in train_data], device,
-                              method="random")
+                              method=args.init_method)
 
         # Train
         n_epochs = train_fold(model, train_data, device,
                                args.lr, args.weight_decay,
                                args.n_epochs, args.accum_steps)
 
-        # Evaluate
-        metrics, y_true, y_pred, y_proba = evaluate(model, test_data, device)
-        fold_metrics.append(metrics)
+        # Evaluate train and test
+        train_metrics, tr_yt, tr_yp, tr_prob = evaluate(model, train_data, device)
+        test_metrics, te_yt, te_yp, te_prob = evaluate(model, test_data, device)
+        fold_metrics.append(test_metrics)
 
-        print(f"    Fold {fold_idx}: acc={metrics['accuracy']:.4f}  "
-              f"f1={metrics['f1_macro']:.4f}  kappa={metrics['kappa']:.4f}  "
+        print(f"    Fold {fold_idx}: train_f1={train_metrics['f1_macro']:.4f}  "
+              f"test_f1={test_metrics['f1_macro']:.4f}  "
+              f"test_acc={test_metrics['accuracy']:.4f}  "
               f"(trained {n_epochs} epochs)")
 
-        # Save
+        # Save model
         torch.save(model.state_dict(), os.path.join(fold_dir, "model.pt"))
-        predictions = {}
+
+        # Save prototypes (codebook) and projection weights
+        with torch.no_grad():
+            np.save(os.path.join(fold_dir, "prototypes.npy"),
+                    model.prototypes.cpu().numpy())
+            np.save(os.path.join(fold_dir, "projection_weight.npy"),
+                    model.proj.weight.cpu().numpy())
+            np.save(os.path.join(fold_dir, "projection_bias.npy"),
+                    model.proj.bias.cpu().numpy())
+            np.save(os.path.join(fold_dir, "classifier_weight.npy"),
+                    model.classifier.weight.cpu().numpy())
+
+        # Save test predictions
+        test_predictions = {}
         for i, d in enumerate(test_data):
-            predictions[d["sid"]] = {
-                "y_true": int(y_true[i]),
-                "y_pred": int(y_pred[i]),
-                "y_proba": float(y_proba[i]),
+            test_predictions[d["sid"]] = {
+                "y_true": int(te_yt[i]),
+                "y_pred": int(te_yp[i]),
+                "y_proba": float(te_prob[i]),
             }
         with open(os.path.join(fold_dir, "predictions.json"), "w") as f:
-            json.dump(predictions, f)
+            json.dump(test_predictions, f)
+
+        # Save train predictions
+        train_predictions = {}
+        for i, d in enumerate(train_data):
+            train_predictions[d["sid"]] = {
+                "y_true": int(tr_yt[i]),
+                "y_pred": int(tr_yp[i]),
+                "y_proba": float(tr_prob[i]),
+            }
+        with open(os.path.join(fold_dir, "train_predictions.json"), "w") as f:
+            json.dump(train_predictions, f)
+
+        # Save per-fold metrics (train + test)
+        fold_detail = {
+            "train": train_metrics,
+            "test": test_metrics,
+        }
         with open(os.path.join(fold_dir, "metrics.json"), "w") as f:
-            json.dump(metrics, f, indent=2)
+            json.dump(fold_detail, f, indent=2)
 
     with open(os.path.join(output_dir, "fold_assignments.json"), "w") as f:
         json.dump(fold_assignments, f)
@@ -366,6 +403,8 @@ def main():
     summary["weight_decay"] = args.weight_decay
     summary["n_epochs"] = args.n_epochs
     summary["temperature"] = args.temperature
+    summary["no_threshold"] = args.no_threshold
+    summary["init_method"] = args.init_method
     summary["seed"] = args.seed
     summary["classes"] = classes
     summary["type"] = "prototype_mil"
