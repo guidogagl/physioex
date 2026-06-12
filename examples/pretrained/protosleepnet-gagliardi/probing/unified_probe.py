@@ -390,37 +390,54 @@ def main():
         if is_regression:
             clf = Ridge(alpha=1.0 / args.C)
             clf.fit(X_tr, y_tr)
-            y_pred = clf.predict(X_te)
-            mae = mean_absolute_error(y_te, y_pred)
-            r2 = r2_score(y_te, y_pred)
-            metrics = {"mae": float(mae), "r2": float(r2)}
-            print(f"    Fold {fold_idx}: MAE={mae:.3f}  R2={r2:.3f}")
+            y_pred_te = clf.predict(X_te)
+            y_pred_tr = clf.predict(X_tr)
+            test_metrics = {"mae": float(mean_absolute_error(y_te, y_pred_te)),
+                            "r2": float(r2_score(y_te, y_pred_te))}
+            train_metrics = {"mae": float(mean_absolute_error(y_tr, y_pred_tr)),
+                             "r2": float(r2_score(y_tr, y_pred_tr))}
+            print(f"    Fold {fold_idx}: train MAE={train_metrics['mae']:.3f} R2={train_metrics['r2']:.3f}"
+                  f"  test MAE={test_metrics['mae']:.3f} R2={test_metrics['r2']:.3f}")
         else:
             if len(np.unique(y_tr)) < 2:
                 continue
             clf = LogisticRegression(max_iter=1000, C=args.C, solver="lbfgs")
             clf.fit(X_tr, y_tr)
-            y_pred = clf.predict(X_te)
+            y_pred_te = clf.predict(X_te)
+            y_pred_tr = clf.predict(X_tr)
             y_proba = clf.predict_proba(X_te)
-            acc = accuracy_score(y_te, y_pred)
-            f1 = f1_score(y_te, y_pred, average="macro", zero_division=0)
-            kappa = cohen_kappa_score(y_te, y_pred)
-            metrics = {"accuracy": float(acc), "f1_macro": float(f1), "kappa": float(kappa)}
-            print(f"    Fold {fold_idx}: acc={acc:.4f}  f1={f1:.4f}  kappa={kappa:.4f}")
+            test_metrics = {"accuracy": float(accuracy_score(y_te, y_pred_te)),
+                            "f1_macro": float(f1_score(y_te, y_pred_te, average="macro", zero_division=0)),
+                            "kappa": float(cohen_kappa_score(y_te, y_pred_te))}
+            train_metrics = {"accuracy": float(accuracy_score(y_tr, y_pred_tr)),
+                             "f1_macro": float(f1_score(y_tr, y_pred_tr, average="macro", zero_division=0)),
+                             "kappa": float(cohen_kappa_score(y_tr, y_pred_tr))}
+            print(f"    Fold {fold_idx}: train f1={train_metrics['f1_macro']:.4f}"
+                  f"  test f1={test_metrics['f1_macro']:.4f}")
 
-        fold_metrics.append(metrics)
+        fold_metrics.append({"train": train_metrics, "test": test_metrics})
 
-        # Save
+        # Save predictions (test)
         predictions = {}
         for i, idx in enumerate(test_idx):
-            entry = {"y_true": float(y_te[i]), "y_pred": float(y_pred[i])}
+            entry = {"y_true": float(y_te[i]), "y_pred": float(y_pred_te[i])}
             if not is_regression:
                 entry["y_proba"] = y_proba[i].tolist()
             predictions[sids[idx]] = entry
+
+        # Save predictions (train)
+        train_predictions = {}
+        for i, idx in enumerate(train_idx):
+            train_predictions[sids[idx]] = {
+                "y_true": float(y_tr[i]), "y_pred": float(y_pred_tr[i]),
+            }
+
         with open(os.path.join(fold_dir, "predictions.json"), "w") as f:
             json.dump(predictions, f)
+        with open(os.path.join(fold_dir, "train_predictions.json"), "w") as f:
+            json.dump(train_predictions, f)
         with open(os.path.join(fold_dir, "metrics.json"), "w") as f:
-            json.dump(metrics, f, indent=2)
+            json.dump({"train": train_metrics, "test": test_metrics}, f, indent=2)
 
     with open(os.path.join(output_dir, "fold_assignments.json"), "w") as f:
         json.dump(fold_assignments, f)
@@ -429,10 +446,11 @@ def main():
         print("  No valid folds")
         return
 
-    summary = {}
-    for key in fold_metrics[0]:
-        vals = [m[key] for m in fold_metrics]
-        summary[key] = {"mean": float(np.mean(vals)), "std": float(np.std(vals))}
+    summary = {"train": {}, "test": {}}
+    for split in ["train", "test"]:
+        for key in fold_metrics[0][split]:
+            vals = [m[split][key] for m in fold_metrics]
+            summary[split][key] = {"mean": float(np.mean(vals)), "std": float(np.std(vals))}
     summary["n_folds"] = len(fold_metrics)
     summary["n_subjects"] = n_subj
     summary["mode"] = args.mode
@@ -449,11 +467,13 @@ def main():
         json.dump(summary, f, indent=2)
 
     if is_regression:
-        print(f"\n  Summary: MAE={summary['mae']['mean']:.3f}+/-{summary['mae']['std']:.3f}  "
-              f"R2={summary['r2']['mean']:.3f}+/-{summary['r2']['std']:.3f}")
+        tr, te = summary["train"], summary["test"]
+        print(f"\n  Train: MAE={tr['mae']['mean']:.3f}  R2={tr['r2']['mean']:.3f}")
+        print(f"  Test:  MAE={te['mae']['mean']:.3f}  R2={te['r2']['mean']:.3f}")
     else:
-        print(f"\n  Summary: f1={summary['f1_macro']['mean']:.4f}+/-{summary['f1_macro']['std']:.4f}  "
-              f"acc={summary['accuracy']['mean']:.4f}+/-{summary['accuracy']['std']:.4f}")
+        tr, te = summary["train"], summary["test"]
+        print(f"\n  Train: f1={tr['f1_macro']['mean']:.4f}")
+        print(f"  Test:  f1={te['f1_macro']['mean']:.4f}+/-{te['f1_macro']['std']:.4f}")
     print(f"Results: {output_dir}/")
 
 
