@@ -26,7 +26,7 @@ from sklearn.preprocessing import StandardScaler
 AHI_CUTOFF = 5
 
 
-def load_subjects(emb_dirs, codebook):
+def load_subjects(emb_dirs, codebook, exclude_mild=False):
     """Load subjects and compute codebook features."""
     K = len(codebook)
     subjects = []
@@ -38,6 +38,10 @@ def load_subjects(emb_dirs, codebook):
                 meta = json.load(f)
             ahi = meta.get("ahi")
             if ahi is None:
+                continue
+
+            # Skip mild apnea (5 <= AHI < 15) if requested
+            if exclude_mild and 5 <= ahi < 15:
                 continue
 
             emb_path = os.path.join(emb_dir, f"{sid}_embeddings.npy")
@@ -125,6 +129,8 @@ def main():
     parser.add_argument("--source_name", required=True)
     parser.add_argument("--C", type=float, default=1.0)
     parser.add_argument("--scaler", action="store_true")
+    parser.add_argument("--exclude_mild", action="store_true",
+                        help="Exclude mild apnea (5<=AHI<15), keep only <5 vs >=15")
     parser.add_argument("--penalty", default="l2", choices=["l1", "l2"])
     parser.add_argument("--features", default="all",
                         choices=["all", "prop", "prop_bout", "rem_only"])
@@ -137,7 +143,7 @@ def main():
     print(f"AHI probe: K={K}, C={args.C}, scaler={args.scaler}, "
           f"penalty={args.penalty}, features={args.features}")
 
-    subjects = load_subjects(args.emb_dirs, codebook)
+    subjects = load_subjects(args.emb_dirs, codebook, args.exclude_mild)
     print(f"Loaded {len(subjects)} subjects")
 
     n_pos = sum(1 for s in subjects if s["label"] == 1)
@@ -250,6 +256,7 @@ def main():
         "penalty": args.penalty,
         "features": args.features,
         "class_weight": "balanced",
+        "exclude_mild": args.exclude_mild,
         "cv": "LOSO",
         "feature_dim": int(X.shape[1]),
     }
