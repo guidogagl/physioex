@@ -19,6 +19,7 @@ import numpy as np
 from scipy.spatial.distance import cdist
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, f1_score, cohen_kappa_score, confusion_matrix
+from sklearn.preprocessing import StandardScaler
 
 
 RBDSQ_CUTOFF = 5
@@ -89,14 +90,22 @@ def load_subjects(emb_dirs, codebook):
 
 def run_loso_fold(args):
     """Run a single LOSO fold. Returns (sid, y_true, y_pred, y_proba, train_acc)."""
-    i, X, y, sids, C = args
+    i, X, y, sids, C, use_scaler, penalty = args
     mask = np.ones(len(X), dtype=bool)
     mask[i] = False
 
-    X_train, y_train = X[mask], y[mask]
-    X_test = X[i:i+1]
+    X_train, y_train = X[mask].copy(), y[mask]
+    X_test = X[i:i+1].copy()
 
-    clf = LogisticRegression(C=C, solver="lbfgs", max_iter=1000)
+    if use_scaler:
+        scaler = StandardScaler()
+        X_train = scaler.fit_transform(X_train)
+        X_test = scaler.transform(X_test)
+
+    if penalty == "l1":
+        clf = LogisticRegression(C=C, penalty="l1", solver="saga", max_iter=5000)
+    else:
+        clf = LogisticRegression(C=C, penalty="l2", solver="lbfgs", max_iter=1000)
     clf.fit(X_train, y_train)
 
     y_pred = clf.predict(X_test)[0]
@@ -115,13 +124,19 @@ def main():
     parser.add_argument("--codebook", required=True, help="Path to M24.npy codebook")
     parser.add_argument("--source_name", required=True)
     parser.add_argument("--C", type=float, default=1.0)
+    parser.add_argument("--scaler", action="store_true", help="Apply StandardScaler")
+    parser.add_argument("--penalty", default="l2", choices=["l1", "l2"])
+    parser.add_argument("--features", default="all",
+                        choices=["all", "prop", "prop_bout", "rem_only"],
+                        help="Feature subset: all (72d), prop (24d), prop_bout (48d), rem_only (K_rem*3)")
     parser.add_argument("--n_jobs", type=int, default=-1)
     parser.add_argument("--output_dir", required=True)
     args = parser.parse_args()
 
     codebook = np.load(args.codebook).astype(np.float32)
     K = len(codebook)
-    print(f"RBDSQ probe: codebook={args.codebook} (K={K}), C={args.C}")
+    print(f"RBDSQ probe: K={K}, C={args.C}, scaler={args.scaler}, "
+          f"penalty={args.penalty}, features={args.features}")
 
     subjects = load_subjects(args.emb_dirs, codebook)
     print(f"Loaded {len(subjects)} subjects")
@@ -129,15 +144,58 @@ def main():
     n_pos = sum(1 for s in subjects if s["label"] == 1)
     n_neg = sum(1 for s in subjects if s["label"] == 0)
     print(f"  RBD- (RBDSQ<5): {n_neg}, RBD+ (RBDSQ>=5): {n_pos}")
-    print(f"  Feature dim: {subjects[0]['features'].shape[0]}")
 
-    X = np.array([s["features"] for s in subjects], dtype=np.float32)
+    # Select feature subset
+    # Full features per subject: [prop(K), bout_mean(K), bout_std(K)] = 3K
+    X_full = np.array([s["features"] for s in subjects], dtype=np.float32)
+
+    if args.features == "prop":
+        X = X_full[:, :K]  # proportions only
+    elif args.features == "prop_bout":
+        X = X_full[:, :2*K]  # proportions + bout_mean
+    elif args.features == "rem_only":
+        # Identify REM prototypes (>= 30% REM from GT labels)
+        # Quick heuristic: load labels and check
+        rem_protos = []
+        all_assign = []
+        all_labels = []
+        for s in subjects:
+            emb_dir = None
+            for d in args.emb_dirs:
+                if os.path.exists(os.path.join(d, s["sid"] + "_labels.npy")):
+                    emb_dir = d
+                    break
+            if emb_dir:
+                labels = np.load(os.path.join(emb_dir, s["sid"] + "_labels.npy")).astype(np.int64)
+                emb = np.load(os.path.join(emb_dir, s["sid"] + "_embeddings.npy")).astype(np.float32)
+                n = min(len(emb), len(labels))
+                assign = cdist(emb[:n], codebook).argmin(axis=1)
+                all_assign.append(assign)
+                all_labels.append(labels[:n])
+        all_assign = np.concatenate(all_assign)
+        all_labels = np.concatenate(all_labels)
+        for k in range(K):
+            mask = all_assign == k
+            sl = all_labels[mask]
+            valid = sl >= 0
+            if valid.sum() > 0 and (sl[valid] == 4).sum() / valid.sum() >= 0.30:
+                rem_protos.append(k)
+        print(f"  REM prototypes: {rem_protos}")
+        # Select columns for REM protos: prop, bout_mean, bout_std
+        cols = []
+        for k in rem_protos:
+            cols.extend([k, K + k, 2 * K + k])
+        X = X_full[:, cols]
+    else:
+        X = X_full
+
     y = np.array([s["label"] for s in subjects])
     sids = [s["sid"] for s in subjects]
     N = len(subjects)
+    print(f"  Feature dim: {X.shape[1]}")
 
     # LOSO with parallel execution
-    fold_args = [(i, X, y, sids, args.C) for i in range(N)]
+    fold_args = [(i, X, y, sids, args.C, args.scaler, args.penalty) for i in range(N)]
 
     n_jobs = args.n_jobs if args.n_jobs > 0 else os.cpu_count()
     print(f"  Running {N} LOSO folds on {n_jobs} workers...")
@@ -197,6 +255,9 @@ def main():
         "codebook": args.codebook,
         "K": K,
         "C": args.C,
+        "scaler": args.scaler,
+        "penalty": args.penalty,
+        "features": args.features,
         "cv": "LOSO",
         "feature_dim": int(X.shape[1]),
     }
