@@ -103,7 +103,7 @@ def main():
     fs, nfft = 100.0, 256
     freq_axis = np.arange(129) * fs / nfft
 
-    channels = ["EEG", "EOG", "EMG"]
+    channels = ["EEG", "EMG", "EOG"]  # sorted alphabetically as in _inputs.npy
 
     # Plot
     fig, axes = plt.subplots(args.K, 3, figsize=(18, 4 * args.K))
