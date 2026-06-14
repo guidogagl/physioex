@@ -59,9 +59,9 @@ def optimize_all_prototypes(
     total = M * N
     codebook_t = torch.from_numpy(codebook).float().to(device)
 
-    # cuDNN RNN backward requires train mode; params are frozen so
-    # only x receives gradients. Dropout acts as mild regularization.
-    model.train()
+    # cuDNN RNN backward requires train mode, but we need eval mode
+    # for deterministic dropout/batchnorm. Disable cuDNN instead.
+    torch.backends.cudnn.enabled = False
 
     # Initialize
     if init is not None:
