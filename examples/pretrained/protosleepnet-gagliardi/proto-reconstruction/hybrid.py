@@ -101,7 +101,7 @@ def main():
     device = get_device(args)
     print(f"Device: {device}")
 
-    codebook = load_codebook(args.backbone, m=args.m)
+    codebook = load_codebook(args.backbone, m=args.m, codebook_path=args.codebook_path)
     M = codebook.shape[0]
     N = args.top_k
     print(f"Codebook: M={M}, d={codebook.shape[1]}")
@@ -114,7 +114,7 @@ def main():
           f"real epochs per proto: min={n_real.min()}, max={n_real.max()}, "
           f"mean={n_real.mean():.0f}")
 
-    model = load_frozen_model(args.backbone, device)
+    model = load_frozen_model(args.backbone, device, checkpoint_path=args.checkpoint_path)
     print(f"Model loaded, params: {sum(p.numel() for p in model.parameters()):,}")
     print(f"Optimizing {M}×{N} = {M*N} samples, {args.n_steps} steps")
 

@@ -52,12 +52,13 @@ def get_paths(backbone, m=24):
 
 # ── Model loading ────────────────────────────────────────────────────
 
-def load_frozen_model(backbone, device):
+def load_frozen_model(backbone, device, checkpoint_path=None):
     """Load ProtoSleepNet checkpoint with all params frozen."""
-    paths = get_paths(backbone)
+    if checkpoint_path is None:
+        checkpoint_path = get_paths(backbone)["checkpoint"]
     model = build_model(backbone=backbone)
     ckpt = torch.load(
-        paths["checkpoint"], map_location="cpu", weights_only=False
+        checkpoint_path, map_location="cpu", weights_only=False
     )
     if isinstance(ckpt, dict) and "model_state_dict" in ckpt:
         model.load_state_dict(ckpt["model_state_dict"])
@@ -68,10 +69,11 @@ def load_frozen_model(backbone, device):
     return model.to(device).eval()
 
 
-def load_codebook(backbone, m=24):
+def load_codebook(backbone, m=24, codebook_path=None):
     """Load VQ codebook (M, d_model) as float32 numpy array."""
-    paths = get_paths(backbone, m)
-    return np.load(paths["codebook"]).astype(np.float32)
+    if codebook_path is None:
+        codebook_path = get_paths(backbone, m)["codebook"]
+    return np.load(codebook_path).astype(np.float32)
 
 
 # ── L2 distance (must match VQ assignment) ───────────────────────────
@@ -260,6 +262,14 @@ def add_common_args(parser):
     parser.add_argument("--gpu_id", type=int, default=0)
     parser.add_argument("--output_dir", type=str, default=None)
     parser.add_argument("--force", action="store_true", help="Overwrite existing output")
+    parser.add_argument(
+        "--codebook_path", type=str, default=None,
+        help="Override codebook .npy path (for HPC)",
+    )
+    parser.add_argument(
+        "--checkpoint_path", type=str, default=None,
+        help="Override model checkpoint path (for HPC)",
+    )
     return parser
 
 
