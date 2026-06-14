@@ -59,6 +59,10 @@ def optimize_all_prototypes(
     total = M * N
     codebook_t = torch.from_numpy(codebook).float().to(device)
 
+    # cuDNN RNN backward requires train mode; params are frozen so
+    # only x receives gradients. Dropout acts as mild regularization.
+    model.train()
+
     # Initialize
     if init is not None:
         x = init.clone().detach().to(device).requires_grad_(True)
