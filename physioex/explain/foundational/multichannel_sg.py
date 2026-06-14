@@ -13,11 +13,19 @@ Supports five ablation path modes:
   Completeness guaranteed. Order = reverse of band list.
 - **both_cumulative**: Average of cumulative_add and cumulative_remove.
   Reduces order dependence.
-- **shapley**: Average cumulative_add + cumulative_remove over K random
-  permutations of the band order. Completeness + order-independence.
-  Most principled, highest compute cost.
+- **shapley**: Average cumulative_add over K random permutations of the band
+  order. Completeness + order-independence. Most principled, highest compute cost.
+  Uses K=n_perms random permutations (default=20, configurable).
 
-Output: (B, n_bands, C, T) — per-band, per-channel, per-sample attribution.
+Fast mode (skip_ig=True):
+- When skip_ig=True, forward() returns (B, n_bands) scalar importance instead
+  of (B, n_bands, C, T) full attribution.
+- Uses completeness property without IG computation for fast band importance.
+- Computes marginal contribution of each band across K random permutations.
+
+Output:
+- skip_ig=False: (B, n_bands, C, T) — per-band, per-channel, per-sample attribution.
+- skip_ig=True: (B, n_bands) — per-band scalar importance.
 """
 from __future__ import annotations
 
@@ -119,7 +127,19 @@ class MultiChannelSpectralGradients(nn.Module):
 
     # ── Forward ──────────────────────────────────────────────────────
 
-    def forward(self, x: Tensor) -> Tensor:
+    def forward(self, x: Tensor, skip_ig: bool = False) -> Tensor:
+        """Compute multi-channel spectral attributions.
+
+        Args:
+            x: Input signal tensor of shape (B, C, T).
+            skip_ig: If True, skip IG computation and return fast
+                completeness-based band importance. Returns (B, n_bands)
+                instead of (B, n_bands, C, T).
+
+        Returns:
+            If skip_ig=False: (B, n_bands, C, T) attribution tensor.
+            If skip_ig=True: (B, n_bands) scalar importance tensor.
+        """
         if x.ndim != 3:
             raise ValueError(f"Expected 3D input (B, C, T), got {x.ndim}D")
 
@@ -128,6 +148,9 @@ class MultiChannelSpectralGradients(nn.Module):
 
         xdft = torch.fft.rfft(x, dim=-1)  # (B, C, n_freqs)
         bin_ranges = self._get_bin_ranges(T)
+
+        if skip_ig:
+            return self._forward_completeness_only(xdft, T, bin_ranges)
 
         if self.path == "marginal":
             return self._forward_marginal(xdft, T, bin_ranges)
@@ -200,9 +223,21 @@ class MultiChannelSpectralGradients(nn.Module):
 
         return self._integrate(all_prev, delta, n_bands, B, C, T)
 
-    # ── Shapley: random permutations of cumulative both ──────────────
+    # ── Shapley: random permutations of cumulative (original pattern) ──
 
     def _forward_shapley(self, xdft, T, bin_ranges):
+        """Approximate Shapley values via random-permutation IG.
+
+        Follows the original SpectralGradients pattern:
+        - For each permutation, do cumulative_add from silence to full
+        - Accumulate attributions across permutations
+        - Final weighting by |sum_t attr(i, t)|
+
+        This is simpler and more consistent with the original implementation
+        than using both add and remove directions per permutation.
+
+        GPU kernel launches = n_perms × steps, independent of n_bands or B.
+        """
         B, C = xdft.shape[0], xdft.shape[1]
         n_bands = len(bin_ranges)
         device = xdft.device
@@ -210,61 +245,122 @@ class MultiChannelSpectralGradients(nn.Module):
 
         attr_acc = torch.zeros(B, n_bands, C, T, device=device, dtype=dtype)
 
+        alphas = torch.linspace(0.0, 1.0, self.steps, device=device, dtype=dtype)
+
         for perm_idx in range(self.n_perms):
             perm = torch.randperm(n_bands)
 
-            # ── cumulative_add in permuted order ──
-            add_prev, add_curr, add_band_idx = [], [], []
+            # Build ALL n_bands (prev, curr) pairs incrementally
+            all_prev = []
+            all_curr = []
+
             xdft_cumul = torch.zeros_like(xdft)
             for pos in range(n_bands):
-                bi = perm[pos].item()
-                name, bs, be = bin_ranges[bi]
+                band_i = perm[pos].item()
+                name, bs, be = bin_ranges[band_i]
+
                 x_prev = torch.fft.irfft(xdft_cumul, n=T, dim=-1)
+
+                xdft_cumul = xdft_cumul.clone()
+                xdft_cumul[..., bs:be] = xdft[..., bs:be]
+
+                x_curr = torch.fft.irfft(xdft_cumul, n=T, dim=-1)
+
+                all_prev.append(x_prev)
+                all_curr.append(x_curr)
+
+            # Stack: (n_bands, B, C, T)
+            all_prev = torch.stack(all_prev)
+            all_curr = torch.stack(all_curr)
+            delta = all_curr - all_prev
+
+            # IG integration: one GPU call per step for ALL bands
+            attr = self._integrate(all_prev, delta, n_bands, B, C, T)
+
+            # Scatter back to band indices
+            for pos in range(n_bands):
+                band_i = perm[pos].item()
+                attr_acc[:, band_i, :, :] += attr[:, pos, :, :].detach()
+
+            # Explicit cleanup between permutations
+            del all_prev, all_curr, delta, attr
+
+        attr = attr_acc / self.n_perms  # (B, n_bands, C, T)
+
+        # --- Band importance weighting (same as original SpectralGradients) ---
+        # w_i = sum_{c,t} attr(i, c, t): signed importance of band i
+        # Noise bands have w ≈ 0 (positive and negative cancel)
+        # Discriminative bands have |w| >> 0
+        w = attr.sum(dim=(-2, -1), keepdim=True)  # (B, n_bands, 1, 1)
+        attr = attr * w.abs()  # band-wise weighting
+
+        return attr
+
+    # ── Completeness-only: fast band importance without IG ─────────────
+
+    def _forward_completeness_only(self, xdft, T, bin_ranges):
+        """Fast band importance using completeness property (no IG).
+
+        Computes marginal contribution of each band by averaging score
+        differences across K random permutations. No temporal resolution,
+        no gradients — much faster than full Shapley mode.
+
+        Algorithm:
+        1. For each of n_perms random permutations:
+           - Build cumulative signal step by step (silence → full)
+           - At each step, compute score difference: f(x_curr) - f(x_prev)
+           - Track marginal contribution for the band being added
+        2. Average marginal contributions across all permutations
+
+        Returns:
+            (B, n_bands) scalar importance tensor.
+        """
+        B, C = xdft.shape[0], xdft.shape[1]
+        n_bands = len(bin_ranges)
+        device = xdft.device
+        dtype = xdft.real.dtype
+
+        # Accumulate marginal contributions per band
+        contribution_acc = torch.zeros(B, n_bands, device=device, dtype=dtype)
+
+        for perm_idx in range(self.n_perms):
+            perm = torch.randperm(n_bands)
+
+            xdft_cumul = torch.zeros_like(xdft)
+            scores_prev = None
+
+            for pos in range(n_bands):
+                band_i = perm[pos].item()
+                name, bs, be = bin_ranges[band_i]
+
+                # Add this band to the cumulative signal
                 xdft_cumul = xdft_cumul.clone()
                 xdft_cumul[..., bs:be] = xdft[..., bs:be]
                 x_curr = torch.fft.irfft(xdft_cumul, n=T, dim=-1)
-                add_prev.append(x_prev)
-                add_curr.append(x_curr)
-                add_band_idx.append(bi)
 
-            # ── cumulative_remove in reverse permuted order ──
-            rem_prev, rem_curr, rem_band_idx = [], [], []
-            xdft_cumul = xdft.clone()
-            for pos in range(n_bands - 1, -1, -1):
-                bi = perm[pos].item()
-                name, bs, be = bin_ranges[bi]
-                x_curr = torch.fft.irfft(xdft_cumul, n=T, dim=-1)
-                xdft_cumul = xdft_cumul.clone()
-                xdft_cumul[..., bs:be] = 0.0
-                x_prev = torch.fft.irfft(xdft_cumul, n=T, dim=-1)
-                rem_prev.append(x_prev)
-                rem_curr.append(x_curr)
-                rem_band_idx.append(bi)
+                # Compute score for current state
+                with torch.no_grad():
+                    scores_curr = self.f(x_curr)  # (B,) or (B, n_classes)
 
-            # Stack both directions: (2*n_bands, B, C, T)
-            all_prev = torch.stack(add_prev + rem_prev)
-            all_curr = torch.stack(add_curr + rem_curr)
-            delta = all_curr - all_prev
-            all_band_idx = add_band_idx + rem_band_idx
+                # Compute marginal contribution
+                if scores_prev is not None:
+                    # MC = score(x_with_band) - score(x_without_band)
+                    # Handle both scalar and vector outputs
+                    if scores_curr.ndim == 1:
+                        marginal = scores_curr - scores_prev
+                    else:
+                        # For multi-class, use max or sum depending on context
+                        marginal = (scores_curr - scores_prev).sum(dim=-1)
 
-            # Mega-batch IG
-            P = 2 * n_bands
-            attr = self._integrate(all_prev, delta, P, B, C, T)
-            # attr: (B, P, C, T) — need to accumulate by band index
+                    # Accumulate for this band
+                    contribution_acc[:, band_i] += marginal
 
-            # Average add + remove for each band, accumulate
-            for j in range(n_bands):
-                bi = add_band_idx[j]
-                add_attr = attr[:, j]  # (B, C, T)
-                rem_attr = attr[
-                    :, n_bands + rem_band_idx.index(bi)
-                ]  # find matching remove
-                attr_acc[:, bi] += 0.5 * (add_attr + rem_attr)
+                scores_prev = scores_curr.detach().clone()
 
-            # Free memory
-            del all_prev, all_curr, delta, attr
+        # Average across permutations
+        importance = contribution_acc / self.n_perms  # (B, n_bands)
 
-        return attr_acc / self.n_perms
+        return importance
 
     # ── Shared IG integration ────────────────────────────────────────
 

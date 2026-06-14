@@ -51,7 +51,9 @@ def main():
         description="Fine-tune ProtoSleepNet epoch encoder on Alzheimer HC"
     )
     parser.add_argument("--backbone", type=str, required=True, choices=["seq", "st"])
-    parser.add_argument("--checkpoint", type=str, required=True)
+    parser.add_argument("--checkpoint", type=str, default=None)
+    parser.add_argument("--from_scratch", action="store_true",
+                        help="Train from random init (no checkpoint, no freeze)")
     parser.add_argument("--gpu_id", type=int, default=0)
     parser.add_argument("--output_dir", type=str, default="finetune_alzheimer_output")
     parser.add_argument("--lr", type=float, default=1e-5)
@@ -70,20 +72,29 @@ def main():
     )
 
     # ── Load model ───────────────────────────────────────────────
-    print(f"Loading ProtoSleepNet ({args.backbone}) from {args.checkpoint}")
-    model = load_model(args.backbone, args.checkpoint, device)
-    print(f"Params: {sum(p.numel() for p in model.parameters()):,}")
+    if args.from_scratch:
+        print(f"Training ProtoSleepNet ({args.backbone}) from scratch")
+        factory = getattr(ProtoSleepNet, BACKBONE_CONFIG[args.backbone]["factory"])
+        model = factory(n_channels=3, **MIXER_KWARGS).to(device)
+        n_trainable = sum(p.numel() for p in model.parameters())
+        print(f"Params (all trainable): {n_trainable:,}")
+    else:
+        if args.checkpoint is None:
+            parser.error("--checkpoint is required unless --from_scratch is set")
+        print(f"Loading ProtoSleepNet ({args.backbone}) from {args.checkpoint}")
+        model = load_model(args.backbone, args.checkpoint, device)
+        print(f"Params: {sum(p.numel() for p in model.parameters()):,}")
 
-    # ── Freeze all, unfreeze epoch encoder only ──────────────────
-    for p in model.parameters():
-        p.requires_grad_(False)
-    for p in model.epoch_encoder.parameters():
-        p.requires_grad_(True)
+        # Freeze all, unfreeze epoch encoder only
+        for p in model.parameters():
+            p.requires_grad_(False)
+        for p in model.epoch_encoder.parameters():
+            p.requires_grad_(True)
 
-    n_trainable = sum(p.numel() for p in model.parameters() if p.requires_grad)
-    n_frozen = sum(p.numel() for p in model.parameters() if not p.requires_grad)
-    print(f"Trainable (epoch encoder): {n_trainable:,}")
-    print(f"Frozen: {n_frozen:,}")
+        n_trainable = sum(p.numel() for p in model.parameters() if p.requires_grad)
+        n_frozen = sum(p.numel() for p in model.parameters() if not p.requires_grad)
+        print(f"Trainable (epoch encoder): {n_trainable:,}")
+        print(f"Frozen: {n_frozen:,}")
 
     # ── Dataset: HC ──────────────────────────────────────────────
     DatasetClass = get_dataset("alzheimers")

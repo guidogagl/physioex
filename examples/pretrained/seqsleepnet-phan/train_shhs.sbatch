@@ -1,8 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=seqsleep-shhs-3ch
 #SBATCH --partition=zen4_h200
-#SBATCH --gres=gpu:nvidia_h200:1
-#SBATCH --nice=200
+#SBATCH --gres=gpu:1
 #SBATCH --account=pilot_2026_0042
 #SBATCH --time=02:00:00
 #SBATCH --output=/sofia/scratch/pilot/pilot_2026_0042/WORK/logs/%x_%j.out

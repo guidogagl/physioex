@@ -65,10 +65,11 @@ class ConceptAttribution:
     """Attribution map for a single embedding dimension (concept)."""
 
     dim: int  # embedding dimension index
-    attribution: Tensor  # (B, n_bands, C, T) raw SG map for this dim
+    attribution: Tensor  # (B, n_bands, C, T) raw SG map OR (B, n_bands) if skip_ig=True
     weight: float  # W[c, d] — probe weight for target class
     mask_value: float  # specificity mask value for this dim
     contribution: Tensor  # (B,) = W[c,d] * emb_normed_d per sample
+    skip_ig: bool = False  # Whether fast mode (no temporal resolution) was used
 
     @property
     def weighted_attribution(self) -> Tensor:
@@ -78,16 +79,23 @@ class ConceptAttribution:
     @property
     def channel_aggregated(self) -> Tensor:
         """(B, n_bands, T) attribution summed over channels."""
+        if self.skip_ig:
+            raise AttributeError("channel_aggregated not available in skip_ig mode (no temporal resolution)")
         return self.attribution.sum(dim=2)
 
     @property
     def band_energy(self) -> Tensor:
         """(n_bands,) total attribution energy per band (mean over B, sum over C and T)."""
+        if self.skip_ig:
+            # In skip_ig mode, attribution is (B, n_bands) - mean over B directly
+            return self.attribution.abs().mean(dim=0)
         return self.attribution.abs().mean(dim=0).sum(dim=(-2, -1))
 
     @property
     def channel_energy(self) -> Tensor:
         """(C,) total attribution energy per channel (mean over B, sum over bands and T)."""
+        if self.skip_ig:
+            raise AttributeError("channel_energy not available in skip_ig mode (no channel resolution)")
         return self.attribution.abs().mean(dim=0).sum(dim=(0, -1))
 
     @property
@@ -135,12 +143,17 @@ class ConceptualSpectralDecomposition(nn.Module):
             from the trained linear probe.
         fs: Sampling rate of the preprocessed signal (Hz).
         freq_step: SpectralGradients band width (Hz). Default 4.0.
-        steps: Integration steps per local IG. Default 10.
-        path: SG ablation direction ('both', 'low_to_high', 'high_to_low').
+        bands: Custom frequency bands. If None, uniform bands of width freq_step.
+        steps: Integration steps per local IG. Default 10. Ignored if skip_ig=True.
+        path: SG ablation direction ('marginal', 'cumulative_add', 'cumulative_remove',
+            'both_cumulative', 'shapley'). Default 'marginal'.
         specificity: Strategy for selecting class-specific dimensions.
             Default: MarginSpecificity(tau=0.5).
         mask_threshold: Dimensions with mask > threshold get their own map.
             Default 0.5.
+        skip_ig: If True, skip IG computation and return fast band importance only.
+            Returns (B, n_bands) instead of (B, n_bands, C, T). Default False.
+        n_perms: Number of permutations for Shapley path. Default 20.
         device: Torch device. Default: auto.
     """
 
@@ -155,6 +168,8 @@ class ConceptualSpectralDecomposition(nn.Module):
         path: str = "marginal",
         specificity: Optional[SpecificityStrategy] = None,
         mask_threshold: float = 0.5,
+        skip_ig: bool = False,
+        n_perms: int = 20,
         device: Optional[str] = None,
     ):
         super().__init__()
@@ -166,6 +181,8 @@ class ConceptualSpectralDecomposition(nn.Module):
         self.path = path
         self.specificity = specificity or MarginSpecificity(tau=0.5)
         self.mask_threshold = mask_threshold
+        self.skip_ig = skip_ig
+        self.n_perms = n_perms
         self.device = torch.device(
             device or ("cuda:0" if torch.cuda.is_available() else "cpu")
         )
@@ -307,9 +324,10 @@ class ConceptualSpectralDecomposition(nn.Module):
                 bands=self.bands,
                 steps=self.steps,
                 path=self.path,
+                n_perms=self.n_perms,
             )
 
-            attr_d = mcsg(x_prep)  # (B, n_bands, C, T)
+            attr_d = mcsg(x_prep, skip_ig=self.skip_ig)  # (B, n_bands) if skip_ig, else (B, n_bands, C, T)
 
             if band_freqs is None:
                 band_freqs = mcsg.band_frequencies()
@@ -324,6 +342,7 @@ class ConceptualSpectralDecomposition(nn.Module):
                 weight=w_val,
                 mask_value=mask_val,
                 contribution=contrib_d.detach(),
+                skip_ig=self.skip_ig,
             )
 
             logger.info(
@@ -333,13 +352,23 @@ class ConceptualSpectralDecomposition(nn.Module):
 
         # 5. Aggregate: class map = Σ_d W[c,d] · map_d
         if concepts:
-            class_attr = torch.zeros_like(next(iter(concepts.values())).attribution)
-            for d, concept in concepts.items():
-                class_attr = class_attr + concept.weighted_attribution
+            if self.skip_ig:
+                # In skip_ig mode: attribution is (B, n_bands), just weight and sum
+                class_attr = torch.zeros(B, next(iter(concepts.values())).attribution.shape[1], device=self.device)
+                for d, concept in concepts.items():
+                    class_attr = class_attr + concept.weight * concept.attribution
+            else:
+                # Full mode: attribution is (B, n_bands, C, T)
+                class_attr = torch.zeros_like(next(iter(concepts.values())).attribution)
+                for d, concept in concepts.items():
+                    class_attr = class_attr + concept.weighted_attribution
         else:
             # No concepts selected — return zeros
             n_bands_val = self._estimate_n_bands(T_prep)
-            class_attr = torch.zeros(B, n_bands_val, C_prep, T_prep, device=self.device)
+            if self.skip_ig:
+                class_attr = torch.zeros(B, n_bands_val, device=self.device)
+            else:
+                class_attr = torch.zeros(B, n_bands_val, C_prep, T_prep, device=self.device)
             band_freqs = torch.zeros(n_bands_val)
 
         return CSDResult(
