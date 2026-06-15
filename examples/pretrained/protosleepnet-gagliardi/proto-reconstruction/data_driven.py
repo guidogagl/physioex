@@ -31,7 +31,7 @@ from utils import (
     CONFIGS, STAGE_NAMES,
     add_common_args, resolve_output_dir, get_device,
     load_frozen_model, load_codebook,
-    build_prototype_index, build_train_loader,
+    build_prototype_index, build_train_loader, build_full_loader,
     save_prototype_results, save_summary,
 )
 
@@ -74,6 +74,17 @@ def main():
         "--embed_batch_size", type=int, default=256,
         help="Batch size for epoch_encode() during extraction",
     )
+    # Per-dataset mode
+    parser.add_argument("--dataset", type=str, default=None,
+                        help="Dataset name (e.g., hmc, shhs, mass, wsc, parkinsons, hpap, ...)")
+    parser.add_argument("--visit", type=int, default=None,
+                        help="Visit number (for shhs, wsc)")
+    parser.add_argument("--cohort", type=int, default=None,
+                        help="Cohort number (for mass)")
+    parser.add_argument("--subset", type=str, default=None,
+                        help="Subset name (for hpap: lab-full, lab-split)")
+    parser.add_argument("--recording", type=str, default=None,
+                        help="Recording type (for parkinsons: night, nap)")
     args = parser.parse_args()
 
     output_dir = resolve_output_dir(args, "data_driven")
@@ -92,11 +103,21 @@ def main():
     )
     print(f"  Model loaded, params: {sum(p.numel() for p in model.parameters()):,}")
 
-    _, train_loader = build_train_loader(args.backbone)
-    print(f"  Dataset ready, {len(train_loader)} training subjects")
+    if args.dataset is not None:
+        # Per-dataset mode: load ALL subjects, no split
+        ds_kwargs = {k: v for k, v in [
+            ("visit", args.visit), ("cohort", args.cohort),
+            ("subset", args.subset), ("recording", args.recording),
+        ] if v is not None}
+        _, loader = build_full_loader(args.dataset, **ds_kwargs)
+        print(f"  Dataset {args.dataset} (full, no split), {len(loader)} subjects")
+    else:
+        # Default: in-domain training split
+        _, loader = build_train_loader(args.backbone)
+        print(f"  Dataset ready, {len(loader)} training subjects")
 
     subjects = extract_epoch_embeddings(
-        model, train_loader, device, batch_size=args.embed_batch_size
+        model, loader, device, batch_size=args.embed_batch_size
     )
     print(f"  Extracted embeddings for {len(subjects)} subjects")
 
@@ -126,7 +147,7 @@ def main():
     # ── Phase 3: Load raw epochs for selected subjects ───────────────
     print("Phase 3: Loading raw spectrogram epochs...")
     epoch_store = {}  # (subject_id, epoch_idx) -> (C, T, F) numpy
-    for batch in tqdm(train_loader, desc="Loading raw epochs"):
+    for batch in tqdm(loader, desc="Loading raw epochs"):
         subject_id = batch["subject"][0]["id"]
         if subject_id not in needed:
             continue

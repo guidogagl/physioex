@@ -224,6 +224,34 @@ def build_train_loader(backbone, channels=None, pipeline="seqsleepnet"):
     return dataset, train_loader
 
 
+def build_full_loader(dataset_name, channels=None, pipeline="seqsleepnet",
+                      num_workers=0, **dataset_kwargs):
+    """Build DataLoader for ALL subjects (no train/test split).
+
+    Returns:
+        dataset: the dataset object
+        loader: DataLoader (batch_size=1, recording mode, all subjects)
+    """
+    from physioex.data.datasets import get_dataset
+    from physioex.data.collate import dict_collate_fn
+    from torch.utils.data import DataLoader
+
+    if channels is None:
+        channels = ["EEG", "EOG", "EMG"]
+
+    DatasetClass = get_dataset(dataset_name)
+    dataset = DatasetClass(
+        channels=channels, pipelines=pipeline,
+        sequence_length=0, **dataset_kwargs,
+    )
+
+    loader = DataLoader(
+        dataset, batch_size=1, shuffle=False,
+        collate_fn=dict_collate_fn, num_workers=num_workers,
+    )
+    return dataset, loader
+
+
 # ── I/O helpers ──────────────────────────────────────────────────────
 
 def save_prototype_results(output_dir, k, **arrays):
