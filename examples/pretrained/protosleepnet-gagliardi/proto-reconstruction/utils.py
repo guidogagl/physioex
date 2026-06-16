@@ -43,10 +43,13 @@ CONFIGS = {
 def get_paths(backbone, m=24):
     cfg = CONFIGS[backbone]
     model_dir = MODELS_DIR / cfg["model_name"]
+    pretrained_dir = BASE / "pretrained" / cfg["model_name"]
     return {
         "checkpoint": model_dir / "model.pt",
         "codebook": model_dir / f"vq_kmeans/{m}/codebook.npy",
         "emb_dir": EMB_DIR / cfg["model_name"],
+        "training_mean": pretrained_dir / "training_mean.npy",
+        "training_class_means": pretrained_dir / "training_class_means.npy",
     }
 
 
