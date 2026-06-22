@@ -33,7 +33,7 @@ M_VALUES=(5 8 12 15 24 32 48 65 80 100)
 M=${M_VALUES[$SLURM_ARRAY_TASK_ID]}
 
 MODELS=/leonardo_work/IscrC_SELFEEG/pretrained/protosleepnet-seq-3ch-mixer
-EMB=/leonardo_scratch/fast/IscrC_SELFEEG/epoch-embeddings/protosleepnet-seq-3ch-mixer
+EMB=$MODELS/embeddings
 OUTDIR=/leonardo_work/IscrC_SELFEEG/results/randomization/seq
 mkdir -p "$OUTDIR"
 
@@ -42,7 +42,7 @@ echo "Array task $SLURM_ARRAY_TASK_ID → M=$M"
 python examples/pretrained/protosleepnet-gagliardi/test_prototype_randomization.py \
     --backbone seq \
     --checkpoint $MODELS/model.pt \
-    --codebook_path $MODELS/vq_kmeans/${M}/codebook.npy \
+    --codebook_path $EMB/codebook_vq_kmeans_m${M}.npy \
     --emb_dir $EMB \
     --dataset mass --seq_len 20 --fold 0 --gpu_id 0 \
     --n_random 50 --seed 42 \

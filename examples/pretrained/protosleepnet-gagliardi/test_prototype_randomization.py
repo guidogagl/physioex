@@ -35,29 +35,30 @@ from physioex.data.collate import stack_channels
 from physioex.train.trainer import Trainer
 
 
-def load_training_embeddings(emb_dir, dataset="mass"):
-    """Load all training epoch embeddings for random codebook sampling.
+def load_training_embeddings(emb_dir):
+    """Load training-split epoch embeddings for random codebook sampling.
+
+    Tries two directory layouts:
+      1. {emb_dir}/train/*_embeddings.npy          (Leonardo layout)
+      2. {emb_dir}/mass_cohort{1..5}/all/*_embeddings.npy  (local layout)
 
     Returns:
         Z_train: (N, d_model) float32 numpy array.
     """
-    if dataset == "mass":
-        patterns = [
-            os.path.join(emb_dir, f"mass_cohort{c}", "all", "*_embeddings.npy")
-            for c in range(1, 6)
-        ]
-    elif dataset == "shhs":
-        patterns = [os.path.join(emb_dir, "shhs_visit1", "all", "*_embeddings.npy")]
-    else:
-        raise ValueError(f"Unsupported dataset for embedding loading: {dataset}")
+    # Layout 1: train/valid/test split
+    train_pattern = os.path.join(emb_dir, "train", "*_embeddings.npy")
+    files = sorted(glob.glob(train_pattern))
 
-    files = []
-    for pat in patterns:
-        files.extend(sorted(glob.glob(pat)))
+    # Layout 2: per-cohort all/
+    if not files:
+        for c in range(1, 6):
+            pat = os.path.join(emb_dir, f"mass_cohort{c}", "all", "*_embeddings.npy")
+            files.extend(sorted(glob.glob(pat)))
 
     if not files:
         raise FileNotFoundError(
-            f"No embedding files found. Patterns tried: {patterns}"
+            f"No embedding files found in {emb_dir}/train/ or "
+            f"{emb_dir}/mass_cohort*/all/"
         )
 
     arrays = [np.load(f) for f in files]

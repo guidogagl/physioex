@@ -29,7 +29,7 @@ echo "Cache copied: $(du -sh /dev/shm/physioex_cache | cut -f1)"
 cd /leonardo_work/IscrC_SELFEEG/code/physioex
 
 MODELS=/leonardo_work/IscrC_SELFEEG/pretrained/protosleepnet-seq-3ch-mixer
-EMB=/leonardo_scratch/fast/IscrC_SELFEEG/epoch-embeddings/protosleepnet-seq-3ch-mixer
+EMB=$MODELS/embeddings
 OUTDIR=/leonardo_work/IscrC_SELFEEG/results/randomization/seq_debug
 mkdir -p "$OUTDIR"
 
@@ -38,7 +38,7 @@ echo "Debug run: M=5, n_random=2"
 python examples/pretrained/protosleepnet-gagliardi/test_prototype_randomization.py \
     --backbone seq \
     --checkpoint $MODELS/model.pt \
-    --codebook_path $MODELS/vq_kmeans/5/codebook.npy \
+    --codebook_path $EMB/codebook_vq_kmeans_m5.npy \
     --emb_dir $EMB \
     --dataset mass --seq_len 20 --fold 0 --gpu_id 0 \
     --n_random 2 --seed 42 \
