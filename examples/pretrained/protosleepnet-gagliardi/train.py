@@ -109,6 +109,7 @@ def main():
     parser.add_argument("--valid_every", type=int, default=None,
                         help="Validate every N steps (default: 100 for seq, 1000 for st)")
     parser.add_argument("--num_workers", type=int, default=0)
+    parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--upload", action="store_true")
     args = parser.parse_args()
 
@@ -169,6 +170,7 @@ def main():
         pin_memory=nw > 0,
         persistent_workers=nw > 0,
         prefetch_factor=2,
+        seed=args.seed,
     )
 
     # ── Evaluate ─────────────────────────────────────────────────
@@ -197,6 +199,7 @@ def main():
         "lr": args.lr,
         "weight_decay": args.weight_decay,
         "batch_size": args.batch_size,
+        "seed": args.seed,
     }
     config = {
         "model_class": "physioex.models.protosleepnet:ProtoSleepNet",
