@@ -138,7 +138,7 @@ def main():
     print(f"Model loaded on {device}")
 
     # Load training embeddings for random sampling
-    Z_train = load_training_embeddings(args.emb_dir, args.dataset)
+    Z_train = load_training_embeddings(args.emb_dir)
 
     # Build test dataloader
     dataset = build_dataset(args.dataset, args.channels, "seqsleepnet", args.seq_len)
