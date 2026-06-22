@@ -4,13 +4,23 @@ For a given M, evaluates the real K-Means codebook and K random codebooks
 (M random training embeddings as centroids) on in-domain staging. Reports
 kappa for each, plus a permutation p-value.
 
+Supports multi-worker parallelism via --worker_id / --n_workers: each worker
+evaluates a disjoint subset of random codebooks (k % n_workers == worker_id).
+RNG is advanced for every k to maintain determinism regardless of partitioning.
+
 Usage:
-    python examples/pretrained/protosleepnet-gagliardi/test_prototype_randomization.py \
-        --backbone seq --checkpoint /path/to/model.pt \
-        --codebook_path /path/to/vq_kmeans/{M}/codebook.npy \
-        --emb_dir /path/to/epoch-embeddings/protosleepnet-seq-3ch-mixer \
+    # Single process (original behavior):
+    python test_prototype_randomization.py \
+        --backbone seq --checkpoint MODEL.pt \
+        --codebook_path codebook.npy --emb_dir EMBDIR \
         --dataset mass --seq_len 20 --fold 0 --gpu_id 0 \
-        --n_random 50 --seed 42 --output_dir /results
+        --n_random 50 --seed 42 --output_dir OUTDIR
+
+    # Parallel (8 workers, launched from bash):
+    for w in 0 1 2 3 4 5 6 7; do
+        python test_prototype_randomization.py ... \
+            --worker_id $w --n_workers 8 &
+    done; wait
 """
 import argparse
 import glob
@@ -67,6 +77,14 @@ def load_training_embeddings(emb_dir):
     return Z
 
 
+def _atomic_json_write(path, data, indent=None):
+    """Write JSON atomically via tmp + os.replace."""
+    tmp = path + f".tmp.{os.getpid()}"
+    with open(tmp, "w") as f:
+        json.dump(data, f, indent=indent)
+    os.replace(tmp, path)
+
+
 def evaluate_all_subjects(model, test_loader, seq_len, device):
     """Run sliding-window evaluation on all test subjects.
 
@@ -117,7 +135,14 @@ def main():
     parser.add_argument("--n_random", type=int, default=50,
                         help="Number of random codebook trials")
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--worker_id", type=int, default=0,
+                        help="Worker ID for parallel partitioning (0-based)")
+    parser.add_argument("--n_workers", type=int, default=1,
+                        help="Total number of parallel workers")
     args = parser.parse_args()
+
+    assert 0 <= args.worker_id < args.n_workers, \
+        f"worker_id={args.worker_id} must be in [0, n_workers={args.n_workers})"
 
     os.makedirs(args.output_dir, exist_ok=True)
 
@@ -131,7 +156,8 @@ def main():
     codebook_real = np.load(args.codebook_path).astype(np.float32)
     M = codebook_real.shape[0]
     prefix = f"M{M}"
-    print(f"=== Randomization test: M={M}, n_random={args.n_random}, seed={args.seed} ===")
+    print(f"=== Randomization test: M={M}, n_random={args.n_random}, seed={args.seed}, "
+          f"worker={args.worker_id}/{args.n_workers} ===")
 
     # Load model
     model = load_model(args.backbone, args.checkpoint, device)
@@ -148,50 +174,47 @@ def main():
     )
     print(f"Test subjects: {len(test_loader)}")
 
-    # --- Real codebook evaluation (shared, skip if exists) ---
+    # --- Real codebook evaluation (worker 0 only, others skip) ---
     real_metrics_path = os.path.join(args.output_dir, f"{prefix}_real_metrics.json")
     real_preds_path = os.path.join(args.output_dir, f"{prefix}_real_predictions.json")
 
-    if os.path.exists(real_metrics_path):
-        print(f"SKIP real: {real_metrics_path} exists")
-        with open(real_metrics_path) as f:
-            real_metrics = json.load(f)
+    if args.worker_id == 0:
+        if os.path.exists(real_metrics_path):
+            print(f"SKIP real: {real_metrics_path} exists")
+        else:
+            print(f"Evaluating real K-Means codebook (M={M})...")
+            model.set_codebook(codebook_real)
+            t0 = time.time()
+            real_metrics, real_predictions = evaluate_all_subjects(
+                model, test_loader, args.seq_len, device
+            )
+            elapsed = time.time() - t0
+            print(f"  Real: kappa={real_metrics['cohen_kappa']:.4f}  "
+                  f"acc={real_metrics['accuracy']:.4f}  f1={real_metrics['f1_macro']:.4f}  "
+                  f"({elapsed:.1f}s)")
+            _atomic_json_write(real_metrics_path, real_metrics, indent=2)
+            _atomic_json_write(real_preds_path, real_predictions)
     else:
-        print(f"Evaluating real K-Means codebook (M={M})...")
-        model.set_codebook(codebook_real)
-        t0 = time.time()
-        real_metrics, real_predictions = evaluate_all_subjects(
-            model, test_loader, args.seq_len, device
-        )
-        elapsed = time.time() - t0
-        print(f"  Real: kappa={real_metrics['cohen_kappa']:.4f}  "
-              f"acc={real_metrics['accuracy']:.4f}  f1={real_metrics['f1_macro']:.4f}  "
-              f"({elapsed:.1f}s)")
+        print(f"Worker {args.worker_id}: skipping real eval (worker 0's job)")
 
-        with open(real_metrics_path, "w") as f:
-            json.dump(real_metrics, f, indent=2)
-        with open(real_preds_path, "w") as f:
-            json.dump(real_predictions, f)
-
-    real_kappa = real_metrics["cohen_kappa"]
-
-    # --- Random codebook evaluations ---
+    # --- Random codebook evaluations (partitioned across workers) ---
     rng = np.random.RandomState(args.seed)
-    random_kappas = []
     n_skipped = 0
+    n_evaluated = 0
 
     for k in range(args.n_random):
+        # Always advance RNG to maintain determinism regardless of partitioning
+        idx = rng.choice(len(Z_train), size=M, replace=False)
+
+        # Only evaluate codebooks assigned to this worker
+        if k % args.n_workers != args.worker_id:
+            continue
+
         metrics_path = os.path.join(args.output_dir, f"{prefix}_random_{k:03d}_metrics.json")
         codebook_out_path = os.path.join(args.output_dir, f"{prefix}_random_{k:03d}_codebook.npy")
 
-        # Always draw from RNG to maintain determinism across restarts
-        idx = rng.choice(len(Z_train), size=M, replace=False)
-
         if os.path.exists(metrics_path):
             n_skipped += 1
-            with open(metrics_path) as f:
-                rand_metrics = json.load(f)
-            random_kappas.append(rand_metrics["cohen_kappa"])
             continue
 
         codebook_rand = Z_train[idx].astype(np.float32)
@@ -204,18 +227,35 @@ def main():
         )
         elapsed = time.time() - t0
 
-        with open(metrics_path, "w") as f:
-            json.dump(rand_metrics, f, indent=2)
+        _atomic_json_write(metrics_path, rand_metrics, indent=2)
 
-        random_kappas.append(rand_metrics["cohen_kappa"])
+        n_evaluated += 1
         print(f"  Random {k:03d}: kappa={rand_metrics['cohen_kappa']:.4f}  "
               f"acc={rand_metrics['accuracy']:.4f}  ({elapsed:.1f}s)")
 
-    if n_skipped > 0:
-        print(f"Skipped {n_skipped}/{args.n_random} random trials (already computed)")
+    print(f"Worker {args.worker_id}: evaluated {n_evaluated}, skipped {n_skipped}")
 
-    # --- Summary ---
-    if len(random_kappas) == args.n_random:
+    # --- Summary: scan all metrics files from disk ---
+    all_kappas = {}
+    for k in range(args.n_random):
+        mp = os.path.join(args.output_dir, f"{prefix}_random_{k:03d}_metrics.json")
+        if os.path.exists(mp):
+            with open(mp) as f:
+                all_kappas[k] = json.load(f)["cohen_kappa"]
+
+    n_complete = len(all_kappas)
+    print(f"Total completed: {n_complete}/{args.n_random} random trials")
+
+    if n_complete == args.n_random:
+        # Read real kappa from disk (may have been computed by worker 0)
+        if os.path.exists(real_metrics_path):
+            with open(real_metrics_path) as f:
+                real_kappa = json.load(f)["cohen_kappa"]
+        else:
+            print("WARNING: real metrics not found, summary deferred")
+            return
+
+        random_kappas = [all_kappas[k] for k in range(args.n_random)]
         p_value = float(np.mean([kr >= real_kappa for kr in random_kappas]))
         summary = {
             "M": M,
@@ -229,8 +269,7 @@ def main():
             "delta": real_kappa - float(np.mean(random_kappas)),
         }
         summary_path = os.path.join(args.output_dir, f"{prefix}_summary.json")
-        with open(summary_path, "w") as f:
-            json.dump(summary, f, indent=2)
+        _atomic_json_write(summary_path, summary, indent=2)
 
         print(f"\n{'='*60}")
         print(f"M={M}: real_kappa={real_kappa:.4f}  "
@@ -238,8 +277,9 @@ def main():
               f"delta={summary['delta']:+.4f}  p={p_value:.4f}")
         print(f"{'='*60}")
     else:
-        print(f"WARNING: only {len(random_kappas)}/{args.n_random} random trials complete, "
-              f"summary not written")
+        missing = [k for k in range(args.n_random) if k not in all_kappas]
+        print(f"Summary deferred: {args.n_random - n_complete} trials missing "
+              f"(first missing: k={missing[0]})")
 
 
 if __name__ == "__main__":
