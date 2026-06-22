@@ -15,6 +15,7 @@ source /leonardo_work/IscrC_SELFEEG/.venv/physioex-torch2x/bin/activate
 export PYTHONUNBUFFERED=1
 export HF_HUB_OFFLINE=1
 export PYTHONNOUSERSITE=1
+export PYTHONNOUSERSITE=1
 
 # Copy MASS cache to /dev/shm (shared by all workers)
 echo "Copying MASS cache to /dev/shm..."
