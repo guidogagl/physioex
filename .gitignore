@@ -137,3 +137,25 @@ __pypackages__/
 
 # pdm
 .pdm.toml
+
+# ── Lectures (LaTeX sources + build artifacts) ──────────────────────────────
+# LaTeX source files (only notebooks, PDFs, and Python utils are tracked)
+lectures/**/*.tex
+lectures/**/*.sty
+# LaTeX build artifacts
+lectures/**/*.aux
+lectures/**/*.log
+lectures/**/*.nav
+lectures/**/*.out
+lectures/**/*.snm
+lectures/**/*.toc
+lectures/**/*.vrb
+lectures/**/*.synctex.gz
+lectures/**/*.fls
+lectures/**/*.fdb_latexmk
+lectures/**/*.bbl
+lectures/**/*.blg
+# Misc lecture artifacts
+lectures/**/run_output.log
+lectures/**/texput.log
+lectures/**/__pycache__/
