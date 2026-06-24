@@ -15,7 +15,6 @@ source /leonardo_work/IscrC_SELFEEG/.venv/physioex-torch2x/bin/activate
 export PYTHONUNBUFFERED=1
 export HF_HUB_OFFLINE=1
 export PYTHONNOUSERSITE=1
-export PYTHONNOUSERSITE=1
 
 # Copy SHHS cache to /dev/shm (shared by all workers, ~124 GB)
 echo "Copying shhs_visit1 cache to /dev/shm..."
