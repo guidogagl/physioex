@@ -69,6 +69,7 @@ class EDFHeader:
     patient_meta: Dict[str, Optional[str]]  # age, sex, patient_code, birthdate
     duration_sec: float
     source_mtime: float  # EDF file mtime for cache invalidation
+    start_sec: float = 0.0  # recording start as seconds-of-day (HH*3600+MM*60+SS)
 
     def to_dict(self) -> Dict:
         return asdict(self)
@@ -82,6 +83,7 @@ class EDFHeader:
             patient_meta=dict(d["patient_meta"]),
             duration_sec=float(d["duration_sec"]),
             source_mtime=float(d["source_mtime"]),
+            start_sec=float(d.get("start_sec", 0.0)),
         )
 
 
@@ -110,6 +112,11 @@ def probe_edf_header(edf_path: Union[str, Path]) -> EDFHeader:
         fs = {labels[i]: float(f.getSampleFrequency(i)) for i in range(n)}
         units = {labels[i]: str(f.getPhysicalDimension(i)).strip() for i in range(n)}
         duration = float(f.getFileDuration())
+        try:
+            dt = f.getStartdatetime()
+            start_sec = float(dt.hour * 3600 + dt.minute * 60 + dt.second)
+        except Exception:
+            start_sec = 0.0
 
         # Patient metadata -- pyedflib exposes several fields; be defensive.
         def _safe(getter):
@@ -146,6 +153,7 @@ def probe_edf_header(edf_path: Union[str, Path]) -> EDFHeader:
         patient_meta=patient,
         duration_sec=duration,
         source_mtime=mtime,
+        start_sec=start_sec,
     )
 
 

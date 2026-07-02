@@ -1,6 +1,7 @@
 import os
 import typing
 import random
+import warnings
 
 import torch
 import numpy as np
@@ -492,6 +493,7 @@ class Trainer:
         model.eval()
 
         all_preds, all_targets = [], []
+        n_skipped = 0
 
         with torch.autocast(device.type if "cuda" in device.type else "cpu"):
             for batch in track(
@@ -517,13 +519,24 @@ class Trainer:
                 batch_size_b, night_length = inputs.shape[0], inputs.shape[1]
 
                 if night_length < L:
-                    raise ValueError(
-                        f"Night length {night_length} is shorter than window L={L}"
+                    warnings.warn(
+                        f"Skipping subject: night length {night_length} < L={L}"
                     )
+                    n_skipped += 1
+                    continue
 
-                # Infer n_classes via a single probe forward on the first L epochs
-                with torch.no_grad():
-                    probe = model(inputs[:, :L])  # (B, L, n_classes)
+                try:
+                    # Infer n_classes via a single probe forward on the first L epochs
+                    with torch.no_grad():
+                        probe = model(inputs[:, :L])  # (B, L, n_classes)
+                except (ValueError, RuntimeError) as e:
+                    warnings.warn(
+                        f"Skipping subject: model forward failed "
+                        f"(input shape {tuple(inputs.shape)}): {e}"
+                    )
+                    n_skipped += 1
+                    continue
+
                 n_classes = probe.shape[-1]
 
                 votes = torch.zeros(
@@ -560,6 +573,12 @@ class Trainer:
 
                 all_preds.append(votes.cpu())
                 all_targets.append(targets.cpu())
+
+        if n_skipped > 0:
+            warnings.warn(
+                f"Voting evaluation skipped {n_skipped} subject(s) due to "
+                f"incompatible input"
+            )
 
         # Flatten each subject's predictions to (n_epochs, n_classes) before
         # concatenating, because different subjects have different night lengths.

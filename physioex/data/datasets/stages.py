@@ -313,10 +313,15 @@ class STAGESDataset(BasePhysioDataset):
     def _get_parse_result(self, spec: SubjectSpec) -> Tuple[np.ndarray, list]:
         """Return cached (labels, events) from parse_stages_csv."""
         if spec.subject_id not in self._stages_parse_cache:
+            # Pass EDF start time so labels align to the recording start,
+            # not to the first CSV timestamp (which may be hours later).
+            header = self._headers.get(spec.subject_id)
+            edf_start_sec = header.start_sec if header is not None else None
             labels, events = parse_stages_csv(
                 spec.label_path,
                 epoch_length_sec=self.epoch_length_sec,
                 stage_map=self.stage_map,
+                edf_start_sec=edf_start_sec,
             )
             self._stages_parse_cache[spec.subject_id] = (labels, events)
         return self._stages_parse_cache[spec.subject_id]

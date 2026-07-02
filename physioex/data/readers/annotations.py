@@ -261,6 +261,7 @@ def parse_stages_csv(
     csv_path: Union[str, Path],
     epoch_length_sec: float = 30.0,
     stage_map: Optional[Dict[str, int]] = None,
+    edf_start_sec: Optional[float] = None,
 ) -> Tuple[np.ndarray, List]:
     """Parse a STAGES CSV annotation file.
 
@@ -272,6 +273,11 @@ def parse_stages_csv(
     3. **blocks** (GSDV, GSBB, GSLH, GSSA, GSSW, MSMI, MSNF, MSQW): stage
        lines have variable durations (multiples of 30s) representing N
        consecutive epochs.
+
+    Args:
+        edf_start_sec: EDF recording start as seconds-of-day. When provided,
+            labels are aligned to the EDF start rather than to the first CSV
+            timestamp, fixing misalignment when the CSV begins after the EDF.
 
     Returns:
         ``(labels, events)`` where *labels* is an ``int16`` numpy array of
@@ -322,8 +328,21 @@ def parse_stages_csv(
         offsets[i] = cumulative_offset
     abs_seconds = [raw_seconds[i] + offsets[i] for i in range(len(raw_seconds))]
 
-    # Recording start = earliest timestamp
-    recording_start = abs_seconds[0]
+    # Recording start: prefer EDF start time (seconds-of-day) when
+    # available; otherwise fall back to the earliest CSV timestamp.
+    if edf_start_sec is not None:
+        # Apply the same midnight-crossing logic to the EDF start time:
+        # express it in the same absolute-second space as abs_seconds.
+        edf_abs = edf_start_sec
+        # If EDF start is in the evening and abs_seconds[0] has crossed
+        # midnight, adjust (edf is before midnight, CSV continued after).
+        if abs_seconds[0] - edf_abs > 43200:
+            pass  # edf_abs is already correct (before midnight)
+        elif edf_abs - abs_seconds[0] > 43200:
+            edf_abs += 86400.0
+        recording_start = edf_abs
+    else:
+        recording_start = abs_seconds[0]
     rel_seconds = [s - recording_start for s in abs_seconds]
 
     # ------------------------------------------------------------------
@@ -341,9 +360,25 @@ def parse_stages_csv(
     # ------------------------------------------------------------------
     # 4. Build labels array from stage lines
     # ------------------------------------------------------------------
-    labels_list: List[int] = []
-
+    # Use timestamp-based positioning: each stage entry is placed at
+    # epoch_idx = round(rel_sec / epoch_length_sec).  This correctly
+    # handles (a) pre-scoring gaps (pre-lights-off period), (b) duplicate
+    # timestamps (e.g. BOGN dur=0 with stage + MT at the same time),
+    # and (c) inter-stage gaps.  For duplicates, actual sleep stages
+    # (label >= 0) take precedence over unscored markers (label == -1).
     if stage_rows:
+        # Determine array size from the last stage entry
+        last_rel_sec = stage_rows[-1][0]
+        last_dur = stage_rows[-1][1]
+        if last_dur > _MAX_PLAUSIBLE_DURATION_SEC:
+            last_dur = epoch_length_sec
+        if last_dur <= 0:
+            last_dur = epoch_length_sec
+        total_sec = last_rel_sec + last_dur
+        n_total = max(1, int(round(total_sec / epoch_length_sec)))
+
+        labels_arr = np.full(n_total, -1, dtype=np.int16)
+
         for rel_sec, dur, stage_name in stage_rows:
             label = stage_map.get(stage_name, -1)
 
@@ -351,21 +386,26 @@ def parse_stages_csv(
             if dur > _MAX_PLAUSIBLE_DURATION_SEC:
                 dur = epoch_length_sec
 
-            if dur <= 0:
-                # dur=0 encoding: each line = 1 epoch
-                labels_list.append(label)
-            else:
-                # dur>0: number of epochs = int(dur / epoch_length_sec)
-                n_epochs = int(dur / epoch_length_sec)
-                if n_epochs < 1:
-                    n_epochs = 1
-                labels_list.extend([label] * n_epochs)
+            epoch_idx = int(round(rel_sec / epoch_length_sec))
+            if epoch_idx < 0:
+                continue
 
-    labels = (
-        np.array(labels_list, dtype=np.int16)
-        if labels_list
-        else np.array([], dtype=np.int16)
-    )
+            if dur <= 0:
+                # dur=0 encoding: place 1 epoch at its timestamp position
+                if epoch_idx < n_total:
+                    # Actual stages (>= 0) take precedence over MT/unscored (-1)
+                    if label >= 0 or labels_arr[epoch_idx] == -1:
+                        labels_arr[epoch_idx] = label
+            else:
+                n_epochs = max(1, int(dur / epoch_length_sec))
+                end_idx = min(epoch_idx + n_epochs, n_total)
+                for j in range(epoch_idx, end_idx):
+                    if label >= 0 or labels_arr[j] == -1:
+                        labels_arr[j] = label
+
+        labels = labels_arr
+    else:
+        labels = np.array([], dtype=np.int16)
 
     # ------------------------------------------------------------------
     # 5. Build event list from non-stage lines
