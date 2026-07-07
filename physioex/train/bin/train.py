@@ -32,6 +32,7 @@ import os
 import yaml
 
 from physioex.train.trainer import Trainer
+from physioex.train.logger import add_logger_cli_args, logger_train_kwargs
 
 
 def _import_class(spec: str):
@@ -120,6 +121,9 @@ def train_script():
     parser.add_argument("--accumulate_grad_batches", type=int, default=1)
     parser.add_argument("--early_stopping_patience", type=int, default=None)
 
+    # Logging / experiment tracking
+    add_logger_cli_args(parser)
+
     # Optional config overlay
     parser.add_argument(
         "--config", type=str, default=None, help="YAML config file (overrides CLI args)"
@@ -180,6 +184,7 @@ def train_script():
         seed=args.seed,
         accumulate_grad_batches=args.accumulate_grad_batches,
         early_stopping_patience=args.early_stopping_patience,
+        **logger_train_kwargs(args),
     )
 
     print(f"[Info] Training complete.")

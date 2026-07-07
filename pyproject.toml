@@ -46,6 +46,7 @@ dependencies = [
 
 [project.optional-dependencies]
 gpu-monitor = ["nvitop>=1.0.0"]
+tracking = ["tensorboard>=2.14", "wandb>=0.16"]
 dev = ["ruff", "pytest", "black~=22.0"]
 legacy = ["pytorch_lightning>=2.5.0", "lightning>=2.5.0", "torchmetrics>=1.8.0"]
 

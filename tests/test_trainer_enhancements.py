@@ -2,7 +2,7 @@
 Unit tests for 4 trainer enhancements:
   - P2-B6:  seed_everything + seed parameter on train/evaluate/voting_evaluate
   - P2-D6-Bug4: multidevicetrainer _run_epoch is @classmethod (not @staticmethod)
-  - P2-D6-Bug3: multidevicetrainer imports and uses LossTracker
+  - P2-D6-Bug3: multidevicetrainer uses the pluggable Logger (build_logger)
   - P3-D4:  gradient accumulation (accumulate_grad_batches parameter)
   - P3-D5:  early stopping (early_stopping_patience parameter)
 
@@ -177,23 +177,25 @@ def test_multidevice_run_epoch_is_classmethod():
 
 
 # ---------------------------------------------------------------------------
-# Test 7: multidevice trainer imports LossTracker
+# Test 7: multidevice trainer uses the pluggable Logger (build_logger)
 # ---------------------------------------------------------------------------
-def test_multidevice_imports_losstracker():
+def test_multidevice_uses_logger():
     try:
-        src_path = os.path.join(ROOT, "test", "train", "multidevicetrainer.py")
-        with open(src_path, "r") as f:
+        import physioex.train.multidevicetrainer as mdt
+
+        with open(mdt.__file__, "r") as f:
             source = f.read()
 
-        # Check for import of LossTracker
-        has_import = bool(
-            re.search(r"from\s+losstracker\s+import\s+LossTracker", source)
-            or re.search(r"import\s+losstracker", source)
+        # The CSV/matplotlib LossTracker was decommissioned in favour of the
+        # pluggable Logger abstraction (TensorBoard / W&B).
+        assert "LossTracker" not in source, (
+            "multidevicetrainer.py still references the removed LossTracker"
         )
-        assert has_import, "multidevicetrainer.py does not import LossTracker"
-        report("P2-D6-Bug3: multidevice trainer imports LossTracker", True)
+        has_logger = bool(re.search(r"build_logger", source))
+        assert has_logger, "multidevicetrainer.py does not use build_logger"
+        report("P2-D6-Bug3: multidevice trainer uses build_logger", True)
     except Exception as exc:
-        report("P2-D6-Bug3: multidevice trainer imports LossTracker", False, str(exc))
+        report("P2-D6-Bug3: multidevice trainer uses build_logger", False, str(exc))
 
 
 # ---------------------------------------------------------------------------
@@ -210,7 +212,7 @@ if __name__ == "__main__":
     test_train_has_early_stopping_param()
     test_gradient_accumulation_behavior()
     test_multidevice_run_epoch_is_classmethod()
-    test_multidevice_imports_losstracker()
+    test_multidevice_uses_logger()
 
     print("=" * 60)
     print(f"Results: {passed} passed, {failed} failed out of {passed + failed}")
