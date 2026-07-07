@@ -396,7 +396,18 @@ def build_logger(
         run_name = Path(log_dir).name
 
     if name in ("tensorboard", "tb"):
-        logger = TensorBoardLogger(log_dir=log_dir, run_name=run_name)
+        # TensorBoard is the default backend, so a missing optional dependency
+        # must not crash training: degrade to a NoOpLogger with a warning.
+        try:
+            logger = TensorBoardLogger(log_dir=log_dir, run_name=run_name)
+        except ImportError as exc:
+            import warnings
+
+            warnings.warn(
+                f"{exc} Falling back to no-op logging. "
+                "Install 'physioex[tracking]' to enable TensorBoard."
+            )
+            return NoOpLogger()
     elif name in ("wandb", "wb"):
         logger = WandbLogger(
             log_dir=log_dir,
