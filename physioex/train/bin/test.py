@@ -8,6 +8,8 @@ import pandas as pd
 
 from physioex.data.dataset import PhysioExDataset
 from physioex.train.trainer import Trainer
+from physioex.train import stats as _stats
+from physioex.train.logger import add_logger_cli_args, build_logger
 
 
 def _import_class(spec):
@@ -69,6 +71,12 @@ def test_script():
         default=21,
         help="Window length for voting evaluation",
     )
+    parser.add_argument(
+        "--per_subject",
+        action="store_true",
+        help="Report per-class metrics with mean/std/CI aggregated across subjects.",
+    )
+    add_logger_cli_args(parser)
     args = parser.parse_args()
 
     # Merge YAML config if provided
@@ -92,6 +100,16 @@ def test_script():
     model = model_class(**model_kwargs)
     model, _, _ = Trainer.load_checkpoint(model, args.ckpt_path)
 
+    log_dir = args.log_dir or (
+        os.path.join(args.results_path, "tb") if args.results_path else os.path.join(os.getcwd(), "tb")
+    )
+    logger = build_logger(
+        args.logger,
+        log_dir=log_dir,
+        run_name=args.run_name,
+        tags=args.tags,
+    )
+
     results = []
     for ds_name in args.datasets:
         dataset = PhysioExDataset(
@@ -100,26 +118,47 @@ def test_script():
             seqlen=args.seqlen,
             preprocessing=args.preprocessing,
         )
+        eval_kwargs = dict(
+            model=model,
+            dataset=dataset,
+            fold=args.fold,
+            gpu_id=args.gpu_id,
+            per_subject=args.per_subject,
+            ci_method=args.ci_method,
+            n_bootstrap=args.n_bootstrap,
+        )
         if args.voting:
-            res = Trainer.voting_evaluate(
-                model=model,
-                dataset=dataset,
-                L=args.voting_L,
-                fold=args.fold,
-                gpu_id=args.gpu_id,
-            )
+            res = Trainer.voting_evaluate(L=args.voting_L, **eval_kwargs)
         else:
-            res = Trainer.evaluate(
-                model=model,
-                dataset=dataset,
-                fold=args.fold,
-                gpu_id=args.gpu_id,
-            )
-        # Flatten metrics (skip non-scalar like confusion_matrix, support)
+            res = Trainer.evaluate(**eval_kwargs)
+
+        # Flatten scalar metrics (skip non-scalar like confusion_matrix, support).
         scalar = {k: v for k, v in res.items() if isinstance(v, (int, float))}
         scalar["dataset"] = ds_name
         scalar["fold"] = args.fold
+
+        # Flatten per-subject aggregates into mean/std/ci columns.
+        aggregated = res.get("aggregated")
+        if aggregated:
+            for metric_key, stat in aggregated.items():
+                flat_key = metric_key.replace("/", "_")
+                scalar[f"{flat_key}_mean"] = stat["mean"]
+                scalar[f"{flat_key}_std"] = stat["std"]
+                scalar[f"{flat_key}_ci_low"] = stat["ci_low"]
+                scalar[f"{flat_key}_ci_high"] = stat["ci_high"]
+
         results.append(scalar)
+
+        # Log the confusion matrix figure if a tracker is active.
+        cm = res.get("confusion_matrix")
+        if cm is not None:
+            fig = _stats.figure_from_cm(cm)
+            logger.log_figure(f"test/{ds_name}/confusion_matrix", fig, args.fold)
+            import matplotlib.pyplot as plt
+
+            plt.close(fig)
+
+    logger.close()
 
     df = pd.DataFrame(results)
     if args.results_path:

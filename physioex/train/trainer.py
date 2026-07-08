@@ -27,7 +27,8 @@ from physioex.train.metrics import (
 )
 
 from physioex.train.progress import PhysioExTrainProgressBar
-from physioex.train.losstracker import LossTracker
+from physioex.train.logger import build_logger, Logger
+from physioex.train import stats as _stats
 
 # import rich for progress bar
 from rich.console import Console
@@ -247,6 +248,9 @@ class Trainer:
         gpu_id: int = None,
         ignore_index: int = -1,
         seed: int = 42,
+        per_subject: bool = False,
+        ci_method: str = "bootstrap",
+        n_bootstrap: int = 1000,
     ) -> dict:
 
         if seed is not None:
@@ -355,6 +359,11 @@ class Trainer:
                 all_preds.append(outputs.cpu())
                 all_targets.append(targets.cpu())
 
+        # Per-batch prediction chunks (used for per-subject aggregation when
+        # each batch corresponds to one subject / recording).
+        subject_preds = [p.reshape(-1, p.shape[-1]) for p in all_preds]
+        subject_targets = [t.reshape(-1) for t in all_targets]
+
         all_preds = torch.cat(all_preds, dim=0)
         all_targets = torch.cat(all_targets, dim=0)
 
@@ -362,8 +371,19 @@ class Trainer:
         if metrics is not None:
             for name, metric_fn in metrics.items():
                 results[name] = metric_fn(
-                    all_preds, all_targets, ignore_index=ignore_index
+                    all_preds.reshape(-1, all_preds.shape[-1]),
+                    all_targets.reshape(-1),
+                    ignore_index=ignore_index,
                 )
+
+        if per_subject and subject_preds:
+            n_classes = subject_preds[0].shape[-1]
+            ps = _stats.per_subject_metrics(
+                subject_preds, subject_targets, n_classes, ignore_index=ignore_index
+            )
+            results["aggregated"] = _stats.aggregate(
+                ps, ci_method=ci_method, n_bootstrap=n_bootstrap, seed=seed
+            )
 
         return results
 
@@ -384,6 +404,9 @@ class Trainer:
         gpu_id: int = None,
         ignore_index: int = -1,
         seed: int = 42,
+        per_subject: bool = False,
+        ci_method: str = "bootstrap",
+        n_bootstrap: int = 1000,
     ) -> dict:
         """
         Evaluate using sliding-window voting over full-night sequences.
@@ -594,6 +617,15 @@ class Trainer:
                 all_preds_cat, all_targets_cat, ignore_index=ignore_index
             )
 
+        if per_subject and flat_preds:
+            n_classes = all_preds_cat.shape[-1]
+            ps = _stats.per_subject_metrics(
+                flat_preds, flat_targets, n_classes, ignore_index=ignore_index
+            )
+            results["aggregated"] = _stats.aggregate(
+                ps, ci_method=ci_method, n_bootstrap=n_bootstrap, seed=seed
+            )
+
         return results
 
     @classmethod
@@ -621,6 +653,13 @@ class Trainer:
         seed: int = 42,
         accumulate_grad_batches: int = 1,
         early_stopping_patience: int = None,
+        logger: typing.Union[str, Logger] = "tensorboard",
+        log_dir: str = None,
+        run_name: str = None,
+        tags: typing.Optional[typing.List[str]] = None,
+        log_graph: bool = False,
+        log_hist_every: int = 0,
+        log_confusion_matrix: bool = True,
     ) -> torch.nn.Module:
 
         if seed is not None:
@@ -677,6 +716,41 @@ class Trainer:
             config_params.get("log_device", log_device)
             if config_params.get("log_device", None) is not None
             else log_device
+        )
+        logger = (
+            config_params.get("logger", logger)
+            if config_params.get("logger", None) is not None
+            else logger
+        )
+        log_dir = (
+            config_params.get("log_dir", log_dir)
+            if config_params.get("log_dir", None) is not None
+            else log_dir
+        )
+        run_name = (
+            config_params.get("run_name", run_name)
+            if config_params.get("run_name", None) is not None
+            else run_name
+        )
+        tags = (
+            config_params.get("tags", tags)
+            if config_params.get("tags", None) is not None
+            else tags
+        )
+        log_graph = (
+            config_params.get("log_graph", log_graph)
+            if config_params.get("log_graph", None) is not None
+            else log_graph
+        )
+        log_hist_every = (
+            config_params.get("log_hist_every", log_hist_every)
+            if config_params.get("log_hist_every", None) is not None
+            else log_hist_every
+        )
+        log_confusion_matrix = (
+            config_params.get("log_confusion_matrix", log_confusion_matrix)
+            if config_params.get("log_confusion_matrix", None) is not None
+            else log_confusion_matrix
         )
 
         if checkpoint_path is None:
@@ -751,15 +825,42 @@ class Trainer:
             device=str(device) if log_device else "cpu",
         )
 
-        loss_tracker = LossTracker(
-            output_dir=checkpoint_path,
-            prefix="metrics",
+        if log_dir is None:
+            log_dir = os.path.join(checkpoint_path, "tb")
+        if run_name is None:
+            run_name = os.path.basename(os.path.normpath(checkpoint_path))
+
+        hparams = {
+            "model": type(model).__name__,
+            "max_epochs": max_epochs,
+            "lr": lr,
+            "weight_decay": weight_decay,
+            "train_batch_size": train_batch_size,
+            "eval_batch_size": eval_batch_size,
+            "accumulate_grad_batches": accumulate_grad_batches,
+            "seed": seed,
+            "fold": fold,
+        }
+        logger = build_logger(
+            logger,
+            log_dir=log_dir,
+            run_name=run_name,
+            hparams=hparams,
+            tags=tags,
         )
 
         # Determine sequence_length for voting evaluation
         _eval_seq_len = None
         if _is_base_dataset_t and hasattr(dataset, "sequence_length"):
             _eval_seq_len = dataset.sequence_length
+
+        if log_graph:
+            try:
+                sample_batch = next(iter(train_loader))
+                sample_input = cls._extract_inputs(sample_batch, device)
+                logger.log_graph(model.to(device), sample_input)
+            except Exception as exc:
+                print(f"[Warning] Could not log model graph: {exc}")
 
         epochs_without_improvement = 0
         prev_best = float("inf")
@@ -779,9 +880,11 @@ class Trainer:
                 valid_interval=valid_interval,
                 checkpoint_path=checkpoint_path,
                 progress=progress,
-                loss_tracker=loss_tracker,
+                logger=logger,
                 accumulate_grad_batches=accumulate_grad_batches,
                 eval_sequence_length=_eval_seq_len,
+                log_hist_every=log_hist_every,
+                log_confusion_matrix=log_confusion_matrix,
             )
 
             # Early stopping check
@@ -802,6 +905,8 @@ class Trainer:
 
         progress._stop_live()
 
+        logger.close()
+
         return model
 
     @classmethod
@@ -818,9 +923,11 @@ class Trainer:
         valid_interval: int,
         checkpoint_path: str,
         progress: PhysioExTrainProgressBar = None,
-        loss_tracker: typing.Optional[LossTracker] = None,
+        logger: typing.Optional[Logger] = None,
         accumulate_grad_batches: int = 1,
         eval_sequence_length : int = None,
+        log_hist_every: int = 0,
+        log_confusion_matrix: bool = True,
     ) -> torch.nn.Module:
 
         if progress is None:
@@ -854,9 +961,9 @@ class Trainer:
 
             step_time_ms = (perf_counter() - t0) * 1000
 
-            if loss_tracker is not None:
-                train_global_step = epoch * steps_per_epoch + step
-                loss_tracker.log(
+            train_global_step = epoch * steps_per_epoch + step
+            if logger is not None:
+                logger.log(
                     stage="train",
                     epoch=epoch,
                     step=train_global_step,
@@ -864,15 +971,29 @@ class Trainer:
                     accuracy=step_acc,
                     extra_metrics=step_extra,
                 )
-                loss_tracker.log_learning_rate(
+                logger.log_learning_rate(
                     step=train_global_step,
                     value=optimizer.param_groups[0]["lr"],
                 )
                 if update_norm is not None:
-                    loss_tracker.log_update_norm(
+                    logger.log_update_norm(
                         step=train_global_step,
                         value=update_norm,
                     )
+
+                # Weights/gradients histograms (gradients are still populated
+                # here: zero_grad only runs at the next accumulation cycle).
+                if log_hist_every and train_global_step % log_hist_every == 0:
+                    for name, param in model.named_parameters():
+                        if not param.requires_grad:
+                            continue
+                        logger.log_histogram(
+                            f"weights/{name}", param.detach(), train_global_step
+                        )
+                        if param.grad is not None:
+                            logger.log_histogram(
+                                f"grads/{name}", param.grad.detach(), train_global_step
+                            )
 
             progress.update(step_loss, step_acc, step_time_ms)
 
@@ -882,26 +1003,32 @@ class Trainer:
                 progress.begin_eval(steps_per_eval=len(valid_dataloader))
                 val_iter = iter(valid_dataloader)
 
+                collect_val = bool(log_confusion_matrix and logger is not None)
+
                 val_losses, val_accs = [], []
                 val_extras: list[dict] = []
+                val_preds: list[torch.Tensor] = []
+                val_targets: list[torch.Tensor] = []
                 for val_step in range(len(valid_dataloader)):
                     v_t0 = perf_counter()
 
                     if eval_sequence_length is not None:
                         # Subject-level voting evaluation
-                        v_step_loss, v_step_acc, v_step_extra = cls._voting_eval_step(
+                        v_step_loss, v_step_acc, v_step_extra, v_out = cls._voting_eval_step(
                             model=model,
                             batch=next(val_iter),
                             loss_fn=loss,
                             device=device,
                             L=eval_sequence_length,
+                            collect_outputs=collect_val,
                         )
                     else:
-                        v_step_loss, v_step_acc, v_step_extra = cls._eval_step(
+                        v_step_loss, v_step_acc, v_step_extra, v_out = cls._eval_step(
                             model=model,
                             batch=next(val_iter),
                             loss_fn=loss,
                             device=device,
+                            collect_outputs=collect_val,
                         )
 
                     v_step_time_ms = (perf_counter() - v_t0) * 1000
@@ -910,6 +1037,9 @@ class Trainer:
                     val_accs.append(v_step_acc)
                     if v_step_extra is not None:
                         val_extras.append(v_step_extra)
+                    if v_out is not None:
+                        val_preds.append(v_out[0])
+                        val_targets.append(v_out[1])
 
                     progress.eval_progress.update(
                         v_step_loss, v_step_acc, v_step_time_ms
@@ -940,9 +1070,9 @@ class Trainer:
 
                 progress.set_lr(scheduler.get_last_lr()[0] if hasattr(scheduler, 'get_last_lr') else optimizer.param_groups[0]['lr'])
 
-                if loss_tracker is not None:
-                    validation_global_step = epoch * steps_per_epoch + step
-                    loss_tracker.log(
+                validation_global_step = epoch * steps_per_epoch + step
+                if logger is not None:
+                    logger.log(
                         stage="validation",
                         epoch=epoch,
                         step=validation_global_step,
@@ -950,11 +1080,39 @@ class Trainer:
                         accuracy=val_acc,
                         extra_metrics=val_extra_agg,
                     )
-                    loss_tracker.log_learning_rate(
+                    logger.log_learning_rate(
                         step=validation_global_step,
                         value=scheduler.get_last_lr()[0] if hasattr(scheduler, 'get_last_lr') else optimizer.param_groups[0]['lr'],
                     )
-                    loss_tracker.update()
+
+                    if collect_val and val_preds:
+                        ignore_index = getattr(loss, "ignore_index", -1)
+                        preds_cat = torch.cat(val_preds, dim=0)
+                        targets_cat = torch.cat(val_targets, dim=0)
+                        n_classes = preds_cat.shape[-1]
+
+                        argmax, valid_t = _stats._mask_valid(
+                            preds_cat, targets_cat, ignore_index
+                        )
+                        class_names = _stats._class_names(n_classes)
+                        per_class = {}
+                        for metric, fn in _stats.PER_CLASS_METRICS.items():
+                            values, _ = fn(argmax, valid_t, n_classes)
+                            for cname, value in zip(class_names, values):
+                                per_class[f"validation/{metric}/{cname}"] = float(value)
+                        logger.log_scalars(per_class, validation_global_step)
+
+                        fig = _stats.confusion_matrix_figure(
+                            preds_cat, targets_cat, ignore_index=ignore_index
+                        )
+                        logger.log_figure(
+                            "validation/confusion_matrix", fig, validation_global_step
+                        )
+                        import matplotlib.pyplot as plt
+
+                        plt.close(fig)
+
+                    logger.update()
 
                 # aggiorna best su valid ogni tot step (qui dummy)
                 if best_val_loss is None or val_loss < best_val_loss:
@@ -1051,21 +1209,30 @@ class Trainer:
         batch: dict,
         loss_fn: torch.nn.Module,
         device: torch.device,
-    ) -> tuple[float, float, dict | None]:
+        collect_outputs: bool = False,
+    ) -> tuple[float, float, dict | None, tuple | None]:
 
-        step_result = cls._step(model, batch, loss_fn, device)
-        extra_metrics = None
-        if isinstance(step_result, tuple) and len(step_result) == 3:
-            loss, acc, extra_metrics = step_result
+        outputs = None
+        if collect_outputs:
+            loss, acc, logits, targets = cls._step(
+                model, batch, loss_fn, device, return_logits=True
+            )
+            extra_metrics = None
+            outputs = (logits, targets)
         else:
-            loss, acc = step_result
+            step_result = cls._step(model, batch, loss_fn, device)
+            extra_metrics = None
+            if isinstance(step_result, tuple) and len(step_result) == 3:
+                loss, acc, extra_metrics = step_result
+            else:
+                loss, acc = step_result
 
         loss_value = (
             loss.detach().item() if isinstance(loss, torch.Tensor) else float(loss)
         )
         acc_value = acc.detach().item() if isinstance(acc, torch.Tensor) else float(acc)
 
-        return loss_value, acc_value, extra_metrics
+        return loss_value, acc_value, extra_metrics, outputs
 
     @classmethod
     @torch.no_grad()
@@ -1076,7 +1243,8 @@ class Trainer:
         loss_fn: torch.nn.Module,
         device: torch.device,
         L: int = 21,
-    ) -> tuple[float, float, dict | None]:
+        collect_outputs: bool = False,
+    ) -> tuple[float, float, dict | None, tuple | None]:
         """Evaluate a single full-night subject batch using sliding-window voting.
 
         The model was trained with sequence_length=L. For a full-night recording
@@ -1112,10 +1280,16 @@ class Trainer:
                 targets_flat,
                 ignore_index=getattr(loss_fn, "ignore_index", None),
             )
+            out = (
+                (outputs_flat.detach().cpu(), targets_flat.detach().cpu())
+                if collect_outputs
+                else None
+            )
             return (
                 loss.detach().item(),
                 acc.detach().item() if isinstance(acc, torch.Tensor) else float(acc),
                 None,
+                out,
             )
 
         # Probe n_classes from a small forward pass
@@ -1158,11 +1332,29 @@ class Trainer:
             ignore_index=getattr(loss_fn, "ignore_index", None),
         )
 
+        out = (
+            (voted_flat.detach().cpu(), targets_flat.detach().cpu())
+            if collect_outputs
+            else None
+        )
         return (
             loss.detach().item(),
             acc.detach().item() if isinstance(acc, torch.Tensor) else float(acc),
             None,
+            out,
         )
+
+    @staticmethod
+    def _extract_inputs(batch, device: torch.device) -> torch.Tensor:
+        """Return the model input tensor for a batch (any supported format)."""
+        if isinstance(batch, dict) and "embeddings" in batch:
+            return batch["embeddings"].to(device)
+        if isinstance(batch, dict) and "signals" in batch:
+            from physioex.data.collate import stack_channels
+
+            return stack_channels(batch).to(device)
+        inputs, _ = batch
+        return inputs.to(device)
 
     @staticmethod
     def _step(
@@ -1170,6 +1362,7 @@ class Trainer:
         batch: dict,
         loss_fn: torch.nn.Module,
         device: torch.device,
+        return_logits: bool = False,
     ) -> tuple[float, float]:
 
         # Support three batch formats:
@@ -1201,6 +1394,9 @@ class Trainer:
         acc = accuracy_score(
             outputs, targets, ignore_index=getattr(loss_fn, "ignore_index", None)
         )
+
+        if return_logits:
+            return loss, acc, outputs.detach().cpu(), targets.detach().cpu()
 
         del inputs, targets, outputs
 
@@ -1254,6 +1450,13 @@ def _get_parameters_from_config():
         "fold": config.get("fold", None),
         "gpu_id": config.get("gpu_id", None),
         "log_device": config.get("log_device", None),
+        "logger": config.get("logger", None),
+        "log_dir": config.get("log_dir", None),
+        "run_name": config.get("run_name", None),
+        "tags": config.get("tags", None),
+        "log_graph": config.get("log_graph", None),
+        "log_hist_every": config.get("log_hist_every", None),
+        "log_confusion_matrix": config.get("log_confusion_matrix", None),
     }
 
 

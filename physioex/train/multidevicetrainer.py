@@ -15,7 +15,8 @@ from physioex.data.dataset import (
 )
 
 from physioex.train.progress import PhysioExTrainProgressBar
-from physioex.train.losstracker import LossTracker
+from physioex.train.logger import build_logger, Logger
+from physioex.train import stats as _stats
 from physioex.train.trainer import Trainer as SingleDeviceTrainer
 
 import torch.multiprocessing as mp
@@ -126,6 +127,14 @@ class Trainer(SingleDeviceTrainer):
         fold: int = 0,
         gpu_ids: typing.Union[str, typing.List[int]] = "all",
         log_device: bool = True,
+        logger: str = "tensorboard",
+        log_dir: str = None,
+        run_name: str = None,
+        tags: typing.Optional[typing.List[str]] = None,
+        log_graph: bool = False,
+        log_hist_every: int = 0,
+        log_confusion_matrix: bool = True,
+        accumulate_grad_batches: int = 1,
     ) -> torch.nn.Module:
 
         # load parameters from config file if exists
@@ -180,6 +189,41 @@ class Trainer(SingleDeviceTrainer):
             if config_params.get("log_device", None) is not None
             else log_device
         )
+        logger = (
+            config_params.get("logger", logger)
+            if config_params.get("logger", None) is not None
+            else logger
+        )
+        log_dir = (
+            config_params.get("log_dir", log_dir)
+            if config_params.get("log_dir", None) is not None
+            else log_dir
+        )
+        run_name = (
+            config_params.get("run_name", run_name)
+            if config_params.get("run_name", None) is not None
+            else run_name
+        )
+        tags = (
+            config_params.get("tags", tags)
+            if config_params.get("tags", None) is not None
+            else tags
+        )
+        log_graph = (
+            config_params.get("log_graph", log_graph)
+            if config_params.get("log_graph", None) is not None
+            else log_graph
+        )
+        log_hist_every = (
+            config_params.get("log_hist_every", log_hist_every)
+            if config_params.get("log_hist_every", None) is not None
+            else log_hist_every
+        )
+        log_confusion_matrix = (
+            config_params.get("log_confusion_matrix", log_confusion_matrix)
+            if config_params.get("log_confusion_matrix", None) is not None
+            else log_confusion_matrix
+        )
 
         if checkpoint_path is None:
             checkpoint_id = 0
@@ -219,6 +263,11 @@ class Trainer(SingleDeviceTrainer):
                 optimizer, mode="min", factor=0.1, patience=10
             )
 
+        if log_dir is None:
+            log_dir = os.path.join(checkpoint_path, "tb")
+        if run_name is None:
+            run_name = os.path.basename(os.path.normpath(checkpoint_path))
+
         world_size = len(gpu_ids)
         mp.spawn(
             Trainer.ddp_train_worker,
@@ -241,6 +290,14 @@ class Trainer(SingleDeviceTrainer):
                 fold,
                 log_device,
                 gpu_ids,
+                accumulate_grad_batches,
+                logger,
+                log_dir,
+                run_name,
+                tags,
+                log_graph,
+                log_hist_every,
+                log_confusion_matrix,
             ),
             nprocs=world_size,
         )
@@ -276,8 +333,10 @@ class Trainer(SingleDeviceTrainer):
         valid_interval: int,
         checkpoint_path: str,
         progress: PhysioExTrainProgressBar = None,
-        loss_tracker: typing.Optional[LossTracker] = None,
+        logger: typing.Optional[Logger] = None,
         accumulate_grad_batches: int = 1,
+        log_hist_every: int = 0,
+        log_confusion_matrix: bool = True,
     ) -> torch.nn.Module:
 
         if progress is None and rank == 0:
@@ -317,9 +376,9 @@ class Trainer(SingleDeviceTrainer):
             if rank == 0:
                 progress.update(step_loss, step_acc, step_time_ms)
 
-                if loss_tracker is not None:
+                if logger is not None:
                     train_global_step = epoch * steps_per_epoch + step
-                    loss_tracker.log(
+                    logger.log(
                         stage="train",
                         epoch=epoch,
                         step=train_global_step,
@@ -327,15 +386,28 @@ class Trainer(SingleDeviceTrainer):
                         accuracy=step_acc,
                         extra_metrics=step_extra,
                     )
-                    loss_tracker.log_learning_rate(
+                    logger.log_learning_rate(
                         step=train_global_step,
                         value=optimizer.param_groups[0]["lr"],
                     )
                     if update_norm is not None:
-                        loss_tracker.log_update_norm(
+                        logger.log_update_norm(
                             step=train_global_step,
                             value=update_norm,
                         )
+
+                    if log_hist_every and train_global_step % log_hist_every == 0:
+                        base = model.module if hasattr(model, "module") else model
+                        for name, param in base.named_parameters():
+                            if not param.requires_grad:
+                                continue
+                            logger.log_histogram(
+                                f"weights/{name}", param.detach(), train_global_step
+                            )
+                            if param.grad is not None:
+                                logger.log_histogram(
+                                    f"grads/{name}", param.grad.detach(), train_global_step
+                                )
 
             should_run_eval = (step + 1) % valid_interval == 0
 
@@ -349,16 +421,21 @@ class Trainer(SingleDeviceTrainer):
                     progress.begin_eval(steps_per_eval=len(valid_dataloader))
                     val_iter = iter(valid_dataloader)
 
+                    collect_val = bool(log_confusion_matrix and logger is not None)
+
                     val_losses, val_accs = [], []
                     val_extras: list[dict] = []
+                    val_preds: list[torch.Tensor] = []
+                    val_targets: list[torch.Tensor] = []
                     for val_step in range(len(valid_dataloader)):
                         v_t0 = perf_counter()
 
-                        v_step_loss, v_step_acc, v_step_extra = cls._eval_step(
+                        v_step_loss, v_step_acc, v_step_extra, v_out = cls._eval_step(
                             model=model,
                             batch=next(val_iter),
                             loss_fn=loss,
                             device=device,
+                            collect_outputs=collect_val,
                         )
 
                         v_step_time_ms = (perf_counter() - v_t0) * 1000
@@ -367,6 +444,9 @@ class Trainer(SingleDeviceTrainer):
                         val_accs.append(v_step_acc)
                         if v_step_extra is not None:
                             val_extras.append(v_step_extra)
+                        if v_out is not None:
+                            val_preds.append(v_out[0])
+                            val_targets.append(v_out[1])
 
                         progress.eval_progress.update(
                             v_step_loss, v_step_acc, v_step_time_ms
@@ -399,9 +479,9 @@ class Trainer(SingleDeviceTrainer):
                         scheduler.step()
                     progress.set_lr(scheduler.get_last_lr()[0] if hasattr(scheduler, 'get_last_lr') else optimizer.param_groups[0]['lr'])
 
-                    if loss_tracker is not None:
+                    if logger is not None:
                         validation_global_step = epoch * steps_per_epoch + step
-                        loss_tracker.log(
+                        logger.log(
                             stage="validation",
                             epoch=epoch,
                             step=validation_global_step,
@@ -409,11 +489,41 @@ class Trainer(SingleDeviceTrainer):
                             accuracy=val_acc,
                             extra_metrics=val_extra_agg,
                         )
-                        loss_tracker.log_learning_rate(
+                        logger.log_learning_rate(
                             step=validation_global_step,
                             value=scheduler.get_last_lr()[0],
                         )
-                        loss_tracker.update()
+
+                        if collect_val and val_preds:
+                            ignore_index = getattr(loss, "ignore_index", -1)
+                            preds_cat = torch.cat(val_preds, dim=0)
+                            targets_cat = torch.cat(val_targets, dim=0)
+                            n_classes = preds_cat.shape[-1]
+
+                            argmax, valid_t = _stats._mask_valid(
+                                preds_cat, targets_cat, ignore_index
+                            )
+                            class_names = _stats._class_names(n_classes)
+                            per_class = {}
+                            for metric, fn in _stats.PER_CLASS_METRICS.items():
+                                values, _ = fn(argmax, valid_t, n_classes)
+                                for cname, value in zip(class_names, values):
+                                    per_class[f"validation/{metric}/{cname}"] = float(value)
+                            logger.log_scalars(per_class, validation_global_step)
+
+                            fig = _stats.confusion_matrix_figure(
+                                preds_cat, targets_cat, ignore_index=ignore_index
+                            )
+                            logger.log_figure(
+                                "validation/confusion_matrix",
+                                fig,
+                                validation_global_step,
+                            )
+                            import matplotlib.pyplot as plt
+
+                            plt.close(fig)
+
+                        logger.update()
 
                     if best_val_loss is None or val_loss < best_val_loss:
                         best_val_loss = val_loss
@@ -476,6 +586,13 @@ class Trainer(SingleDeviceTrainer):
         log_device: bool,
         gpu_ids: typing.List[int],
         accumulate_grad_batches: int = 1,
+        logger_kind: str = "tensorboard",
+        log_dir: str = None,
+        run_name: str = None,
+        tags: typing.Optional[typing.List[str]] = None,
+        log_graph: bool = False,
+        log_hist_every: int = 0,
+        log_confusion_matrix: bool = True,
     ):
 
         device_id = gpu_ids[rank]
@@ -513,14 +630,35 @@ class Trainer(SingleDeviceTrainer):
                 steps_per_epoch=len(train_loader),
                 device="all",
             )
-            loss_tracker = LossTracker(output_dir=checkpoint_path, prefix="metrics")
         else:
             progress = None
-            loss_tracker = None
+
+        # build_logger returns a NoOpLogger for rank != 0, so only rank 0 writes.
+        logger = build_logger(
+            logger_kind,
+            log_dir=log_dir if log_dir is not None else os.path.join(checkpoint_path, "tb"),
+            run_name=run_name,
+            hparams={
+                "model": type(model).__name__,
+                "max_epochs": max_epochs,
+                "train_batch_size": train_batch_size,
+                "world_size": world_size,
+            },
+            tags=tags,
+            rank=rank,
+        )
 
         model = DDP(
             model.to(device), device_ids=[device_id] if device.type == "cuda" else None
         )
+
+        if rank == 0 and log_graph:
+            try:
+                sample_batch = next(iter(train_loader))
+                sample_input = SingleDeviceTrainer._extract_inputs(sample_batch, device)
+                logger.log_graph(model, sample_input)
+            except Exception as exc:
+                print(f"[Warning] Could not log model graph: {exc}")
 
         for epoch in range(max_epochs):
             if rank == 0:
@@ -542,12 +680,16 @@ class Trainer(SingleDeviceTrainer):
                 valid_interval=valid_interval,
                 checkpoint_path=checkpoint_path,
                 progress=progress,
-                loss_tracker=loss_tracker,
+                logger=logger,
                 accumulate_grad_batches=accumulate_grad_batches,
+                log_hist_every=log_hist_every,
+                log_confusion_matrix=log_confusion_matrix,
             )
 
         if rank == 0:
             progress._stop_live()
+
+        logger.close()
 
         destroy_process_group()
 
@@ -584,6 +726,13 @@ def _get_parameters_from_config():
         "fold": config.get("fold", None),
         "log_device": config.get("log_device", None),
         "gpu_ids": config.get("gpu_ids", None),
+        "logger": config.get("logger", None),
+        "log_dir": config.get("log_dir", None),
+        "run_name": config.get("run_name", None),
+        "tags": config.get("tags", None),
+        "log_graph": config.get("log_graph", None),
+        "log_hist_every": config.get("log_hist_every", None),
+        "log_confusion_matrix": config.get("log_confusion_matrix", None),
     }
 
 

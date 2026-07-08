@@ -6,6 +6,7 @@ import yaml
 
 from physioex.data.dataset import PhysioExDataset
 from physioex.train.trainer import Trainer
+from physioex.train.logger import add_logger_cli_args, logger_train_kwargs
 
 
 def _import_class(spec):
@@ -66,6 +67,7 @@ def finetune_script():
     parser.add_argument("--selected_channels", nargs="+", default=["EEG"])
     parser.add_argument("--seqlen", type=int, default=21)
     parser.add_argument("--preprocessing", type=str, default="raw")
+    add_logger_cli_args(parser)
     args = parser.parse_args()
 
     # Merge YAML config if provided
@@ -111,6 +113,7 @@ def finetune_script():
         fold=args.fold,
         checkpoint_path=args.checkpoint_path,
         gpu_id=args.gpu_id,
+        **logger_train_kwargs(args),
     )
     print("[Info] Finetune complete.")
     return model
