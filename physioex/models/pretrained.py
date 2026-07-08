@@ -68,9 +68,8 @@ def load_from_pretrained(
     with open(config_path) as f:
         config = json.load(f)
 
-    # 2. Resolve model class and kwargs
+    # 2. Resolve model class
     model_cls = _resolve_class(config["model_class"])
-    model_kwargs = config["model_kwargs"]
 
     # 3. Download weights
     weights_path = hf_hub_download(
@@ -78,8 +77,12 @@ def load_from_pretrained(
         filename=f"{name}/model.pt",
     )
 
-    # 4. Instantiate and load
-    model = model_cls(**model_kwargs)
+    # 4. Instantiate: via a factory classmethod if the config specifies one
+    #    (e.g. ProtoSleepNet.from_sleep_transformer), else plain constructor.
+    if "factory" in config:
+        model = getattr(model_cls, config["factory"])(**config.get("factory_kwargs", {}))
+    else:
+        model = model_cls(**config.get("model_kwargs", {}))
     state_dict = torch.load(weights_path, map_location=device, weights_only=True)
     model.load_state_dict(state_dict)
     model = model.to(device).eval()
