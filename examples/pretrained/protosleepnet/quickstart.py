@@ -5,13 +5,15 @@
 
 Full experiment/reproduction code for the paper lives in the dedicated repo:
     https://github.com/guidogagl/protosleepnet
-Weights are on the HuggingFace Hub under 4rooms/physioex.
+Weights are on the HuggingFace Hub under 4rooms/sleep-prototypes.
 """
 import torch
 from physioex.models import load_from_pretrained
 
-# ProtoSleepTransformer (PST), trained on SHHS. Also: "protosleepnet-seq-3ch-mixer" (PSN, MASS).
-model = load_from_pretrained("protosleepnet-st-3ch-mixer", verbose=True)
+# ProtoSleepTransformer (PST), trained on SHHS. Also: "protosleepnet-gagliardi" (PSN, MASS).
+model = load_from_pretrained(
+    "protosleeptransformer-gagliardi", repo_id="4rooms/sleep-prototypes", verbose=True
+)
 
 # Input:  (batch, L, channels, T, F) STFT log-power spectrograms (T=29, F=129),
 #         channels = EEG, EOG, EMG (3). Output: (batch, L, 5) AASM stage logits
