@@ -1,0 +1,35 @@
+PhysioEx Repository Map
+==================================================
+
+PhysioEx: Python library for sleep staging from physiological signals (EEG/EOG/EMG/ECG).
+Install: pip install -e . | Docs: mkdocs | CI: black + deploy
+
+STRUCTURE
+  claude_guide/
+  docs/
+  examples/
+  lib/
+  physioex/
+  tests/
+
+
+CORE MODULES
+  physioex/ (110 .py files)
+  tests/ (26 .py files)
+  examples/ (34 .py files)
+
+
+TOP-LEVEL FILES
+
+
+WORKFLOW
+1. Read CLAUDE.md for project context
+2. Key dirs: physioex/ (src), tests/ (integration), examples/ (scripts)
+3. Use @filename for specific files instead of glob
+4. .claudeignore excludes .git/, __pycache__/, *.pt, data/, cache/, logs/
+
+IMPORTANT PATHS
+- physioex/data/ — datasets, pipelines, preprocessing
+- physioex/models/ — sleep models (tinysleepnet, seqsleepnet, protosleepnet, sleep_tokenizer)
+- physioex/train/ — custom trainer, metrics, progress
+- physioex/explain/ — post-hoc attribution methods

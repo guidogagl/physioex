@@ -1,0 +1,75 @@
+# ============ CRITICAL TOKEN SAVERS ============
+.git/
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.coverage
+.hypothesis/
+
+# ============ LOGS & TEMPORARY ============
+**/*.log
+**/*_log.txt
+**/*.out
+*.tmp
+*.swp
+*.swo
+*~
+*.bak
+*.backup
+
+# ============ SESSION & STATE ============
+SESSION_STATE.md
+*.session
+.state/
+.vscode/
+.idea/
+
+# ============ ML & DATA (AGGRESSIVE) ============
+**/data/
+**/results/
+**/checkpoints/
+**/cache/
+**/embeddings/
+**/*_old/
+**/*.pt
+**/*.pth
+**/*.pkl
+**/*.npy
+**/*.h5
+**/*.hdf5
+**/*.safetensors
+
+# ============ DOCS & ASSETS ============
+docs/assets/
+**/*.png
+**/*.jpg
+**/*.jpeg
+**/*.gif
+**/*.svg
+**/*.pdf
+**/*.psd
+
+# ============ CONFIG & DATA FILES ============
+**/*.json
+**/*.yaml
+**/*.yml
+**/*.toml
+**/*.csv
+**/*.tsv
+**/*.sample
+
+# =ipython notebooks ============
+**/*.ipynb
+.ipynb_checkpoints/
+
+# ============ MISC ============
+*.sbatch
+.DS_Store
+*.db
+*.sqlite
