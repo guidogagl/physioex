@@ -243,7 +243,7 @@ class ChannelCache:
         """Open a cached .npy as a read-only memmap. Returns (memmap, meta).
 
         For non-native numpy dtypes (e.g. ml_dtypes.bfloat16), np.load returns a
-        void type (|V2). We detect this via the sidecar metadata and reconstruct
+        void type (``|V2``). We detect this via the sidecar metadata and reconstruct
         the memmap with the correct dtype and shape, computing the .npy header
         offset from the file.
         """

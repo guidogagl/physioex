@@ -217,6 +217,7 @@ def resolve_channels(
               -> take next unclaimed preference match
             - string naming a specific channel ("C4-M2") -> case-insensitive exact match
             - dict with keys {"modality": ..., "preference": ...} or {"name": ...}
+
         available: list of physical channel labels from the EDF header
         fs_map: mapping physical_label -> sample rate (for fs_in propagation)
         preferences: dict[modality -> list[candidate]]. Defaults to DEFAULT_PREFERENCES.

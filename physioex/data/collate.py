@@ -11,10 +11,12 @@ def dict_collate_fn(batch: List[Dict[str, Any]]) -> Dict[str, Any]:
     accessible.
 
     Expects each item to have at least:
-      - 'signals': dict[str, Tensor]
-      - 'channel_order': list[str]
-      - 'labels': Tensor
-    Optional fields: 'epoch_indices', 'channel_info', 'subject', 'recording_length'.
+
+    - ``signals``: dict[str, Tensor]
+    - ``channel_order``: list[str]
+    - ``labels``: Tensor
+
+    Optional fields: ``epoch_indices``, ``channel_info``, ``subject``, ``recording_length``.
 
     Note:
         Channel names are expected to be in MODALITY_INDEX format (e.g., "EEG_0", "EOG_1").
