@@ -12,27 +12,19 @@ import tempfile
 import csv
 from pathlib import Path
 
-passed, failed, skipped = 0, 0, 0
+import pytest
 
 REAL_DATA = os.environ.get("PHYSIOEX_TEST_REAL_DATA", "0") == "1"
 
 
 def report(name, ok, detail=""):
-    global passed, failed
-    tag = "PASS" if ok else "FAIL"
-    if ok:
-        passed += 1
-    else:
-        failed += 1
-    suffix = f" -- {detail}" if detail else ""
-    print(f"[{tag}] {name}{suffix}")
+    """Thin assert shim: fail the test with a descriptive message."""
+    assert ok, f"{name}{(' -- ' + detail) if detail else ''}"
 
 
 def skip(name, reason=""):
-    global skipped
-    skipped += 1
-    suffix = f" -- {reason}" if reason else ""
-    print(f"[SKIP] {name}{suffix}")
+    """Skip the current test under pytest."""
+    pytest.skip(f"{name} -- {reason}" if reason else name)
 
 
 # ---------------------------------------------------------------------------
@@ -432,36 +424,3 @@ def test_real_gsdv_subject_metadata():
 # ---------------------------------------------------------------------------
 # Runner
 # ---------------------------------------------------------------------------
-if __name__ == "__main__":
-    print("=" * 60)
-    print("Running STAGES dataset tests")
-    print("=" * 60)
-
-    # Unit tests (synthetic data)
-    test_parse_dur0()
-    test_parse_dur30()
-    test_parse_block()
-    test_parse_events()
-    test_parse_midnight()
-    test_parse_anomalous_duration()
-    test_stage_map()
-    test_channel_preferences()
-    test_sites_list()
-    test_dynamic_name()
-
-    # Real-data smoke tests
-    test_real_gsdv_instantiation()
-    test_real_gsdv_load_item()
-    test_real_gsdv_events_populated()
-    test_real_gsdv_subject_metadata()
-
-    print("=" * 60)
-    total = passed + failed
-    msg = f"Results: {passed} passed, {failed} failed"
-    if skipped > 0:
-        msg += f", {skipped} skipped"
-    msg += f" out of {total + skipped}"
-    print(msg)
-    print("=" * 60)
-
-    sys.exit(1 if failed > 0 else 0)

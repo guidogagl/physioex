@@ -10,7 +10,7 @@ import pyedflib
 from physioex.data.base import BasePhysioDataset, SubjectSpec
 
 # Reuse the fake EDF helpers by importing them from the integration test
-from tests.test_raw_dataset_integration import (
+from tests.factories.edf import (
     write_fake_edf, write_fake_annotations_edf, FakeEDFDataset,
 )
 

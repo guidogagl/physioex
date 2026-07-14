@@ -18,8 +18,7 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader
 
-# Reuse helpers from the existing integration test
-from tests.test_raw_dataset_integration import (
+from tests.factories.edf import (
     write_fake_edf,
     write_fake_annotations_edf,
     FakeEDFDataset,
@@ -37,19 +36,9 @@ from physioex.train.trainer import Trainer
 # ---------------------------------------------------------------------------
 # Test bookkeeping
 # ---------------------------------------------------------------------------
-passed = 0
-failed = 0
-
-
-def report(name: str, ok: bool, detail: str = ""):
-    global passed, failed
-    tag = "PASS" if ok else "FAIL"
-    if ok:
-        passed += 1
-    else:
-        failed += 1
-    suffix = f" -- {detail}" if detail else ""
-    print(f"[{tag}] {name}{suffix}")
+def report(name, ok, detail=""):
+    """Thin assert shim: fail the test with a descriptive message."""
+    assert ok, f"{name}{(' -- ' + detail) if detail else ''}"
 
 
 # ---------------------------------------------------------------------------
@@ -389,36 +378,3 @@ def test_evaluate_with_dict_batch():
 # Runner
 # ---------------------------------------------------------------------------
 
-def run_test(fn, name):
-    """Run a test function, catching exceptions gracefully."""
-    try:
-        result = fn()
-        return result
-    except Exception as exc:
-        report(name, False, f"EXCEPTION: {exc}")
-        traceback.print_exc()
-        return None
-
-
-if __name__ == "__main__":
-    print("=" * 70)
-    print("End-to-end smoke tests: real models + new dataset pipeline")
-    print("=" * 70)
-
-    print("\n--- Shape sanity checks ---")
-    run_test(test_shape_sanity_time_domain, "time_domain shape sanity")
-    run_test(test_shape_sanity_time_frequency, "time_frequency shape sanity")
-
-    print("\n--- TinySleepNet + time_domain ---")
-    run_test(test_tinysleepnet_time_domain, "TinySleepNet + time_domain trains 1 epoch")
-
-    print("\n--- SeqSleepNet + time_frequency ---")
-    run_test(test_seqsleepnet_time_frequency, "SeqSleepNet + time_frequency trains 1 epoch")
-
-    print("\n--- Trainer.evaluate with dict batches ---")
-    run_test(test_evaluate_with_dict_batch, "Trainer.evaluate with dict batches")
-
-    print("\n" + "=" * 70)
-    print(f"Results: {passed} passed, {failed} failed out of {passed + failed}")
-    print("=" * 70)
-    sys.exit(0 if failed == 0 else 1)

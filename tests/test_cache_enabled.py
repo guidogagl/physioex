@@ -12,7 +12,7 @@ import numpy as np
 import torch
 
 # Reuse helpers from the existing integration test
-from tests.test_raw_dataset_integration import (
+from tests.factories.edf import (
     FakeEDFDataset,
     write_fake_edf,
     write_fake_annotations_edf,
