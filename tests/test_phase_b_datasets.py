@@ -19,22 +19,14 @@ import pyedflib
 from physioex.data.datasets import get_dataset, available_datasets
 from physioex.data.datasets.sleepedf import SleepEDFDataset, SLEEPEDF_STAGE_MAP
 from physioex.data.datasets.dcsm import DCSMDataset, DCSM_STAGE_MAP
-from tests.test_raw_dataset_integration import write_fake_edf, write_fake_annotations_edf
+import pytest
+
+from tests.factories.edf import write_fake_edf, write_fake_annotations_edf
 
 
-passed = 0
-failed = 0
-
-
-def report(name: str, ok: bool, detail: str = ""):
-    global passed, failed
-    tag = "PASS" if ok else "FAIL"
-    if ok:
-        passed += 1
-    else:
-        failed += 1
-    suffix = f" -- {detail}" if detail else ""
-    print(f"[{tag}] {name}{suffix}")
+def report(name, ok, detail=""):
+    """Thin assert shim: fail the test with a descriptive message."""
+    assert ok, f"{name}{(' -- ' + detail) if detail else ''}"
 
 
 # ===================================================================
@@ -498,7 +490,8 @@ def test_dcsm_multiple_subjects():
 # Real-data smoke tests (guarded)
 # ===================================================================
 
-def run_real_data_tests():
+@pytest.mark.real_data
+def test_real_data_smoke():
     """Only runs if PHYSIOEX_TEST_REAL_DATA=1."""
     print("\n--- Real-data smoke tests ---")
 
@@ -555,42 +548,3 @@ def run_real_data_tests():
 # Runner
 # ===================================================================
 
-if __name__ == "__main__":
-    print("=" * 60)
-    print("Phase B dataset integration tests")
-    print("=" * 60)
-
-    # SleepEDF synthetic tests
-    print("\n--- SleepEDF (synthetic) ---")
-    test_sleepedf_registry()
-    test_sleepedf_in_available()
-    test_sleepedf_empty_root()
-    test_sleepedf_subject_discovery()
-    test_sleepedf_subject_id()
-    test_sleepedf_channel_resolution()
-    test_sleepedf_label_parsing()
-    test_sleepedf_end_to_end()
-    test_sleepedf_two_subjects()
-
-    # DCSM synthetic tests
-    print("\n--- DCSM (synthetic) ---")
-    test_dcsm_registry()
-    test_dcsm_in_available()
-    test_dcsm_empty_root()
-    test_dcsm_subject_discovery()
-    test_dcsm_subject_id()
-    test_dcsm_channel_resolution()
-    test_dcsm_label_parsing()
-    test_dcsm_end_to_end()
-    test_dcsm_multiple_subjects()
-
-    # Real-data tests (optional, guarded by env var)
-    if os.environ.get("PHYSIOEX_TEST_REAL_DATA", "") == "1":
-        run_real_data_tests()
-    else:
-        print("\n--- Real-data smoke tests SKIPPED (set PHYSIOEX_TEST_REAL_DATA=1) ---")
-
-    print("\n" + "=" * 60)
-    print(f"Results: {passed} passed, {failed} failed out of {passed + failed}")
-    print("=" * 60)
-    sys.exit(0 if failed == 0 else 1)

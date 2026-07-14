@@ -100,23 +100,3 @@ def test_yaml_missing_physioex_section():
         os.chdir(original_cwd)
 
 
-if __name__ == "__main__":
-    print("=" * 60)
-    print("Running test_dataset_config.py")
-    print("=" * 60)
-    passed = 0
-    failed = 0
-    for test_fn in [test_no_yaml_file, test_empty_yaml_file, test_yaml_with_physioex_section, test_yaml_missing_physioex_section]:
-        try:
-            test_fn()
-            passed += 1
-        except Exception as e:
-            print(f"FAIL: {test_fn.__name__} -- {e}")
-            failed += 1
-    print("=" * 60)
-    print(f"Results: {passed} passed, {failed} failed out of {passed + failed} tests.")
-    if failed > 0:
-        sys.exit(1)
-    else:
-        print("All tests passed!")
-        sys.exit(0)

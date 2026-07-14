@@ -20,18 +20,9 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 import torch
 from physioex.train.trainer import Trainer, seed_everything
 
-passed, failed = 0, 0
-
-
 def report(name, ok, detail=""):
-    global passed, failed
-    tag = "PASS" if ok else "FAIL"
-    if ok:
-        passed += 1
-    else:
-        failed += 1
-    suffix = f" -- {detail}" if detail else ""
-    print(f"[{tag}] {name}{suffix}")
+    """Thin assert shim: fail the test with a descriptive message."""
+    assert ok, f"{name}{(' -- ' + detail) if detail else ''}"
 
 
 # ---------------------------------------------------------------------------
@@ -201,21 +192,3 @@ def test_multidevice_uses_logger():
 # ---------------------------------------------------------------------------
 # Run all tests
 # ---------------------------------------------------------------------------
-if __name__ == "__main__":
-    print("=" * 60)
-    print("Running trainer enhancement tests")
-    print("=" * 60)
-
-    test_seed_reproducibility()
-    test_train_has_seed_param()
-    test_train_has_accumulate_param()
-    test_train_has_early_stopping_param()
-    test_gradient_accumulation_behavior()
-    test_multidevice_run_epoch_is_classmethod()
-    test_multidevice_uses_logger()
-
-    print("=" * 60)
-    print(f"Results: {passed} passed, {failed} failed out of {passed + failed}")
-    print("=" * 60)
-
-    sys.exit(0 if failed == 0 else 1)

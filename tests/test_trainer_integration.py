@@ -27,19 +27,9 @@ from torch.utils.data import DataLoader
 
 from physioex.train.trainer import Trainer
 
-passed = 0
-failed = 0
-
-
-def report(name: str, ok: bool, detail: str = ""):
-    global passed, failed
-    tag = "PASS" if ok else "FAIL"
-    if ok:
-        passed += 1
-    else:
-        failed += 1
-    suffix = f" -- {detail}" if detail else ""
-    print(f"[{tag}] {name}{suffix}")
+def report(name, ok, detail=""):
+    """Thin assert shim: fail the test with a descriptive message."""
+    assert ok, f"{name}{(' -- ' + detail) if detail else ''}"
 
 
 # -------------------------------------------------------------------
@@ -431,20 +421,3 @@ class _MultiSubjectFakeDataset:
 # -------------------------------------------------------------------
 # Runner
 # -------------------------------------------------------------------
-if __name__ == "__main__":
-    print("=" * 60)
-    print("Trainer integration tests (Phase D: dict batch support)")
-    print("=" * 60)
-
-    test_step_dict_batch()
-    test_step_tuple_batch()
-    test_build_dataloaders_base_dataset()
-    test_step_with_collated_dict()
-    test_evaluate_dict_loader()
-    test_train_base_dataset()
-
-    print("=" * 60)
-    print(f"Results: {passed} passed, {failed} failed out of {passed + failed}")
-    print("=" * 60)
-
-    sys.exit(0 if failed == 0 else 1)
