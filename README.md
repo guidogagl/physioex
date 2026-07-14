@@ -11,14 +11,31 @@
 
 The main purpose of the library is to propose a standard and fast methodology to train and evalutate state-of-the-art deep learning architectures for physiological signal analysis, to shift the attention from the architecture building task to the explainability task. 
 
-With PhysioEx you can simulate a state-of-the-art experiment just running the `train`, `test_model`  and `finetune` commands; evaluating and saving the trained model; and start focusing on the explainability task! 
+With PhysioEx you can simulate a state-of-the-art experiment just running the `train`, `test_model`  and `finetune` commands; evaluating and saving the trained model; and start focusing on the explainability task!
+
+Beyond training classic architectures from scratch, PhysioEx wraps a family of
+**pretrained foundation encoders** behind a uniform interface, so you can extract
+embeddings, run linear probes, and apply the explainability tools on top of them.
 
 ## Supported deep learning architectures
 
-- [Chambon2018](https://ieeexplore.ieee.org/document/8307462) model for sleep stage classification ( raw time series as input).
-- [TinySleepNet](https://github.com/akaraspt/tinysleepnet) model for sleep stage classification (raw time series as input).
-- [SeqSleepNet](https://arxiv.org/pdf/1809.10932.pdf) model for sleep stage classification (time-frequency images as input).
-- [SleepTransformer](https://arxiv.org/pdf/2105.11043) model for sleep stage classification (time-frequency images as input).
+PhysioEx ships two families of models under `physioex.models`.
+
+**Classic sleep-staging architectures** (trained from scratch):
+
+- [Chambon2018](https://ieeexplore.ieee.org/document/8307462) — raw time series as input.
+- [TinySleepNet](https://github.com/akaraspt/tinysleepnet) — raw time series as input.
+- Tsinalis (`TsinalisCNN`) — raw time series as input.
+- [SeqSleepNet](https://arxiv.org/pdf/1809.10932.pdf) — time-frequency images as input.
+- L-SeqSleepNet (`LSeqSleepNet`) — long-sequence time-frequency modelling.
+- [SleepTransformer](https://arxiv.org/pdf/2105.11043) — time-frequency images as input.
+- CoReSleep — multimodal architecture.
+- ProtoSleepNet — prototype-based, interpretable-by-design architecture.
+
+**Foundation encoders** (pretrained backbones exposed through a uniform
+`(B, L, C, T) -> (B, L, D)` `encode()` interface, for embedding extraction and
+linear probing): `CBraMod`, `BENDR`, `LaBraM`, `BIOT`, `SleepFM`, `TFC`, `REVE`,
+`S-JEPA`, `NeuroLM`.
 
 ## Supported datasets
 
