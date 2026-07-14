@@ -66,9 +66,11 @@ autodoc_default_options = {
     "show-inheritance": True,
 }
 autodoc_typehints = "description"
-# Mock only the lazily-imported optional extras — NEVER torch/braindecode,
-# or autodoc signatures break.
-autodoc_mock_imports = ["transformers", "mne", "wandb", "tensorboard", "nvitop"]
+# Mock only the lazily-imported optional extras that CI does not install.
+# NOT torch/braindecode (core), and NOT mne: braindecode (a core dep) pulls
+# mne transitively and registers models via __init_subclass__, which breaks if
+# mne is a mock ("ATCNet.__init_subclass__() takes no keyword arguments").
+autodoc_mock_imports = ["transformers", "wandb", "tensorboard", "nvitop"]
 
 napoleon_google_docstring = True
 napoleon_numpy_docstring = False
