@@ -2,6 +2,13 @@ site_name: PhysioEx
 site_url: https://guidogagl.github.io/physioex/
 nav:
     - Home: index.md
+    - Architecture:
+        - Library:
+            - Overview: pages/architecture/library/overview.md
+            - Data: pages/architecture/library/data.md
+            - Models: pages/architecture/library/models.md
+            - Train: pages/architecture/library/train.md
+            - Explain: pages/architecture/library/explain.md
     - Preprocess Module: pages/preprocess.md
     - Data Module: pages/data.md
     - Train Module:
@@ -86,7 +93,11 @@ markdown_extensions:
       generic: true
   - footnotes
   - pymdownx.details
-  - pymdownx.superfences
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
   - pymdownx.mark
   - pymdownx.highlight
   - toc:
