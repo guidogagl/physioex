@@ -11,50 +11,48 @@ The raw-EDF, lazy-loading dataset layer, the preprocessing pipeline, the
 on-disk cache, EDF/annotation readers and sleep-event helpers.
 
 ```{eval-rst}
-.. currentmodule:: physioex.data
 .. autosummary::
    :toctree: _generated
    :nosignatures:
 
-   BasePhysioDataset
-   MultiDataset
-   SubjectSpec
-   PreprocessingStep
-   PreprocessingPipeline
-   CompiledPipeline
-   CompiledStep
-   Identity
-   BandpassFilter
-   NotchFilter
-   Resample
-   ZScoreNormalize
-   XSleepNetSpectrogram
-   get_preset
-   available_presets
-   ChannelCache
-   dict_collate_fn
-   stack_channels
-   is_dict_batch
-   EDFHeader
-   ResolvedChannel
-   probe_edf_header
-   resolve_channels
-   SleepEvent
-   map_events_to_epochs
-   events_to_dicts
-   dicts_to_events
+   physioex.data.BasePhysioDataset
+   physioex.data.MultiDataset
+   physioex.data.SubjectSpec
+   physioex.data.PreprocessingStep
+   physioex.data.PreprocessingPipeline
+   physioex.data.CompiledPipeline
+   physioex.data.CompiledStep
+   physioex.data.Identity
+   physioex.data.BandpassFilter
+   physioex.data.NotchFilter
+   physioex.data.Resample
+   physioex.data.ZScoreNormalize
+   physioex.data.XSleepNetSpectrogram
+   physioex.data.get_preset
+   physioex.data.available_presets
+   physioex.data.ChannelCache
+   physioex.data.dict_collate_fn
+   physioex.data.stack_channels
+   physioex.data.is_dict_batch
+   physioex.data.EDFHeader
+   physioex.data.ResolvedChannel
+   physioex.data.probe_edf_header
+   physioex.data.resolve_channels
+   physioex.data.SleepEvent
+   physioex.data.map_events_to_epochs
+   physioex.data.events_to_dicts
+   physioex.data.dicts_to_events
 ```
 
 Datasets are resolved by name from the registry:
 
 ```{eval-rst}
-.. currentmodule:: physioex.data.datasets
 .. autosummary::
    :toctree: _generated
    :nosignatures:
 
-   get_dataset
-   available_datasets
+   physioex.data.datasets.get_dataset
+   physioex.data.datasets.available_datasets
 ```
 
 ## `physioex.models`
@@ -64,25 +62,24 @@ heterogeneous pretrained backbones), embedding/pretrained helpers, and the
 classic sleep-staging architectures.
 
 ```{eval-rst}
-.. currentmodule:: physioex.models
 .. autosummary::
    :toctree: _generated
    :nosignatures:
 
-   FoundationEncoder
-   CBraModEncoder
-   BENDREncoder
-   LaBraMEncoder
-   BIOTEncoder
-   SleepFMEncoder
-   TFCEncoder
-   REVEEncoder
-   SJEEncoder
-   NeuroLMEncoder
-   load_from_pretrained
-   extract_embeddings
-   load_embeddings
-   linear_probe
+   physioex.models.FoundationEncoder
+   physioex.models.CBraModEncoder
+   physioex.models.BENDREncoder
+   physioex.models.LaBraMEncoder
+   physioex.models.BIOTEncoder
+   physioex.models.SleepFMEncoder
+   physioex.models.TFCEncoder
+   physioex.models.REVEEncoder
+   physioex.models.SJEEncoder
+   physioex.models.NeuroLMEncoder
+   physioex.models.load_from_pretrained
+   physioex.models.extract_embeddings
+   physioex.models.load_embeddings
+   physioex.models.linear_probe
 ```
 
 Classic architectures:
@@ -93,6 +90,9 @@ Classic architectures:
    :nosignatures:
 
    physioex.models.chambon2018.Chambon2018Net
+   physioex.models.tinysleepnet.TinySleepNet
+   physioex.models.seqsleepnet.SeqSleepNet
+   physioex.models.sleeptransformer.SleepTransformer
 ```
 
 ## `physioex.train`
