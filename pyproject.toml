@@ -91,6 +91,27 @@ omit = [
     "physioex/data/dataset.py",       # legacy, deprecated
     "physioex/data/datareader.py",    # legacy, deprecated
     "*/tests/*",
+    # ── Not exercisable in CPU-only CI (covered by gated/manual runs) ──
+    "physioex/train/multidevicetrainer.py",   # DDP, needs multi-GPU
+    "physioex/train/bin/*",                    # CLI entry points (gated cli_workflows)
+    # Foundation-encoder internals need HuggingFace weights (@hf, run on bio-gpu).
+    # Their contract (class attrs, PIPELINE_PRESET, wrapper) is covered CPU-side.
+    "physioex/models/bendr.py",
+    "physioex/models/biot.py",
+    "physioex/models/cbramod.py",
+    "physioex/models/labram.py",
+    "physioex/models/neurolm.py",
+    "physioex/models/reve.py",
+    "physioex/models/sjepa.py",
+    "physioex/models/sleepfm.py",
+    "physioex/models/tfc.py",
+    "physioex/models/coresleep.py",            # multimodal, no CPU forward path tested
+    "physioex/models/protosleepnet.py",        # composite encoder, gated
+    "physioex/models/embed.py",                # extract/probe pipelines need HF + disk
+    "physioex/models/pretrained.py",           # checkpoint loading (gated)
+    "physioex/models/foundation_checkpoints.py",  # downloads checkpoints
+    "physioex/models/foundation_datasets.py",     # dataset registry, needs real roots
+    "physioex/models/foundation_channel_mapping.py",  # exercised via @hf encoder builds
 ]
 
 [tool.coverage.report]
