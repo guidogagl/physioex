@@ -20,6 +20,16 @@ class DataReader:
         channels_index: List[int],
         offset: int = 0,
     ):
+        import warnings
+
+        warnings.warn(
+            "DataReader (the legacy preprocessed-array reader) is deprecated and will "
+            "be removed in a future release. Use the raw-EDF layer instead "
+            "(physioex.data.datasets.get_dataset).",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+
         # Initialize parameters
         self.data_folder = data_folder
         self.dataset = dataset

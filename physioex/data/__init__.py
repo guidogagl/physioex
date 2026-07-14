@@ -1,10 +1,15 @@
-"""PhysioEx data module public API."""
-# Legacy API (preserved for backward compat)
-# -- the legacy physioex/data/dataset.py file uses internal imports
-# (from datareader import DataReader) so we do NOT import from
-# dataset/datareader here to avoid circular-import issues.
-# Users who want the legacy PhysioExDataset can still do:
-#   from physioex.data.dataset import PhysioExDataset
+"""PhysioEx data module public API.
+
+The canonical data layer is the raw-EDF, lazy-loading ``BasePhysioDataset``
+stack exported below (resolve datasets by name via
+``physioex.data.datasets.get_dataset``).
+
+DEPRECATED: the legacy preprocessed-array layer (``PhysioExDataset`` /
+``DataReader``) is kept only for backward compatibility and emits a
+``DeprecationWarning`` on instantiation. It is not re-exported here (its
+internal imports would create circular-import issues); import it explicitly:
+``from physioex.data.dataset import PhysioExDataset``.
+"""
 
 # New API
 from physioex.data.pipeline import (

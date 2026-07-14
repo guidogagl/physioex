@@ -46,6 +46,17 @@ class PhysioExDataset(Dataset):
 
         super().__init__()
 
+        import warnings
+
+        warnings.warn(
+            "PhysioExDataset (the legacy preprocessed-array data layer) is deprecated "
+            "and will be removed in a future release. Use the raw-EDF layer instead: "
+            "physioex.data.datasets.get_dataset(name)(channels=..., pipelines=..., "
+            "sequence_length=...).",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+
         self.datasets = datasets
         self.preprocessing = preprocessing
         self.seqlen = seqlen

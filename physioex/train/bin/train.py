@@ -1,8 +1,7 @@
 """CLI entry point for training a model on PhysioEx datasets.
 
-Supports BOTH:
-  - Legacy preprocessed datasets (``--dataset_type legacy``)
-  - New raw-EDF lazy-loading datasets (``--dataset_type raw``, default)
+Uses the raw-EDF lazy-loading data layer (``physioex.data.datasets``), shared
+with ``finetune`` and ``test_model`` via ``physioex.train.bin._common``.
 
 Examples::
 
@@ -25,28 +24,17 @@ Examples::
         --max_epochs 20 --train_batch_size 64 --lr 1e-4 --gpu_id 0
 """
 import argparse
-import importlib
-import json
-import os
 
-import yaml
-
+from physioex.train.bin._common import (
+    add_dataset_cli_args,
+    apply_config_overlay,
+    build_dataset_from_args,
+    import_class,
+    inject_in_chan,
+    parse_kwargs,
+)
 from physioex.train.trainer import Trainer
 from physioex.train.logger import add_logger_cli_args, logger_train_kwargs
-
-
-def _import_class(spec: str):
-    """Import a class from 'module.path:ClassName' spec."""
-    module_path, class_name = spec.rsplit(":", 1)
-    return getattr(importlib.import_module(module_path), class_name)
-
-
-def _parse_model_kwargs(raw: str) -> dict:
-    """Parse JSON or YAML string into a dict."""
-    try:
-        return json.loads(raw)
-    except Exception:
-        return yaml.safe_load(raw) or {}
 
 
 def train_script():
@@ -66,41 +54,8 @@ def train_script():
         help="JSON/YAML model constructor kwargs",
     )
 
-    # Dataset
-    parser.add_argument(
-        "--dataset",
-        type=str,
-        required=True,
-        help="Dataset name (e.g. hmc, sleepedf, dcsm, mesa)",
-    )
-    parser.add_argument(
-        "--dataset_root",
-        type=str,
-        default=None,
-        help="Override default data root directory",
-    )
-    parser.add_argument(
-        "--channels",
-        nargs="+",
-        default=["EEG", "EOG", "EMG"],
-        help="Channels to load (modality names or physical names)",
-    )
-    parser.add_argument(
-        "--pipelines",
-        type=str,
-        default="time_domain",
-        help="Preset pipeline name: raw, time_domain, time_frequency, "
-        "seqsleepnet, eeg, emg, etc.",
-    )
-    parser.add_argument(
-        "--seqlen",
-        type=int,
-        default=21,
-        help="Epoch sequence length (L). -1 for full recordings.",
-    )
-    parser.add_argument(
-        "--cache_dir", type=str, default=None, help="Override default cache directory"
-    )
+    # Dataset (shared flags)
+    add_dataset_cli_args(parser)
 
     # Training
     parser.add_argument("--max_epochs", type=int, default=20)
@@ -130,43 +85,21 @@ def train_script():
     )
 
     args = parser.parse_args()
+    apply_config_overlay(args)
 
-    # YAML config overlay
-    if args.config is not None:
-        with open(args.config, "r") as f:
-            config = yaml.safe_load(f) or {}
-        for k, v in config.items():
-            if hasattr(args, k) and v is not None:
-                setattr(args, k, v)
-
-    # Dataset (new raw-EDF system) — build BEFORE model so we can infer in_chan
-    from physioex.data.datasets import get_dataset
-    from physioex.data.presets import get_preset
-
-    dataset_class = get_dataset(args.dataset)
-    ds_kwargs = dict(
-        channels=args.channels,
-        pipelines=args.pipelines,
-        sequence_length=args.seqlen,
-        cache_dir=args.cache_dir,
-    )
-    if args.dataset_root is not None:
-        ds_kwargs["root"] = args.dataset_root
-    dataset = dataset_class(**ds_kwargs)
-
+    # Dataset (new raw-EDF layer) — build BEFORE model so we can infer in_chan.
+    dataset, n_channels = build_dataset_from_args(args)
     print(
         f"[Info] Dataset: {args.dataset} | Subjects: {dataset.get_n_subjects()} | "
         f"Epochs indexed: {len(dataset)} | Channels: {args.channels} | "
-        f"Pipeline: {args.pipelines} | SeqLen: {args.seqlen}"
+        f"Pipeline: {args.pipelines} | SeqLen: {args.sequence_length}"
     )
 
-    # Model — auto-inject in_chan from channel count if not explicitly set
-    model_kwargs = _parse_model_kwargs(args.model_kwargs)
-    n_channels = len(args.channels)
-    if "in_chan" not in model_kwargs and "in_channels" not in model_kwargs:
-        model_kwargs["in_chan"] = n_channels
-        print(f"[Info] Auto-set in_chan={n_channels} from --channels {args.channels}")
-    model_class = _import_class(args.model)
+    # Model — auto-inject in_chan from channel count if not explicitly set.
+    model_kwargs = inject_in_chan(parse_kwargs(args.model_kwargs), n_channels)
+    if "in_chan" in model_kwargs:
+        print(f"[Info] in_chan={model_kwargs['in_chan']} (from --channels {args.channels})")
+    model_class = import_class(args.model)
     model = model_class(**model_kwargs)
 
     # Train
@@ -187,7 +120,7 @@ def train_script():
         **logger_train_kwargs(args),
     )
 
-    print(f"[Info] Training complete.")
+    print("[Info] Training complete.")
     return model
 
 

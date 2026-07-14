@@ -1,18 +1,21 @@
-"""CLI entry point for fine-tuning a pretrained PhysioEx model."""
-import argparse
-import importlib
-import os
-import yaml
+"""CLI entry point for fine-tuning a pretrained PhysioEx model.
 
-from physioex.data.dataset import PhysioExDataset
+Uses the same raw-EDF data layer as ``train`` and ``test_model`` (see
+``physioex.train.bin._common``), so the ``--dataset/--channels/--pipelines``
+spec matches across all three commands.
+"""
+import argparse
+
+from physioex.train.bin._common import (
+    add_dataset_cli_args,
+    apply_config_overlay,
+    build_dataset_from_args,
+    import_class,
+    inject_in_chan,
+    parse_kwargs,
+)
 from physioex.train.trainer import Trainer
 from physioex.train.logger import add_logger_cli_args, logger_train_kwargs
-
-
-def _import_class(spec):
-    """Import a class from 'module.path:ClassName' spec."""
-    module_path, class_name = spec.rsplit(":", 1)
-    return getattr(importlib.import_module(module_path), class_name)
 
 
 def finetune_script():
@@ -33,19 +36,17 @@ def finetune_script():
         help="Path to pretrained checkpoint to finetune from",
     )
     parser.add_argument(
-        "--datasets", nargs="+", required=True, help="One or more dataset names"
+        "--model_kwargs",
+        type=str,
+        default="{}",
+        help="JSON/YAML string with model constructor kwargs",
     )
+    add_dataset_cli_args(parser)
     parser.add_argument(
         "--config",
         type=str,
         default=None,
         help="Optional YAML config file (merged over defaults)",
-    )
-    parser.add_argument(
-        "--model_kwargs",
-        type=str,
-        default="{}",
-        help="JSON/YAML string with model constructor kwargs",
     )
     parser.add_argument("--max_epochs", type=int, default=5, help="Number of epochs")
     parser.add_argument("--lr", type=float, default=1e-5, help="Learning rate")
@@ -53,9 +54,7 @@ def finetune_script():
     parser.add_argument(
         "--train_batch_size", type=int, default=32, help="Train batch size"
     )
-    parser.add_argument(
-        "--eval_batch_size", type=int, default=1, help="Eval batch size"
-    )
+    parser.add_argument("--eval_batch_size", type=int, default=1, help="Eval batch size")
     parser.add_argument("--fold", type=int, default=0, help="Cross-validation fold")
     parser.add_argument(
         "--checkpoint_path",
@@ -64,44 +63,24 @@ def finetune_script():
         help="Directory to save finetuned checkpoints",
     )
     parser.add_argument("--gpu_id", type=int, default=None)
-    parser.add_argument("--selected_channels", nargs="+", default=["EEG"])
-    parser.add_argument("--seqlen", type=int, default=21)
-    parser.add_argument("--preprocessing", type=str, default="raw")
+    parser.add_argument(
+        "--num_workers", type=int, default=0, help="DataLoader workers (0 = main process)"
+    )
     add_logger_cli_args(parser)
     args = parser.parse_args()
 
-    # Merge YAML config if provided
-    if args.config is not None:
-        with open(args.config, "r") as f:
-            config = yaml.safe_load(f) or {}
-        for k, v in config.items():
-            if hasattr(args, k) and v is not None:
-                setattr(args, k, v)
+    apply_config_overlay(args)
 
-    # Parse model_kwargs string (supports JSON and YAML)
-    try:
-        import json
+    # Dataset (new raw-EDF layer) — build BEFORE model so we can infer in_chan.
+    dataset, n_channels = build_dataset_from_args(args)
 
-        model_kwargs = json.loads(args.model_kwargs)
-    except Exception:
-        model_kwargs = yaml.safe_load(args.model_kwargs) or {}
-
-    # Build dataset
-    dataset = PhysioExDataset(
-        datasets=args.datasets,
-        selected_channels=args.selected_channels,
-        seqlen=args.seqlen,
-        preprocessing=args.preprocessing,
-    )
-
-    # Build model
-    model_class = _import_class(args.model)
+    # Model
+    model_kwargs = inject_in_chan(parse_kwargs(args.model_kwargs), n_channels)
+    model_class = import_class(args.model)
     model = model_class(**model_kwargs)
 
-    # Load pretrained weights
+    # Load pretrained weights, then finetune (lower LR).
     model, _, _ = Trainer.load_checkpoint(model, args.ckpt_path)
-
-    # Finetune (lower LR)
     model = Trainer.train(
         model=model,
         dataset=dataset,

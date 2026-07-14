@@ -1,26 +1,45 @@
-"""CLI entry point for evaluating a pretrained PhysioEx model."""
+"""CLI entry point for evaluating a pretrained PhysioEx model.
+
+Uses the same raw-EDF data layer as ``train`` and ``finetune`` (see
+``physioex.train.bin._common``). Results are reported per dataset.
+"""
 import argparse
-import importlib
 import os
-import yaml
 
 import pandas as pd
 
-from physioex.data.dataset import PhysioExDataset
+from physioex.train.bin._common import (
+    add_dataset_cli_args,
+    apply_config_overlay,
+    import_class,
+    inject_in_chan,
+    parse_kwargs,
+)
 from physioex.train.trainer import Trainer
 from physioex.train import stats as _stats
 from physioex.train.logger import add_logger_cli_args, build_logger
 
 
-def _import_class(spec):
-    """Import a class from 'module.path:ClassName' spec."""
-    module_path, class_name = spec.rsplit(":", 1)
-    return getattr(importlib.import_module(module_path), class_name)
+def _build_single_dataset(args, name):
+    """Build one raw-EDF dataset for ``name`` using the shared CLI spec."""
+    from physioex.data.datasets import get_dataset
+
+    ds_kwargs = dict(
+        channels=args.channels,
+        pipelines=args.pipelines,
+        sequence_length=args.sequence_length,
+        cache_dir=args.cache_dir,
+    )
+    if args.dataset_root is not None:
+        ds_kwargs["root"] = args.dataset_root
+    extra = parse_kwargs(args.dataset_kwargs)
+    return get_dataset(name)(**ds_kwargs, **extra)
 
 
 def test_script():
     parser = argparse.ArgumentParser(
-        description="Evaluate a PhysioEx model on datasets."
+        description="Evaluate a PhysioEx model on datasets.",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     parser.add_argument(
         "--model",
@@ -35,19 +54,17 @@ def test_script():
         help="Path to pretrained checkpoint to evaluate",
     )
     parser.add_argument(
-        "--datasets", nargs="+", required=True, help="One or more dataset names"
+        "--model_kwargs",
+        type=str,
+        default="{}",
+        help="JSON/YAML string with model constructor kwargs",
     )
+    add_dataset_cli_args(parser)
     parser.add_argument(
         "--config",
         type=str,
         default=None,
         help="Optional YAML config file (merged over defaults)",
-    )
-    parser.add_argument(
-        "--model_kwargs",
-        type=str,
-        default="{}",
-        help="JSON/YAML string with model constructor kwargs",
     )
     parser.add_argument("--fold", type=int, default=0)
     parser.add_argument(
@@ -57,9 +74,6 @@ def test_script():
         help="Directory to save results CSV",
     )
     parser.add_argument("--gpu_id", type=int, default=None)
-    parser.add_argument("--selected_channels", nargs="+", default=["EEG"])
-    parser.add_argument("--seqlen", type=int, default=21)
-    parser.add_argument("--preprocessing", type=str, default="raw")
     parser.add_argument(
         "--voting",
         action="store_true",
@@ -79,29 +93,18 @@ def test_script():
     add_logger_cli_args(parser)
     args = parser.parse_args()
 
-    # Merge YAML config if provided
-    if args.config is not None:
-        with open(args.config, "r") as f:
-            config = yaml.safe_load(f) or {}
-        for k, v in config.items():
-            if hasattr(args, k) and v is not None:
-                setattr(args, k, v)
+    apply_config_overlay(args)
 
-    # Parse model_kwargs string (supports JSON and YAML)
-    try:
-        import json
-
-        model_kwargs = json.loads(args.model_kwargs)
-    except Exception:
-        model_kwargs = yaml.safe_load(args.model_kwargs) or {}
-
-    # Build model and load checkpoint
-    model_class = _import_class(args.model)
+    # Build model and load checkpoint.
+    model_kwargs = inject_in_chan(parse_kwargs(args.model_kwargs), len(args.channels))
+    model_class = import_class(args.model)
     model = model_class(**model_kwargs)
     model, _, _ = Trainer.load_checkpoint(model, args.ckpt_path)
 
     log_dir = args.log_dir or (
-        os.path.join(args.results_path, "tb") if args.results_path else os.path.join(os.getcwd(), "tb")
+        os.path.join(args.results_path, "tb")
+        if args.results_path
+        else os.path.join(os.getcwd(), "tb")
     )
     logger = build_logger(
         args.logger,
@@ -111,13 +114,8 @@ def test_script():
     )
 
     results = []
-    for ds_name in args.datasets:
-        dataset = PhysioExDataset(
-            datasets=[ds_name],
-            selected_channels=args.selected_channels,
-            seqlen=args.seqlen,
-            preprocessing=args.preprocessing,
-        )
+    for ds_name in args.dataset:
+        dataset = _build_single_dataset(args, ds_name)
         eval_kwargs = dict(
             model=model,
             dataset=dataset,

@@ -8,16 +8,13 @@ from torch.utils.data import DataLoader
 
 from time import perf_counter
 
-from physioex.data.dataset import (
-    PhysioExDataset,
-    _PhysioExTrainDataset,
-    _PhysioExEvalDataset,
-)
-
 from physioex.train.progress import PhysioExTrainProgressBar
 from physioex.train.logger import build_logger, Logger
 from physioex.train import stats as _stats
-from physioex.train.trainer import Trainer as SingleDeviceTrainer
+from physioex.train.trainer import (
+    Trainer as SingleDeviceTrainer,
+    _BasePhysioEvalDataset,
+)
 
 import torch.multiprocessing as mp
 from torch.utils.data.distributed import DistributedSampler
@@ -58,7 +55,7 @@ class Trainer(SingleDeviceTrainer):
 
     @staticmethod
     def build_dataloaders(
-        dataset: PhysioExDataset,
+        dataset,  # BasePhysioDataset / MultiDataset (new) OR PhysioExDataset (legacy)
         train_batch_size: int = 32,
         eval_batch_size: int = 1,
         num_workers: int = None,
@@ -68,12 +65,54 @@ class Trainer(SingleDeviceTrainer):
         fold: int = 0,
     ) -> tuple[DataLoader, DataLoader, DataLoader]:
 
+        # Detect the new raw-EDF layer (dict-returning) vs. the legacy layer,
+        # mirroring the single-device Trainer so DDP shares the same data path.
+        _is_base_dataset = False
+        collate_fn = None
+        try:
+            from physioex.data.base import BasePhysioDataset as _Base
+            from physioex.data.multi import MultiDataset as _Multi
+
+            if isinstance(dataset, (_Base, _Multi)):
+                _is_base_dataset = True
+                from physioex.data.collate import dict_collate_fn
+
+                collate_fn = dict_collate_fn
+                # NFS-backed memmap caching: multi-worker loaders thrash the
+                # network filesystem. Default to main-process loading.
+                if num_workers is None:
+                    num_workers = 0
+                _is_multi = isinstance(dataset, _Multi)
+        except ImportError:
+            pass
+
         num_workers = Trainer._get_num_workers(num_workers)
 
         train_indexes, valid_subjects, test_subjects = dataset.split(fold=fold)
-        train_dataset = _PhysioExTrainDataset(dataset, train_indexes)
-        valid_dataset = _PhysioExEvalDataset(dataset, valid_subjects)
-        test_dataset = _PhysioExEvalDataset(dataset, test_subjects)
+
+        if _is_base_dataset:
+            from torch.utils.data import Subset
+
+            train_dataset = Subset(dataset, train_indexes.tolist())
+            if _is_multi:
+                valid_dataset = _BasePhysioEvalDataset(dataset, valid_subjects)
+                test_dataset = _BasePhysioEvalDataset(dataset, test_subjects)
+            else:
+                valid_dataset = _BasePhysioEvalDataset(
+                    dataset, [sid for _, sid in valid_subjects]
+                )
+                test_dataset = _BasePhysioEvalDataset(
+                    dataset, [sid for _, sid in test_subjects]
+                )
+        else:
+            from physioex.data.dataset import (
+                _PhysioExTrainDataset,
+                _PhysioExEvalDataset,
+            )
+
+            train_dataset = _PhysioExTrainDataset(dataset, train_indexes)
+            valid_dataset = _PhysioExEvalDataset(dataset, valid_subjects)
+            test_dataset = _PhysioExEvalDataset(dataset, test_subjects)
 
         train_loader_kwargs = dict(
             dataset=train_dataset,
@@ -84,20 +123,25 @@ class Trainer(SingleDeviceTrainer):
             persistent_workers=persistent_workers,
             sampler=DistributedSampler(train_dataset),
         )
-
+        if collate_fn is not None:
+            train_loader_kwargs["collate_fn"] = collate_fn
         if num_workers > 0:
             train_loader_kwargs["prefetch_factor"] = prefetch_factor
 
         train_loader = DataLoader(**train_loader_kwargs)
 
+        # Subject-level eval recordings have variable length -> batch_size=1.
+        effective_eval_bs = 1 if _is_base_dataset else eval_batch_size
         valid_loader_kwargs = dict(
             dataset=valid_dataset,
-            batch_size=eval_batch_size,
+            batch_size=effective_eval_bs,
             shuffle=False,
             num_workers=num_workers,
             pin_memory=pin_memory,
             persistent_workers=persistent_workers,
         )
+        if collate_fn is not None:
+            valid_loader_kwargs["collate_fn"] = collate_fn
         if num_workers > 0:
             valid_loader_kwargs["prefetch_factor"] = prefetch_factor
 
@@ -111,7 +155,7 @@ class Trainer(SingleDeviceTrainer):
     @staticmethod
     def train(
         model: torch.nn.Module,
-        dataset: typing.Union[PhysioExDataset, typing.Tuple[DataLoader, DataLoader]],
+        dataset: typing.Union["typing.Any", typing.Tuple[DataLoader, DataLoader]],
         checkpoint_path: str = None,
         max_epochs: int = 10,
         loss: torch.nn.Module = torch.nn.CrossEntropyLoss(ignore_index=-1),
@@ -569,7 +613,7 @@ class Trainer(SingleDeviceTrainer):
         rank: int,
         world_size: int,
         model: torch.nn.Module,
-        dataset: typing.Union[PhysioExDataset, typing.Tuple[DataLoader, DataLoader]],
+        dataset: typing.Union["typing.Any", typing.Tuple[DataLoader, DataLoader]],
         checkpoint_path: str,
         max_epochs: int,
         loss: torch.nn.Module,
@@ -606,7 +650,7 @@ class Trainer(SingleDeviceTrainer):
 
         if isinstance(dataset, tuple):
             train_loader, valid_loader = dataset
-        elif isinstance(dataset, PhysioExDataset):
+        elif hasattr(dataset, "split"):
             train_loader, valid_loader, _ = Trainer.build_dataloaders(
                 dataset=dataset,
                 train_batch_size=train_batch_size,
@@ -619,7 +663,8 @@ class Trainer(SingleDeviceTrainer):
             )
         else:
             raise ValueError(
-                "Invalid dataset type. Must be PhysioExDataset or tuple of DataLoaders."
+                "Invalid dataset type. Must be a PhysioEx dataset (BasePhysioDataset / "
+                "MultiDataset / legacy PhysioExDataset) or a tuple of DataLoaders."
             )
 
         valid_interval = max(1, int(len(train_loader) * valid_interval_ratio))
@@ -754,9 +799,10 @@ class DummyModel(torch.nn.Module):
 
 
 if __name__ == "__main__":
-    # create dummy model
+    # Smoke demo on the new raw-EDF layer (requires PHYSIOEX_DATA to point at HMC).
+    from physioex.data.datasets import get_dataset
 
-    dataset = PhysioExDataset(datasets=["hmc"])
+    dataset = get_dataset("hmc")(channels=["EEG"], pipelines="raw", sequence_length=21)
 
     Trainer.train(
         model=DummyModel(),
