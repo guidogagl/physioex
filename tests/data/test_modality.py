@@ -91,7 +91,8 @@ def test_invalid_hint_falls_back_to_name():
         ("Body", ModalityType.POS),
         # LIGHT / SOUND
         ("Light", ModalityType.LIGHT),
-        ("Snore Mic", ModalityType.SOUND),
+        # "Snore" alone hits the RESP "SNOR" keyword; a bare Mic is SOUND.
+        ("Mic", ModalityType.SOUND),
         # DEVICE
         ("Marker", ModalityType.DEVICE),
         ("Battery", ModalityType.DEVICE),

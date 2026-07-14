@@ -21,6 +21,8 @@ from tests.factories.edf import (
 
 
 def _make_ds(root: Path, cache: Path, sid: str, n_epochs: int, seq_len: int = 5):
+    root.mkdir(parents=True, exist_ok=True)
+    cache.mkdir(parents=True, exist_ok=True)
     write_fake_edf(
         root / f"{sid}.edf",
         duration_sec=n_epochs * 30,
