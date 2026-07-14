@@ -13,18 +13,9 @@ from physioex.data.steps import (
 )
 from physioex.data.presets import get_preset, available_presets, PRESETS
 
-passed, failed = 0, 0
-
-
 def report(name, ok, detail=""):
-    global passed, failed
-    tag = "PASS" if ok else "FAIL"
-    if ok:
-        passed += 1
-    else:
-        failed += 1
-    suffix = f" -- {detail}" if detail else ""
-    print(f"[{tag}] {name}{suffix}")
+    """Thin assert shim: fail the test with a descriptive message."""
+    assert ok, f"{name}{(' -- ' + detail) if detail else ''}"
 
 
 # ---------------------------------------------------------------------------
@@ -348,28 +339,3 @@ def test_time_frequency_clip_db():
 # ---------------------------------------------------------------------------
 # Run all tests
 # ---------------------------------------------------------------------------
-if __name__ == "__main__":
-    print("=" * 60)
-    print("Running preset pipeline tests")
-    print("=" * 60)
-
-    test_raw_preset_steps()
-    test_seqsleepnet_preset_steps()
-    test_xsleepnet_mouse_noverlap()
-    test_identity_preset()
-    test_unknown_preset_raises()
-    test_hash_determinism()
-    test_hash_uniqueness()
-    test_overrides()
-    test_available_presets()
-    test_modality_presets()
-    test_modality_preset_with_notch()
-    test_time_domain_bundle()
-    test_time_frequency_bundle()
-    test_time_frequency_clip_db()
-
-    print("=" * 60)
-    print(f"Results: {passed} passed, {failed} failed out of {passed + failed}")
-    print("=" * 60)
-
-    sys.exit(0 if failed == 0 else 1)

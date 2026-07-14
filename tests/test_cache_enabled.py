@@ -18,19 +18,9 @@ from tests.test_raw_dataset_integration import (
     write_fake_annotations_edf,
 )
 
-passed = 0
-failed = 0
-
-
-def report(name: str, ok: bool, detail: str = ""):
-    global passed, failed
-    tag = "PASS" if ok else "FAIL"
-    if ok:
-        passed += 1
-    else:
-        failed += 1
-    suffix = f" -- {detail}" if detail else ""
-    print(f"[{tag}] {name}{suffix}")
+def report(name, ok, detail=""):
+    """Thin assert shim: fail the test with a descriptive message."""
+    assert ok, f"{name}{(' -- ' + detail) if detail else ''}"
 
 
 # -------------------------------------------------------------------
@@ -210,15 +200,3 @@ def test_both_modes_produce_same_data():
 
 # ----- runner -----
 
-if __name__ == "__main__":
-    print("=" * 60)
-    print("cache_enabled parameter tests")
-    print("=" * 60)
-    test_cache_enabled_true_writes_to_disk()
-    test_cache_enabled_false_no_disk_io()
-    test_cache_enabled_false_repeated_access()
-    test_both_modes_produce_same_data()
-    print("=" * 60)
-    print(f"Results: {passed} passed, {failed} failed out of {passed + failed}")
-    print("=" * 60)
-    sys.exit(0 if failed == 0 else 1)

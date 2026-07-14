@@ -14,19 +14,9 @@ from tests.test_raw_dataset_integration import (
     write_fake_edf, write_fake_annotations_edf, FakeEDFDataset,
 )
 
-passed = 0
-failed = 0
-
-
 def report(name, ok, detail=""):
-    global passed, failed
-    tag = "PASS" if ok else "FAIL"
-    if ok:
-        passed += 1
-    else:
-        failed += 1
-    suffix = f" -- {detail}" if detail else ""
-    print(f"[{tag}] {name}{suffix}")
+    """Thin assert shim: fail the test with a descriptive message."""
+    assert ok, f"{name}{(' -- ' + detail) if detail else ''}"
 
 
 def test_sequence_mode_length():
@@ -129,16 +119,3 @@ def test_different_subjects_different_lengths_recording_mode():
         report("recording mode yields subject-specific length", True)
 
 
-if __name__ == "__main__":
-    print("=" * 60)
-    print("Reading mode tests")
-    print("=" * 60)
-    test_sequence_mode_length()
-    test_recording_mode_length()
-    test_sequence_mode_shape()
-    test_recording_mode_shape()
-    test_different_subjects_different_lengths_recording_mode()
-    print("=" * 60)
-    print(f"Results: {passed} passed, {failed} failed out of {passed + failed}")
-    print("=" * 60)
-    sys.exit(0 if failed == 0 else 1)

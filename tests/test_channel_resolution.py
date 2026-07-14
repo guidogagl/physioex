@@ -17,18 +17,9 @@ from physioex.data.readers.edf import (
     _classify_modality,
 )
 
-passed, failed = 0, 0
-
-
 def report(name, ok, detail=""):
-    global passed, failed
-    tag = "PASS" if ok else "FAIL"
-    if ok:
-        passed += 1
-    else:
-        failed += 1
-    suffix = f" -- {detail}" if detail else ""
-    print(f"[{tag}] {name}{suffix}")
+    """Thin assert shim: fail the test with a descriptive message."""
+    assert ok, f"{name}{(' -- ' + detail) if detail else ''}"
 
 
 # ---------------------------------------------------------------------------
@@ -286,28 +277,3 @@ def test_modality_classification_of_specific():
 # ---------------------------------------------------------------------------
 # Run all tests
 # ---------------------------------------------------------------------------
-if __name__ == "__main__":
-    print("=" * 60)
-    print("Running channel resolution tests")
-    print("=" * 60)
-
-    test_generic_modality_eeg()
-    test_specific_channel()
-    test_case_insensitive_specific()
-    test_two_generic_eeg()
-    test_differential_pair()
-    test_custom_preference_dict()
-    test_dict_name()
-    test_unresolvable_raises()
-    test_second_eeg_no_options_raises()
-    test_specific_double_claim_raises()
-    test_unknown_request_type_raises()
-    test_dict_without_required_keys_raises()
-    test_fs_in_propagation()
-    test_modality_classification_of_specific()
-
-    print("=" * 60)
-    print(f"Results: {passed} passed, {failed} failed out of {passed + failed}")
-    print("=" * 60)
-
-    sys.exit(0 if failed == 0 else 1)
