@@ -9,9 +9,7 @@ Covers:
 Run:  cd /mnt/nfs/guido/home/dev/physioex && python test/tests/test_events.py
 """
 
-import sys
 import tempfile
-import shutil
 from pathlib import Path
 
 import numpy as np
@@ -27,18 +25,10 @@ from physioex.data.events import (
 from physioex.data.collate import dict_collate_fn
 from physioex.data.base import BasePhysioDataset, SubjectSpec
 
-passed, failed = 0, 0
-
 
 def report(name, ok, detail=""):
-    global passed, failed
-    tag = "PASS" if ok else "FAIL"
-    if ok:
-        passed += 1
-    else:
-        failed += 1
-    suffix = f" -- {detail}" if detail else ""
-    print(f"[{tag}] {name}{suffix}")
+    """Thin assert shim: fail the test with a descriptive message."""
+    assert ok, f"{name}{(' -- ' + detail) if detail else ''}"
 
 
 # ---------------------------------------------------------------------------
@@ -531,33 +521,3 @@ def test_events_caching():
         report("13. Events cached to disk and reloaded", False, str(exc))
 
 
-# ---------------------------------------------------------------------------
-# Runner
-# ---------------------------------------------------------------------------
-if __name__ == "__main__":
-    print("=" * 60)
-    print("Running per-epoch event metadata tests")
-    print("=" * 60)
-
-    test_sleep_event_creation()
-    test_sleep_event_defaults()
-    test_event_to_dict()
-    test_event_to_dict_no_extra()
-    test_events_to_dicts()
-    test_round_trip()
-    test_map_basic()
-    test_map_spanning()
-    test_map_boundary()
-    test_map_zero_duration()
-    test_map_empty()
-    test_map_beyond()
-    test_getitem_events_key()
-    test_events_in_collate()
-    test_get_subjects_and_metadata()
-    test_events_caching()
-
-    print("=" * 60)
-    print(f"Results: {passed} passed, {failed} failed out of {passed + failed}")
-    print("=" * 60)
-
-    sys.exit(0 if failed == 0 else 1)

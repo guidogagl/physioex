@@ -9,31 +9,26 @@ Run standalone:
     python test/tests/test_alzheimers_parkinsons.py
 """
 import os
-import sys
 import tempfile
 from pathlib import Path
 
-import numpy as np
+import pytest
 import torch
 
 from physioex.data.datasets import get_dataset, available_datasets
 from physioex.data.datasets.alzheimers import AlzheimersDataset, _STAGE_MAP as ALZ_STAGE_MAP
 from physioex.data.datasets.parkinsons import ParkinsonsDataset, _STAGE_MAP as PD_STAGE_MAP
-from tests.test_raw_dataset_integration import write_fake_edf
-
-passed = 0
-failed = 0
+from tests.factories.edf import write_fake_edf
 
 
 def report(name: str, ok: bool, detail: str = ""):
-    global passed, failed
-    tag = "PASS" if ok else "FAIL"
-    if ok:
-        passed += 1
-    else:
-        failed += 1
-    suffix = f" -- {detail}" if detail else ""
-    print(f"[{tag}] {name}{suffix}")
+    """Thin assert shim: fail the test with a descriptive message.
+
+    Interim helper retained to convert this large dataset-test file to pytest
+    gating without a full line-by-line rewrite; call sites read
+    ``report("name", cond, "detail")``.
+    """
+    assert ok, f"{name}{(' -- ' + detail) if detail else ''}"
 
 
 # ===================================================================
@@ -271,12 +266,13 @@ def test_alz_tsv_parsing():
         )
         spec = ds._subjects[0]
         labels = ds._read_subject_labels(spec)
-        expected = [0, 1, 2, 3, 4]
-        ok_len = len(labels) == len(expected)
-        ok_vals = list(labels) == expected
-        ok = ok_len and ok_vals
-        report("ALZ TSV parsing (comment headers + stages)", ok,
-               f"len={len(labels)}, vals={list(labels)}, expected={expected}")
+        # Labels are aligned by absolute onset epoch (onset 40860s / 30s =
+        # epoch 1362): pre-sleep epochs are -1, the 5 scored epochs carry the
+        # stages. Assert the scored (non-masked) sequence, robust to the offset.
+        scored = [int(x) for x in labels if x != -1]
+        report("ALZ TSV parsing (onset-aligned scored epochs)",
+               scored == [0, 1, 2, 3, 4],
+               f"scored={scored}, n={len(labels)}")
 
 
 # 7. Stage mapping
@@ -632,7 +628,8 @@ def test_pd_dataset_name():
 # Real-data smoke tests (guarded)
 # ===================================================================
 
-def run_real_data_tests():
+@pytest.mark.real_data
+def test_real_data_smoke():
     print("\n--- Alzheimer's real-data smoke tests ---")
 
     # 17. Alzheimer's: ~69 subjects total
@@ -754,49 +751,3 @@ def run_real_data_tests():
             report(f"{name} channels probe", False, f"SKIP: {e}")
 
 
-# ===================================================================
-# Runner
-# ===================================================================
-
-if __name__ == "__main__":
-    print("=" * 60)
-    print("Alzheimer's and Parkinson's dataset tests")
-    print("=" * 60)
-
-    print("\n--- Alzheimer's (synthetic) ---")
-    test_alz_registry()
-    test_alz_in_available()
-    test_alz_valid_subsets()
-    test_alz_invalid_subset()
-    test_alz_subject_discovery()
-    test_alz_subset_filtering()
-    test_alz_tsv_parsing()
-    test_alz_stage_map()
-    test_alz_end_to_end()
-    test_alz_dataset_name()
-
-    print("\n--- Parkinson's (synthetic) ---")
-    test_pd_registry()
-    test_pd_in_available()
-    test_pd_valid_recording()
-    test_pd_invalid_recording()
-    test_pd_valid_groups()
-    test_pd_invalid_group()
-    test_pd_subject_discovery()
-    test_pd_group_filtering()
-    test_pd_tsv_parsing()
-    test_pd_stage_map()
-    test_pd_end_to_end()
-    test_pd_dataset_name()
-
-    # Real-data tests (optional)
-    if os.environ.get("PHYSIOEX_TEST_REAL_DATA", "") == "1":
-        run_real_data_tests()
-    else:
-        print("\n--- Real-data smoke tests SKIPPED "
-              "(set PHYSIOEX_TEST_REAL_DATA=1) ---")
-
-    print("\n" + "=" * 60)
-    print(f"Results: {passed} passed, {failed} failed out of {passed + failed}")
-    print("=" * 60)
-    sys.exit(0 if failed == 0 else 1)
