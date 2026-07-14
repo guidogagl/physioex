@@ -16,6 +16,7 @@ import os
 import yaml
 from docutils import nodes
 from docutils.parsers.rst import Directive
+from docutils.statemachine import StringList
 
 
 def _esc(text: str) -> str:
@@ -127,7 +128,11 @@ class RelatedWorksDirective(Directive):
         if preprints:
             rst += [".. rubric:: Preprints", ""] + _grid(preprints) + [""]
 
-        return self.parse_text_to_nodes("\n".join(rst))
+        container = nodes.container()
+        self.state.nested_parse(
+            StringList(rst, source="related-works"), self.content_offset, container
+        )
+        return container.children
 
 
 def setup(app):
