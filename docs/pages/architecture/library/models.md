@@ -1,3 +1,7 @@
+---
+orphan: true
+---
+
 # `physioex.models` — class diagram
 
 Two model families — **foundation encoders** (pretrained backbones adapted to a

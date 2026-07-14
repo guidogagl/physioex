@@ -1,3 +1,7 @@
+---
+orphan: true
+---
+
 # `physioex.train` — class diagram
 
 A **hand-written PyTorch training/evaluation loop** (not Lightning), with metric

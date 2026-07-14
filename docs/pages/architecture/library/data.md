@@ -1,3 +1,7 @@
+---
+orphan: true
+---
+
 # `physioex.data` — class diagram
 
 The data layer turns raw EDF recordings into model-ready tensors through a

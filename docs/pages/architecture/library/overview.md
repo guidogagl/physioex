@@ -1,3 +1,7 @@
+---
+orphan: true
+---
+
 # Library architecture — overview
 
 This section is the **living class-diagram documentation** of the PhysioEx

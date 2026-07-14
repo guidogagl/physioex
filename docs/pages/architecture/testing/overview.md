@@ -1,3 +1,7 @@
+---
+orphan: true
+---
+
 # Testing suite architecture (Diagram B)
 
 Living class/structure diagram of the **pytest** test suite. Kept in sync with

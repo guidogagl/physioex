@@ -137,3 +137,21 @@ PHYSIOEX_TEST_HF=1        pytest -m hf
   `__all__` export) and covered by a behavioural test in the matching subpackage.
 - CI (`.github/workflows/test.yml`) runs the fast suite on Python 3.11 and 3.12
   and enforces a coverage gate; the target is being raised progressively.
+
+## Architecture (internals)
+
+Living **class diagrams**, extracted directly from the source and kept in sync
+with the code — a map for contributors of how the library and its test suite are
+structured. These are internal references, not needed to *use* PhysioEx.
+
+**Library (Diagram A):**
+
+- [Overview](architecture/library/overview.md) — subsystem map and cross-cutting types
+- [Data](architecture/library/data.md) — datasets, pipeline, cache, readers, events
+- [Models](architecture/library/models.md) — foundation encoders, classic architectures
+- [Train](architecture/library/train.md) — training/eval loop, metrics, logging, CLIs
+- [Explain](architecture/library/explain.md) — post-hoc, foundational (CSD), prototypes
+
+**Test suite (Diagram B):**
+
+- [Testing suite architecture](architecture/testing/overview.md) — fixtures, factories, markers, test layout

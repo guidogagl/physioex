@@ -26,7 +26,9 @@ With PhysioEx you can simulate a state-of-the-art experiment just running the `t
 
 ### Publicly Available:
 
-For these datasets PhysioEx will take also to download the data with the `preprocess` command.
+These datasets are supported out of the box — PhysioEx reads the raw recordings
+directly (preprocessing is applied lazily, on the fly). See the
+[User Guide](pages/user_guide.md) for how to point PhysioEx at your data.
 
 - [Sleep-EDF(78)](https://physionet.org/content/sleep-edfx/1.0.0/), The sleep-edf database contains 197 whole-night PolySomnoGraphic sleep recordings, containing EEG, EOG, chin EMG, and event markers.
 - [HMC (Haaglanden Medisch Centrum)](https://physionet.org/content/hmc-sleep-staging/1.1/), is a collection of 151 whole-night PSG recordings from 85 men and 66 women, gathered at the Haaglanden Medisch Centrum sleep center. The PSG data includes 4 EEG channels (F4/M1, C4/M1, O2/M1, and C3/M2), two EOG channels (E1/M2 and E2/M2), and one bipolar chin EMG, with all signals sampled at 256 Hz.
@@ -35,7 +37,10 @@ For these datasets PhysioEx will take also to download the data with the `prepro
 
 ### [NSSR](https://sleepdata.org) Datasets 
 
-These datasets can be easily get from the NSSR archive. Once downloaded in your `data_folder`, place them into the folder `data_folder/dataset_name/` directory with name `dataset_raw`. Then you can run the `preprocess -d dataset_name -df data_folder` command to make the data readable by PhysioEx. 
+These datasets can be obtained from the NSSR archive. Once downloaded, point
+PhysioEx at the dataset root and it will read the recordings directly — see the
+[Data guide](pages/data.md) for the expected layout and how datasets are resolved
+by name.
 
 - [SHHS (Sleep Heart Health Study)](https://sleepdata.org/datasets/shhs), is a multi-center cohort study designed to investigate the cardiovascular and other consequences of sleep-disordered breathing. At visit 1, it included 5,793 participants aged 40 years or older. PSG recordings were typically conducted in the subjects' homes by trained and certified technicians. The recording montage included C3/A2 and C4/A1 EEGs sampled at 125 Hz, right and left EOGs sampled at 50 Hz, and a bipolar submental EMG sampled at 125 Hz.
 - [MESA (Multi-Ethnic Study of Atherosclerosis)](https://sleepdata.org/datasets/mesa), is a multi-center prospective study of 2.237 ethnically diverse men and women aged 45-84 from six communities in the United States. PSGs recordings were obtained using in-home settings including central C4-M1 EEG, bilateral EOG and chin EMG sampled at 256Hz. PSGs were scored by one of 3 MESA certified, registered polysomnologists.
@@ -99,51 +104,10 @@ Note: the github version of the library is kept updated weekly, the PiPy version
 
 ```{toctree}
 :hidden:
-:caption: Architecture · Library
+:maxdepth: 1
 
-pages/architecture/library/overview
-pages/architecture/library/data
-pages/architecture/library/models
-pages/architecture/library/train
-pages/architecture/library/explain
-```
-
-```{toctree}
-:hidden:
-:caption: Architecture · Testing
-
-pages/architecture/testing/overview
-```
-
-```{toctree}
-:hidden:
-:caption: Modules
-
-pages/preprocess
-pages/data
-pages/train/train
-pages/train/cli
-pages/train/networks
-pages/explain/explain
-```
-
-```{toctree}
-:hidden:
-:caption: Examples
-
-examples/latent_space_visualization
-```
-
-```{toctree}
-:hidden:
-:caption: API Reference
-
+pages/user_guide
+examples/index
 api/index
-```
-
-```{toctree}
-:hidden:
-:caption: Contributing
-
 pages/contribute
 ```

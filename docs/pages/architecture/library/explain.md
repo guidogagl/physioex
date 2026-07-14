@@ -1,3 +1,7 @@
+---
+orphan: true
+---
+
 # `physioex.explain` — class diagram
 
 The explainability toolkit: **post-hoc attribution** (time / frequency / time-
