@@ -18,8 +18,11 @@ from __future__ import annotations
 
 import importlib
 import json
+import logging
 
 import torch
+
+logger = logging.getLogger("physioex.models")
 
 HF_REPO_ID = "4rooms/physioex"
 
@@ -138,7 +141,8 @@ def load_from_pretrained(
                     f"F1: {metrics.get('f1_score', 0):.4f}, "
                     f"Kappa: {metrics.get('cohen_kappa', 0):.4f}"
                 )
-        except Exception:
-            pass  # metrics.json not available, silently skip
+        except Exception as exc:
+            # metrics.json is optional; note the reason at debug level.
+            logger.debug("No metrics.json for %s (%s)", name, exc)
 
     return model

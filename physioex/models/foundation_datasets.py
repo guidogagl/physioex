@@ -2,7 +2,8 @@
 
 Each dataset declares:
 - ``channels``: list of channel requests for BasePhysioDataset
-- ``default_root``: default data path on this machine
+- ``default_root``: dataset path RELATIVE to ``$PHYSIOEX_DATA`` (resolved at
+  build time), or ``None`` to let the dataset class derive its own root
 - ``channel_map``: raw physioex name → standard 10-20 name
 - ``extra_kwargs``: extra constructor args (cohort, visit, subset, etc.)
 
@@ -20,7 +21,9 @@ class DatasetConfig:
     """Everything needed to create a dataset for foundation model evaluation."""
 
     channels: List[str]
-    default_root: str
+    # Path to the dataset relative to $PHYSIOEX_DATA (resolved at build time),
+    # or None to let the dataset class derive its own root from PHYSIOEX_DATA.
+    default_root: Optional[str]
     module_path: str
     class_name: str
     extra_kwargs: Dict[str, Any] = field(default_factory=dict)
@@ -112,7 +115,7 @@ DATASET_CONFIGS: Dict[str, DatasetConfig] = {
     # ── Core datasets ───────────────────────────────────────────────
     "hmc": DatasetConfig(
         channels=["EEG F4-M1", "EEG C4-M1", "EEG O2-M1", "EEG C3-M2"],
-        default_root="/home/dev/sleep-data/raw-sleep/hmc/physionet.org/files/hmc-sleep-staging/1.1/recordings",
+        default_root="hmc/physionet.org/files/hmc-sleep-staging/1.1/recordings",
         module_path="physioex.data.datasets.hmc",
         class_name="HMCDataset",
         channel_map={
@@ -124,7 +127,7 @@ DATASET_CONFIGS: Dict[str, DatasetConfig] = {
     ),
     "dcsm": DatasetConfig(
         channels=["F4-M1", "C4-M1", "O2-M1", "F3-M2", "C3-M2", "O1-M2"],
-        default_root="/home/dev/sleep-data/raw-sleep/dcsm/extracted/data/sleep/DCSM",
+        default_root="dcsm/extracted/data/sleep/DCSM",
         module_path="physioex.data.datasets.dcsm",
         class_name="DCSMDataset",
         channel_map={
@@ -138,7 +141,7 @@ DATASET_CONFIGS: Dict[str, DatasetConfig] = {
     ),
     "sleepedf": DatasetConfig(
         channels=["EEG", "EEG"],
-        default_root="/home/dev/sleep-data/raw-sleep/physionet-sleep-data",
+        default_root="physionet-sleep-data",
         module_path="physioex.data.datasets.sleepedf",
         class_name="SleepEDFDataset",
         channel_map={"EEG Fpz-Cz": "Fpz", "EEG Pz-Oz": "Pz"},
@@ -195,14 +198,14 @@ DATASET_CONFIGS: Dict[str, DatasetConfig] = {
     # ── NSRR datasets ───────────────────────────────────────────────
     "mesa": DatasetConfig(
         channels=["EEG", "EEG", "EEG"],
-        default_root="/home/dev/sleep-data/raw-sleep/mesa",
+        default_root="mesa",
         module_path="physioex.data.datasets.mesa",
         class_name="MESADataset",
         channel_map={"EEG1": "C4", "EEG2": "C3", "EEG3": "Cz"},
     ),
     "mros": DatasetConfig(
         channels=["EEG", "EEG"],
-        default_root="/home/dev/sleep-data/raw-sleep/mros",
+        default_root="mros",
         module_path="physioex.data.datasets.mros",
         class_name="MrOSDataset",
         # MrOS resolves to differential pairs (C3,A2) and (C4,A1)
@@ -211,7 +214,7 @@ DATASET_CONFIGS: Dict[str, DatasetConfig] = {
     ),
     "shhs_v1": DatasetConfig(
         channels=["EEG", "EEG"],
-        default_root="/home/dev/sleep-data/raw-sleep/shhs",
+        default_root="shhs",
         module_path="physioex.data.datasets.shhs",
         class_name="SHHSDataset",
         extra_kwargs={"visit": 1},
@@ -219,7 +222,7 @@ DATASET_CONFIGS: Dict[str, DatasetConfig] = {
     ),
     "shhs_v2": DatasetConfig(
         channels=["EEG", "EEG"],
-        default_root="/home/dev/sleep-data/raw-sleep/shhs",
+        default_root="shhs",
         module_path="physioex.data.datasets.shhs",
         class_name="SHHSDataset",
         extra_kwargs={"visit": 2},
@@ -228,7 +231,7 @@ DATASET_CONFIGS: Dict[str, DatasetConfig] = {
     # ── WSC visits ──────────────────────────────────────────────────
     "wsc": DatasetConfig(
         channels=["EEG", "EEG"],
-        default_root="/home/dev/sleep-data/raw-sleep/wsc",
+        default_root="wsc",
         module_path="physioex.data.datasets.wsc",
         class_name="WSCDataset",
         extra_kwargs={"visit": 1},
@@ -236,21 +239,21 @@ DATASET_CONFIGS: Dict[str, DatasetConfig] = {
     ),
     "wsc_v2": DatasetConfig(
         channels=["EEG", "EEG"],
-        default_root="/home/dev/sleep-data/raw-sleep/wsc",
+        default_root="wsc",
         module_path="physioex.data.datasets.wsc",
         class_name="WSCDataset",
         extra_kwargs={"visit": 2},
     ),
     "wsc_v3": DatasetConfig(
         channels=["EEG", "EEG"],
-        default_root="/home/dev/sleep-data/raw-sleep/wsc",
+        default_root="wsc",
         module_path="physioex.data.datasets.wsc",
         class_name="WSCDataset",
         extra_kwargs={"visit": 3},
     ),
     "wsc_v4": DatasetConfig(
         channels=["EEG", "EEG"],
-        default_root="/home/dev/sleep-data/raw-sleep/wsc",
+        default_root="wsc",
         module_path="physioex.data.datasets.wsc",
         class_name="WSCDataset",
         extra_kwargs={"visit": 4},
@@ -258,7 +261,7 @@ DATASET_CONFIGS: Dict[str, DatasetConfig] = {
     # ── HPAP variants ───────────────────────────────────────────────
     "hpap_lab_full": DatasetConfig(
         channels=["EEG", "EEG"],
-        default_root="/home/dev/sleep-data/raw-sleep/homepap",
+        default_root="homepap",
         module_path="physioex.data.datasets.hpap",
         class_name="HPAPDataset",
         extra_kwargs={"subset": "lab-full"},
@@ -267,7 +270,7 @@ DATASET_CONFIGS: Dict[str, DatasetConfig] = {
     ),
     "hpap_lab_split": DatasetConfig(
         channels=["EEG", "EEG"],
-        default_root="/home/dev/sleep-data/raw-sleep/homepap",
+        default_root="homepap",
         module_path="physioex.data.datasets.hpap",
         class_name="HPAPDataset",
         extra_kwargs={"subset": "lab-split"},
@@ -275,7 +278,7 @@ DATASET_CONFIGS: Dict[str, DatasetConfig] = {
     ),
     "hpap_home": DatasetConfig(
         channels=["EEG", "EEG"],
-        default_root="/home/dev/sleep-data/raw-sleep/homepap",
+        default_root="homepap",
         module_path="physioex.data.datasets.hpap",
         class_name="HPAPDataset",
         extra_kwargs={"subset": "home"},
@@ -284,7 +287,7 @@ DATASET_CONFIGS: Dict[str, DatasetConfig] = {
     # ── STAGES ──────────────────────────────────────────────────────
     "stages": DatasetConfig(
         channels=["EEG"] * 6,
-        default_root="/home/dev/sleep-data/raw-sleep/stages",
+        default_root="stages",
         module_path="physioex.data.datasets.stages",
         class_name="STAGESDataset",
         # STAGES channels are concatenated without separator: "C3M2" not "C3-M2"
@@ -309,7 +312,7 @@ DATASET_CONFIGS: Dict[str, DatasetConfig] = {
             "EEG Fz-REF",
             "EEG Pz-REF",
         ],
-        default_root="/home/dev/sleep-data/raw-sleep/AlzheimerData",
+        default_root="AlzheimerData",
         module_path="physioex.data.datasets.alzheimers",
         class_name="AlzheimersDataset",
         extra_kwargs={"subset": "AD"},
@@ -326,7 +329,7 @@ DATASET_CONFIGS: Dict[str, DatasetConfig] = {
             "EEG Fz-REF",
             "EEG Pz-REF",
         ],
-        default_root="/home/dev/sleep-data/raw-sleep/AlzheimerData",
+        default_root="AlzheimerData",
         module_path="physioex.data.datasets.alzheimers",
         class_name="AlzheimersDataset",
         extra_kwargs={"subset": "HC"},
@@ -334,7 +337,7 @@ DATASET_CONFIGS: Dict[str, DatasetConfig] = {
     ),
     "parkinsons_night_pd": DatasetConfig(
         channels=["EEG", "EEG"],
-        default_root="/home/dev/sleep-data/raw-sleep/Parkinson_data",
+        default_root="Parkinson_data",
         module_path="physioex.data.datasets.parkinsons",
         class_name="ParkinsonsDataset",
         extra_kwargs={"recording": "night", "group": "PD"},
@@ -342,7 +345,7 @@ DATASET_CONFIGS: Dict[str, DatasetConfig] = {
     ),
     "parkinsons_night_hoa": DatasetConfig(
         channels=["EEG", "EEG"],
-        default_root="/home/dev/sleep-data/raw-sleep/Parkinson_data",
+        default_root="Parkinson_data",
         module_path="physioex.data.datasets.parkinsons",
         class_name="ParkinsonsDataset",
         extra_kwargs={"recording": "night", "group": "HOA"},
@@ -350,7 +353,7 @@ DATASET_CONFIGS: Dict[str, DatasetConfig] = {
     ),
     "parkinsons_nap_pd": DatasetConfig(
         channels=["EEG", "EEG"],
-        default_root="/home/dev/sleep-data/raw-sleep/Parkinson_data",
+        default_root="Parkinson_data",
         module_path="physioex.data.datasets.parkinsons",
         class_name="ParkinsonsDataset",
         extra_kwargs={"recording": "nap", "group": "PD"},
@@ -358,7 +361,7 @@ DATASET_CONFIGS: Dict[str, DatasetConfig] = {
     ),
     "parkinsons_nap_hoa": DatasetConfig(
         channels=["EEG", "EEG"],
-        default_root="/home/dev/sleep-data/raw-sleep/Parkinson_data",
+        default_root="Parkinson_data",
         module_path="physioex.data.datasets.parkinsons",
         class_name="ParkinsonsDataset",
         extra_kwargs={"recording": "nap", "group": "HOA"},

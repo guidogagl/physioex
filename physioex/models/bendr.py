@@ -12,6 +12,7 @@ Preprocessing (pure PyTorch, differentiable):
 """
 from __future__ import annotations
 
+import logging
 from typing import Dict, List, Tuple
 
 import torch
@@ -19,6 +20,8 @@ import torch.nn as nn
 
 from physioex.models.foundation_base import FoundationEncoder
 from physioex.models.foundation_preproc import mean_center, minmax_scale
+
+logger = logging.getLogger("physioex.models")
 
 _BENDR_TARGET_CHANNELS = (
     "FP1",
@@ -232,8 +235,14 @@ class BENDREncoder(FoundationEncoder):
                     strict=False,
                 )
                 self.encoder.load_state_dict(model.state_dict(), strict=False)
-            except Exception:
-                pass  # Use random init if HF download fails
+            except Exception as exc:
+                logger.warning(
+                    "BENDR pretrained weights could not be loaded (%s: %s); "
+                    "falling back to RANDOM initialization. Embeddings will not "
+                    "reflect the pretrained model.",
+                    type(exc).__name__,
+                    exc,
+                )
             return
         payload = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
         state = _extract_state_dict(payload)

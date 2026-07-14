@@ -220,7 +220,17 @@ class FoundationEncoder(nn.Module):
 
         # Channels: dataset-specific defaults, overridable by user
         effective_channels = channels if channels is not None else config.channels
-        effective_root = root if root is not None else config.default_root
+
+        # Root: explicit arg wins; else resolve the config's PHYSIOEX_DATA-relative
+        # subpath; else None so the dataset class derives its own root from env.
+        if root is not None:
+            effective_root = root
+        elif config.default_root is not None:
+            from physioex.data.base import get_data_root
+
+            effective_root = str(get_data_root() / config.default_root)
+        else:
+            effective_root = None
 
         # Merge extra kwargs: dataset config defaults + user overrides
         ds_kwargs = dict(config.extra_kwargs)
