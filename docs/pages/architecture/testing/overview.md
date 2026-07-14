@@ -72,6 +72,7 @@ flowchart LR
         FAC["factories/ ✅"]
         TD["top-level data/pipeline/cache/... ✅"]
         TDATA["data/ (per-dataset) ✅"]
+        TDU["data/ (modality/multi/annotations) ✅ (Fase C)"]
         TT["train/ (trainer/metrics/...) ✅"]
         TE["explain/posthoc/ ✅ (moved out of wheel)"]
         TEF["explain/foundational + prototypes ⏳"]
@@ -80,6 +81,7 @@ flowchart LR
     end
     TD --> DATA["physioex.data"]
     TDATA --> DATA
+    TDU --> DATA
     TT --> TRAIN["physioex.train"]
     TE --> EXPLAIN["physioex.explain"]
     TEF --> EXPLAIN
@@ -103,7 +105,22 @@ flowchart LR
 - **Coverage**: measured over `physioex` (legacy modules omitted), gate enforced
   in CI (Fase D).
 
-## Status (Fase B complete)
+## Status (Fase B complete · Fase C in progress)
 
-Full suite on A30 (`-m "not real_data and not gpu and not hf"`):
+Full suite on A30 (`-m "not real_data and not gpu and not hf"`) after Fase B:
 **490 passed, 4 skipped, 5 deselected**. All 6 previously-stale tests fixed.
+
+**Fase C** (capillary coverage of Diagram-A gaps) adds, incrementally:
+
+- `tests/data/test_modality.py` — `infer_channel_modality` across all
+  `ModalityType` buckets, hint precedence, enum/`MODALITY_TYPES` invariants.
+- `tests/data/test_multi.py` — `MultiDataset` flat indexing, negative/OOR
+  guards, `dataset_idx` injection, `split()` coordination, accessors,
+  sequence-length invariant.
+- `tests/data/test_readers_annotations.py` — `parse_nsrr_xml`,
+  `parse_tsv_annotations`, `parse_nsrr_xml_events`, `parse_stages_csv`
+  (dur0/dur30/blocks variants) on synthetic inputs.
+
+Remaining Fase C targets (⏳): `models/` (foundation encoders as contracts,
+embed/pretrained mocked, classic archs, sleep_tokenizer), `train/{stats,logger,
+progress}`, `explain/{foundational,prototypes}`, `test_api_surface.py`.
