@@ -155,18 +155,18 @@ class MASSDataset(BasePhysioDataset):
 
     # Additional per-subject annotation files carrying temporal micro-events
     # (sleep spindles, K-complexes) scored by CEAMS experts. These are SEPARATE
-    # from the staging file above and are only present for the SS02 gold-standard
-    # subset when the full MASS distribution has been downloaded. Any file whose
-    # name is ``{subject_id}{suffix}`` and that exists is parsed for events (in
-    # addition to the staging file); absent files are silently skipped, so this
-    # is a no-op for cohorts/installations without expert micro-event scoring.
-    # NOTE: validate these suffixes against your MASS release layout.
-    EVENT_ANNOTATION_PATTERNS: List[str] = [
-        "_Spindles.edf",
-        "_SpindlesE1.edf",
-        "_SpindlesE2.edf",
-        "_KComplexes.edf",
-        "_KComplexesE1.edf",
+    # from the staging file above and ship as the "SS2 Sleep Annotations" Borealis
+    # release (DOI 10.5683/SP3/Y889CS): per-expert files such as
+    # ``<subject> SpindleE1.edf`` / ``<subject> KComplexE1.edf`` (Expert 1/2 for
+    # spindles, Expert 1 for K-complexes), scored on N2 epochs of C3-CLE.
+    # Discovery uses globs (matched after the subject_id prefix) so it tolerates
+    # space/underscore separators and singular/plural naming across releases.
+    # Any matching file is parsed for events in addition to the staging file;
+    # if none are present (e.g. only the base download), this is a no-op.
+    EVENT_ANNOTATION_GLOBS: List[str] = [
+        "*Spindle*.edf",
+        "*KComplex*.edf",
+        "*K-Complex*.edf",
     ]
 
     # Seconds of context to pad on each side of a 20s epoch to create
@@ -234,12 +234,15 @@ class MASSDataset(BasePhysioDataset):
                 continue
 
             # Discover optional expert micro-event annotation files (spindles,
-            # K-complexes). Absent files are simply not recorded.
+            # K-complexes) via globs. Absent files are simply not recorded.
+            event_files: List[Path] = []
+            for pat in self.EVENT_ANNOTATION_GLOBS:
+                event_files.extend(sorted(ann_dir.glob(f"{subject_id}{pat}")))
+            # Deduplicate while preserving order.
+            seen = set()
             event_files = [
-                ann_dir / f"{subject_id}{suffix}"
-                for suffix in self.EVENT_ANNOTATION_PATTERNS
+                p for p in event_files if not (p in seen or seen.add(p))
             ]
-            event_files = [p for p in event_files if p.exists()]
             if event_files:
                 self._event_paths[subject_id] = event_files
 
