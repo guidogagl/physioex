@@ -125,12 +125,8 @@ def test_split_shifts_train_and_retags_subjects(two_datasets):
         assert ds_idx in (0, 1)
         assert isinstance(sid, str)
 
-    # Union of all split subjects equals the full subject roster (per dataset).
+    # Every valid/test subject is a known (ds_idx, sid) pair from the roster.
     tagged = md.get_subjects_with_dataset_idx()
-    split_subjects = set(valid) | set(test) | {
-        # training tuples are flat ints, not subjects -> account via counts below
-    }
-    # every valid/test subject is a known (ds_idx, sid) pair
     assert set(valid) | set(test) <= set(tagged)
 
 
