@@ -44,6 +44,16 @@ foundation = ["transformers>=4.40.0"]  # REVE encoder (physioex.models.reve)
 datasets = ["mne>=1.6.0"]              # HOMEPAP EDF fallback reader (data.datasets.hpap)
 dev = ["ruff", "pytest", "pytest-cov", "black~=22.0"]
 legacy = ["pytorch_lightning>=2.5.0", "lightning>=2.5.0", "torchmetrics>=1.8.0"]
+docs = [
+    "sphinx==8.1.3",
+    "pydata-sphinx-theme==0.16.1",
+    "myst-nb==1.2.0",              # pulls in myst-parser
+    "sphinx-design==0.6.1",
+    "sphinx-copybutton==0.5.2",
+    "sphinxcontrib-mermaid==1.0.0",
+    # autodoc/autosummary/napoleon/intersphinx/viewcode ship with sphinx.
+    # sphinx-autoapi is the static-parsing fallback (not enabled by default).
+]
 
 [tool.hatch.version]
 path = "physioex/__init__.py"

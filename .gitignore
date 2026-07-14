@@ -120,6 +120,7 @@ Thumbs.db
 
 # Sphinx / mkdocs documentation
 docs/_build/
+docs/api/_generated/
 /site
 
 # mypy / pytype / pyre

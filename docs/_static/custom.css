@@ -1,0 +1,22 @@
+/* PhysioEx — PyData Sphinx Theme palette + tweaks.
+   Approximates the previous mkdocs-material teal/purple (light) and teal/lime (dark). */
+
+html[data-theme="light"] {
+    --pst-color-primary: #009688;      /* teal */
+    --pst-color-secondary: #9c27b0;    /* purple accent */
+    --pst-color-link: #00796b;
+    --pst-color-link-hover: #9c27b0;
+}
+
+html[data-theme="dark"] {
+    --pst-color-primary: #26a69a;      /* teal on slate */
+    --pst-color-secondary: #cddc39;    /* lime accent */
+    --pst-color-link: #26a69a;
+    --pst-color-link-hover: #cddc39;
+}
+
+/* Table header styling carried over from the old custom.css. */
+table.table th {
+    background-color: rgb(50, 128, 128);
+    color: white;
+}
