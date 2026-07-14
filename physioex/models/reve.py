@@ -24,6 +24,17 @@ from physioex.models.foundation_preproc import (
     strip_zero_channels,
 )
 
+def _import_automodel():
+    try:
+        from transformers import AutoModel
+    except ImportError as e:  # pragma: no cover - dependency guard
+        raise ImportError(
+            "The REVE encoder requires the 'transformers' package. "
+            "Install it with: pip install 'physioex[foundation]'"
+        ) from e
+    return AutoModel
+
+
 _SIGMA_CLIP = 15.0
 
 _BIPOLAR_TO_STANDARD = {
@@ -81,7 +92,7 @@ class REVEEncoder(FoundationEncoder):
         )
 
     def _build_encoder(self, **kwargs) -> nn.Module:
-        from transformers import AutoModel
+        AutoModel = _import_automodel()
 
         model = AutoModel.from_pretrained(
             self._ckpt_path or "brain-bzh/reve-base",
@@ -99,9 +110,9 @@ class REVEEncoder(FoundationEncoder):
     def _build_pos_bank(self):
         """Build position bank (lazy, first call only)."""
         if not hasattr(self, "_pos_bank"):
-            from transformers import AutoModel
             from physioex.models.foundation_checkpoints import ensure_reve_positions
 
+            AutoModel = _import_automodel()
             pos_path = ensure_reve_positions()
             self._pos_bank = AutoModel.from_pretrained(
                 pos_path,

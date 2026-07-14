@@ -46,6 +46,17 @@ from physioex.data.readers.edf import EDFHeader, ResolvedChannel
 logger = logging.getLogger("physioex.data")
 
 
+def _import_mne():
+    try:
+        import mne
+    except ImportError as e:  # pragma: no cover - dependency guard
+        raise ImportError(
+            "The HOMEPAP MNE fallback reader requires the 'mne' package. "
+            "Install it with: pip install 'physioex[datasets]'"
+        ) from e
+    return mne
+
+
 class HPAPDataset(_NSRRBaseDataset):
     """HomePAP sleep dataset with subset selection."""
 
@@ -255,7 +266,7 @@ class HPAPDataset(_NSRRBaseDataset):
     @staticmethod
     def _read_edf_header_mne(spec: SubjectSpec) -> EDFHeader:
         """Read EDF header using MNE-Python (tolerant of minor spec violations)."""
-        import mne
+        mne = _import_mne()
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
@@ -339,7 +350,7 @@ class HPAPDataset(_NSRRBaseDataset):
         spec: SubjectSpec, resolved: ResolvedChannel
     ) -> Tuple[np.ndarray, float]:
         """Read a channel using MNE-Python as fallback."""
-        import mne
+        mne = _import_mne()
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")

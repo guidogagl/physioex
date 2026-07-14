@@ -21,23 +21,15 @@ dependencies = [
     "matplotlib>=3.10.0",
     "scikit_learn>=1.7.0",
     "scipy>=1.16.0",
-    "seaborn>=0.13.0",
-
-    "boto3>=1.40.0",
-    "botocore>=1.40.0",
 
     "huggingface_hub>=0.34.0",
-    "vector_quantize_pytorch>=1.22.0",
-    "pytorch_metric_learning>=2.8.0",
     "captum>=0.6.0",
-    "dirhash>=0.5.0",
-    "joblib>=1.4.0",
     "loguru>=0.7.0",
-    "psg_utils>=0.1.7",
     "pyedflib>=0.1.42",
-    "wfdb>=4.3.0",
     "braindecode>=1.0.0",
     "ml_dtypes>=0.5.0",
+    "einops>=0.7.0",
+    "tqdm>=4.65.0",
 
     "rich>=13.0.0",
     "psutil>=5.9.0",
@@ -47,11 +39,22 @@ dependencies = [
 [project.optional-dependencies]
 gpu-monitor = ["nvitop>=1.0.0"]
 tracking = ["tensorboard>=2.14", "wandb>=0.16"]
+# Heavyweight, feature-specific deps imported lazily; install only if needed.
+foundation = ["transformers>=4.40.0"]  # REVE encoder (physioex.models.reve)
+datasets = ["mne>=1.6.0"]              # HOMEPAP EDF fallback reader (data.datasets.hpap)
 dev = ["ruff", "pytest", "black~=22.0"]
 legacy = ["pytorch_lightning>=2.5.0", "lightning>=2.5.0", "torchmetrics>=1.8.0"]
 
 [tool.hatch.version]
 path = "physioex/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["physioex"]
+
+# Runtime data files that must ship in the wheel (loaded via __file__ at import time).
+[tool.hatch.build.targets.wheel.force-include]
+"physioex/train/models/check_table.csv" = "physioex/train/models/check_table.csv"
+"physioex/data/datasets/_splits/shhs.json" = "physioex/data/datasets/_splits/shhs.json"
 
 
 [project.scripts]

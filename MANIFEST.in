@@ -1,2 +1,2 @@
 include physioex/train/models/check_table.csv
-include physioex/train/networks/config.yaml
+include physioex/data/datasets/_splits/shhs.json
