@@ -60,35 +60,50 @@ classDiagram
     }
 ```
 
-## Target module layout ↔ library mapping
+## Test module layout ↔ library mapping
 
-Each test module targets exactly the public symbols documented in Diagram A
-(congruence rule). ✅ = scaffolding present, ⏳ = to be migrated/added.
+Each test module targets the public symbols documented in Diagram A (congruence
+rule). ✅ = migrated to pytest (Fase B) · ⏳ = capillary gaps to add (Fase C).
 
 ```mermaid
 flowchart LR
     subgraph tests
         CF["conftest.py ✅"]
         FAC["factories/ ✅"]
-        TD["data/ ⏳"]
-        TM["models/ ⏳"]
-        TT["train/ ⏳"]
-        TE["explain/ ⏳"]
+        TD["top-level data/pipeline/cache/... ✅"]
+        TDATA["data/ (per-dataset) ✅"]
+        TT["train/ (trainer/metrics/...) ✅"]
+        TE["explain/posthoc/ ✅ (moved out of wheel)"]
+        TEF["explain/foundational + prototypes ⏳"]
+        TM["models/ (encoders/embed/archs) ⏳"]
         TA["test_api_surface.py ⏳"]
     end
     TD --> DATA["physioex.data"]
-    TM --> MODELS["physioex.models"]
+    TDATA --> DATA
     TT --> TRAIN["physioex.train"]
     TE --> EXPLAIN["physioex.explain"]
+    TEF --> EXPLAIN
+    TM --> MODELS["physioex.models"]
     TA --> ALL["all __all__ exports"]
     FAC --> DATA
 ```
 
 ## Conventions
 
-- **pytest-only**: plain `assert`, fixtures, `@pytest.mark.parametrize`; no
-  `report()/passed/failed/__main__` scaffolding (removed in Fase B).
-- **Single source of truth for synthetic data**: `tests/factories/` (the old
-  `tests/test_raw_dataset_integration` re-exports become imports in Fase B).
+- **pytest gating**: tests fail via `assert` (native, or a 2-line `report()`
+  assert shim in the large dataset files); the `passed/failed/__main__/sys.exit`
+  script scaffold is removed. `test_cli_workflows` remains `unittest`-style
+  (pytest-collected).
+- **Single source of truth for synthetic data**: `tests/factories/edf.py`
+  (all former `tests.test_raw_dataset_integration` importers migrated).
+- **Unified tree**: the former in-package `physioex/explain/posthoc/tests/`
+  now lives under `tests/explain/posthoc/` and no longer ships in the wheel.
+- **Markers**: `real_data` / `gpu` / `hf` auto-skip unless their environment is
+  present (see `conftest.py`).
 - **Coverage**: measured over `physioex` (legacy modules omitted), gate enforced
   in CI (Fase D).
+
+## Status (Fase B complete)
+
+Full suite on A30 (`-m "not real_data and not gpu and not hf"`):
+**490 passed, 4 skipped, 5 deselected**. All 6 previously-stale tests fixed.
