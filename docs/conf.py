@@ -37,9 +37,10 @@ exclude_patterns = [
     "_build",
     "Thumbs.db",
     ".DS_Store",
-    "api/_generated",
     "pages/unavailable.md",   # empty placeholder, not part of the site
 ]
+# NOTE: api/_generated/ is git-ignored (autosummary stubs) but MUST NOT be in
+# exclude_patterns — Sphinx has to read those stubs to build the API pages.
 
 # -- MyST / notebooks --------------------------------------------------------
 

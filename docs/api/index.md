@@ -107,7 +107,7 @@ statistics helpers, pluggable logging, and the three console-script entry points
 
    physioex.train.trainer.Trainer
    physioex.train.trainer.seed_everything
-   physioex.train.multidevicetrainer.MultiDeviceTrainer
+   physioex.train.multidevicetrainer.Trainer
    physioex.train.logger.Logger
    physioex.train.logger.NoOpLogger
    physioex.train.logger.build_logger
