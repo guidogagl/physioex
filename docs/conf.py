@@ -31,10 +31,7 @@ extensions = [
     "sphinxcontrib.mermaid",
 ]
 
-source_suffix = {
-    ".md": "markdown",
-    ".rst": "restructuredtext",
-}
+# myst-nb auto-registers `.md` and `.ipynb`; `.rst` is built in. No override needed.
 root_doc = "index"
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store", "api/_generated"]
 
