@@ -189,7 +189,7 @@ class SoftmaxSpecificity(SpecificityStrategy):
 class TopKSpecificity(SpecificityStrategy):
     """Hard selection of top-K dimensions by absolute contribution.
 
-    Selects the K dimensions with highest |W[c,d] · ĥ_d(x)| for the
+    Selects the K dimensions with highest ``|W[c,d] · ĥ_d(x)|`` for the
     target class. All other dimensions are zeroed out.
     """
 

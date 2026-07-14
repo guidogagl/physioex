@@ -86,9 +86,9 @@ def quantize_embeddings(
 class VQBottleneck(nn.Module):
     """Differentiable vector quantization with straight-through estimator.
 
-    Forward: z → z_q = codebook[argmin_k ||z - c_k||²]
-    Backward: gradients pass through as if z_q = z (STE),
-              but codebook receives gradients from ||sg[z] - c_q||²
+    Forward: ``z_q = codebook[argmin_k ||z - c_k||^2]``.
+    Backward: gradients pass through as if ``z_q = z`` (STE), but the codebook
+    receives gradients from ``||sg[z] - c_q||^2``.
 
     Args:
         codebook_init: (M, d_model) initial codebook (e.g. from K-Means).

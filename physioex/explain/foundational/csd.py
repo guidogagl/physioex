@@ -247,7 +247,7 @@ class ConceptualSpectralDecomposition(nn.Module):
             embeddings: (N, D) dataset embeddings for static strategies.
             labels: (N,) labels for static strategies.
             max_concepts: Limit number of concepts to explain (None = all
-                above threshold). Selects top by |mask * W[c,d]|.
+                above threshold). Selects top by ``|mask * W[c,d]|``.
 
         Returns:
             CSDResult with per-concept maps and aggregated class map.
