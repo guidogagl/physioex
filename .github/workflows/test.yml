@@ -10,12 +10,16 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.11', '3.12']
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: ${{ matrix.python-version }}
 
       - name: Install CPU torch (avoid large CUDA wheels)
         run: |
@@ -25,17 +29,23 @@ jobs:
       - name: Install package with dev + legacy extras
         run: pip install .[dev,legacy]
 
-      - name: Run test suite (script-style; data-gated tests self-skip)
+      - name: Run test suite with coverage gate
         env:
-          # Real-data tests self-skip when this is unset.
+          # Gated markers self-skip / deselect when their environment is absent:
+          #   real_data -> PHYSIOEX_TEST_REAL_DATA, hf -> PHYSIOEX_TEST_HF, gpu -> CUDA.
           PHYSIOEX_TEST_REAL_DATA: ""
+          PHYSIOEX_TEST_HF: ""
         run: |
-          fail=0
-          # Run as modules from repo root so intra-`tests` imports resolve.
-          for f in tests/test_*.py; do
-            name="tests.$(basename "$f" .py)"
-            echo "::group::$name"
-            python -m "$name" || { echo "FAILED: $name"; fail=1; }
-            echo "::endgroup::"
-          done
-          exit $fail
+          pytest -m "not real_data and not gpu and not hf" \
+            --cov=physioex \
+            --cov-report=term-missing \
+            --cov-report=xml \
+            --cov-fail-under=60
+
+      - name: Upload coverage XML
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ matrix.python-version }}
+          path: coverage.xml
+          if-no-files-found: ignore

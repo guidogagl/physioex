@@ -9,6 +9,8 @@ nav:
             - Models: pages/architecture/library/models.md
             - Train: pages/architecture/library/train.md
             - Explain: pages/architecture/library/explain.md
+        - Testing:
+            - Overview: pages/architecture/testing/overview.md
     - Preprocess Module: pages/preprocess.md
     - Data Module: pages/data.md
     - Train Module:

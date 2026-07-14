@@ -79,3 +79,57 @@ Replace `your-username` with your GitHub username.
     To keep your fork repo updated check the [official doc](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks/syncing-a-fork)
 
 8. Write your code & documentation and when it's ready submit a Pull Request! For a step-by-step guide on how to submit a PR check the [GitHub official documentation](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request-from-a-fork)
+
+## Testing
+
+PhysioEx uses **pytest**. Install the dev extra (`pip install -e .[dev]`) to get
+`pytest` and `pytest-cov`. The suite mirrors the library layout under `tests/`
+(`tests/data`, `tests/models`, `tests/train`, `tests/explain`), with shared
+fixtures in `tests/conftest.py` and synthetic-data generators in
+`tests/factories/`. The test architecture is documented in the
+[testing class diagram](architecture/testing/overview.md).
+
+### Running the tests
+
+```bash
+# Fast unit/integration suite — exactly what CI runs (no data, network, or GPU):
+pytest -m "not real_data and not gpu and not hf"
+
+# With the coverage gate (CI fails below the threshold):
+pytest -m "not real_data and not gpu and not hf" --cov=physioex --cov-report=term-missing
+
+# A single subpackage or file:
+pytest tests/data
+pytest tests/models/test_foundation_preproc.py -q
+```
+
+### Markers
+
+Heavy tests are gated behind markers and **auto-skip / deselect** unless their
+environment is present, so the default run stays hermetic:
+
+| Marker        | Runs only when…                          | What it covers |
+|---------------|------------------------------------------|----------------|
+| `real_data`   | `PHYSIOEX_TEST_REAL_DATA=1`              | real PSG datasets on disk (e.g. MASS SS02) |
+| `hf`          | `PHYSIOEX_TEST_HF=1`                     | building foundation encoders from HuggingFace weights |
+| `gpu`         | `torch.cuda.is_available()`              | CUDA-specific code paths |
+| `slow`        | always (opt-out with `-m "not slow"`)    | long-running builds |
+| `unit`, `integration` | always                           | plain classification of scope |
+
+Enable a gated tier explicitly, e.g. on a GPU box with data mounted:
+
+```bash
+PHYSIOEX_TEST_REAL_DATA=1 pytest -m real_data
+PHYSIOEX_TEST_HF=1        pytest -m hf
+```
+
+### Conventions
+
+- Assert with native `assert` (a thin 2-line `report(name, ok, detail)` shim
+  wrapping `assert` is retained in the large dataset files).
+- Reuse the synthetic-data factories in `tests/factories/`; don't re-implement
+  EDF/annotation writers per test.
+- New public API must be reachable from `tests/test_api_surface.py` (its
+  `__all__` export) and covered by a behavioural test in the matching subpackage.
+- CI (`.github/workflows/test.yml`) runs the fast suite on Python 3.11 and 3.12
+  and enforces a coverage gate; the target is being raised progressively.
