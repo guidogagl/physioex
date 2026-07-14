@@ -42,6 +42,41 @@ MASS_STAGE_MAP: Dict[str, int] = {
     "Sleep stage ?": -1,
 }
 
+# Maps (space-stripped, lowercased) annotation substrings to a canonical
+# SleepEvent.type. Keys are matched as substrings so scorer-specific prefixes
+# (e.g. "SpindleE1") still resolve. Includes the CEAMS expert micro-events
+# (sleep spindles, K-complexes) scored on the SS02 subset.
+MASS_EVENT_CATEGORY_MAP: Dict[str, str] = {
+    "spindle": "spindle",
+    "sleepspindle": "spindle",
+    "kcomplex": "k_complex",
+    "k-complex": "k_complex",
+    "microarousal": "arousal",
+    "arousal": "arousal",
+    "plms": "limb_movement",
+    "plm": "limb_movement",
+    "leg movement": "limb_movement",
+    "limb movement": "limb_movement",
+    "obstructiveapnea": "respiratory",
+    "obstructive apnea": "respiratory",
+    "centralapnea": "respiratory",
+    "central apnea": "respiratory",
+    "mixedapnea": "respiratory",
+    "mixed apnea": "respiratory",
+    "hypopnea": "respiratory",
+    "apnea": "respiratory",
+    "desaturation": "desaturation",
+}
+
+
+def _categorize_mass_event(annotation: str) -> str:
+    """Map a raw annotation label to a canonical SleepEvent.type."""
+    key = annotation.lower().replace(" ", "")
+    for needle, cat in MASS_EVENT_CATEGORY_MAP.items():
+        if needle.replace(" ", "") in key:
+            return cat
+    return "other"
+
 
 class MASSDataset(BasePhysioDataset):
     """MASS (Montreal Archive of Sleep Studies) dataset.
@@ -118,6 +153,22 @@ class MASSDataset(BasePhysioDataset):
         5: [],  # only _saf.txt (EDF annotations not reliably available)
     }
 
+    # Additional per-subject annotation files carrying temporal micro-events
+    # (sleep spindles, K-complexes) scored by CEAMS experts. These are SEPARATE
+    # from the staging file above and are only present for the SS02 gold-standard
+    # subset when the full MASS distribution has been downloaded. Any file whose
+    # name is ``{subject_id}{suffix}`` and that exists is parsed for events (in
+    # addition to the staging file); absent files are silently skipped, so this
+    # is a no-op for cohorts/installations without expert micro-event scoring.
+    # NOTE: validate these suffixes against your MASS release layout.
+    EVENT_ANNOTATION_PATTERNS: List[str] = [
+        "_Spindles.edf",
+        "_SpindlesE1.edf",
+        "_SpindlesE2.edf",
+        "_KComplexes.edf",
+        "_KComplexesE1.edf",
+    ]
+
     # Seconds of context to pad on each side of a 20s epoch to create
     # a 30s window (Phan convention).
     PAD_SEC: float = 5.0
@@ -136,6 +187,9 @@ class MASSDataset(BasePhysioDataset):
             root = str(get_data_root() / self.DATASET_SUBDIR)
         self.cohort = cohort
         self._is_20s = cohort in (2, 4, 5)
+        # subject_id -> list of extra event-annotation file paths (spindles,
+        # K-complexes). Populated by _list_subjects during super().__init__().
+        self._event_paths: Dict[str, List[Path]] = {}
         # Dynamic dataset name so cache dirs are separated per cohort.
         self.DATASET_NAME = f"mass_ss{cohort:02d}"
         # For label parsing, keep native epoch_length_sec (20s or 30s).
@@ -178,6 +232,16 @@ class MASSDataset(BasePhysioDataset):
 
             if label_path is None:
                 continue
+
+            # Discover optional expert micro-event annotation files (spindles,
+            # K-complexes). Absent files are simply not recorded.
+            event_files = [
+                ann_dir / f"{subject_id}{suffix}"
+                for suffix in self.EVENT_ANNOTATION_PATTERNS
+            ]
+            event_files = [p for p in event_files if p.exists()]
+            if event_files:
+                self._event_paths[subject_id] = event_files
 
             subjects.append(
                 SubjectSpec(
@@ -319,40 +383,28 @@ class MASSDataset(BasePhysioDataset):
         apneas, etc.) are converted to SleepEvent objects.
         For SAF text files, similarly filters non-stage entries.
         """
-        from physioex.data.events import SleepEvent
+        events = []
 
         path = spec.label_path
-        if path is None:
-            return []
+        if path is not None:
+            suffix = str(path)
+            if suffix.endswith(".edf"):
+                events.extend(self._parse_annotation_edf_events(path))
+            elif suffix.endswith("_saf.txt"):
+                events.extend(self._parse_saf_events(path))
 
-        suffix = str(path)
-        if suffix.endswith(".edf"):
-            return self._parse_annotation_edf_events(path)
-        elif suffix.endswith("_saf.txt"):
-            return self._parse_saf_events(path)
-        return []
+        # Expert micro-event files (spindles, K-complexes), if present.
+        for extra in self._event_paths.get(spec.subject_id, []):
+            if str(extra).endswith(".edf"):
+                events.extend(self._parse_annotation_edf_events(extra))
+            elif str(extra).endswith(("_saf.txt", ".txt")):
+                events.extend(self._parse_saf_events(extra))
+
+        return events
 
     def _parse_annotation_edf_events(self, path: Path):
         """Parse non-stage events from an EDF+ annotation file."""
         from physioex.data.events import SleepEvent
-
-        _CATEGORY_MAP = {
-            "microarousal": "arousal",
-            "arousal": "arousal",
-            "plms": "limb_movement",
-            "plm": "limb_movement",
-            "leg movement": "limb_movement",
-            "limb movement": "limb_movement",
-            "obstructiveapnea": "respiratory",
-            "obstructive apnea": "respiratory",
-            "centralapnea": "respiratory",
-            "central apnea": "respiratory",
-            "mixedapnea": "respiratory",
-            "mixed apnea": "respiratory",
-            "hypopnea": "respiratory",
-            "apnea": "respiratory",
-            "desaturation": "desaturation",
-        }
 
         import pyedflib
 
@@ -369,13 +421,7 @@ class MASSDataset(BasePhysioDataset):
             if not label_str:
                 continue
 
-            # Determine category from annotation text
-            label_lower = label_str.lower().replace(" ", "")
-            category = "other"
-            for key, cat in _CATEGORY_MAP.items():
-                if key.replace(" ", "") in label_lower:
-                    category = cat
-                    break
+            category = _categorize_mass_event(label_str)
 
             events.append(
                 SleepEvent(
@@ -394,24 +440,6 @@ class MASSDataset(BasePhysioDataset):
         Format: each line is ``{onset}\x15{duration}\x14{annotation}\x14\x00``
         """
         from physioex.data.events import SleepEvent
-
-        _CATEGORY_MAP = {
-            "microarousal": "arousal",
-            "arousal": "arousal",
-            "plms": "limb_movement",
-            "plm": "limb_movement",
-            "leg movement": "limb_movement",
-            "limb movement": "limb_movement",
-            "obstructiveapnea": "respiratory",
-            "obstructive apnea": "respiratory",
-            "centralapnea": "respiratory",
-            "central apnea": "respiratory",
-            "mixedapnea": "respiratory",
-            "mixed apnea": "respiratory",
-            "hypopnea": "respiratory",
-            "apnea": "respiratory",
-            "desaturation": "desaturation",
-        }
 
         with open(path, encoding="latin1") as f:
             raw = f.read()
@@ -441,13 +469,7 @@ class MASSDataset(BasePhysioDataset):
             except ValueError:
                 continue
 
-            # Determine category
-            ann_lower = annotation.lower().replace(" ", "")
-            category = "other"
-            for key, cat in _CATEGORY_MAP.items():
-                if key.replace(" ", "") in ann_lower:
-                    category = cat
-                    break
+            category = _categorize_mass_event(annotation)
 
             events.append(
                 SleepEvent(

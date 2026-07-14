@@ -381,6 +381,71 @@ def test_ss02_base_edf():
 
 
 # ===================================================================
+# 10b. Expert micro-events: spindles / K-complexes
+# ===================================================================
+
+def test_event_categorization():
+    """_categorize_mass_event maps spindle/K-complex + physiological events."""
+    from physioex.data.datasets.mass import _categorize_mass_event
+
+    cases = {
+        "Sleep spindle": "spindle",
+        "SpindleE1": "spindle",
+        "K-complex": "k_complex",
+        "KComplex E2": "k_complex",
+        "Micro-arousal": "arousal",
+        "Obstructive Apnea": "respiratory",
+        "PLM": "limb_movement",
+        "Desaturation": "desaturation",
+        "Something else": "other",
+    }
+    bad = {k: _categorize_mass_event(k) for k, v in cases.items()
+           if _categorize_mass_event(k) != v}
+    report("MASS event categorization (spindle/k_complex/...)", not bad, str(bad))
+
+
+def test_spindle_event_discovery():
+    """A ``_Spindles.edf`` file is discovered and its events parsed as spindle/k_complex."""
+    with tempfile.TemporaryDirectory() as data_dir, \
+         tempfile.TemporaryDirectory() as cache_dir:
+        data_dir = Path(data_dir)
+        make_mass_subject(data_dir, cohort=2, subject_num="0001",
+                          annotation_type="edf_base",
+                          stages=["Sleep stage W", "Sleep stage 2",
+                                  "Sleep stage 2", "Sleep stage 3",
+                                  "Sleep stage R"],
+                          epoch_sec=20.0, duration_sec=120.0)
+        # Add an expert spindle/K-complex annotation file next to the staging file.
+        subject_id = "01-02-0001"
+        ann_dir = data_dir / "SS02" / "annotations"
+        write_fake_annotations_edf(
+            ann_dir / f"{subject_id}_Spindles.edf",
+            ["Sleep spindle", "Sleep spindle", "K-complex"],
+            epoch_sec=20.0,
+        )
+        ds = MASSDataset(
+            cohort=2,
+            root=str(data_dir),
+            channels=["EEG"],
+            pipelines="raw",
+            sequence_length=1,
+            cache_dir=cache_dir,
+            cache_enabled=False,
+        )
+        discovered = ds._event_paths.get(subject_id, [])
+        events = ds.get_subject_events(subject_id)
+        types = sorted({e.type for e in events})
+        ok = (len(discovered) == 1
+              and "spindle" in types
+              and "k_complex" in types)
+        report(
+            "MASS spindle/K-complex event discovery",
+            ok,
+            f"discovered={len(discovered)} types={types}",
+        )
+
+
+# ===================================================================
 # 11. Cohort isolation
 # ===================================================================
 
@@ -600,6 +665,8 @@ if __name__ == "__main__":
     test_annotation_edf_parsing()
     test_saf_parsing()
     test_ss02_base_edf()
+    test_event_categorization()
+    test_spindle_event_discovery()
     test_cohort_isolation()
     test_end_to_end()
 
