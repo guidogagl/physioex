@@ -5,6 +5,10 @@ YAML file (single source of truth, see ``related_works_yaml`` in conf.py).
 The cards are produced as ``sphinx-design`` grids so the look matches the rest
 of the site; entries are grouped into *Published* and *Preprints*.
 
+The directive is invoked from a MyST page, so it generates **MyST** markup
+(colon-fence ``:::{grid-item-card}`` …) and nested-parses it — RST directive
+syntax would be silently dropped by the MyST parser.
+
 The YAML is refreshed semi-automatically by ``docs/related/fetch_citations.py``
 (OpenAlex); this directive only reads it at build time — no network access.
 """
@@ -18,14 +22,16 @@ from docutils import nodes
 from docutils.parsers.rst import Directive
 from docutils.statemachine import StringList
 
+_SPECIAL = ("\\", "`", "*", "_", "[", "]", "<", ">", "|")
 
-def _esc(text: str) -> str:
-    """Escape the RST inline-markup characters so arbitrary titles/abstracts
-    (which may contain ``*``, backticks, ``|`` …) can't break the build."""
+
+def _esc(text) -> str:
+    """Escape MyST/Markdown inline-markup characters so arbitrary titles and
+    abstracts can't break the build or the layout."""
     if text is None:
         return ""
     text = str(text).replace("\n", " ").strip()
-    for ch in ("\\", "*", "`", "|", "_"):
+    for ch in _SPECIAL:
         text = text.replace(ch, "\\" + ch)
     return text
 
@@ -34,6 +40,7 @@ def _authors(entry: dict) -> str:
     a = entry.get("authors") or []
     if isinstance(a, str):
         a = [a]
+    a = [x for x in a if x]
     if not a:
         return ""
     if len(a) > 4:
@@ -47,42 +54,43 @@ def _meta_line(entry: dict) -> str:
 
 
 def _card(entry: dict) -> list[str]:
-    """One ``grid-item-card`` block as a list of RST lines."""
+    """One MyST ``grid-item-card`` colon-fence as a list of lines."""
     title = _esc(entry.get("title") or "Untitled")
-    lines = [f".. grid-item-card:: {title}", ""]
+    lines = [f":::{{grid-item-card}} {title}", ""]
 
     meta = _meta_line(entry)
     if meta:
-        lines += [f"   {meta}", ""]
+        lines += [meta, ""]
 
-    preview = _esc(entry.get("preview") or entry.get("note") or "")
+    preview = _esc(entry.get("preview") or "")
     if preview:
-        lines += [f"   {preview}", ""]
+        lines += [preview, ""]
     note = entry.get("note")
-    if note and entry.get("preview"):
-        lines += [f"   *{_esc(note)}*", ""]
+    if note:
+        lines += [f"*{_esc(note)}*", ""]
 
-    # Footer: type badge + link badges.
+    # Footer (after +++): type badge + link badges.
     is_pre = (entry.get("type") or "").lower() == "preprint"
-    badge = ":bdg-warning:`Preprint`" if is_pre else ":bdg-success:`Published`"
-    footer = [badge]
+    footer = ["{bdg-warning}`Preprint`" if is_pre else "{bdg-success}`Published`"]
     url = entry.get("url") or (
         f"https://doi.org/{entry['doi']}" if entry.get("doi") else None
     )
     if url:
-        footer.append(f":bdg-link-primary:`DOI <{url}>`" if entry.get("doi")
-                      else f":bdg-link-primary:`Link <{url}>`")
+        label = "DOI" if entry.get("doi") else "Link"
+        footer.append(f"{{bdg-link-primary}}`{label} <{url}>`")
     if entry.get("arxiv"):
-        footer.append(f":bdg-link-info:`arXiv <https://arxiv.org/abs/{entry['arxiv']}>`")
-    lines += ["   +++", "   " + " ".join(footer)]
+        footer.append(
+            f"{{bdg-link-info}}`arXiv <https://arxiv.org/abs/{entry['arxiv']}>`"
+        )
+    lines += ["+++", " ".join(footer), ":::", ""]
     return lines
 
 
 def _grid(entries: list[dict]) -> list[str]:
-    out = [".. grid:: 1 2 2 3", "   :gutter: 3", ""]
+    out = ["::::{grid} 1 2 2 3", ":gutter: 3", ""]
     for e in entries:
-        out += ["   " + ln if ln else "" for ln in _card(e)]
-        out += [""]
+        out += _card(e)
+    out += ["::::", ""]
     return out
 
 
@@ -104,11 +112,10 @@ class RelatedWorksDirective(Directive):
 
         if not entries:
             note = nodes.note()
-            para = nodes.paragraph(
+            note += nodes.paragraph(
                 text="No citing works are indexed yet. This page updates as "
                 "publications and preprints citing PhysioEx are picked up."
             )
-            note += para
             return [note]
 
         def _year(e):
@@ -117,20 +124,24 @@ class RelatedWorksDirective(Directive):
             except (TypeError, ValueError):
                 return 0
 
-        published = sorted([e for e in entries if (e.get("type") or "").lower() != "preprint"],
-                           key=_year, reverse=True)
-        preprints = sorted([e for e in entries if (e.get("type") or "").lower() == "preprint"],
-                          key=_year, reverse=True)
+        published = sorted(
+            [e for e in entries if (e.get("type") or "").lower() != "preprint"],
+            key=_year, reverse=True,
+        )
+        preprints = sorted(
+            [e for e in entries if (e.get("type") or "").lower() == "preprint"],
+            key=_year, reverse=True,
+        )
 
-        rst: list[str] = []
+        md: list[str] = []
         if published:
-            rst += [".. rubric:: Published", ""] + _grid(published) + [""]
+            md += ["```{rubric} Published", "```", ""] + _grid(published)
         if preprints:
-            rst += [".. rubric:: Preprints", ""] + _grid(preprints) + [""]
+            md += ["```{rubric} Preprints", "```", ""] + _grid(preprints)
 
         container = nodes.container()
         self.state.nested_parse(
-            StringList(rst, source="related-works"), self.content_offset, container
+            StringList(md, source="related-works"), self.content_offset, container
         )
         return container.children
 
