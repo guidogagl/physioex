@@ -39,6 +39,9 @@ linear probing): `CBraMod`, `BENDR`, `LaBraM`, `BIOT`, `SleepFM`, `TFC`, `REVE`,
 
 ## Supported datasets
 
+All datasets are resolved by name via `get_dataset(name)`; `available_datasets()` returns:
+`alzheimers`, `dcsm`, `hmc`, `hpap`, `mass`, `mesa`, `mros`, `parkinsons`, `shhs`, `sleepedf`, `stages`, `wsc`.
+
 ### Publicly Available:
 
 These datasets are supported out of the box — PhysioEx reads the raw recordings directly (preprocessing is applied lazily, on the fly).
@@ -48,18 +51,22 @@ These datasets are supported out of the box — PhysioEx reads the raw recording
 - [DCSM (Danish Center for Sleep Medicine)](https://erda.ku.dk/public/archives/db553715ecbe1f3ac66c1dc569826eef/published-archive.html), is a collection of 255 randomly selected and fully anonymized overnight lab-based PSG recordings from patients seeking diagnosis for non-specific sleep-related disorders at the DCSM. The PSG setup included EEG, EOG, and EMG channels, all sampled at 256 Hz.
 
 
-### [NSSR](https://sleepdata.org) Datasets 
+### [NSRR](https://sleepdata.org) Datasets
 
-These datasets can be obtained from the NSSR archive. Once downloaded, point PhysioEx at the dataset root and it will read the recordings directly.
+These datasets can be obtained from the NSRR archive. Once downloaded, point PhysioEx at the dataset root and it will read the recordings directly.
 
 - [SHHS (Sleep Heart Health Study)](https://sleepdata.org/datasets/shhs), is a multi-center cohort study designed to investigate the cardiovascular and other consequences of sleep-disordered breathing. At visit 1, it included 5,793 participants aged 40 years or older. PSG recordings were typically conducted in the subjects' homes by trained and certified technicians. The recording montage included C3/A2 and C4/A1 EEGs sampled at 125 Hz, right and left EOGs sampled at 50 Hz, and a bipolar submental EMG sampled at 125 Hz.
 - [MESA (Multi-Ethnic Study of Atherosclerosis)](https://sleepdata.org/datasets/mesa), is a multi-center prospective study of 2.237 ethnically diverse men and women aged 45-84 from six communities in the United States. PSGs recordings were obtained using in-home settings including central C4-M1 EEG, bilateral EOG and chin EMG sampled at 256Hz. PSGs were scored by one of 3 MESA certified, registered polysomnologists.
 - [MrOS (The Osteoporotic Fractures in Men Study)](https://sleepdata.org/datasets/mros), is a multicenter study comprising 2,911 PSG recordings from men aged 65 years or older, enrolled at six clinical centers. PSG recordings were conducted in home settings and included C3/A2 and C4/A1 EEGs, chin EMG, and left-right EOG, all sampled at 256 Hz.
 - [WSC (The Wisconsin Sleep Cohort)](https://sleepdata.org/datasets/wsc) A longitudinal study of the causes, consequences, and natural history of sleep disorders using overnight in-laboratory sleep recordings gathered at the University of Wisconsin, United States, with a baseline sample of 1,500 subjects assessed at four-year intervals. The study consists of multiple visits with overnight PSG data acquisition. PSG recordings included C3/M2 EEG, EMG, and left-right EOG, all sampled at 200 Hz.
+- [STAGES (Stanford Technology Analytics and Genomics in Sleep)](https://sleepdata.org/datasets/stages), 1,914 recordings across 13 clinical sites with a bipolar EEG montage (C4-M1 / C3-M2 equivalent), EOG and chin EMG, plus rich respiratory / arousal / PLM event annotations. Selectable by site and by recording (`first` / `second` / `all`).
+- [HomePAP](https://sleepdata.org/datasets/homepap) (`hpap`), a positive-airway-pressure study in NSRR format, with three subsets — `lab-full`, `lab-split` and `home` — selectable via the `subset` parameter.
 
 ### Others
 
-- [MASS (Montreal Archive of Sleep Studies)](http://ceams-carsm.ca/mass/), is an open-access collaborative database containing laboratory-based PSG recordings. It includes 200 complete nights recorded from 97 men and 103 women, aged 18 to 76 years. All recordings have a sampling frequency of 256 Hz and feature an EEG montage of 4–20 channels, along with standard EOG and EMG
+- [MASS (Montreal Archive of Sleep Studies)](http://ceams-carsm.ca/mass/), is an open-access collaborative database containing laboratory-based PSG recordings. It includes 200 complete nights recorded from 97 men and 103 women, aged 18 to 76 years. All recordings have a sampling frequency of 256 Hz and feature an EEG montage of 4–20 channels, along with standard EOG and EMG.
+- **Alzheimer's disease dataset** (`alzheimers`, UZ Leuven), 69 subjects (37 Alzheimer's + 32 healthy controls), one night each with an average-reference EEG montage, differential EOG, chin EMG and ECG at 200 Hz. The `subset` parameter selects only AD or HC subjects.
+- **Parkinson's disease dataset** (`parkinsons`, UZ Leuven), 87 subjects (48 Parkinson's + 40 healthy older adults) with up to 157 recordings (night and nap), bipolar EEG montage, EOG, chin EMG and ECG at 500 Hz.
 
 
 ## Installation guidelines
