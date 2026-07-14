@@ -85,11 +85,13 @@ learning rate is typical). Multi-GPU DDP training is available via
 
 ```{eval-rst}
 .. autoclass:: physioex.train.trainer.Trainer
+   :no-index:
    :members: build_dataloaders, train, evaluate, voting_evaluate,
              save_checkpoint, load_checkpoint
    :show-inheritance:
 
 .. autofunction:: physioex.train.trainer.seed_everything
+   :no-index:
 ```
 
 See the full auto-generated [API Reference](../../api/index.md) for metrics,

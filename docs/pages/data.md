@@ -124,16 +124,19 @@ See the [Training](train/train.md) page and the
 
 ```{eval-rst}
 .. autoclass:: physioex.data.BasePhysioDataset
+   :no-index:
    :members: __getitem__, __len__, split, get_splits, probe,
              available_channels, get_n_subjects, get_subjects,
              get_subject_events, close
    :show-inheritance:
 
 .. autoclass:: physioex.data.MultiDataset
+   :no-index:
    :members: split, available_channels, get_n_subjects, close
    :show-inheritance:
 
 .. autofunction:: physioex.data.dict_collate_fn
+   :no-index:
 ```
 
 See the full auto-generated [API Reference](../api/index.md) for the complete

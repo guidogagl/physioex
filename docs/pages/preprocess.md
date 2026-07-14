@@ -92,16 +92,20 @@ presets apply modality-specific filtering.
 
 ```{eval-rst}
 .. autoclass:: physioex.data.PreprocessingPipeline
+   :no-index:
    :members:
    :show-inheritance:
 
 .. autoclass:: physioex.data.PreprocessingStep
+   :no-index:
    :members:
    :show-inheritance:
 
 .. autofunction:: physioex.data.get_preset
+   :no-index:
 
 .. autofunction:: physioex.data.available_presets
+   :no-index:
 ```
 
 The individual steps, the `ChannelCache`, and the compiled-pipeline classes are

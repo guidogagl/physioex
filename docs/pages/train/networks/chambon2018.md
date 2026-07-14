@@ -15,6 +15,7 @@ train --model physioex.models.chambon2018:Chambon2018Net \
 
 ```{eval-rst}
 .. autoclass:: physioex.models.chambon2018.Chambon2018Net
+   :no-index:
    :members: __init__, encode, forward
    :show-inheritance:
 ```

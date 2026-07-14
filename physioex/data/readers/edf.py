@@ -212,11 +212,11 @@ def resolve_channels(
     """Resolve user channel requests against the EDF's available channels.
 
     Args:
-        requests: list of requests. Each may be:
-            - string matching a known modality ("EEG", "EOG", "EMG", "ECG")
-              -> take next unclaimed preference match
-            - string naming a specific channel ("C4-M2") -> case-insensitive exact match
-            - dict with keys {"modality": ..., "preference": ...} or {"name": ...}
+        requests: list of requests. Each may be one of:
+
+            * a modality string ("EEG", "EOG", "EMG", "ECG") — takes the next unclaimed preference match;
+            * a specific channel name ("C4-M2") — case-insensitive exact match;
+            * a dict ``{"modality": ..., "preference": ...}`` or ``{"name": ...}``.
 
         available: list of physical channel labels from the EDF header
         fs_map: mapping physical_label -> sample rate (for fs_in propagation)

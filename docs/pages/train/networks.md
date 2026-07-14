@@ -57,6 +57,7 @@ state-dicts, and can look a model up in the built-in registry.
 
 ```{eval-rst}
 .. autofunction:: physioex.train.models.load.load_model
+   :no-index:
 ```
 
 Pretrained models published on the Hugging Face Hub can be reconstructed with
