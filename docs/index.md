@@ -1,8 +1,10 @@
-<p align="center">
-<img src="assets/images/logo.svg" width = "250px", alt="PhysioEx Logo">
+```{image} assets/images/logo.svg
+:alt: PhysioEx Logo
+:width: 250px
+:align: center
+```
 
-<h1> PhysioEx </h1>
-</p>
+# PhysioEx
 
 ![Python Version](https://img.shields.io/badge/python-3.7%2B-blue)
 ![PyPI Version](https://badge.fury.io/py/physioex.svg)
@@ -93,4 +95,41 @@ Note: the github version of the library is kept updated weekly, the PiPy version
 	url={http://iopscience.iop.org/article/10.1088/1361-6579/adaf73},
 	year={2025},
 }
+```
+
+```{toctree}
+:hidden:
+:caption: Architecture · Library
+
+pages/architecture/library/overview
+pages/architecture/library/data
+pages/architecture/library/models
+pages/architecture/library/train
+pages/architecture/library/explain
+```
+
+```{toctree}
+:hidden:
+:caption: Architecture · Testing
+
+pages/architecture/testing/overview
+```
+
+```{toctree}
+:hidden:
+:caption: Modules
+
+pages/preprocess
+pages/data
+pages/train/train
+pages/train/cli
+pages/train/networks
+pages/explain/explain
+```
+
+```{toctree}
+:hidden:
+:caption: Contributing
+
+pages/contribute
 ```

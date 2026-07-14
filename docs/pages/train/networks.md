@@ -77,3 +77,9 @@ The SleepModule needs to know the `n_classes` ( for sleep staging this is tipyca
       show_root_heading: false
       show_source: false
 	  heading_level: 3
+
+```{toctree}
+:hidden:
+
+networks/chambon2018
+```

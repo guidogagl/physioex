@@ -33,7 +33,13 @@ extensions = [
 
 # myst-nb auto-registers `.md` and `.ipynb`; `.rst` is built in. No override needed.
 root_doc = "index"
-exclude_patterns = ["_build", "Thumbs.db", ".DS_Store", "api/_generated"]
+exclude_patterns = [
+    "_build",
+    "Thumbs.db",
+    ".DS_Store",
+    "api/_generated",
+    "pages/unavailable.md",   # empty placeholder, not part of the site
+]
 
 # -- MyST / notebooks --------------------------------------------------------
 

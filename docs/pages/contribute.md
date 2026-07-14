@@ -60,23 +60,27 @@ Replace `your-username` with your GitHub username.
     $ git remote add upstream https://github.com/guidogagl/physioex.git
 ```    
 
-!!! warning Check that everything went allright
-    To check that the upstream is correctly setted up, run:
-    ```bash
-        $ git remote -v
-    ```
-    And check that the output resembles:
-    ```bash
-        > origin    https://github.com/your-username/physioex.git (fetch)
+:::{admonition} Check that everything went allright
+:class: warning
+To check that the upstream is correctly setted up, run:
+```bash
+    $ git remote -v
+```
+And check that the output resembles:
+```bash
+    > origin    https://github.com/your-username/physioex.git (fetch)
 
-        > origin    https://github.com/your-username/physioex.git (push)
+    > origin    https://github.com/your-username/physioex.git (push)
 
-        > upstream  https://github.com/guidogagl/physioex.git (fetch)
-        > upstream  https://github.com/guidogagl/physioex.git (push)
-    ```
+    > upstream  https://github.com/guidogagl/physioex.git (fetch)
+    > upstream  https://github.com/guidogagl/physioex.git (push)
+```
+:::
 
-!!! tip Keep your fork updated
-    To keep your fork repo updated check the [official doc](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks/syncing-a-fork)
+:::{admonition} Keep your fork updated
+:class: tip
+To keep your fork repo updated check the [official doc](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks/syncing-a-fork)
+:::
 
 8. Write your code & documentation and when it's ready submit a Pull Request! For a step-by-step guide on how to submit a PR check the [GitHub official documentation](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request-from-a-fork)
 
