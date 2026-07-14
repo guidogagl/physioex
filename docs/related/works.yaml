@@ -1,0 +1,8 @@
+# Works that cite PhysioEx — data source for the "Related Works" page.
+#
+# Refresh from OpenAlex with:  python docs/related/fetch_citations.py
+# Fields per entry: id, title, authors[], year, venue, type (published|preprint),
+# doi, arxiv, url, preview, note, thumbnail, manual.
+# Set `manual: true` to protect a hand-curated entry from auto-overwrite, or add
+# entries by hand (e.g. preprints OpenAlex has not indexed yet).
+[]

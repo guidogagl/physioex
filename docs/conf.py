@@ -10,6 +10,7 @@ import os
 import sys
 
 sys.path.insert(0, os.path.abspath(".."))
+sys.path.insert(0, os.path.abspath("_ext"))   # local Sphinx extensions
 
 # -- Project information -----------------------------------------------------
 
@@ -29,7 +30,12 @@ extensions = [
     "sphinx_design",           # {tab-set}, cards, grids
     "sphinx_copybutton",
     "sphinxcontrib.mermaid",
+    "related_works",           # local: the {related-works} card gallery (docs/_ext/)
 ]
+
+# "Related Works" citing-papers gallery — data file (relative to docs/), read at
+# build time by the related_works extension; refreshed by related/fetch_citations.py.
+related_works_yaml = "related/works.yaml"
 
 # myst-nb auto-registers `.md` and `.ipynb`; `.rst` is built in. No override needed.
 root_doc = "index"
