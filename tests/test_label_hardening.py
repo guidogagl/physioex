@@ -29,19 +29,9 @@ from tests.test_raw_dataset_integration import (
     write_fake_annotations_edf,
 )
 
-passed = 0
-failed = 0
-
-
-def report(name: str, ok: bool, detail: str = "") -> None:
-    global passed, failed
-    tag = "PASS" if ok else "FAIL"
-    if ok:
-        passed += 1
-    else:
-        failed += 1
-    suffix = f" -- {detail}" if detail else ""
-    print(f"[{tag}] {name}{suffix}")
+def report(name, ok, detail=""):
+    """Thin assert shim: fail the test with a descriptive message."""
+    assert ok, f"{name}{(' -- ' + detail) if detail else ''}"
 
 
 # ---------------------------------------------------------------------------
@@ -407,32 +397,3 @@ def test_all_dataset_stage_maps_in_aasm_range():
 # Runner
 # ---------------------------------------------------------------------------
 
-if __name__ == "__main__":
-    print("=" * 60)
-    print("Label hardening tests")
-    print("=" * 60)
-
-    test_sanitize_passes_valid_labels()
-    test_sanitize_out_of_range_becomes_minus_one()
-    test_sanitize_empty_array()
-    test_sanitize_preserves_dtype()
-    test_sanitize_accepts_larger_int_dtype()
-
-    test_safe_slice_in_range()
-    test_safe_slice_past_end_pads()
-    test_safe_slice_2d()
-    test_safe_slice_length_zero_raises()
-
-    test_labels_shorter_than_signal_padded_with_minus_one()
-    test_labels_longer_than_signal_handled()
-    test_invalid_labels_replaced_with_minus_one()
-    test_no_epochs_dropped_when_half_unscored()
-    test_full_recording_mode_alignment()
-
-    test_sleepedf_stage_map_is_aasm_5class()
-    test_all_dataset_stage_maps_in_aasm_range()
-
-    print("=" * 60)
-    print(f"Results: {passed} passed, {failed} failed out of {passed + failed}")
-    print("=" * 60)
-    sys.exit(0 if failed == 0 else 1)

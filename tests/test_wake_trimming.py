@@ -20,19 +20,9 @@ from tests.test_raw_dataset_integration import (
     write_fake_annotations_edf,
 )
 
-passed = 0
-failed = 0
-
-
-def report(name: str, ok: bool, detail: str = "") -> None:
-    global passed, failed
-    tag = "PASS" if ok else "FAIL"
-    if ok:
-        passed += 1
-    else:
-        failed += 1
-    suffix = f" -- {detail}" if detail else ""
-    print(f"[{tag}] {name}{suffix}")
+def report(name, ok, detail=""):
+    """Thin assert shim: fail the test with a descriptive message."""
+    assert ok, f"{name}{(' -- ' + detail) if detail else ''}"
 
 
 # ---------------------------------------------------------------------------
@@ -336,27 +326,3 @@ def test_dataset_length_preserved():
 # Runner
 # ---------------------------------------------------------------------------
 
-if __name__ == "__main__":
-    print("=" * 60)
-    print("Wake-trimming tests")
-    print("=" * 60)
-
-    test_trim_empty_noop()
-    test_trim_short_wake_noop()
-    test_trim_long_evening_wake()
-    test_trim_long_morning_wake()
-    test_trim_both_sides()
-    test_trim_all_wake_noop()
-    test_trim_preserves_mid_wake()
-    test_trim_preserves_existing_neg1()
-    test_trim_custom_keep_minutes()
-    test_trim_idempotent()
-
-    test_dataset_default_trims()
-    test_dataset_flag_disabled()
-    test_dataset_length_preserved()
-
-    print("=" * 60)
-    print(f"Results: {passed} passed, {failed} failed out of {passed + failed}")
-    print("=" * 60)
-    sys.exit(0 if failed == 0 else 1)

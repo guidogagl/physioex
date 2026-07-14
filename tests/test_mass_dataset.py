@@ -14,25 +14,17 @@ import tempfile
 from pathlib import Path
 
 import numpy as np
+import pytest
 import torch
 
 from physioex.data.datasets import get_dataset, available_datasets
 from physioex.data.datasets.mass import MASSDataset, MASS_STAGE_MAP
-from tests.test_raw_dataset_integration import write_fake_edf, write_fake_annotations_edf
-
-passed = 0
-failed = 0
+from tests.factories.edf import write_fake_edf, write_fake_annotations_edf
 
 
-def report(name: str, ok: bool, detail: str = ""):
-    global passed, failed
-    tag = "PASS" if ok else "FAIL"
-    if ok:
-        passed += 1
-    else:
-        failed += 1
-    suffix = f" -- {detail}" if detail else ""
-    print(f"[{tag}] {name}{suffix}")
+def report(name, ok, detail=""):
+    """Thin assert shim: fail the test with a descriptive message."""
+    assert ok, f"{name}{(' -- ' + detail) if detail else ''}"
 
 
 # ===================================================================
@@ -529,7 +521,8 @@ def test_end_to_end():
 # Real-data smoke tests (guarded)
 # ===================================================================
 
-def run_real_data_tests():
+@pytest.mark.real_data
+def test_real_data_smoke():
     """Only runs if PHYSIOEX_TEST_REAL_DATA=1."""
     print("\n--- MASS real-data smoke tests ---")
 
@@ -649,36 +642,3 @@ def run_real_data_tests():
 # Runner
 # ===================================================================
 
-if __name__ == "__main__":
-    print("=" * 60)
-    print("MASS dataset tests")
-    print("=" * 60)
-
-    print("\n--- MASS (synthetic) ---")
-    test_registry()
-    test_in_available()
-    test_valid_cohorts()
-    test_invalid_cohorts()
-    test_dataset_name_per_cohort()
-    test_epoch_length_per_cohort()
-    test_empty_root()
-    test_subject_discovery()
-    test_annotation_edf_parsing()
-    test_saf_parsing()
-    test_ss02_base_edf()
-    test_event_categorization()
-    test_spindle_event_discovery()
-    test_cohort_isolation()
-    test_end_to_end()
-
-    # Real-data tests (optional)
-    if os.environ.get("PHYSIOEX_TEST_REAL_DATA", "") == "1":
-        run_real_data_tests()
-    else:
-        print("\n--- MASS real-data smoke tests SKIPPED "
-              "(set PHYSIOEX_TEST_REAL_DATA=1) ---")
-
-    print("\n" + "=" * 60)
-    print(f"Results: {passed} passed, {failed} failed out of {passed + failed}")
-    print("=" * 60)
-    sys.exit(0 if failed == 0 else 1)
