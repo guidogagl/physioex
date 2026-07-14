@@ -129,6 +129,13 @@ pages/explain/explain
 
 ```{toctree}
 :hidden:
+:caption: API Reference
+
+api/index
+```
+
+```{toctree}
+:hidden:
 :caption: Contributing
 
 pages/contribute
