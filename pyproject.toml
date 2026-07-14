@@ -42,7 +42,7 @@ tracking = ["tensorboard>=2.14", "wandb>=0.16"]
 # Heavyweight, feature-specific deps imported lazily; install only if needed.
 foundation = ["transformers>=4.40.0"]  # REVE encoder (physioex.models.reve)
 datasets = ["mne>=1.6.0"]              # HOMEPAP EDF fallback reader (data.datasets.hpap)
-dev = ["ruff", "pytest", "black~=22.0"]
+dev = ["ruff", "pytest", "pytest-cov", "black~=22.0"]
 legacy = ["pytorch_lightning>=2.5.0", "lightning>=2.5.0", "torchmetrics>=1.8.0"]
 
 [tool.hatch.version]
@@ -67,3 +67,39 @@ Homepage = "https://github.com/guidogagl/physioex"
 Documentation = "https://guidogagl.github.io/physioex"
 Repository = "https://github.com/guidogagl/physioex"
 Issues = "https://github.com/guidogagl/physioex/issues"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers --import-mode=importlib"
+markers = [
+    "unit: fast, isolated unit test (default)",
+    "integration: exercises several components together",
+    "real_data: needs datasets on disk (skipped unless PHYSIOEX_TEST_REAL_DATA=1)",
+    "gpu: needs a CUDA GPU (skipped if unavailable)",
+    "hf: needs HuggingFace network/checkpoints (skipped unless PHYSIOEX_TEST_HF=1)",
+    "slow: long-running test",
+]
+filterwarnings = [
+    "ignore::DeprecationWarning:physioex.data.dataset",
+    "ignore::DeprecationWarning:physioex.data.datareader",
+]
+
+[tool.coverage.run]
+source = ["physioex"]
+branch = true
+omit = [
+    "physioex/data/dataset.py",       # legacy, deprecated
+    "physioex/data/datareader.py",    # legacy, deprecated
+    "*/tests/*",
+]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
+exclude_lines = [
+    "pragma: no cover",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "@(abc\\.)?abstractmethod",
+]
