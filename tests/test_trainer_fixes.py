@@ -13,7 +13,7 @@ import sys
 import tempfile
 import re
 
-ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
 from physioex.train.trainer import _get_parameters_from_config, Trainer
 import torch
@@ -161,7 +161,7 @@ def test_voting_evaluate():
 # ---------------------------------------------------------------------------
 def test_multidevice_train_step_unpacking():
     try:
-        src_path = os.path.join(ROOT, "test", "train", "multidevicetrainer.py")
+        src_path = os.path.join(ROOT, "physioex", "train", "multidevicetrainer.py")
         with open(src_path, "r") as f:
             source = f.read()
 
@@ -188,7 +188,7 @@ def test_multidevice_train_step_unpacking():
 # ---------------------------------------------------------------------------
 def test_multidevice_eval_step_unpacking():
     try:
-        src_path = os.path.join(ROOT, "test", "train", "multidevicetrainer.py")
+        src_path = os.path.join(ROOT, "physioex", "train", "multidevicetrainer.py")
         with open(src_path, "r") as f:
             source = f.read()
 

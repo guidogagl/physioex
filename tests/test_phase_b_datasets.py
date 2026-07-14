@@ -6,6 +6,7 @@ channel resolution, label parsing, and end-to-end dict return for both datasets.
 Run standalone:
     python test/tests/test_phase_b_datasets.py
 """
+import os
 import sys
 import tempfile
 import shutil
