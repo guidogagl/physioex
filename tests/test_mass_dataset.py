@@ -8,6 +8,7 @@ Real-data smoke tests are guarded by PHYSIOEX_TEST_REAL_DATA=1.
 Run standalone:
     python test/tests/test_mass_dataset.py
 """
+import os
 import sys
 import tempfile
 from pathlib import Path

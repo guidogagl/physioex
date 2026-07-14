@@ -11,11 +11,11 @@ import subprocess
 import sys
 import unittest
 
-ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
-TRAIN_SCRIPT = os.path.join(ROOT, "test", "train", "bin", "train.py")
-FINETUNE_SCRIPT = os.path.join(ROOT, "test", "train", "bin", "finetune.py")
-TEST_SCRIPT = os.path.join(ROOT, "test", "train", "bin", "test.py")
+TRAIN_SCRIPT = os.path.join(ROOT, "physioex", "train", "bin", "train.py")
+FINETUNE_SCRIPT = os.path.join(ROOT, "physioex", "train", "bin", "finetune.py")
+TEST_SCRIPT = os.path.join(ROOT, "physioex", "train", "bin", "test.py")
 
 
 def _run_script(script_path, args, timeout=30):
@@ -196,7 +196,7 @@ class TestCrossScriptConsistency(unittest.TestCase):
             self.assertTrue(os.path.isfile(path), f"Script not found: {path}")
 
     def test_init_file_exists(self):
-        init_path = os.path.join(ROOT, "test", "train", "bin", "__init__.py")
+        init_path = os.path.join(ROOT, "physioex", "train", "bin", "__init__.py")
         self.assertTrue(os.path.isfile(init_path), "__init__.py missing in bin/")
 
     def test_shared_args_present_in_all(self):

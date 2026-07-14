@@ -31,9 +31,11 @@ jobs:
           PHYSIOEX_TEST_REAL_DATA: ""
         run: |
           fail=0
+          # Run as modules from repo root so intra-`tests` imports resolve.
           for f in tests/test_*.py; do
-            echo "::group::$f"
-            python "$f" || { echo "FAILED: $f"; fail=1; }
+            name="tests.$(basename "$f" .py)"
+            echo "::group::$name"
+            python -m "$name" || { echo "FAILED: $name"; fail=1; }
             echo "::endgroup::"
           done
           exit $fail
