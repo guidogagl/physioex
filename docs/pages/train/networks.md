@@ -1,82 +1,75 @@
-# Networks Module Overview
+# Model architectures
 
-The model implemented into the PhysioEx library are:
+Models in PhysioEx are plain `torch.nn.Module` architectures — there is no
+Lightning `SleepModule` base class. They fall into two families, both living
+under `physioex.models`:
 
-- [Chambon2018](https://ieeexplore.ieee.org/document/8307462) model for sleep stage classification ( raw time series as input).
-- [TinySleepNet](https://github.com/akaraspt/tinysleepnet) model for sleep stage classification (raw time series as input).
-- [SeqSleepNet](https://arxiv.org/pdf/1809.10932.pdf) model for sleep stage classification (time-frequency images as input).
+- **Classic sleep-staging architectures** — self-contained networks for supervised
+  sleep staging.
+- **Foundation encoders** — pretrained backbones adapted to a uniform interface
+  (the `FoundationEncoder` family).
 
+All architectures take epoch sequences of 30-second sleep epochs as input. The
+preprocessing they expect is expressed through a matching pipeline preset (see
+the [Preprocessing](../preprocess.md) page); for foundation encoders this is
+declared on the class as `PIPELINE_PRESET`.
 
-| Model          | Model Name    | Input Transform | Target Transform |
-|----------------|---------------|-----------------|------------------|
-| Chambon2018    | chambon2018   | raw             | get_mid_label    |
-| TinySleepNet   | tinysleepnet  | raw             | None             |
-| SeqSleepNet    | seqsleepnet   | xsleepnet       | None             |
+For the full class diagram and per-model contract see the
+[models architecture](../architecture/library/models.md) page.
 
-The models in PhysioEx are designed to receive input sequences of 30-second sleep epochs. These sequences can be either preprocessed or raw, depending on the specific requirements of the model. 
-The preprocessing status of the input sequences is indicated by the "Input Transform" attribute. This attribute must match the "preprocessing" argument of the dataset to ensure that the model receives as input the correct information.
+## Classic architectures
 
-Similarly, models can be sequence-to-sequence (default) or sequence-to-epoch. In the last case a function that selects one epoch in the sequence needs to be added to the PhysioExDataModule pipeline to match the target data and the output of the model. These functions are implemented into the `physioex.train.networks.utils.target_transform` module. 
+Each is a `torch.nn.Module` following the common contract
+`__init__(n_classes, in_chan, ...)`, `forward(x) -> (B, L, n_classes)` logits,
+and (for most) `encode(x)` returning per-epoch features. They are imported from
+their own modules and referenced by dotted `module:Class` spec in the CLIs:
 
-When implementing your own SleepModule, the Input Transform and Target Transform methods must be configurated properly, the best practice is to set them into a `.yaml` file as discussed in the train module documentation page.
+| Model | Class spec |
+|---|---|
+| Chambon 2018 | `physioex.models.chambon2018:Chambon2018Net` |
+| TinySleepNet | `physioex.models.tinysleepnet:TinySleepNet` |
+| SeqSleepNet | `physioex.models.seqsleepnet:SeqSleepNet` |
+| L-SeqSleepNet | `physioex.models.lseqsleepnet:LSeqSleepNet` |
+| SleepTransformer | `physioex.models.sleeptransformer:SleepTransformer` |
+| Tsinalis CNN | `physioex.models.tsinalis:TsinalisCNN` |
+| CoRe-Sleep | `physioex.models.coresleep:CoReSleep` |
+| ProtoSleepNet | `physioex.models.protosleepnet:ProtoSleepNet` |
 
-# Extending the SleepModule
+`ProtoSleepNet` additionally provides prototype quantization and factory
+constructors from a `SleepTransformer`/`SeqSleepNet` epoch encoder.
 
-All the models compatible with PhysioEx are Pytorch Lightning Modules which extends the `physioes.train.networks.base.SleepModule`.
+## Foundation encoders
 
-By extending the module you can implement your own custom sleep staging deep learning network. When extending the module use a dictionary `module_config: dict` as the argument to the construct to allow compatibility with all the library. Second define your custom `torch.nn.Module` and use  `module_config: dict` as its constructor argument too.
+The `FoundationEncoder` family wraps heterogeneous pretrained backbones behind a
+uniform `encode: (B, L, C, T) -> (B, L, D)` interface, each declaring its
+`MODEL_NAME`, `PIPELINE_PRESET` and `CHANNEL_STRATEGY`. The encoders are
+re-exported from `physioex.models`: `BENDREncoder`, `BIOTEncoder`,
+`CBraModEncoder`, `LaBraMEncoder`, `NeuroLMEncoder`, `REVEEncoder`,
+`SJEEncoder`, `SleepFMEncoder`, `TFCEncoder`. Some require the optional
+`physioex[foundation]` extra.
 
-!!! example
-    ```python
-    import torch
-    from physioex.train.networks.base import SleepModule
+## Loading a model
 
-    class CustomNet( torch.nn.Module ):
-        def __init__(self, module_config: dict):
+`physioex.train.models.load.load_model` reconstructs a model from a class (or
+`"module:Class"` string) plus constructor kwargs, and loads weights from a
+checkpoint. It supports Lightning `.ckpt`, the new `.pt` format, and raw
+state-dicts, and can look a model up in the built-in registry.
 
-            # tipycally here you have an epoch_encoder and a sequence_encoder
-            self.epoch_encoder = ...
-            self.sequence_encoder = ...
+```{eval-rst}
+.. autofunction:: physioex.train.models.load.load_model
+```
 
-            pass
+Pretrained models published on the Hugging Face Hub can be reconstructed with
+`physioex.models.load_from_pretrained` (see the
+[models architecture](../architecture/library/models.md) page and the
+[API Reference](../../api/index.md)).
 
-        def forward(self, x : torch.Tensor):
-            encoding, preds = self.encode(x)
-            return preds
+## Adding your own model
 
-        def encode(self, x : torch.Tensor):
-            # get your latent-space encodings
-            encodings = ...
-
-            # get your predictions out of the encodings
-            preds = ...
-
-            return econdings, preds
-
-    class CustomModule(SleepModule):
-        def __init__(self, module_config: dict):
-            super(CustomNet, self).__init__(CustomNet(module_config), module_config)
-
-    ```
-
-The SleepModule needs to know the `n_classes` ( for sleep staging this is tipycally 5 ) and the loss to be computed during training. By default the loss function in PhysioEx ( check `physioex.train.networks.utils.loss` ) take a python `dict` in its constructor, so you should always specify in your module_config the `n_classes` value, `loss_call` and `loss_params`.
-
-`SleepModule`
-::: network.SleepModule
-    handler: python
-    options:
-      members:
-        - __init__
-        - configure_optimizers
-        - forward
-        - encode
-        - compute_loss
-        - training_step
-        - validation_step
-        - test_step
-      show_root_heading: false
-      show_source: false
-	  heading_level: 3
+Any `torch.nn.Module` that follows the common contract
+(`__init__(n_classes, in_chan, ...)` and `forward(x) -> (B, L, n_classes)`) is
+compatible with `Trainer` and the CLIs — pass it as a `module:Class` spec to
+`--model`. No base class or module wrapper is required.
 
 ```{toctree}
 :hidden:

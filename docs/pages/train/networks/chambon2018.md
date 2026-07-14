@@ -1,6 +1,10 @@
-# `Chambon2018` documentation
+# `Chambon2018`
 
-This page details the implementation of the `chambon2018` model published [here](https://ieeexplore.ieee.org/document/8307462).
+This page documents the `Chambon2018Net` architecture, published
+[here](https://ieeexplore.ieee.org/document/8307462). It encodes each 30-second
+epoch independently (via braindecode's `SleepStagerChambon2018`), then
+concatenates the per-epoch features across the sequence to classify the central
+epoch.
 
 Train it with the CLI:
 
@@ -9,12 +13,8 @@ train --model physioex.models.chambon2018:Chambon2018Net \
       --dataset hmc --channels EEG EOG EMG --pipelines time_domain
 ```
 
-::: physioex.models.chambon2018.Chambon2018Net
-    handler: python
-    options:
-      members:
-        - __init__
-        - encode
-        - forward
-      show_root_heading: true
-      show_source: true
+```{eval-rst}
+.. autoclass:: physioex.models.chambon2018.Chambon2018Net
+   :members: __init__, encode, forward
+   :show-inheritance:
+```

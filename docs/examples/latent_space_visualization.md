@@ -1,3 +1,15 @@
+# Latent-space visualization
+
+:::{note}
+This is a **legacy example** exported from a notebook that targets the old
+PhysioEx API (e.g. `SleepPhysionet`, `TimeDistributedModule`, the
+`physioex.train.networks` module). Those APIs no longer exist in
+`physioex-dev`. The cells below are kept for reference only and are pending an
+update to the current API — see the [Data](../pages/data.md),
+[Training](../pages/train/train.md) and [Explain](../pages/explain/explain.md)
+pages for the current workflow.
+:::
+
 ```python
 import pkg_resources as pkg
 path = pkg.resource_filename(__name__, "../")

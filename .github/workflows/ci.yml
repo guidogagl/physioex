@@ -1,26 +1,27 @@
-name: ci 
+name: docs
 on:
   push:
     branches:
-      - master 
+      - master
       - main
 permissions:
   contents: write
 jobs:
-  deploy:
+  build-deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
-          python-version: 3.x
-      - uses: actions/cache@v4
+          python-version: "3.11"
+      # Core deps (torch, braindecode→mne) are needed for autodoc imports.
+      # Install CPU torch/torchaudio from the CPU index to match the test job
+      # (braindecode otherwise pulls a mismatched-ABI torchaudio).
+      - run: pip install torch torchaudio --index-url https://download.pytorch.org/whl/cpu
+      - run: pip install -e ".[docs]"
+      # -W --keep-going = strict build (fail on any warning, but report them all).
+      - run: sphinx-build -b html -W --keep-going docs docs/_build/html
+      - uses: peaceiris/actions-gh-pages@v4
         with:
-          key: ${{ github.ref }}
-          path: .cache
-      - run: pip install mkdocs-material
-      - run: pip install 'mkdocstrings[python]'
-      - run: pip install Pygments
-      - run: pip install mknotebooks
-      - run: pip install pillow cairosvg
-      - run: mkdocs gh-deploy --force
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: docs/_build/html

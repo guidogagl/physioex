@@ -129,6 +129,13 @@ pages/explain/explain
 
 ```{toctree}
 :hidden:
+:caption: Examples
+
+examples/latent_space_visualization
+```
+
+```{toctree}
+:hidden:
 :caption: API Reference
 
 api/index

@@ -1,138 +1,140 @@
-# Data Module 
+# Data
 
-The `physioex.data` module provides the API to read the data from the disk once the raw datasets have been processed by the `Preprocess` module. It consists of two classes: 
+The `physioex.data` module turns raw EDF recordings into model-ready tensors
+through a **lazy, content-addressed pipeline**. There is no more preprocessed
+"array" layer and no Lightning data-module: datasets read raw EDF on demand,
+preprocess per channel on the fly, and cache the result to disk.
 
-- `physioex.data.PhysioExDataset` which serialize the disk processed version of the dataset into a `PyTorch Dataset`
-- `physioex.data.PhysioExDataModule` which transforms the datasets to `PyTorch DataLoaders` ready for training. 
+The public entry points are:
 
-### Example of Usage
+- **`physioex.data.BasePhysioDataset`** — the abstract `torch.utils.data.Dataset`
+  base that all concrete datasets inherit from.
+- **`physioex.data.MultiDataset`** — concatenates several datasets into one.
+- **`physioex.data.dict_collate_fn`** — the collate function that batches the
+  dict samples for a `DataLoader`.
 
-#### PhysioExDataset
+Concrete datasets are resolved **by name** from a string registry rather than
+imported directly. For the full class diagram and how the pieces fit together,
+see the [data-layer architecture](architecture/library/data.md) page.
 
-The `PhysioExDataset` class is automatically handled by the `PhysioExDataModule` class when you need to use it for training or testing purposes. In most of the cases you don't need to interact with the `PhysioExDataset` class.
+## Resolving a dataset by name
 
-The class is instead really helpfull when you need to visualize your data, or you need to get some samples of your data to provide them as input to Explainable AI algorithms.
-
-In these cases you need to instantiate a `PhysioExDataset`:
-
-```python
-from physioex.data import PhysioExDataset
-
-data = PhysioExDataset(
-    datasets = ["hmc"], # you can read different datasets merged together in this way
-    preprocessing = "raw",  
-    selected_channels = ["EEG", "EOG", "EMG"],     
-    data_folder = "/your/data/path/",
-)
-
-# you can now access any sequence of epochs in the dataset
-signal, label = data[0]
-
-signal.shape # will be [21 (default sequence lenght), 3, 3000]
-label.shape # will be [21]
-```
-
-Then you can use a python plotting library to plot visualize the data
-
-!!! example
-	```python
-	import seaborn as sns
-	import numpy as np 
-
-	hypnogram = np.ones((21, 3000)) * label.numpy().reshape(-1, 1)
-
-	# plot a subfigure with one column for each element of the sequence (21)
-	fig, ax = plt.subplots(4, 1, figsize = (21, 8), sharex="col", sharey="row")
-
-	hypnogram = hypnogram.reshape( -1 )
-	signals = signal.numpy().transpose(1, 0, 2).reshape(3, -1)
-
-	# set tytle for each subplot
-	sns.lineplot( x = range(3000*21), y = hypnogram, ax = ax[0], color = "blue")
-	# then the channels:
-	sns.lineplot( x = range(3000*21), y = signals[ 0], ax = ax[1], color = "red")
-	sns.lineplot( x = range(3000*21), y = signals[ 1], ax = ax[2], color = "green")
-	sns.lineplot( x = range(3000*21), y = signals[ 2], ax = ax[3], color = "purple")    
-
-	# check the examples notebook "visualize_data.ipynb" to see how to customize the plot properly
-
-	plt.tight_layout()
-	```
-
-	![png](assets/images/data/sequence_viz.png)
-
-
-#### PhysioExDataModule
-
-The `PhysioExDataModule` class is designed to transform datasets into `PyTorch DataLoaders` ready for training. It handles the batching, shuffling, and splitting of the data into training, validation, and test sets.
-
-To use the `PhysioExDataModule`, you need to instantiate it with the required parameters:
+`physioex.data.datasets` exposes a registry of the 12 concrete datasets:
 
 ```python
-from physioex.data import PhysioExDataModule
+from physioex.data.datasets import get_dataset, available_datasets
 
-datamodule = PhysioExDataModule(
-    datasets=["hmc", "mass"],  # list of datasets to be used
-    batch_size=64,             # batch size for the DataLoader
-    preprocessing="raw",       # preprocessing method
-    selected_channels=["EEG", "EOG", "EMG"],  # channels to be selected
-    sequence_length=21,        # length of the sequence
-    data_folder="/your/data/path/",  # path to the data folder
-)
+available_datasets()
+# ['alzheimers', 'dcsm', 'hmc', 'hpap', 'mass', 'mesa', 'mros',
+#  'parkinsons', 'shhs', 'sleepedf', 'stages', 'wsc']
 
-# get the DataLoaders
-train_loader = datamodule.train_dataloader()
-val_loader = datamodule.val_dataloader()
-test_loader = datamodule.test_dataloader()
+HMCDataset = get_dataset("hmc")   # the class, not an instance
 ```
 
-PhysiEx is built on `pytorch_lightning` for model training and testig, hence you can use `PhysioExDataModule` in combination with `pl.Trainer`
+## Instantiating a dataset
+
+Every concrete dataset shares the `BasePhysioDataset` constructor. The most
+common arguments are the data `root` (falls back to the `PHYSIOEX_DATA`
+environment variable when omitted), the `channels` to load, a preprocessing
+`pipelines` preset, and the `sequence_length`:
 
 ```python
-from pytorch_lightning import Trainer
+from physioex.data.datasets import get_dataset
 
-model = SomePytorchModel()
-
-trainer = Trainer(
-    devices="auto"
-    max_epochs=10,
-    deterministic=True,
+data = get_dataset("hmc")(
+    root=None,                     # None -> uses $PHYSIOEX_DATA
+    channels=["EEG", "EOG", "EMG"],
+    pipelines="time_domain",       # a preset name (see the Preprocessing page)
+    sequence_length=21,
 )
-    
-# setup the model in training mode if needed
-model = model.train()
-# Start training
-trainer.fit(model, datamodule=datamodule)
-results = trainer.test( model, datamodule = datamodule)
+
+len(data)              # number of indexable epoch-sequences
+data.get_n_subjects()  # number of subjects discovered
+data.available_channels()
 ```
 
-## Documentation
-`PhysioExDataset` 
-::: data.PhysioExDataset
-    handler: python
-    options:
-      members:
-        - __init__
-        - __getitem__
-        - __len__
-        - split
-        - get_num_folds
-        - get_sets
-      show_root_heading: false
-      show_source: false
-	  heading_level: 3
+Each item is a **dict** (not a `(signal, label)` tuple). The keys are:
 
----
+| Key | Meaning |
+|---|---|
+| `signals` | stacked channel tensor for the sequence |
+| `channel_order` | ordered list of channel names |
+| `channel_info` | per-channel resolution metadata |
+| `labels` | per-epoch AASM labels (`-1` = unscored) |
+| `subject` | subject metadata dict (incl. `dataset_idx` for `MultiDataset`) |
+| `epoch_indices` | indices of the epochs in the recording |
+| `recording_length` | number of epochs in the full recording |
+| `events` | sleep events overlapping the sequence |
 
-`PhysioExDataModule`
-::: data.PhysioExDataModule
-    handler: python
-    options:
-      members:
-        - __init__
-        - train_dataloader
-        - valid_dataloader
-        - test_dataloader
-      show_root_heading: false
-      show_source: false
-	  heading_level: 3
+```python
+item = data[0]
+item["signals"].shape   # (sequence_length, n_channels, ...)
+item["labels"].shape    # (sequence_length,)
+```
+
+The trailing dimensions of `signals` depend on the preprocessing preset:
+time-domain presets yield `(L, C, T)` samples, while spectrogram presets
+(`seqsleepnet`, `time_frequency`) yield `(L, C, T, F)`.
+
+## Splitting
+
+`BasePhysioDataset.split(fold)` and `get_splits(fold)` produce reproducible
+train/validation/test subject splits (70/15/15, seeded by `42 + fold`). See the
+API reference for the exact return types.
+
+## Merging datasets
+
+`MultiDataset` concatenates several `BasePhysioDataset` instances into a single
+flat index with coordinated splitting. All constituent datasets must share the
+same `sequence_length`.
+
+```python
+from physioex.data.datasets import get_dataset
+from physioex.data import MultiDataset
+
+hmc = get_dataset("hmc")(channels=["EEG"], pipelines="raw", sequence_length=21)
+dcsm = get_dataset("dcsm")(channels=["EEG"], pipelines="raw", sequence_length=21)
+
+merged = MultiDataset([hmc, dcsm])
+```
+
+## Building a DataLoader
+
+Because items are dicts, use `dict_collate_fn` as the loader's `collate_fn`:
+
+```python
+from torch.utils.data import DataLoader
+from physioex.data import dict_collate_fn
+
+loader = DataLoader(data, batch_size=32, shuffle=True, collate_fn=dict_collate_fn)
+batch = next(iter(loader))
+batch["signals"].shape   # (32, sequence_length, n_channels, ...)
+```
+
+:::{admonition} Training
+:class: tip
+For actual training and evaluation you rarely wire the `DataLoader` yourself:
+`physioex.train.trainer.Trainer.build_dataloaders` detects a
+`BasePhysioDataset`/`MultiDataset` and attaches `dict_collate_fn` automatically.
+See the [Training](train/train.md) page and the
+[train CLIs](train/cli.md).
+:::
+
+## API
+
+```{eval-rst}
+.. autoclass:: physioex.data.BasePhysioDataset
+   :members: __getitem__, __len__, split, get_splits, probe,
+             available_channels, get_n_subjects, get_subjects,
+             get_subject_events, close
+   :show-inheritance:
+
+.. autoclass:: physioex.data.MultiDataset
+   :members: split, available_channels, get_n_subjects, close
+   :show-inheritance:
+
+.. autofunction:: physioex.data.dict_collate_fn
+```
+
+See the full auto-generated [API Reference](../api/index.md) for the complete
+`physioex.data` surface (readers, cache, events, modality helpers).
