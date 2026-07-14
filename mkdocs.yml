@@ -8,7 +8,7 @@ nav:
         - Overview: pages/train/train.md
         - CLI : pages/train/cli.md
         - Networks: pages/train/networks.md
-    - Explain Module: pages/unavailable.md
+    - Explain Module: pages/explain/explain.md
       # - Concept Learning : pages/explain/concept_learning.ipynb
       # - Spectral Gradients : pages/explain/spectral_gradients.ipynb
     - Contribute: pages/contribute.md

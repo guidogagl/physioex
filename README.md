@@ -50,7 +50,7 @@ These datasets can be easily get from the NSSR archive. Once downloaded in your 
 ### Create a Virtual Environment (Optional but Recommended)
 
 ```bash
-$ conda create -n physioex python==3.10
+$ conda create -n physioex python==3.11
 $ conda activate physioex
 $ conda install pip
 $ pip install --upgrade pip  # On Windows, use `venv\Scripts\activate`
@@ -76,6 +76,55 @@ $ pip install physioex
 ```
 
 Note: the github version of the library is kept updated weekly, the PiPy version may be outdated depending on the last commit of the github version. We recommend to use the github version if possible.  
+
+**Optional extras** (heavyweight, feature-specific deps installed lazily):
+
+```bash
+$ pip install "physioex[foundation]"   # transformers, for the REVE encoder
+$ pip install "physioex[datasets]"     # mne, for the HOMEPAP EDF fallback reader
+$ pip install "physioex[tracking]"     # tensorboard / wandb logging
+```
+
+## Quickstart
+
+Set `PHYSIOEX_DATA` to the directory holding your datasets, then use the raw-EDF
+data layer, the model zoo, and the training loop:
+
+```python
+import os
+os.environ["PHYSIOEX_DATA"] = "/path/to/datasets"
+
+from physioex.data.datasets import get_dataset, available_datasets
+from physioex.models.tinysleepnet import TinySleepNet
+from physioex.train.trainer import Trainer
+
+print(available_datasets())  # -> ['hmc', 'sleepedf', 'dcsm', 'mass', ...]
+
+dataset = get_dataset("hmc")(
+    channels=["EEG", "EOG", "EMG"],
+    pipelines="time_domain",   # preset preprocessing pipeline
+    sequence_length=21,
+)
+
+model = TinySleepNet(in_chan=3, n_classes=5)
+model = Trainer.train(model=model, dataset=dataset, max_epochs=20)
+```
+
+Load a pretrained model or extract foundation-model embeddings:
+
+```python
+from physioex.models import load_from_pretrained, extract_embeddings, linear_probe
+from physioex.models import CBraModEncoder
+
+model = load_from_pretrained("protosleepnet")           # from the HF model zoo
+encoder = CBraModEncoder()
+ds = encoder.get_dataset("hmc")                          # matched preprocessing
+emb = extract_embeddings(encoder, ds)
+scores = linear_probe(emb)
+```
+
+The same dataset spec drives the CLI (`train` / `finetune` / `test_model`) — see
+the [Train Module CLI](pages/train/cli.md) docs.
 
 ## Cite Us!
 ```bib
