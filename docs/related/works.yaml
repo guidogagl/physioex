@@ -116,3 +116,23 @@
   preview: Sleep disorders and their diagnosis are a significant public health concern. Automated sleep
     stage classification using deep learning models has shown promising results, but these models often
     lack transparency and interpretability. In this study, we propose an eXplainable …
+- id: ieee-11419752
+  title: 'Revealing Sleep Dynamics with PCT-CRV: A Novel Approach for Automatic Sleep Staging
+    and Tracking Transitions using PSG Signals'
+  authors:
+  - Tehreem Fatima Zaidi
+  - Abhishek Dixit
+  - Deepak Joshi
+  - Shiv Dutt Joshi
+  year: 2026
+  venue: IEEE Journal of Biomedical and Health Informatics
+  type: published
+  doi: 10.1109/JBHI.2026.3668939
+  url: https://doi.org/10.1109/JBHI.2026.3668939
+  preview: 'Polysomnography (PSG)-based accurate sleep staging is essential to monitor sleep quality
+    and sleep-related disorders. The authors propose a framework based on the polynomial chirplet
+    transform-derived characteristic response vector (PCT-CRV) to assess sleep stages and track
+    transitions between them …'
+  note: ''
+  thumbnail: ''
+  manual: true
