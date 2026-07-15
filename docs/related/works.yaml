@@ -1,7 +1,10 @@
-# Auto-refreshed by fetch_citations.py from OpenAlex.
-# Set `manual: true` on an entry to protect it from overwrites,
-# or add entries by hand (e.g. preprints OpenAlex hasn't indexed).
-- id: W7118732652
+# Auto-refreshed by fetch_citations.py (OpenAlex + Semantic Scholar).
+# Set `manual: true` to protect a hand-curated entry from overwrites,
+# or add entries by hand (e.g. works only Google Scholar indexes).
+- note: ''
+  thumbnail: https://media.springernature.com/m685/springer-static/image/art%3A10.1038%2Fs41591-025-04133-4/MediaObjects/41591_2025_4133_Fig1_HTML.png
+  manual: false
+  id: W7118732652
   title: A multimodal sleep foundation model for disease prediction
   authors:
   - Rahul Thapa
@@ -24,10 +27,34 @@
   preview: Abstract Sleep is a fundamental biological process with broad implications for physical and
     mental health, yet its complex relationship with disease remains poorly understood. Polysomnography
     (PSG)—the gold standard for sleep analysis—captures rich physiological signals but is …
-  note: ''
+- note: ''
   thumbnail: ''
   manual: false
-- id: W4417199488
+  id: 3f076ed383c7a244455e8218134358c899c0c88f
+  title: Prototype-based sleep micro-structure learning for explainable and robust multimodal recognition
+    of sleep-related conditions
+  authors:
+  - Guido Gagliardi
+  - Javier García Ciudad
+  - L. Micca
+  - B. R. Kornum
+  - M. Gilat
+  - A. L. Alfeo
+  - M. G. Cimino
+  - M. de Vos
+  year: 2026
+  venue: Research Square
+  type: preprint
+  doi: 10.21203/rs.3.rs-9169987/v1
+  arxiv: null
+  url: https://doi.org/10.21203/rs.3.rs-9169987/v1
+  preview: While sleep is fundamental to human health, sleep disturbances reduce quality of life and constitute
+    risk factors for neurodegenerative diseases including Parkinson’s and Alzheimer’s. Automated sleep
+    staging networks achieve human-level performance on multimodal physiological …
+- note: ''
+  thumbnail: ''
+  manual: false
+  id: W4417199488
   title: A multi-source domain fine-tuning framework for deep generalization performance in physiological
     time series analysis
   authors:
@@ -45,10 +72,10 @@
   preview: A multi-source domain fine-tuning framework for deep generalization performance in physiological
     time series analysis, Zvuloni, Eran, Gagliardi, Guido, H Ribeiro, Antônio, Luiz P Ribeiro, Antonio,
     De Vos, Maarten, Behar, Joachim A
-  note: ''
+- note: ''
   thumbnail: ''
   manual: false
-- id: W4416987291
+  id: W4416987291
   title: 'Artificial intelligence and sleep medicine II: A scoping review of applications, advancements,
     and future directions'
   authors:
@@ -65,11 +92,15 @@
   type: published
   doi: 10.1016/j.smrv.2025.102212
   url: https://doi.org/10.1016/j.smrv.2025.102212
-  preview: ''
-  note: ''
+  preview: 'BACKGROUND
+
+    Artificial intelligence (AI) has rapidly advanced in sleep medicine, offering innovative solutions
+    for sleep disorder management. The integration of AI technologies presents unprecedented opportunities
+    to address longstanding challenges in diagnosis, monitoring, and …'
+- note: ''
   thumbnail: ''
   manual: false
-- id: W7125899475
+  id: W7125899475
   title: Building neural networks’ latent space to extract instance-based explanations for sleep staging
   authors:
   - Guido Gagliardi
@@ -78,13 +109,10 @@
   - Gaetano Valenza
   - Maarten De Vos
   year: 2025
-  venue: null
+  venue: IEEE International Conference on Systems, Man and Cybernetics
   type: published
   doi: 10.1109/smc58881.2025.11342484
   url: https://doi.org/10.1109/smc58881.2025.11342484
   preview: Sleep disorders and their diagnosis are a significant public health concern. Automated sleep
     stage classification using deep learning models has shown promising results, but these models often
     lack transparency and interpretability. In this study, we propose an eXplainable …
-  note: ''
-  thumbnail: ''
-  manual: false
