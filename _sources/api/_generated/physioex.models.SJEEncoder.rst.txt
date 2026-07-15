@@ -1,0 +1,87 @@
+﻿physioex.models.SJEEncoder
+==========================
+
+.. currentmodule:: physioex.models
+
+.. autoclass:: SJEEncoder
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~SJEEncoder.__init__
+      ~SJEEncoder.add_module
+      ~SJEEncoder.apply
+      ~SJEEncoder.bfloat16
+      ~SJEEncoder.buffers
+      ~SJEEncoder.children
+      ~SJEEncoder.compile
+      ~SJEEncoder.cpu
+      ~SJEEncoder.cuda
+      ~SJEEncoder.double
+      ~SJEEncoder.encode
+      ~SJEEncoder.eval
+      ~SJEEncoder.extra_repr
+      ~SJEEncoder.float
+      ~SJEEncoder.forward
+      ~SJEEncoder.get_buffer
+      ~SJEEncoder.get_dataset
+      ~SJEEncoder.get_extra_state
+      ~SJEEncoder.get_parameter
+      ~SJEEncoder.get_pipeline
+      ~SJEEncoder.get_submodule
+      ~SJEEncoder.half
+      ~SJEEncoder.ipu
+      ~SJEEncoder.load_state_dict
+      ~SJEEncoder.modules
+      ~SJEEncoder.mtia
+      ~SJEEncoder.named_buffers
+      ~SJEEncoder.named_children
+      ~SJEEncoder.named_modules
+      ~SJEEncoder.named_parameters
+      ~SJEEncoder.parameters
+      ~SJEEncoder.register_backward_hook
+      ~SJEEncoder.register_buffer
+      ~SJEEncoder.register_forward_hook
+      ~SJEEncoder.register_forward_pre_hook
+      ~SJEEncoder.register_full_backward_hook
+      ~SJEEncoder.register_full_backward_pre_hook
+      ~SJEEncoder.register_load_state_dict_post_hook
+      ~SJEEncoder.register_load_state_dict_pre_hook
+      ~SJEEncoder.register_module
+      ~SJEEncoder.register_parameter
+      ~SJEEncoder.register_state_dict_post_hook
+      ~SJEEncoder.register_state_dict_pre_hook
+      ~SJEEncoder.requires_grad_
+      ~SJEEncoder.set_extra_state
+      ~SJEEncoder.set_submodule
+      ~SJEEncoder.share_memory
+      ~SJEEncoder.state_dict
+      ~SJEEncoder.to
+      ~SJEEncoder.to_empty
+      ~SJEEncoder.train
+      ~SJEEncoder.type
+      ~SJEEncoder.xpu
+      ~SJEEncoder.zero_grad
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~SJEEncoder.CHANNEL_STRATEGY
+      ~SJEEncoder.MODEL_NAME
+      ~SJEEncoder.PIPELINE_PRESET
+      ~SJEEncoder.T_destination
+      ~SJEEncoder.call_super_init
+      ~SJEEncoder.dump_patches
+      ~SJEEncoder.training
+   
+   

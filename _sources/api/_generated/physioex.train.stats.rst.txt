@@ -1,0 +1,16 @@
+﻿physioex.train.stats
+====================
+
+.. automodule:: physioex.train.stats
+
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      aggregate
+      aggregated_scalars
+      confusion_matrix_figure
+      figure_from_cm
+      per_subject_metrics
+   

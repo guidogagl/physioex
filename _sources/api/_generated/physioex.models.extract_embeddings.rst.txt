@@ -1,0 +1,6 @@
+﻿physioex.models.extract\_embeddings
+===================================
+
+.. currentmodule:: physioex.models
+
+.. autofunction:: extract_embeddings

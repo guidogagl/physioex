@@ -1,0 +1,32 @@
+﻿physioex.data.ResolvedChannel
+=============================
+
+.. currentmodule:: physioex.data
+
+.. autoclass:: ResolvedChannel
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~ResolvedChannel.__init__
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~ResolvedChannel.request
+      ~ResolvedChannel.physical
+      ~ResolvedChannel.modality
+      ~ResolvedChannel.fs_in
+      ~ResolvedChannel.is_differential
+   
+   

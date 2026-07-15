@@ -1,0 +1,41 @@
+﻿physioex.data.BasePhysioDataset
+===============================
+
+.. currentmodule:: physioex.data
+
+.. autoclass:: BasePhysioDataset
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~BasePhysioDataset.__init__
+      ~BasePhysioDataset.available_channels
+      ~BasePhysioDataset.close
+      ~BasePhysioDataset.get_all_subject_metadata
+      ~BasePhysioDataset.get_n_subjects
+      ~BasePhysioDataset.get_splits
+      ~BasePhysioDataset.get_subject_events
+      ~BasePhysioDataset.get_subject_metadata
+      ~BasePhysioDataset.get_subjects
+      ~BasePhysioDataset.memmap_cache_stats
+      ~BasePhysioDataset.probe
+      ~BasePhysioDataset.split
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~BasePhysioDataset.CHANNEL_PREFERENCES
+      ~BasePhysioDataset.DATASET_NAME
+      ~BasePhysioDataset.DEFAULT_EPOCH_LENGTH_SEC
+   
+   

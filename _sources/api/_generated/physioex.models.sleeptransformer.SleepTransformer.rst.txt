@@ -1,0 +1,82 @@
+﻿physioex.models.sleeptransformer.SleepTransformer
+=================================================
+
+.. currentmodule:: physioex.models.sleeptransformer
+
+.. autoclass:: SleepTransformer
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~SleepTransformer.__init__
+      ~SleepTransformer.add_module
+      ~SleepTransformer.apply
+      ~SleepTransformer.bfloat16
+      ~SleepTransformer.buffers
+      ~SleepTransformer.children
+      ~SleepTransformer.compile
+      ~SleepTransformer.cpu
+      ~SleepTransformer.cuda
+      ~SleepTransformer.double
+      ~SleepTransformer.encode
+      ~SleepTransformer.eval
+      ~SleepTransformer.extra_repr
+      ~SleepTransformer.float
+      ~SleepTransformer.forward
+      ~SleepTransformer.get_buffer
+      ~SleepTransformer.get_extra_state
+      ~SleepTransformer.get_parameter
+      ~SleepTransformer.get_submodule
+      ~SleepTransformer.half
+      ~SleepTransformer.ipu
+      ~SleepTransformer.load_state_dict
+      ~SleepTransformer.modules
+      ~SleepTransformer.mtia
+      ~SleepTransformer.named_buffers
+      ~SleepTransformer.named_children
+      ~SleepTransformer.named_modules
+      ~SleepTransformer.named_parameters
+      ~SleepTransformer.parameters
+      ~SleepTransformer.register_backward_hook
+      ~SleepTransformer.register_buffer
+      ~SleepTransformer.register_forward_hook
+      ~SleepTransformer.register_forward_pre_hook
+      ~SleepTransformer.register_full_backward_hook
+      ~SleepTransformer.register_full_backward_pre_hook
+      ~SleepTransformer.register_load_state_dict_post_hook
+      ~SleepTransformer.register_load_state_dict_pre_hook
+      ~SleepTransformer.register_module
+      ~SleepTransformer.register_parameter
+      ~SleepTransformer.register_state_dict_post_hook
+      ~SleepTransformer.register_state_dict_pre_hook
+      ~SleepTransformer.requires_grad_
+      ~SleepTransformer.set_extra_state
+      ~SleepTransformer.set_submodule
+      ~SleepTransformer.share_memory
+      ~SleepTransformer.state_dict
+      ~SleepTransformer.to
+      ~SleepTransformer.to_empty
+      ~SleepTransformer.train
+      ~SleepTransformer.type
+      ~SleepTransformer.xpu
+      ~SleepTransformer.zero_grad
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~SleepTransformer.T_destination
+      ~SleepTransformer.call_super_init
+      ~SleepTransformer.dump_patches
+      ~SleepTransformer.training
+   
+   

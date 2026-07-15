@@ -1,0 +1,87 @@
+﻿physioex.models.LaBraMEncoder
+=============================
+
+.. currentmodule:: physioex.models
+
+.. autoclass:: LaBraMEncoder
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~LaBraMEncoder.__init__
+      ~LaBraMEncoder.add_module
+      ~LaBraMEncoder.apply
+      ~LaBraMEncoder.bfloat16
+      ~LaBraMEncoder.buffers
+      ~LaBraMEncoder.children
+      ~LaBraMEncoder.compile
+      ~LaBraMEncoder.cpu
+      ~LaBraMEncoder.cuda
+      ~LaBraMEncoder.double
+      ~LaBraMEncoder.encode
+      ~LaBraMEncoder.eval
+      ~LaBraMEncoder.extra_repr
+      ~LaBraMEncoder.float
+      ~LaBraMEncoder.forward
+      ~LaBraMEncoder.get_buffer
+      ~LaBraMEncoder.get_dataset
+      ~LaBraMEncoder.get_extra_state
+      ~LaBraMEncoder.get_parameter
+      ~LaBraMEncoder.get_pipeline
+      ~LaBraMEncoder.get_submodule
+      ~LaBraMEncoder.half
+      ~LaBraMEncoder.ipu
+      ~LaBraMEncoder.load_state_dict
+      ~LaBraMEncoder.modules
+      ~LaBraMEncoder.mtia
+      ~LaBraMEncoder.named_buffers
+      ~LaBraMEncoder.named_children
+      ~LaBraMEncoder.named_modules
+      ~LaBraMEncoder.named_parameters
+      ~LaBraMEncoder.parameters
+      ~LaBraMEncoder.register_backward_hook
+      ~LaBraMEncoder.register_buffer
+      ~LaBraMEncoder.register_forward_hook
+      ~LaBraMEncoder.register_forward_pre_hook
+      ~LaBraMEncoder.register_full_backward_hook
+      ~LaBraMEncoder.register_full_backward_pre_hook
+      ~LaBraMEncoder.register_load_state_dict_post_hook
+      ~LaBraMEncoder.register_load_state_dict_pre_hook
+      ~LaBraMEncoder.register_module
+      ~LaBraMEncoder.register_parameter
+      ~LaBraMEncoder.register_state_dict_post_hook
+      ~LaBraMEncoder.register_state_dict_pre_hook
+      ~LaBraMEncoder.requires_grad_
+      ~LaBraMEncoder.set_extra_state
+      ~LaBraMEncoder.set_submodule
+      ~LaBraMEncoder.share_memory
+      ~LaBraMEncoder.state_dict
+      ~LaBraMEncoder.to
+      ~LaBraMEncoder.to_empty
+      ~LaBraMEncoder.train
+      ~LaBraMEncoder.type
+      ~LaBraMEncoder.xpu
+      ~LaBraMEncoder.zero_grad
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~LaBraMEncoder.CHANNEL_STRATEGY
+      ~LaBraMEncoder.MODEL_NAME
+      ~LaBraMEncoder.PIPELINE_PRESET
+      ~LaBraMEncoder.T_destination
+      ~LaBraMEncoder.call_super_init
+      ~LaBraMEncoder.dump_patches
+      ~LaBraMEncoder.training
+   
+   

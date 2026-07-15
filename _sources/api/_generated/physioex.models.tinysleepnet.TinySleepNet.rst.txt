@@ -1,0 +1,82 @@
+﻿physioex.models.tinysleepnet.TinySleepNet
+=========================================
+
+.. currentmodule:: physioex.models.tinysleepnet
+
+.. autoclass:: TinySleepNet
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~TinySleepNet.__init__
+      ~TinySleepNet.add_module
+      ~TinySleepNet.apply
+      ~TinySleepNet.bfloat16
+      ~TinySleepNet.buffers
+      ~TinySleepNet.children
+      ~TinySleepNet.compile
+      ~TinySleepNet.cpu
+      ~TinySleepNet.cuda
+      ~TinySleepNet.double
+      ~TinySleepNet.encode
+      ~TinySleepNet.eval
+      ~TinySleepNet.extra_repr
+      ~TinySleepNet.float
+      ~TinySleepNet.forward
+      ~TinySleepNet.get_buffer
+      ~TinySleepNet.get_extra_state
+      ~TinySleepNet.get_parameter
+      ~TinySleepNet.get_submodule
+      ~TinySleepNet.half
+      ~TinySleepNet.ipu
+      ~TinySleepNet.load_state_dict
+      ~TinySleepNet.modules
+      ~TinySleepNet.mtia
+      ~TinySleepNet.named_buffers
+      ~TinySleepNet.named_children
+      ~TinySleepNet.named_modules
+      ~TinySleepNet.named_parameters
+      ~TinySleepNet.parameters
+      ~TinySleepNet.register_backward_hook
+      ~TinySleepNet.register_buffer
+      ~TinySleepNet.register_forward_hook
+      ~TinySleepNet.register_forward_pre_hook
+      ~TinySleepNet.register_full_backward_hook
+      ~TinySleepNet.register_full_backward_pre_hook
+      ~TinySleepNet.register_load_state_dict_post_hook
+      ~TinySleepNet.register_load_state_dict_pre_hook
+      ~TinySleepNet.register_module
+      ~TinySleepNet.register_parameter
+      ~TinySleepNet.register_state_dict_post_hook
+      ~TinySleepNet.register_state_dict_pre_hook
+      ~TinySleepNet.requires_grad_
+      ~TinySleepNet.set_extra_state
+      ~TinySleepNet.set_submodule
+      ~TinySleepNet.share_memory
+      ~TinySleepNet.state_dict
+      ~TinySleepNet.to
+      ~TinySleepNet.to_empty
+      ~TinySleepNet.train
+      ~TinySleepNet.type
+      ~TinySleepNet.xpu
+      ~TinySleepNet.zero_grad
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~TinySleepNet.T_destination
+      ~TinySleepNet.call_super_init
+      ~TinySleepNet.dump_patches
+      ~TinySleepNet.training
+   
+   

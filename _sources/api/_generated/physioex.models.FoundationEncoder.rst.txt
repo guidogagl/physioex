@@ -1,0 +1,87 @@
+﻿physioex.models.FoundationEncoder
+=================================
+
+.. currentmodule:: physioex.models
+
+.. autoclass:: FoundationEncoder
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~FoundationEncoder.__init__
+      ~FoundationEncoder.add_module
+      ~FoundationEncoder.apply
+      ~FoundationEncoder.bfloat16
+      ~FoundationEncoder.buffers
+      ~FoundationEncoder.children
+      ~FoundationEncoder.compile
+      ~FoundationEncoder.cpu
+      ~FoundationEncoder.cuda
+      ~FoundationEncoder.double
+      ~FoundationEncoder.encode
+      ~FoundationEncoder.eval
+      ~FoundationEncoder.extra_repr
+      ~FoundationEncoder.float
+      ~FoundationEncoder.forward
+      ~FoundationEncoder.get_buffer
+      ~FoundationEncoder.get_dataset
+      ~FoundationEncoder.get_extra_state
+      ~FoundationEncoder.get_parameter
+      ~FoundationEncoder.get_pipeline
+      ~FoundationEncoder.get_submodule
+      ~FoundationEncoder.half
+      ~FoundationEncoder.ipu
+      ~FoundationEncoder.load_state_dict
+      ~FoundationEncoder.modules
+      ~FoundationEncoder.mtia
+      ~FoundationEncoder.named_buffers
+      ~FoundationEncoder.named_children
+      ~FoundationEncoder.named_modules
+      ~FoundationEncoder.named_parameters
+      ~FoundationEncoder.parameters
+      ~FoundationEncoder.register_backward_hook
+      ~FoundationEncoder.register_buffer
+      ~FoundationEncoder.register_forward_hook
+      ~FoundationEncoder.register_forward_pre_hook
+      ~FoundationEncoder.register_full_backward_hook
+      ~FoundationEncoder.register_full_backward_pre_hook
+      ~FoundationEncoder.register_load_state_dict_post_hook
+      ~FoundationEncoder.register_load_state_dict_pre_hook
+      ~FoundationEncoder.register_module
+      ~FoundationEncoder.register_parameter
+      ~FoundationEncoder.register_state_dict_post_hook
+      ~FoundationEncoder.register_state_dict_pre_hook
+      ~FoundationEncoder.requires_grad_
+      ~FoundationEncoder.set_extra_state
+      ~FoundationEncoder.set_submodule
+      ~FoundationEncoder.share_memory
+      ~FoundationEncoder.state_dict
+      ~FoundationEncoder.to
+      ~FoundationEncoder.to_empty
+      ~FoundationEncoder.train
+      ~FoundationEncoder.type
+      ~FoundationEncoder.xpu
+      ~FoundationEncoder.zero_grad
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~FoundationEncoder.CHANNEL_STRATEGY
+      ~FoundationEncoder.MODEL_NAME
+      ~FoundationEncoder.PIPELINE_PRESET
+      ~FoundationEncoder.T_destination
+      ~FoundationEncoder.call_super_init
+      ~FoundationEncoder.dump_patches
+      ~FoundationEncoder.training
+   
+   

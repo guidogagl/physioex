@@ -1,0 +1,6 @@
+﻿physioex.data.events\_to\_dicts
+===============================
+
+.. currentmodule:: physioex.data
+
+.. autofunction:: events_to_dicts

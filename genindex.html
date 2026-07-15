@@ -1,0 +1,1102 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="./" data-theme="light">
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Index &#8212; PhysioEx</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "light";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "light";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+<link href="_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css" />
+    <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="_static/custom.css?v=885a8570" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" />
+<link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" />
+
+    <script src="_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="_static/copybutton.js?v=f281be69"></script>
+    <script src="_static/design-tabs.js?v=f930bc37"></script>
+    <script type="module" src="https://cdn.jsdelivr.net/npm/mermaid@11.4.0/dist/mermaid.esm.min.mjs"></script>
+    <script type="module" src="https://cdn.jsdelivr.net/npm/@mermaid-js/layout-elk@0.1.4/dist/mermaid-layout-elk.esm.min.mjs"></script>
+    <script type="module">import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.4.0/dist/mermaid.esm.min.mjs";import elkLayouts from "https://cdn.jsdelivr.net/npm/@mermaid-js/layout-elk@0.1.4/dist/mermaid-layout-elk.esm.min.mjs";mermaid.registerLayoutLoaders(elkLayouts);mermaid.initialize({startOnLoad:false});</script>
+    <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
+    <script type="module">
+import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.4.0/dist/mermaid.esm.min.mjs";
+window.addEventListener("load", () => mermaid.run());
+</script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'genindex';</script>
+    <link rel="icon" href="_static/logo_bar.svg"/>
+    <link rel="index" title="Index" href="#" />
+    <link rel="search" title="Search" href="search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="light">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="index.html">
+  
+  
+  
+  
+  
+    
+    
+    
+    <img src="_static/logo_bar.svg" class="logo__image only-light" alt="PhysioEx - Home"/>
+    <img src="_static/logo_bar.svg" class="logo__image only-dark pst-js-only" alt="PhysioEx - Home"/>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="pages/user_guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="related/index.html">
+    Related Works
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="api/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="pages/contribute.html">
+    Contributing to PhysioEx
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/guidogagl/physioex" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://guidogagl.github.io/" title="Website" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-globe fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Website</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar hide-on-wide">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="pages/user_guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="related/index.html">
+    Related Works
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="api/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="pages/contribute.html">
+    Contributing to PhysioEx
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/guidogagl/physioex" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://guidogagl.github.io/" title="Website" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-globe fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Website</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none"></div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+
+<h1 id="index">Index</h1>
+
+<div class="genindex-jumpbox">
+ <a href="#_"><strong>_</strong></a>
+ | <a href="#A"><strong>A</strong></a>
+ | <a href="#B"><strong>B</strong></a>
+ | <a href="#C"><strong>C</strong></a>
+ | <a href="#D"><strong>D</strong></a>
+ | <a href="#E"><strong>E</strong></a>
+ | <a href="#F"><strong>F</strong></a>
+ | <a href="#G"><strong>G</strong></a>
+ | <a href="#I"><strong>I</strong></a>
+ | <a href="#L"><strong>L</strong></a>
+ | <a href="#M"><strong>M</strong></a>
+ | <a href="#N"><strong>N</strong></a>
+ | <a href="#P"><strong>P</strong></a>
+ | <a href="#Q"><strong>Q</strong></a>
+ | <a href="#R"><strong>R</strong></a>
+ | <a href="#S"><strong>S</strong></a>
+ | <a href="#T"><strong>T</strong></a>
+ | <a href="#U"><strong>U</strong></a>
+ | <a href="#V"><strong>V</strong></a>
+ | <a href="#W"><strong>W</strong></a>
+ | <a href="#X"><strong>X</strong></a>
+ | <a href="#Z"><strong>Z</strong></a>
+ 
+</div>
+<h2 id="_">_</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/_generated/physioex.data.BandpassFilter.html#physioex.data.BandpassFilter.__init__">__init__() (physioex.data.BandpassFilter method)</a>
+
+      <ul>
+        <li><a href="api/_generated/physioex.data.BasePhysioDataset.html#physioex.data.BasePhysioDataset.__init__">(physioex.data.BasePhysioDataset method)</a>
+</li>
+        <li><a href="api/_generated/physioex.data.ChannelCache.html#physioex.data.ChannelCache.__init__">(physioex.data.ChannelCache method)</a>
+</li>
+        <li><a href="api/_generated/physioex.data.CompiledPipeline.html#physioex.data.CompiledPipeline.__init__">(physioex.data.CompiledPipeline method)</a>
+</li>
+        <li><a href="api/_generated/physioex.data.CompiledStep.html#physioex.data.CompiledStep.__init__">(physioex.data.CompiledStep method)</a>
+</li>
+        <li><a href="api/_generated/physioex.data.EDFHeader.html#physioex.data.EDFHeader.__init__">(physioex.data.EDFHeader method)</a>
+</li>
+        <li><a href="api/_generated/physioex.data.Identity.html#physioex.data.Identity.__init__">(physioex.data.Identity method)</a>
+</li>
+        <li><a href="api/_generated/physioex.data.MultiDataset.html#physioex.data.MultiDataset.__init__">(physioex.data.MultiDataset method)</a>
+</li>
+        <li><a href="api/_generated/physioex.data.NotchFilter.html#physioex.data.NotchFilter.__init__">(physioex.data.NotchFilter method)</a>
+</li>
+        <li><a href="api/_generated/physioex.data.PreprocessingPipeline.html#physioex.data.PreprocessingPipeline.__init__">(physioex.data.PreprocessingPipeline method)</a>
+</li>
+        <li><a href="api/_generated/physioex.data.PreprocessingStep.html#physioex.data.PreprocessingStep.__init__">(physioex.data.PreprocessingStep method)</a>
+</li>
+        <li><a href="api/_generated/physioex.data.Resample.html#physioex.data.Resample.__init__">(physioex.data.Resample method)</a>
+</li>
+        <li><a href="api/_generated/physioex.data.ResolvedChannel.html#physioex.data.ResolvedChannel.__init__">(physioex.data.ResolvedChannel method)</a>
+</li>
+        <li><a href="api/_generated/physioex.data.SleepEvent.html#physioex.data.SleepEvent.__init__">(physioex.data.SleepEvent method)</a>
+</li>
+        <li><a href="api/_generated/physioex.data.SubjectSpec.html#physioex.data.SubjectSpec.__init__">(physioex.data.SubjectSpec method)</a>
+</li>
+        <li><a href="api/_generated/physioex.data.XSleepNetSpectrogram.html#physioex.data.XSleepNetSpectrogram.__init__">(physioex.data.XSleepNetSpectrogram method)</a>
+</li>
+        <li><a href="api/_generated/physioex.data.ZScoreNormalize.html#physioex.data.ZScoreNormalize.__init__">(physioex.data.ZScoreNormalize method)</a>
+</li>
+        <li><a href="api/_generated/physioex.models.BENDREncoder.html#physioex.models.BENDREncoder.__init__">(physioex.models.BENDREncoder method)</a>
+</li>
+        <li><a href="api/_generated/physioex.models.BIOTEncoder.html#physioex.models.BIOTEncoder.__init__">(physioex.models.BIOTEncoder method)</a>
+</li>
+        <li><a href="api/_generated/physioex.models.CBraModEncoder.html#physioex.models.CBraModEncoder.__init__">(physioex.models.CBraModEncoder method)</a>
+</li>
+        <li><a href="api/_generated/physioex.models.chambon2018.Chambon2018Net.html#physioex.models.chambon2018.Chambon2018Net.__init__">(physioex.models.chambon2018.Chambon2018Net method)</a>
+</li>
+        <li><a href="api/_generated/physioex.models.FoundationEncoder.html#physioex.models.FoundationEncoder.__init__">(physioex.models.FoundationEncoder method)</a>
+</li>
+        <li><a href="api/_generated/physioex.models.LaBraMEncoder.html#physioex.models.LaBraMEncoder.__init__">(physioex.models.LaBraMEncoder method)</a>
+</li>
+        <li><a href="api/_generated/physioex.models.NeuroLMEncoder.html#physioex.models.NeuroLMEncoder.__init__">(physioex.models.NeuroLMEncoder method)</a>
+</li>
+        <li><a href="api/_generated/physioex.models.REVEEncoder.html#physioex.models.REVEEncoder.__init__">(physioex.models.REVEEncoder method)</a>
+</li>
+        <li><a href="api/_generated/physioex.models.seqsleepnet.SeqSleepNet.html#physioex.models.seqsleepnet.SeqSleepNet.__init__">(physioex.models.seqsleepnet.SeqSleepNet method)</a>
+</li>
+        <li><a href="api/_generated/physioex.models.SJEEncoder.html#physioex.models.SJEEncoder.__init__">(physioex.models.SJEEncoder method)</a>
+</li>
+        <li><a href="api/_generated/physioex.models.SleepFMEncoder.html#physioex.models.SleepFMEncoder.__init__">(physioex.models.SleepFMEncoder method)</a>
+</li>
+        <li><a href="api/_generated/physioex.models.sleeptransformer.SleepTransformer.html#physioex.models.sleeptransformer.SleepTransformer.__init__">(physioex.models.sleeptransformer.SleepTransformer method)</a>
+</li>
+        <li><a href="api/_generated/physioex.models.TFCEncoder.html#physioex.models.TFCEncoder.__init__">(physioex.models.TFCEncoder method)</a>
+</li>
+        <li><a href="api/_generated/physioex.models.tinysleepnet.TinySleepNet.html#physioex.models.tinysleepnet.TinySleepNet.__init__">(physioex.models.tinysleepnet.TinySleepNet method)</a>
+</li>
+        <li><a href="api/_generated/physioex.train.logger.Logger.html#physioex.train.logger.Logger.__init__">(physioex.train.logger.Logger method)</a>
+</li>
+        <li><a href="api/_generated/physioex.train.logger.NoOpLogger.html#physioex.train.logger.NoOpLogger.__init__">(physioex.train.logger.NoOpLogger method)</a>
+</li>
+        <li><a href="api/_generated/physioex.train.multidevicetrainer.Trainer.html#physioex.train.multidevicetrainer.Trainer.__init__">(physioex.train.multidevicetrainer.Trainer method)</a>
+</li>
+        <li><a href="api/_generated/physioex.train.trainer.Trainer.html#physioex.train.trainer.Trainer.__init__">(physioex.train.trainer.Trainer method)</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
+<h2 id="A">A</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/_generated/physioex.train.metrics.html#physioex.train.metrics.accuracy_score">accuracy_score() (in module physioex.train.metrics)</a>
+</li>
+      <li><a href="api/_generated/physioex.train.stats.html#physioex.train.stats.aggregate">aggregate() (in module physioex.train.stats)</a>
+</li>
+      <li><a href="api/_generated/physioex.train.stats.html#physioex.train.stats.aggregated_scalars">aggregated_scalars() (in module physioex.train.stats)</a>
+</li>
+      <li><a href="api/_generated/physioex.data.CompiledStep.html#physioex.data.CompiledStep.apply">apply (physioex.data.CompiledStep attribute)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/_generated/physioex.data.ChannelCache.html#physioex.data.ChannelCache.atomic_save_array">atomic_save_array() (physioex.data.ChannelCache method)</a>
+</li>
+      <li><a href="api/_generated/physioex.data.BasePhysioDataset.html#physioex.data.BasePhysioDataset.available_channels">available_channels() (physioex.data.BasePhysioDataset method)</a>
+
+      <ul>
+        <li><a href="api/_generated/physioex.data.MultiDataset.html#physioex.data.MultiDataset.available_channels">(physioex.data.MultiDataset method)</a>
+</li>
+      </ul></li>
+      <li><a href="api/_generated/physioex.data.datasets.available_datasets.html#physioex.data.datasets.available_datasets">available_datasets() (in module physioex.data.datasets)</a>
+</li>
+      <li><a href="api/_generated/physioex.data.available_presets.html#physioex.data.available_presets">available_presets() (in module physioex.data)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="B">B</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/_generated/physioex.data.BandpassFilter.html#physioex.data.BandpassFilter">BandpassFilter (class in physioex.data)</a>
+</li>
+      <li><a href="api/_generated/physioex.data.BasePhysioDataset.html#physioex.data.BasePhysioDataset">BasePhysioDataset (class in physioex.data)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/_generated/physioex.models.BENDREncoder.html#physioex.models.BENDREncoder">BENDREncoder (class in physioex.models)</a>
+</li>
+      <li><a href="api/_generated/physioex.models.BIOTEncoder.html#physioex.models.BIOTEncoder">BIOTEncoder (class in physioex.models)</a>
+</li>
+      <li><a href="api/_generated/physioex.train.logger.build_logger.html#physioex.train.logger.build_logger">build_logger() (in module physioex.train.logger)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="C">C</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/_generated/physioex.models.CBraModEncoder.html#physioex.models.CBraModEncoder">CBraModEncoder (class in physioex.models)</a>
+</li>
+      <li><a href="api/_generated/physioex.models.chambon2018.Chambon2018Net.html#physioex.models.chambon2018.Chambon2018Net">Chambon2018Net (class in physioex.models.chambon2018)</a>
+</li>
+      <li><a href="api/_generated/physioex.data.ChannelCache.html#physioex.data.ChannelCache">ChannelCache (class in physioex.data)</a>
+</li>
+      <li><a href="api/_generated/physioex.data.ChannelCache.html#physioex.data.ChannelCache.clear">clear() (physioex.data.ChannelCache method)</a>
+</li>
+      <li><a href="api/_generated/physioex.data.BasePhysioDataset.html#physioex.data.BasePhysioDataset.close">close() (physioex.data.BasePhysioDataset method)</a>
+
+      <ul>
+        <li><a href="api/_generated/physioex.data.MultiDataset.html#physioex.data.MultiDataset.close">(physioex.data.MultiDataset method)</a>
+</li>
+        <li><a href="api/_generated/physioex.train.logger.Logger.html#physioex.train.logger.Logger.close">(physioex.train.logger.Logger method)</a>
+</li>
+      </ul></li>
+      <li><a href="api/_generated/physioex.explain.foundational.html#physioex.explain.foundational.CohenDSpecificity">CohenDSpecificity (class in physioex.explain.foundational)</a>
+</li>
+      <li><a href="api/_generated/physioex.data.BandpassFilter.html#physioex.data.BandpassFilter.compile">compile() (physioex.data.BandpassFilter method)</a>
+
+      <ul>
+        <li><a href="api/_generated/physioex.data.Identity.html#physioex.data.Identity.compile">(physioex.data.Identity method)</a>
+</li>
+        <li><a href="api/_generated/physioex.data.NotchFilter.html#physioex.data.NotchFilter.compile">(physioex.data.NotchFilter method)</a>
+</li>
+        <li><a href="api/_generated/physioex.data.PreprocessingStep.html#physioex.data.PreprocessingStep.compile">(physioex.data.PreprocessingStep method)</a>
+</li>
+        <li><a href="api/_generated/physioex.data.Resample.html#physioex.data.Resample.compile">(physioex.data.Resample method)</a>
+</li>
+        <li><a href="api/_generated/physioex.data.XSleepNetSpectrogram.html#physioex.data.XSleepNetSpectrogram.compile">(physioex.data.XSleepNetSpectrogram method)</a>
+</li>
+        <li><a href="api/_generated/physioex.data.ZScoreNormalize.html#physioex.data.ZScoreNormalize.compile">(physioex.data.ZScoreNormalize method)</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/_generated/physioex.data.CompiledPipeline.html#physioex.data.CompiledPipeline">CompiledPipeline (class in physioex.data)</a>
+</li>
+      <li><a href="api/_generated/physioex.data.CompiledStep.html#physioex.data.CompiledStep">CompiledStep (class in physioex.data)</a>
+</li>
+      <li><a href="api/_generated/physioex.explain.foundational.html#physioex.explain.foundational.CohenDSpecificity.compute_mask">compute_mask() (physioex.explain.foundational.CohenDSpecificity method)</a>
+
+      <ul>
+        <li><a href="api/_generated/physioex.explain.foundational.html#physioex.explain.foundational.MarginSpecificity.compute_mask">(physioex.explain.foundational.MarginSpecificity method)</a>
+</li>
+        <li><a href="api/_generated/physioex.explain.foundational.html#physioex.explain.foundational.NoFilter.compute_mask">(physioex.explain.foundational.NoFilter method)</a>
+</li>
+        <li><a href="api/_generated/physioex.explain.foundational.html#physioex.explain.foundational.SoftmaxSpecificity.compute_mask">(physioex.explain.foundational.SoftmaxSpecificity method)</a>
+</li>
+        <li><a href="api/_generated/physioex.explain.foundational.html#physioex.explain.foundational.SpecificityStrategy.compute_mask">(physioex.explain.foundational.SpecificityStrategy method)</a>
+</li>
+        <li><a href="api/_generated/physioex.explain.foundational.html#physioex.explain.foundational.TopKSpecificity.compute_mask">(physioex.explain.foundational.TopKSpecificity method)</a>
+</li>
+      </ul></li>
+      <li><a href="api/_generated/physioex.explain.foundational.html#physioex.explain.foundational.ConceptualSpectralDecomposition">ConceptualSpectralDecomposition (class in physioex.explain.foundational)</a>
+</li>
+      <li><a href="api/_generated/physioex.train.stats.html#physioex.train.stats.confusion_matrix_figure">confusion_matrix_figure() (in module physioex.train.stats)</a>
+</li>
+      <li><a href="api/_generated/physioex.explain.foundational.html#physioex.explain.foundational.CSDResult">CSDResult (class in physioex.explain.foundational)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="D">D</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/_generated/physioex.data.MultiDataset.html#physioex.data.MultiDataset.datasets">datasets (physioex.data.MultiDataset property)</a>
+</li>
+      <li><a href="api/_generated/physioex.data.dict_collate_fn.html#physioex.data.dict_collate_fn">dict_collate_fn() (in module physioex.data)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/_generated/physioex.data.dicts_to_events.html#physioex.data.dicts_to_events">dicts_to_events() (in module physioex.data)</a>
+</li>
+      <li><a href="api/_generated/physioex.explain.prototypes.posthoc.html#physioex.explain.prototypes.posthoc.discover_prototypes_nmf">discover_prototypes_nmf() (in module physioex.explain.prototypes.posthoc)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="E">E</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/_generated/physioex.data.EDFHeader.html#physioex.data.EDFHeader">EDFHeader (class in physioex.data)</a>
+</li>
+      <li><a href="api/_generated/physioex.models.chambon2018.Chambon2018Net.html#physioex.models.chambon2018.Chambon2018Net.encode">encode() (physioex.models.chambon2018.Chambon2018Net method)</a>
+
+      <ul>
+        <li><a href="api/_generated/physioex.models.FoundationEncoder.html#physioex.models.FoundationEncoder.encode">(physioex.models.FoundationEncoder method)</a>
+</li>
+        <li><a href="api/_generated/physioex.models.seqsleepnet.SeqSleepNet.html#physioex.models.seqsleepnet.SeqSleepNet.encode">(physioex.models.seqsleepnet.SeqSleepNet method)</a>
+</li>
+        <li><a href="api/_generated/physioex.models.sleeptransformer.SleepTransformer.html#physioex.models.sleeptransformer.SleepTransformer.encode">(physioex.models.sleeptransformer.SleepTransformer method)</a>
+</li>
+        <li><a href="api/_generated/physioex.models.tinysleepnet.TinySleepNet.html#physioex.models.tinysleepnet.TinySleepNet.encode">(physioex.models.tinysleepnet.TinySleepNet method)</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/_generated/physioex.explain.prototypes.posthoc.html#physioex.explain.prototypes.posthoc.evaluate_metrics">evaluate_metrics() (in module physioex.explain.prototypes.posthoc)</a>
+</li>
+      <li><a href="api/_generated/physioex.data.events_to_dicts.html#physioex.data.events_to_dicts">events_to_dicts() (in module physioex.data)</a>
+</li>
+      <li><a href="api/_generated/physioex.explain.foundational.html#physioex.explain.foundational.ConceptualSpectralDecomposition.explain">explain() (physioex.explain.foundational.ConceptualSpectralDecomposition method)</a>
+</li>
+      <li><a href="api/_generated/physioex.models.extract_embeddings.html#physioex.models.extract_embeddings">extract_embeddings() (in module physioex.models)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="F">F</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/_generated/physioex.train.metrics.html#physioex.train.metrics.f1_score">f1_score() (in module physioex.train.metrics)</a>
+</li>
+      <li><a href="api/_generated/physioex.train.stats.html#physioex.train.stats.figure_from_cm">figure_from_cm() (in module physioex.train.stats)</a>
+</li>
+      <li><a href="api/_generated/physioex.explain.prototypes.posthoc.html#physioex.explain.prototypes.posthoc.VQBottleneck.forward">forward() (physioex.explain.prototypes.posthoc.VQBottleneck method)</a>
+
+      <ul>
+        <li><a href="api/_generated/physioex.models.chambon2018.Chambon2018Net.html#physioex.models.chambon2018.Chambon2018Net.forward">(physioex.models.chambon2018.Chambon2018Net method)</a>
+</li>
+        <li><a href="api/_generated/physioex.models.FoundationEncoder.html#physioex.models.FoundationEncoder.forward">(physioex.models.FoundationEncoder method)</a>
+</li>
+        <li><a href="api/_generated/physioex.models.seqsleepnet.SeqSleepNet.html#physioex.models.seqsleepnet.SeqSleepNet.forward">(physioex.models.seqsleepnet.SeqSleepNet method)</a>
+</li>
+        <li><a href="api/_generated/physioex.models.sleeptransformer.SleepTransformer.html#physioex.models.sleeptransformer.SleepTransformer.forward">(physioex.models.sleeptransformer.SleepTransformer method)</a>
+</li>
+        <li><a href="api/_generated/physioex.models.tinysleepnet.TinySleepNet.html#physioex.models.tinysleepnet.TinySleepNet.forward">(physioex.models.tinysleepnet.TinySleepNet method)</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/_generated/physioex.models.FoundationEncoder.html#physioex.models.FoundationEncoder">FoundationEncoder (class in physioex.models)</a>
+</li>
+      <li><a href="api/_generated/physioex.data.CompiledStep.html#physioex.data.CompiledStep.fs_out">fs_out (physioex.data.CompiledStep attribute)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="G">G</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/_generated/physioex.data.BasePhysioDataset.html#physioex.data.BasePhysioDataset.get_all_subject_metadata">get_all_subject_metadata() (physioex.data.BasePhysioDataset method)</a>
+</li>
+      <li><a href="api/_generated/physioex.data.datasets.get_dataset.html#physioex.data.datasets.get_dataset">get_dataset() (in module physioex.data.datasets)</a>
+
+      <ul>
+        <li><a href="api/_generated/physioex.models.FoundationEncoder.html#physioex.models.FoundationEncoder.get_dataset">(physioex.models.FoundationEncoder class method)</a>
+</li>
+      </ul></li>
+      <li><a href="api/_generated/physioex.data.BasePhysioDataset.html#physioex.data.BasePhysioDataset.get_n_subjects">get_n_subjects() (physioex.data.BasePhysioDataset method)</a>
+
+      <ul>
+        <li><a href="api/_generated/physioex.data.MultiDataset.html#physioex.data.MultiDataset.get_n_subjects">(physioex.data.MultiDataset method)</a>
+</li>
+      </ul></li>
+      <li><a href="api/_generated/physioex.models.FoundationEncoder.html#physioex.models.FoundationEncoder.get_pipeline">get_pipeline() (physioex.models.FoundationEncoder class method)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/_generated/physioex.data.get_preset.html#physioex.data.get_preset">get_preset() (in module physioex.data)</a>
+</li>
+      <li><a href="api/_generated/physioex.data.BasePhysioDataset.html#physioex.data.BasePhysioDataset.get_splits">get_splits() (physioex.data.BasePhysioDataset method)</a>
+</li>
+      <li><a href="api/_generated/physioex.data.BasePhysioDataset.html#physioex.data.BasePhysioDataset.get_subject_events">get_subject_events() (physioex.data.BasePhysioDataset method)</a>
+</li>
+      <li><a href="api/_generated/physioex.data.BasePhysioDataset.html#physioex.data.BasePhysioDataset.get_subject_metadata">get_subject_metadata() (physioex.data.BasePhysioDataset method)</a>
+</li>
+      <li><a href="api/_generated/physioex.data.BasePhysioDataset.html#physioex.data.BasePhysioDataset.get_subjects">get_subjects() (physioex.data.BasePhysioDataset method)</a>
+
+      <ul>
+        <li><a href="api/_generated/physioex.data.MultiDataset.html#physioex.data.MultiDataset.get_subjects">(physioex.data.MultiDataset method)</a>
+</li>
+      </ul></li>
+      <li><a href="api/_generated/physioex.data.MultiDataset.html#physioex.data.MultiDataset.get_subjects_with_dataset_idx">get_subjects_with_dataset_idx() (physioex.data.MultiDataset method)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="I">I</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/_generated/physioex.data.Identity.html#physioex.data.Identity">Identity (class in physioex.data)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/_generated/physioex.data.is_dict_batch.html#physioex.data.is_dict_batch">is_dict_batch() (in module physioex.data)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="L">L</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/_generated/physioex.models.LaBraMEncoder.html#physioex.models.LaBraMEncoder">LaBraMEncoder (class in physioex.models)</a>
+</li>
+      <li><a href="api/_generated/physioex.explain.prototypes.posthoc.html#physioex.explain.prototypes.posthoc.learn_codebook_kmeans">learn_codebook_kmeans() (in module physioex.explain.prototypes.posthoc)</a>
+</li>
+      <li><a href="api/_generated/physioex.models.linear_probe.html#physioex.models.linear_probe">linear_probe() (in module physioex.models)</a>
+</li>
+      <li><a href="api/_generated/physioex.models.load_embeddings.html#physioex.models.load_embeddings">load_embeddings() (in module physioex.models)</a>
+</li>
+      <li><a href="api/_generated/physioex.explain.prototypes.posthoc.html#physioex.explain.prototypes.posthoc.load_epoch_embeddings">load_epoch_embeddings() (in module physioex.explain.prototypes.posthoc)</a>
+</li>
+      <li><a href="api/_generated/physioex.explain.prototypes.posthoc.html#physioex.explain.prototypes.posthoc.load_epoch_embeddings_per_subject">load_epoch_embeddings_per_subject() (in module physioex.explain.prototypes.posthoc)</a>
+</li>
+      <li><a href="api/_generated/physioex.models.load_from_pretrained.html#physioex.models.load_from_pretrained">load_from_pretrained() (in module physioex.models)</a>
+</li>
+      <li><a href="api/_generated/physioex.data.ChannelCache.html#physioex.data.ChannelCache.load_memmap">load_memmap() (physioex.data.ChannelCache method)</a>
+</li>
+      <li><a href="api/_generated/physioex.train.models.load.load_model.html#physioex.train.models.load.load_model">load_model() (in module physioex.train.models.load)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/_generated/physioex.train.logger.Logger.html#physioex.train.logger.Logger.log">log() (physioex.train.logger.Logger method)</a>
+
+      <ul>
+        <li><a href="api/_generated/physioex.train.logger.NoOpLogger.html#physioex.train.logger.NoOpLogger.log">(physioex.train.logger.NoOpLogger method)</a>
+</li>
+      </ul></li>
+      <li><a href="api/_generated/physioex.train.logger.Logger.html#physioex.train.logger.Logger.log_figure">log_figure() (physioex.train.logger.Logger method)</a>
+</li>
+      <li><a href="api/_generated/physioex.train.logger.Logger.html#physioex.train.logger.Logger.log_graph">log_graph() (physioex.train.logger.Logger method)</a>
+</li>
+      <li><a href="api/_generated/physioex.train.logger.Logger.html#physioex.train.logger.Logger.log_histogram">log_histogram() (physioex.train.logger.Logger method)</a>
+</li>
+      <li><a href="api/_generated/physioex.train.logger.Logger.html#physioex.train.logger.Logger.log_hparams">log_hparams() (physioex.train.logger.Logger method)</a>
+</li>
+      <li><a href="api/_generated/physioex.train.logger.Logger.html#physioex.train.logger.Logger.log_learning_rate">log_learning_rate() (physioex.train.logger.Logger method)</a>
+</li>
+      <li><a href="api/_generated/physioex.train.logger.Logger.html#physioex.train.logger.Logger.log_scalars">log_scalars() (physioex.train.logger.Logger method)</a>
+</li>
+      <li><a href="api/_generated/physioex.train.logger.Logger.html#physioex.train.logger.Logger.log_update_norm">log_update_norm() (physioex.train.logger.Logger method)</a>
+</li>
+      <li><a href="api/_generated/physioex.train.logger.Logger.html#physioex.train.logger.Logger">Logger (class in physioex.train.logger)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="M">M</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/_generated/physioex.train.metrics.html#physioex.train.metrics.mae_score">mae_score() (in module physioex.train.metrics)</a>
+</li>
+      <li><a href="api/_generated/physioex.data.map_events_to_epochs.html#physioex.data.map_events_to_epochs">map_events_to_epochs() (in module physioex.data)</a>
+</li>
+      <li><a href="api/_generated/physioex.explain.foundational.html#physioex.explain.foundational.MarginSpecificity">MarginSpecificity (class in physioex.explain.foundational)</a>
+</li>
+      <li><a href="api/_generated/physioex.data.BasePhysioDataset.html#physioex.data.BasePhysioDataset.memmap_cache_stats">memmap_cache_stats() (physioex.data.BasePhysioDataset method)</a>
+
+      <ul>
+        <li><a href="api/_generated/physioex.data.MultiDataset.html#physioex.data.MultiDataset.memmap_cache_stats">(physioex.data.MultiDataset method)</a>
+</li>
+      </ul></li>
+      <li>
+    module
+
+      <ul>
+        <li><a href="api/_generated/physioex.explain.foundational.html#module-physioex.explain.foundational">physioex.explain.foundational</a>
+</li>
+        <li><a href="api/_generated/physioex.explain.prototypes.posthoc.html#module-physioex.explain.prototypes.posthoc">physioex.explain.prototypes.posthoc</a>
+</li>
+        <li><a href="api/_generated/physioex.train.metrics.html#module-physioex.train.metrics">physioex.train.metrics</a>
+</li>
+        <li><a href="api/_generated/physioex.train.progress.html#module-physioex.train.progress">physioex.train.progress</a>
+</li>
+        <li><a href="api/_generated/physioex.train.stats.html#module-physioex.train.stats">physioex.train.stats</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/_generated/physioex.train.metrics.html#physioex.train.metrics.mse_score">mse_score() (in module physioex.train.metrics)</a>
+</li>
+      <li><a href="api/_generated/physioex.data.MultiDataset.html#physioex.data.MultiDataset">MultiDataset (class in physioex.data)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="N">N</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/_generated/physioex.explain.prototypes.posthoc.html#physioex.explain.prototypes.posthoc.nearest_prototype_classify">nearest_prototype_classify() (in module physioex.explain.prototypes.posthoc)</a>
+</li>
+      <li><a href="api/_generated/physioex.models.NeuroLMEncoder.html#physioex.models.NeuroLMEncoder">NeuroLMEncoder (class in physioex.models)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/_generated/physioex.explain.foundational.html#physioex.explain.foundational.NoFilter">NoFilter (class in physioex.explain.foundational)</a>
+</li>
+      <li><a href="api/_generated/physioex.train.logger.NoOpLogger.html#physioex.train.logger.NoOpLogger">NoOpLogger (class in physioex.train.logger)</a>
+</li>
+      <li><a href="api/_generated/physioex.data.NotchFilter.html#physioex.data.NotchFilter">NotchFilter (class in physioex.data)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="P">P</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/_generated/physioex.train.stats.html#physioex.train.stats.per_subject_metrics">per_subject_metrics() (in module physioex.train.stats)</a>
+</li>
+      <li>
+    physioex.explain.foundational
+
+      <ul>
+        <li><a href="api/_generated/physioex.explain.foundational.html#module-physioex.explain.foundational">module</a>
+</li>
+      </ul></li>
+      <li>
+    physioex.explain.prototypes.posthoc
+
+      <ul>
+        <li><a href="api/_generated/physioex.explain.prototypes.posthoc.html#module-physioex.explain.prototypes.posthoc">module</a>
+</li>
+      </ul></li>
+      <li>
+    physioex.train.metrics
+
+      <ul>
+        <li><a href="api/_generated/physioex.train.metrics.html#module-physioex.train.metrics">module</a>
+</li>
+      </ul></li>
+      <li>
+    physioex.train.progress
+
+      <ul>
+        <li><a href="api/_generated/physioex.train.progress.html#module-physioex.train.progress">module</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li>
+    physioex.train.stats
+
+      <ul>
+        <li><a href="api/_generated/physioex.train.stats.html#module-physioex.train.stats">module</a>
+</li>
+      </ul></li>
+      <li><a href="api/_generated/physioex.train.metrics.html#physioex.train.metrics.precision_score">precision_score() (in module physioex.train.metrics)</a>
+</li>
+      <li><a href="api/_generated/physioex.data.PreprocessingPipeline.html#physioex.data.PreprocessingPipeline">PreprocessingPipeline (class in physioex.data)</a>
+</li>
+      <li><a href="api/_generated/physioex.data.PreprocessingStep.html#physioex.data.PreprocessingStep">PreprocessingStep (class in physioex.data)</a>
+</li>
+      <li><a href="api/_generated/physioex.data.BasePhysioDataset.html#physioex.data.BasePhysioDataset.probe">probe() (physioex.data.BasePhysioDataset method)</a>
+</li>
+      <li><a href="api/_generated/physioex.data.probe_edf_header.html#physioex.data.probe_edf_header">probe_edf_header() (in module physioex.data)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="Q">Q</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/_generated/physioex.explain.prototypes.posthoc.html#physioex.explain.prototypes.posthoc.quantize_embeddings">quantize_embeddings() (in module physioex.explain.prototypes.posthoc)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="R">R</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/_generated/physioex.train.metrics.html#physioex.train.metrics.r2_score">r2_score() (in module physioex.train.metrics)</a>
+</li>
+      <li><a href="api/_generated/physioex.train.metrics.html#physioex.train.metrics.recall_score">recall_score() (in module physioex.train.metrics)</a>
+</li>
+      <li><a href="api/_generated/physioex.data.Resample.html#physioex.data.Resample">Resample (class in physioex.data)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/_generated/physioex.data.resolve_channels.html#physioex.data.resolve_channels">resolve_channels() (in module physioex.data)</a>
+</li>
+      <li><a href="api/_generated/physioex.data.ResolvedChannel.html#physioex.data.ResolvedChannel">ResolvedChannel (class in physioex.data)</a>
+</li>
+      <li><a href="api/_generated/physioex.models.REVEEncoder.html#physioex.models.REVEEncoder">REVEEncoder (class in physioex.models)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="S">S</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/_generated/physioex.data.ChannelCache.html#physioex.data.ChannelCache.save_json">save_json() (physioex.data.ChannelCache method)</a>
+</li>
+      <li><a href="api/_generated/physioex.train.trainer.seed_everything.html#physioex.train.trainer.seed_everything">seed_everything() (in module physioex.train.trainer)</a>
+</li>
+      <li><a href="api/_generated/physioex.models.seqsleepnet.SeqSleepNet.html#physioex.models.seqsleepnet.SeqSleepNet">SeqSleepNet (class in physioex.models.seqsleepnet)</a>
+</li>
+      <li><a href="api/_generated/physioex.models.SJEEncoder.html#physioex.models.SJEEncoder">SJEEncoder (class in physioex.models)</a>
+</li>
+      <li><a href="api/_generated/physioex.data.SleepEvent.html#physioex.data.SleepEvent">SleepEvent (class in physioex.data)</a>
+</li>
+      <li><a href="api/_generated/physioex.models.SleepFMEncoder.html#physioex.models.SleepFMEncoder">SleepFMEncoder (class in physioex.models)</a>
+</li>
+      <li><a href="api/_generated/physioex.models.sleeptransformer.SleepTransformer.html#physioex.models.sleeptransformer.SleepTransformer">SleepTransformer (class in physioex.models.sleeptransformer)</a>
+</li>
+      <li><a href="api/_generated/physioex.explain.foundational.html#physioex.explain.foundational.SoftmaxSpecificity">SoftmaxSpecificity (class in physioex.explain.foundational)</a>
+</li>
+      <li><a href="api/_generated/physioex.data.BandpassFilter.html#physioex.data.BandpassFilter.spec">spec() (physioex.data.BandpassFilter method)</a>
+
+      <ul>
+        <li><a href="api/_generated/physioex.data.Identity.html#physioex.data.Identity.spec">(physioex.data.Identity method)</a>
+</li>
+        <li><a href="api/_generated/physioex.data.NotchFilter.html#physioex.data.NotchFilter.spec">(physioex.data.NotchFilter method)</a>
+</li>
+        <li><a href="api/_generated/physioex.data.PreprocessingStep.html#physioex.data.PreprocessingStep.spec">(physioex.data.PreprocessingStep method)</a>
+</li>
+        <li><a href="api/_generated/physioex.data.Resample.html#physioex.data.Resample.spec">(physioex.data.Resample method)</a>
+</li>
+        <li><a href="api/_generated/physioex.data.XSleepNetSpectrogram.html#physioex.data.XSleepNetSpectrogram.spec">(physioex.data.XSleepNetSpectrogram method)</a>
+</li>
+        <li><a href="api/_generated/physioex.data.ZScoreNormalize.html#physioex.data.ZScoreNormalize.spec">(physioex.data.ZScoreNormalize method)</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/_generated/physioex.explain.foundational.html#physioex.explain.foundational.SpecificityStrategy">SpecificityStrategy (class in physioex.explain.foundational)</a>
+</li>
+      <li><a href="api/_generated/physioex.data.BasePhysioDataset.html#physioex.data.BasePhysioDataset.split">split() (physioex.data.BasePhysioDataset method)</a>
+
+      <ul>
+        <li><a href="api/_generated/physioex.data.MultiDataset.html#physioex.data.MultiDataset.split">(physioex.data.MultiDataset method)</a>
+</li>
+      </ul></li>
+      <li><a href="api/_generated/physioex.data.stack_channels.html#physioex.data.stack_channels">stack_channels() (in module physioex.data)</a>
+</li>
+      <li><a href="api/_generated/physioex.data.SubjectSpec.html#physioex.data.SubjectSpec">SubjectSpec (class in physioex.data)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="T">T</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/_generated/physioex.models.TFCEncoder.html#physioex.models.TFCEncoder">TFCEncoder (class in physioex.models)</a>
+</li>
+      <li><a href="api/_generated/physioex.models.tinysleepnet.TinySleepNet.html#physioex.models.tinysleepnet.TinySleepNet">TinySleepNet (class in physioex.models.tinysleepnet)</a>
+</li>
+      <li><a href="api/_generated/physioex.explain.foundational.html#physioex.explain.foundational.CSDResult.top_band_hz">top_band_hz() (physioex.explain.foundational.CSDResult method)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/_generated/physioex.explain.foundational.html#physioex.explain.foundational.TopKSpecificity">TopKSpecificity (class in physioex.explain.foundational)</a>
+</li>
+      <li><a href="api/_generated/physioex.explain.prototypes.posthoc.html#physioex.explain.prototypes.posthoc.train_codebook">train_codebook() (in module physioex.explain.prototypes.posthoc)</a>
+</li>
+      <li><a href="api/_generated/physioex.train.multidevicetrainer.Trainer.html#physioex.train.multidevicetrainer.Trainer">Trainer (class in physioex.train.multidevicetrainer)</a>
+
+      <ul>
+        <li><a href="api/_generated/physioex.train.trainer.Trainer.html#physioex.train.trainer.Trainer">(class in physioex.train.trainer)</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
+<h2 id="U">U</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/_generated/physioex.train.logger.Logger.html#physioex.train.logger.Logger.update">update() (physioex.train.logger.Logger method)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="V">V</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/_generated/physioex.train.trainer.Trainer.html#physioex.train.trainer.Trainer.voting_evaluate">voting_evaluate() (physioex.train.trainer.Trainer class method)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/_generated/physioex.explain.prototypes.posthoc.html#physioex.explain.prototypes.posthoc.VQBottleneck">VQBottleneck (class in physioex.explain.prototypes.posthoc)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="W">W</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/_generated/physioex.train.logger.Logger.html#physioex.train.logger.Logger.watch_model">watch_model() (physioex.train.logger.Logger method)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="X">X</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/_generated/physioex.data.XSleepNetSpectrogram.html#physioex.data.XSleepNetSpectrogram">XSleepNetSpectrogram (class in physioex.data)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="Z">Z</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/_generated/physioex.data.ZScoreNormalize.html#physioex.data.ZScoreNormalize">ZScoreNormalize (class in physioex.data)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer src="_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2023, Guido Gagliardi.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 8.1.3.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.16.1.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

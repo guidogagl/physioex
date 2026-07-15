@@ -1,0 +1,82 @@
+﻿physioex.models.chambon2018.Chambon2018Net
+==========================================
+
+.. currentmodule:: physioex.models.chambon2018
+
+.. autoclass:: Chambon2018Net
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~Chambon2018Net.__init__
+      ~Chambon2018Net.add_module
+      ~Chambon2018Net.apply
+      ~Chambon2018Net.bfloat16
+      ~Chambon2018Net.buffers
+      ~Chambon2018Net.children
+      ~Chambon2018Net.compile
+      ~Chambon2018Net.cpu
+      ~Chambon2018Net.cuda
+      ~Chambon2018Net.double
+      ~Chambon2018Net.encode
+      ~Chambon2018Net.eval
+      ~Chambon2018Net.extra_repr
+      ~Chambon2018Net.float
+      ~Chambon2018Net.forward
+      ~Chambon2018Net.get_buffer
+      ~Chambon2018Net.get_extra_state
+      ~Chambon2018Net.get_parameter
+      ~Chambon2018Net.get_submodule
+      ~Chambon2018Net.half
+      ~Chambon2018Net.ipu
+      ~Chambon2018Net.load_state_dict
+      ~Chambon2018Net.modules
+      ~Chambon2018Net.mtia
+      ~Chambon2018Net.named_buffers
+      ~Chambon2018Net.named_children
+      ~Chambon2018Net.named_modules
+      ~Chambon2018Net.named_parameters
+      ~Chambon2018Net.parameters
+      ~Chambon2018Net.register_backward_hook
+      ~Chambon2018Net.register_buffer
+      ~Chambon2018Net.register_forward_hook
+      ~Chambon2018Net.register_forward_pre_hook
+      ~Chambon2018Net.register_full_backward_hook
+      ~Chambon2018Net.register_full_backward_pre_hook
+      ~Chambon2018Net.register_load_state_dict_post_hook
+      ~Chambon2018Net.register_load_state_dict_pre_hook
+      ~Chambon2018Net.register_module
+      ~Chambon2018Net.register_parameter
+      ~Chambon2018Net.register_state_dict_post_hook
+      ~Chambon2018Net.register_state_dict_pre_hook
+      ~Chambon2018Net.requires_grad_
+      ~Chambon2018Net.set_extra_state
+      ~Chambon2018Net.set_submodule
+      ~Chambon2018Net.share_memory
+      ~Chambon2018Net.state_dict
+      ~Chambon2018Net.to
+      ~Chambon2018Net.to_empty
+      ~Chambon2018Net.train
+      ~Chambon2018Net.type
+      ~Chambon2018Net.xpu
+      ~Chambon2018Net.zero_grad
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~Chambon2018Net.T_destination
+      ~Chambon2018Net.call_super_init
+      ~Chambon2018Net.dump_patches
+      ~Chambon2018Net.training
+   
+   

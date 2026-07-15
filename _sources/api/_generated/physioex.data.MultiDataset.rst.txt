@@ -1,0 +1,35 @@
+﻿physioex.data.MultiDataset
+==========================
+
+.. currentmodule:: physioex.data
+
+.. autoclass:: MultiDataset
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~MultiDataset.__init__
+      ~MultiDataset.available_channels
+      ~MultiDataset.close
+      ~MultiDataset.get_n_subjects
+      ~MultiDataset.get_subjects
+      ~MultiDataset.get_subjects_with_dataset_idx
+      ~MultiDataset.memmap_cache_stats
+      ~MultiDataset.split
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~MultiDataset.datasets
+   
+   

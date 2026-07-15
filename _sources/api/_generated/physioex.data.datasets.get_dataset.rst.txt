@@ -1,0 +1,6 @@
+﻿physioex.data.datasets.get\_dataset
+===================================
+
+.. currentmodule:: physioex.data.datasets
+
+.. autofunction:: get_dataset

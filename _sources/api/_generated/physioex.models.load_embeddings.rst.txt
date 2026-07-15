@@ -1,0 +1,6 @@
+﻿physioex.models.load\_embeddings
+================================
+
+.. currentmodule:: physioex.models
+
+.. autofunction:: load_embeddings

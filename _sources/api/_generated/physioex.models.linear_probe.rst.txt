@@ -1,0 +1,6 @@
+﻿physioex.models.linear\_probe
+=============================
+
+.. currentmodule:: physioex.models
+
+.. autofunction:: linear_probe

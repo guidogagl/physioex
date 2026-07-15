@@ -1,0 +1,723 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../../" data-theme="light">
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>physioex.data — class diagram &#8212; PhysioEx</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "light";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "light";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/custom.css?v=885a8570" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="../../../_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" />
+<link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" />
+
+    <script src="../../../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../../_static/design-tabs.js?v=f930bc37"></script>
+    <script type="module" src="https://cdn.jsdelivr.net/npm/mermaid@11.4.0/dist/mermaid.esm.min.mjs"></script>
+    <script type="module" src="https://cdn.jsdelivr.net/npm/@mermaid-js/layout-elk@0.1.4/dist/mermaid-layout-elk.esm.min.mjs"></script>
+    <script type="module">import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.4.0/dist/mermaid.esm.min.mjs";import elkLayouts from "https://cdn.jsdelivr.net/npm/@mermaid-js/layout-elk@0.1.4/dist/mermaid-layout-elk.esm.min.mjs";mermaid.registerLayoutLoaders(elkLayouts);mermaid.initialize({startOnLoad:false});</script>
+    <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
+    <script type="module">
+import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.4.0/dist/mermaid.esm.min.mjs";
+window.addEventListener("load", () => mermaid.run());
+</script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'pages/architecture/library/data';</script>
+    <link rel="icon" href="../../../_static/logo_bar.svg"/>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="light">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../../index.html">
+  
+  
+  
+  
+  
+    
+    
+    
+    <img src="../../../_static/logo_bar.svg" class="logo__image only-light" alt="PhysioEx - Home"/>
+    <img src="../../../_static/logo_bar.svg" class="logo__image only-dark pst-js-only" alt="PhysioEx - Home"/>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../user_guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../related/index.html">
+    Related Works
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../api/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../contribute.html">
+    Contributing to PhysioEx
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/guidogagl/physioex" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://guidogagl.github.io/" title="Website" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-globe fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Website</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar hide-on-wide">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../user_guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../related/index.html">
+    Related Works
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../api/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../contribute.html">
+    Contributing to PhysioEx
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/guidogagl/physioex" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://guidogagl.github.io/" title="Website" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-globe fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Website</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis"><code class="docutils literal notranslate"><span class="pre">physioex.data</span></code> — class diagram</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section class="tex2jax_ignore mathjax_ignore" id="physioex-data-class-diagram">
+<h1><code class="docutils literal notranslate"><span class="pre">physioex.data</span></code> — class diagram<a class="headerlink" href="#physioex-data-class-diagram" title="Link to this heading">#</a></h1>
+<p>The data layer turns raw EDF recordings into model-ready tensors through a
+lazy, content-addressed pipeline. Source: <code class="docutils literal notranslate"><span class="pre">physioex/data/</span></code>.</p>
+<section id="dataset-hierarchy">
+<h2>Dataset hierarchy<a class="headerlink" href="#dataset-hierarchy" title="Link to this heading">#</a></h2>
+<pre  class="mermaid">
+        classDiagram
+    class Dataset {
+        &lt;&lt;torch.utils.data&gt;&gt;
+    }
+    class BasePhysioDataset {
+        &lt;&lt;abstract&gt;&gt;
+        +str DATASET_NAME
+        +dict CHANNEL_PREFERENCES
+        +float DEFAULT_EPOCH_LENGTH_SEC
+        +__init__(root, channels, pipelines, sequence_length, ...)
+        +__len__()
+        +__getitem__(idx)
+        +split(fold)
+        +get_splits(fold)
+        +probe(subject)
+        +available_channels()
+        +get_n_subjects()
+        +get_subjects()
+        +get_subject_metadata(id)
+        +get_subject_events(id)
+        +close()
+        #_list_subjects()*
+        #_read_subject_labels(spec)*
+    }
+    class _NSRRBaseDataset {
+        +float DEFAULT_EPOCH_LENGTH_SEC
+    }
+    class SubjectSpec {
+        +str subject_id
+        +Path edf_path
+        +Path label_path
+        +dict external_meta
+    }
+    class MultiDataset {
+        +__init__(datasets, memmap_cache_size)
+        +split(fold)
+        +datasets
+        +get_n_subjects()
+        +available_channels()
+        +close()
+    }
+
+    Dataset &lt;|-- BasePhysioDataset
+    Dataset &lt;|-- MultiDataset
+    BasePhysioDataset &lt;|-- _NSRRBaseDataset
+    BasePhysioDataset &lt;|-- HMCDataset
+    BasePhysioDataset &lt;|-- SleepEDFDataset
+    BasePhysioDataset &lt;|-- DCSMDataset
+    BasePhysioDataset &lt;|-- MASSDataset
+    BasePhysioDataset &lt;|-- WSCDataset
+    BasePhysioDataset &lt;|-- STAGESDataset
+    BasePhysioDataset &lt;|-- AlzheimersDataset
+    BasePhysioDataset &lt;|-- ParkinsonsDataset
+    _NSRRBaseDataset &lt;|-- MESADataset
+    _NSRRBaseDataset &lt;|-- MrOSDataset
+    _NSRRBaseDataset &lt;|-- SHHSDataset
+    _NSRRBaseDataset &lt;|-- HPAPDataset
+    MultiDataset o-- &quot;N&quot; BasePhysioDataset
+    BasePhysioDataset ..&gt; SubjectSpec : yields
+    </pre><p>The 12 concrete datasets are resolved by name from a <strong>string registry</strong> in
+<code class="docutils literal notranslate"><span class="pre">physioex/data/datasets/__init__.py</span></code> — <code class="docutils literal notranslate"><span class="pre">get_dataset(name)</span></code> / <code class="docutils literal notranslate"><span class="pre">available_datasets()</span></code>;
+keys: <code class="docutils literal notranslate"><span class="pre">hmc,</span> <span class="pre">sleepedf,</span> <span class="pre">dcsm,</span> <span class="pre">mesa,</span> <span class="pre">mros,</span> <span class="pre">hpap,</span> <span class="pre">wsc,</span> <span class="pre">mass,</span> <span class="pre">alzheimers,</span> <span class="pre">parkinsons,</span> <span class="pre">shhs,</span> <span class="pre">stages</span></code>.</p>
+<section id="legacy-deprecated">
+<h3>Legacy (deprecated)<a class="headerlink" href="#legacy-deprecated" title="Link to this heading">#</a></h3>
+<pre  class="mermaid">
+        classDiagram
+    class PhysioExDataset {
+        &lt;&lt;deprecated&gt;&gt;
+        +__init__(datasets, preprocessing, selected_channels, seqlen, ...)
+        +split(fold)
+        +get_scaling()
+    }
+    class DataReader {
+        &lt;&lt;deprecated&gt;&gt;
+        +__init__(data_folder, dataset, preprocessing, seqlen, channels_index, offset)
+    }
+    PhysioExDataset ..&gt; DataReader : reads scaling.npz + table.csv
+    </pre><p><code class="docutils literal notranslate"><span class="pre">PhysioExDataset</span></code>/<code class="docutils literal notranslate"><span class="pre">DataReader</span></code> (<code class="docutils literal notranslate"><span class="pre">data/dataset.py</span></code>, <code class="docutils literal notranslate"><span class="pre">data/datareader.py</span></code>) are the
+old preprocessed-array layer; both emit a <code class="docutils literal notranslate"><span class="pre">DeprecationWarning</span></code> on instantiation
+and are not re-exported from <code class="docutils literal notranslate"><span class="pre">data/__init__</span></code>.</p>
+</section>
+</section>
+<section id="preprocessing-pipeline">
+<h2>Preprocessing pipeline<a class="headerlink" href="#preprocessing-pipeline" title="Link to this heading">#</a></h2>
+<pre  class="mermaid">
+        classDiagram
+    class PreprocessingStep {
+        &lt;&lt;abstract&gt;&gt;
+        +spec()*
+        +compile(fs_in)*
+    }
+    class CompiledStep {
+        +Callable apply
+        +float fs_out
+    }
+    class PreprocessingPipeline {
+        +__init__(steps)
+        +spec()
+        +hash()
+        +compile(fs_in)
+    }
+    class CompiledPipeline {
+        +__init__(steps, fs_out)
+        +__call__(signal)
+    }
+
+    PreprocessingStep &lt;|-- Identity
+    PreprocessingStep &lt;|-- BandpassFilter
+    PreprocessingStep &lt;|-- HighPassFilter
+    PreprocessingStep &lt;|-- NotchFilter
+    PreprocessingStep &lt;|-- Resample
+    PreprocessingStep &lt;|-- ZScoreNormalize
+    PreprocessingStep &lt;|-- XSleepNetSpectrogram
+    PreprocessingPipeline o-- &quot;N&quot; PreprocessingStep
+    PreprocessingStep ..&gt; CompiledStep : compile()
+    PreprocessingPipeline ..&gt; CompiledPipeline : compile(fs_in)
+    </pre><p>Named presets (<code class="docutils literal notranslate"><span class="pre">data/presets.py</span></code>) build ready pipelines: <code class="docutils literal notranslate"><span class="pre">get_preset(name)</span></code> /
+<code class="docutils literal notranslate"><span class="pre">available_presets()</span></code> — e.g. <code class="docutils literal notranslate"><span class="pre">raw</span></code>, <code class="docutils literal notranslate"><span class="pre">time_domain</span></code>, <code class="docutils literal notranslate"><span class="pre">time_frequency</span></code>,
+<code class="docutils literal notranslate"><span class="pre">seqsleepnet</span></code>, per-modality (<code class="docutils literal notranslate"><span class="pre">eeg</span></code>/<code class="docutils literal notranslate"><span class="pre">eog</span></code>/<code class="docutils literal notranslate"><span class="pre">emg</span></code>/<code class="docutils literal notranslate"><span class="pre">ecg</span></code>) and per foundation model.</p>
+</section>
+<section id="cache-readers-events-support">
+<h2>Cache, readers, events, support<a class="headerlink" href="#cache-readers-events-support" title="Link to this heading">#</a></h2>
+<pre  class="mermaid">
+        classDiagram
+    class ChannelCache {
+        +str SCHEMA_VERSION
+        +signal_path(dataset, subject, physical, hash)
+        +atomic_save_array(path, data, meta)
+        +load_memmap(path)
+        +clear(dataset, subject, hash)
+    }
+    class EDFHeader {
+        +list available_channels
+        +dict channel_fs
+        +dict patient_meta
+        +float duration_sec
+        +to_dict()
+        +from_dict(d)$
+    }
+    class ResolvedChannel {
+        +str request
+        +str physical
+        +ModalityType modality
+        +float fs_in
+        +bool is_differential
+    }
+    class ChannelNotAvailableError
+    class SleepEvent {
+        +str type
+        +str concept
+        +float onset_sec
+        +float duration_sec
+        +dict extra
+    }
+    class ModalityType {
+        &lt;&lt;IntEnum&gt;&gt;
+        EEG EOG EMG ECG RESP SPO2 HR ...
+    }
+    ValueError &lt;|-- ChannelNotAvailableError
+    BasePhysioDataset ..&gt; ChannelCache : caches signals
+    BasePhysioDataset ..&gt; EDFHeader : probe()
+    BasePhysioDataset ..&gt; ResolvedChannel : channel resolution
+    BasePhysioDataset ..&gt; SleepEvent : get_subject_events()
+    ResolvedChannel ..&gt; ModalityType
+    </pre></section>
+<section id="class-reference-responsibilities">
+<h2>Class reference (responsibilities)<a class="headerlink" href="#class-reference-responsibilities" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">BasePhysioDataset</span></code> (ABC, <code class="docutils literal notranslate"><span class="pre">base.py</span></code>)</strong> — central <code class="docutils literal notranslate"><span class="pre">torch.utils.data.Dataset</span></code>.
+Concrete datasets implement two hooks: <code class="docutils literal notranslate"><span class="pre">_list_subjects()</span></code> (discover subjects →
+<code class="docutils literal notranslate"><span class="pre">SubjectSpec</span></code>) and <code class="docutils literal notranslate"><span class="pre">_read_subject_labels(spec)</span></code> (hypnogram → AASM int array).
+The base handles: header probing + channel resolution, split logic
+(<code class="docutils literal notranslate"><span class="pre">split</span></code>/<code class="docutils literal notranslate"><span class="pre">get_splits</span></code>, 70/15/15 by seed <code class="docutils literal notranslate"><span class="pre">42+fold</span></code>), excess-wake trimming,
+label sanitization, event loading, memmap caching, and <code class="docutils literal notranslate"><span class="pre">__getitem__</span></code> assembling
+the batch dict (<code class="docutils literal notranslate"><span class="pre">signals,</span> <span class="pre">channel_order,</span> <span class="pre">channel_info,</span> <span class="pre">labels,</span> <span class="pre">subject,</span> <span class="pre">epoch_indices,</span> <span class="pre">recording_length,</span> <span class="pre">events</span></code>). Module fn <code class="docutils literal notranslate"><span class="pre">get_data_root()</span></code> reads
+<code class="docutils literal notranslate"><span class="pre">$PHYSIOEX_DATA</span></code>.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">SubjectSpec</span></code></strong> — lightweight locator (<code class="docutils literal notranslate"><span class="pre">subject_id</span></code>, <code class="docutils literal notranslate"><span class="pre">edf_path</span></code>, <code class="docutils literal notranslate"><span class="pre">label_path</span></code>,
+<code class="docutils literal notranslate"><span class="pre">external_meta</span></code>); returned by <code class="docutils literal notranslate"><span class="pre">_list_subjects</span></code>.</p></li>
+<li><p><strong>Concrete datasets</strong> — each sets <code class="docutils literal notranslate"><span class="pre">DATASET_NAME</span></code>, <code class="docutils literal notranslate"><span class="pre">DATASET_SUBDIR</span></code>,
+<code class="docutils literal notranslate"><span class="pre">CHANNEL_PREFERENCES</span></code>, <code class="docutils literal notranslate"><span class="pre">DEFAULT_EPOCH_LENGTH_SEC</span></code>, and constructor extras where
+relevant: <code class="docutils literal notranslate"><span class="pre">MASSDataset(cohort)</span></code>, <code class="docutils literal notranslate"><span class="pre">SHHSDataset(visit)</span></code>, <code class="docutils literal notranslate"><span class="pre">WSCDataset(visit)</span></code>,
+<code class="docutils literal notranslate"><span class="pre">STAGESDataset(site,</span> <span class="pre">recording)</span></code>, <code class="docutils literal notranslate"><span class="pre">AlzheimersDataset(subset)</span></code>,
+<code class="docutils literal notranslate"><span class="pre">ParkinsonsDataset(recording,</span> <span class="pre">group)</span></code>, <code class="docutils literal notranslate"><span class="pre">HPAPDataset(subset)</span></code>. The four NSRR
+datasets subclass <code class="docutils literal notranslate"><span class="pre">_NSRRBaseDataset</span></code> (shared XML annotation handling).</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">MultiDataset</span></code> (<code class="docutils literal notranslate"><span class="pre">multi.py</span></code>)</strong> — concatenates N <code class="docutils literal notranslate"><span class="pre">BasePhysioDataset</span></code> into one
+flat index with coordinated <code class="docutils literal notranslate"><span class="pre">split(fold)</span></code> (returns <code class="docutils literal notranslate"><span class="pre">(dataset_idx,</span> <span class="pre">subject_id)</span></code>
+tuples for valid/test), proportional cache distribution, unified <code class="docutils literal notranslate"><span class="pre">__getitem__</span></code>.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">PreprocessingStep</span></code> (ABC) / <code class="docutils literal notranslate"><span class="pre">PreprocessingPipeline</span></code> / <code class="docutils literal notranslate"><span class="pre">Compiled*</span></code>
+(<code class="docutils literal notranslate"><span class="pre">pipeline.py</span></code>, <code class="docutils literal notranslate"><span class="pre">steps/</span></code>)</strong> — each step exposes a canonical <code class="docutils literal notranslate"><span class="pre">spec()</span></code> (hashable)
+and <code class="docutils literal notranslate"><span class="pre">compile(fs_in)</span> <span class="pre">-&gt;</span> <span class="pre">CompiledStep</span></code>. The pipeline hashes to a <code class="docutils literal notranslate"><span class="pre">pipeline_hash</span></code>
+used as the cache key. Steps: <code class="docutils literal notranslate"><span class="pre">Identity,</span> <span class="pre">BandpassFilter,</span> <span class="pre">HighPassFilter,</span> <span class="pre">NotchFilter,</span> <span class="pre">Resample,</span> <span class="pre">ZScoreNormalize,</span> <span class="pre">XSleepNetSpectrogram</span></code>.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">ChannelCache</span></code> (<code class="docutils literal notranslate"><span class="pre">cache.py</span></code>)</strong> — on-disk memmap cache keyed by
+<code class="docutils literal notranslate"><span class="pre">(SCHEMA_VERSION,</span> <span class="pre">dataset,</span> <span class="pre">subject,</span> <span class="pre">physical_channel,</span> <span class="pre">pipeline_hash)</span></code> with atomic
+writes; bf16 support via <code class="docutils literal notranslate"><span class="pre">ml_dtypes</span></code> (<code class="docutils literal notranslate"><span class="pre">recommended_dtype</span></code>, <code class="docutils literal notranslate"><span class="pre">cast_to_cache_dtype</span></code>).</p></li>
+<li><p><strong>Readers (<code class="docutils literal notranslate"><span class="pre">readers/edf.py</span></code>, <code class="docutils literal notranslate"><span class="pre">readers/annotations.py</span></code>)</strong> — <code class="docutils literal notranslate"><span class="pre">probe_edf_header</span></code>,
+<code class="docutils literal notranslate"><span class="pre">resolve_channels</span></code> (+ <code class="docutils literal notranslate"><span class="pre">EDFHeader</span></code>, <code class="docutils literal notranslate"><span class="pre">ResolvedChannel</span></code>, <code class="docutils literal notranslate"><span class="pre">ChannelNotAvailableError</span></code>,
+<code class="docutils literal notranslate"><span class="pre">DEFAULT_PREFERENCES</span></code>), and annotation parsers <code class="docutils literal notranslate"><span class="pre">parse_nsrr_xml</span></code>,
+<code class="docutils literal notranslate"><span class="pre">parse_tsv_annotations</span></code>, <code class="docutils literal notranslate"><span class="pre">parse_nsrr_xml_events</span></code>, <code class="docutils literal notranslate"><span class="pre">parse_stages_csv</span></code>.</p></li>
+<li><p><strong>Events (<code class="docutils literal notranslate"><span class="pre">events.py</span></code>)</strong> — <code class="docutils literal notranslate"><span class="pre">SleepEvent</span></code> dataclass + <code class="docutils literal notranslate"><span class="pre">map_events_to_epochs</span></code>,
+<code class="docutils literal notranslate"><span class="pre">events_to_dicts</span></code>/<code class="docutils literal notranslate"><span class="pre">dicts_to_events</span></code> (round-trippable, cached as JSON).</p></li>
+<li><p><strong>Collate (<code class="docutils literal notranslate"><span class="pre">collate.py</span></code>)</strong> — <code class="docutils literal notranslate"><span class="pre">dict_collate_fn</span></code> (deterministic channel-order by
+sorted union — no per-item validation), <code class="docutils literal notranslate"><span class="pre">stack_channels</span></code>, <code class="docutils literal notranslate"><span class="pre">is_dict_batch</span></code>.</p></li>
+<li><p><strong>Modality (<code class="docutils literal notranslate"><span class="pre">modality.py</span></code>)</strong> — <code class="docutils literal notranslate"><span class="pre">ModalityType</span></code> IntEnum + <code class="docutils literal notranslate"><span class="pre">infer_channel_modality</span></code>.</p></li>
+</ul>
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#dataset-hierarchy">Dataset hierarchy</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#legacy-deprecated">Legacy (deprecated)</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#preprocessing-pipeline">Preprocessing pipeline</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#cache-readers-events-support">Cache, readers, events, support</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#class-reference-responsibilities">Class reference (responsibilities)</a></li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../../../_sources/pages/architecture/library/data.md.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer src="../../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2023, Guido Gagliardi.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 8.1.3.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.16.1.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

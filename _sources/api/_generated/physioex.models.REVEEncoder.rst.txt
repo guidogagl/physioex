@@ -1,0 +1,87 @@
+﻿physioex.models.REVEEncoder
+===========================
+
+.. currentmodule:: physioex.models
+
+.. autoclass:: REVEEncoder
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~REVEEncoder.__init__
+      ~REVEEncoder.add_module
+      ~REVEEncoder.apply
+      ~REVEEncoder.bfloat16
+      ~REVEEncoder.buffers
+      ~REVEEncoder.children
+      ~REVEEncoder.compile
+      ~REVEEncoder.cpu
+      ~REVEEncoder.cuda
+      ~REVEEncoder.double
+      ~REVEEncoder.encode
+      ~REVEEncoder.eval
+      ~REVEEncoder.extra_repr
+      ~REVEEncoder.float
+      ~REVEEncoder.forward
+      ~REVEEncoder.get_buffer
+      ~REVEEncoder.get_dataset
+      ~REVEEncoder.get_extra_state
+      ~REVEEncoder.get_parameter
+      ~REVEEncoder.get_pipeline
+      ~REVEEncoder.get_submodule
+      ~REVEEncoder.half
+      ~REVEEncoder.ipu
+      ~REVEEncoder.load_state_dict
+      ~REVEEncoder.modules
+      ~REVEEncoder.mtia
+      ~REVEEncoder.named_buffers
+      ~REVEEncoder.named_children
+      ~REVEEncoder.named_modules
+      ~REVEEncoder.named_parameters
+      ~REVEEncoder.parameters
+      ~REVEEncoder.register_backward_hook
+      ~REVEEncoder.register_buffer
+      ~REVEEncoder.register_forward_hook
+      ~REVEEncoder.register_forward_pre_hook
+      ~REVEEncoder.register_full_backward_hook
+      ~REVEEncoder.register_full_backward_pre_hook
+      ~REVEEncoder.register_load_state_dict_post_hook
+      ~REVEEncoder.register_load_state_dict_pre_hook
+      ~REVEEncoder.register_module
+      ~REVEEncoder.register_parameter
+      ~REVEEncoder.register_state_dict_post_hook
+      ~REVEEncoder.register_state_dict_pre_hook
+      ~REVEEncoder.requires_grad_
+      ~REVEEncoder.set_extra_state
+      ~REVEEncoder.set_submodule
+      ~REVEEncoder.share_memory
+      ~REVEEncoder.state_dict
+      ~REVEEncoder.to
+      ~REVEEncoder.to_empty
+      ~REVEEncoder.train
+      ~REVEEncoder.type
+      ~REVEEncoder.xpu
+      ~REVEEncoder.zero_grad
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~REVEEncoder.CHANNEL_STRATEGY
+      ~REVEEncoder.MODEL_NAME
+      ~REVEEncoder.PIPELINE_PRESET
+      ~REVEEncoder.T_destination
+      ~REVEEncoder.call_super_init
+      ~REVEEncoder.dump_patches
+      ~REVEEncoder.training
+   
+   

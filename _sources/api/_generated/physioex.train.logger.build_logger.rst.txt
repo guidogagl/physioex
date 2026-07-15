@@ -1,0 +1,6 @@
+﻿physioex.train.logger.build\_logger
+===================================
+
+.. currentmodule:: physioex.train.logger
+
+.. autofunction:: build_logger

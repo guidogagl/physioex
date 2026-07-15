@@ -1,0 +1,6 @@
+﻿physioex.data.available\_presets
+================================
+
+.. currentmodule:: physioex.data
+
+.. autofunction:: available_presets

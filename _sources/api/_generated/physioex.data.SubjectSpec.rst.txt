@@ -1,0 +1,31 @@
+﻿physioex.data.SubjectSpec
+=========================
+
+.. currentmodule:: physioex.data
+
+.. autoclass:: SubjectSpec
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~SubjectSpec.__init__
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~SubjectSpec.label_path
+      ~SubjectSpec.subject_id
+      ~SubjectSpec.edf_path
+      ~SubjectSpec.external_meta
+   
+   

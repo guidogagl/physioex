@@ -1,0 +1,87 @@
+﻿physioex.models.BENDREncoder
+============================
+
+.. currentmodule:: physioex.models
+
+.. autoclass:: BENDREncoder
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~BENDREncoder.__init__
+      ~BENDREncoder.add_module
+      ~BENDREncoder.apply
+      ~BENDREncoder.bfloat16
+      ~BENDREncoder.buffers
+      ~BENDREncoder.children
+      ~BENDREncoder.compile
+      ~BENDREncoder.cpu
+      ~BENDREncoder.cuda
+      ~BENDREncoder.double
+      ~BENDREncoder.encode
+      ~BENDREncoder.eval
+      ~BENDREncoder.extra_repr
+      ~BENDREncoder.float
+      ~BENDREncoder.forward
+      ~BENDREncoder.get_buffer
+      ~BENDREncoder.get_dataset
+      ~BENDREncoder.get_extra_state
+      ~BENDREncoder.get_parameter
+      ~BENDREncoder.get_pipeline
+      ~BENDREncoder.get_submodule
+      ~BENDREncoder.half
+      ~BENDREncoder.ipu
+      ~BENDREncoder.load_state_dict
+      ~BENDREncoder.modules
+      ~BENDREncoder.mtia
+      ~BENDREncoder.named_buffers
+      ~BENDREncoder.named_children
+      ~BENDREncoder.named_modules
+      ~BENDREncoder.named_parameters
+      ~BENDREncoder.parameters
+      ~BENDREncoder.register_backward_hook
+      ~BENDREncoder.register_buffer
+      ~BENDREncoder.register_forward_hook
+      ~BENDREncoder.register_forward_pre_hook
+      ~BENDREncoder.register_full_backward_hook
+      ~BENDREncoder.register_full_backward_pre_hook
+      ~BENDREncoder.register_load_state_dict_post_hook
+      ~BENDREncoder.register_load_state_dict_pre_hook
+      ~BENDREncoder.register_module
+      ~BENDREncoder.register_parameter
+      ~BENDREncoder.register_state_dict_post_hook
+      ~BENDREncoder.register_state_dict_pre_hook
+      ~BENDREncoder.requires_grad_
+      ~BENDREncoder.set_extra_state
+      ~BENDREncoder.set_submodule
+      ~BENDREncoder.share_memory
+      ~BENDREncoder.state_dict
+      ~BENDREncoder.to
+      ~BENDREncoder.to_empty
+      ~BENDREncoder.train
+      ~BENDREncoder.type
+      ~BENDREncoder.xpu
+      ~BENDREncoder.zero_grad
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~BENDREncoder.CHANNEL_STRATEGY
+      ~BENDREncoder.MODEL_NAME
+      ~BENDREncoder.PIPELINE_PRESET
+      ~BENDREncoder.T_destination
+      ~BENDREncoder.call_super_init
+      ~BENDREncoder.dump_patches
+      ~BENDREncoder.training
+   
+   

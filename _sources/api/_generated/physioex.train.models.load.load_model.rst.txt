@@ -1,0 +1,6 @@
+﻿physioex.train.models.load.load\_model
+======================================
+
+.. currentmodule:: physioex.train.models.load
+
+.. autofunction:: load_model

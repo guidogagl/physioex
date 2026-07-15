@@ -1,0 +1,6 @@
+﻿physioex.data.dict\_collate\_fn
+===============================
+
+.. currentmodule:: physioex.data
+
+.. autofunction:: dict_collate_fn

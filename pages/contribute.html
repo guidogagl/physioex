@@ -1,0 +1,707 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" data-theme="light">
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Contributing to PhysioEx &#8212; PhysioEx</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "light";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "light";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=885a8570" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="../_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" />
+
+    <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=f281be69"></script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'pages/contribute';</script>
+    <link rel="icon" href="../_static/logo_bar.svg"/>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="prev" title="physioex.explain.prototypes.posthoc" href="../api/_generated/physioex.explain.prototypes.posthoc.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="light">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+    
+    
+    
+    <img src="../_static/logo_bar.svg" class="logo__image only-light" alt="PhysioEx - Home"/>
+    <img src="../_static/logo_bar.svg" class="logo__image only-dark pst-js-only" alt="PhysioEx - Home"/>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="user_guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../related/index.html">
+    Related Works
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../api/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="#">
+    Contributing to PhysioEx
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/guidogagl/physioex" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://guidogagl.github.io/" title="Website" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-globe fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Website</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="user_guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../related/index.html">
+    Related Works
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../api/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="#">
+    Contributing to PhysioEx
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/guidogagl/physioex" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://guidogagl.github.io/" title="Website" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-globe fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Website</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"></div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">Contributing to PhysioEx</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section class="tex2jax_ignore mathjax_ignore" id="contributing-to-physioex">
+<h1>Contributing to PhysioEx<a class="headerlink" href="#contributing-to-physioex" title="Link to this heading">#</a></h1>
+<p>Welcome to the PhysioEx project! We appreciate your interest in contributing.</p>
+<section id="ways-to-contribute">
+<h2>Ways to contribute<a class="headerlink" href="#ways-to-contribute" title="Link to this heading">#</a></h2>
+<p>Numerous avenues exist for contributing to the PhysioEx project, with the most prevalent being the provision of code or enhancements to the documentation. The refinement of the documentation is equally as vital as the augmentation of the library itself.</p>
+<p>Should you discover an error in the documentation, or have implemented improvements, we encourage you to post a new message on the GitHub discussion board or, ideally, submit a GitHub pull request.</p>
+<p>An additional method of contribution involves reporting any issues you encounter, and endorsing issues reported by others that are pertinent to you by giving them a “thumbs up”. Your support in promoting the project is also beneficial: mention the project in your blog posts and articles, provide a link to it from your website, or simply give it a star to indicate your usage of it.</p>
+<section id="adviced-contributing-fields">
+<h3>Adviced contributing fields<a class="headerlink" href="#adviced-contributing-fields" title="Link to this heading">#</a></h3>
+<ol class="arabic simple">
+<li><p>Adding support for a new physiological signal dataset (e.g. checking <a class="reference external" href="https://physionet.org">PhysioNet</a> or <a class="reference external" href="https://moabb.neurotechx.com/docs/">MOABB</a>)</p></li>
+<li><p>Adding support for a new deep learning architecture for physiological signal analysis.</p></li>
+<li><p>Proposing a novel Explainable AI algorithm.</p></li>
+</ol>
+<p>Consider also this other very important fields of contribution:</p>
+<ul class="simple">
+<li><p>Documentation improving, note: check the official <a class="reference external" href="https://squidfunk.github.io/mkdocs-material/">MkDocs Material doc</a>. as reference.</p></li>
+<li><p>Code improving and issues solving.</p></li>
+</ul>
+</section>
+</section>
+<section id="how-to-contribute">
+<h2>How to Contribute<a class="headerlink" href="#how-to-contribute" title="Link to this heading">#</a></h2>
+<p>We welcome contributions from everyone. PhysioEx is a GitHub hosted libray, to know more about GitHub collaborative devolpment check their <a class="reference external" href="https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/getting-started/about-collaborative-development-models">ufficial doc</a>.To get started, follow these steps:</p>
+<ol class="arabic simple">
+<li><p>Fork the Repository</p></li>
+</ol>
+<p>Fork this repository to your GitHub account by clicking on the ‘Fork’ button on the top right of the page. This creates a copy of the repository in your account.</p>
+<ol class="arabic simple" start="2">
+<li><p>Clone your fork of the physioex repo from your GitHub account to your local disk:</p></li>
+</ol>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="w">    </span>$<span class="w"> </span>git<span class="w"> </span>clone<span class="w"> </span>git@github.com:your-username/physioex.git<span class="w"> </span>
+<span class="w">    </span>$<span class="w"> </span><span class="nb">cd</span><span class="w"> </span>physioex<span class="w"> </span>
+</pre></div>
+</div>
+<p>Replace <code class="docutils literal notranslate"><span class="pre">your-username</span></code> with your GitHub username.</p>
+<ol class="arabic simple" start="4">
+<li><p>Make sure to have anaconda or miniconda correctly installed in your machine, then start installing a new virtual enviroment</p></li>
+</ol>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="w">    </span>$<span class="w"> </span>conda<span class="w"> </span>create<span class="w"> </span>-n<span class="w"> </span>myenv<span class="w"> </span><span class="nv">python</span><span class="o">==</span><span class="m">3</span>.10
+</pre></div>
+</div>
+<ol class="arabic simple" start="5">
+<li><p>Now jump into the enviroment and upgrade pip</p></li>
+</ol>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="w">    </span>$<span class="w"> </span>conda<span class="w"> </span>activate<span class="w"> </span>myenv
+<span class="w">    </span>$<span class="w"> </span>conda<span class="w"> </span>install<span class="w"> </span>pip
+<span class="w">    </span>$<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>--upgrade<span class="w"> </span>pip
+</pre></div>
+</div>
+<ol class="arabic simple" start="6">
+<li><p>To install PhysioEx in development mode run:</p></li>
+</ol>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="w">    </span>$<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span>.
+</pre></div>
+</div>
+<ol class="arabic simple" start="7">
+<li><p>Now you need to keep your fork and the original physioex repo in sync creating an upstream:</p></li>
+</ol>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="w">    </span>$<span class="w"> </span>git<span class="w"> </span>remote<span class="w"> </span>add<span class="w"> </span>upstream<span class="w"> </span>https://github.com/guidogagl/physioex.git
+</pre></div>
+</div>
+<div class="warning admonition">
+<p class="admonition-title">Check that everything went allright</p>
+<p>To check that the upstream is correctly setted up, run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="w">    </span>$<span class="w"> </span>git<span class="w"> </span>remote<span class="w"> </span>-v
+</pre></div>
+</div>
+<p>And check that the output resembles:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="w">    </span>&gt;<span class="w"> </span>origin<span class="w">    </span>https://github.com/your-username/physioex.git<span class="w"> </span><span class="o">(</span>fetch<span class="o">)</span>
+
+<span class="w">    </span>&gt;<span class="w"> </span>origin<span class="w">    </span>https://github.com/your-username/physioex.git<span class="w"> </span><span class="o">(</span>push<span class="o">)</span>
+
+<span class="w">    </span>&gt;<span class="w"> </span>upstream<span class="w">  </span>https://github.com/guidogagl/physioex.git<span class="w"> </span><span class="o">(</span>fetch<span class="o">)</span>
+<span class="w">    </span>&gt;<span class="w"> </span>upstream<span class="w">  </span>https://github.com/guidogagl/physioex.git<span class="w"> </span><span class="o">(</span>push<span class="o">)</span>
+</pre></div>
+</div>
+</div>
+<div class="tip admonition">
+<p class="admonition-title">Keep your fork updated</p>
+<p>To keep your fork repo updated check the <a class="reference external" href="https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks/syncing-a-fork">official doc</a></p>
+</div>
+<ol class="arabic simple" start="8">
+<li><p>Write your code &amp; documentation and when it’s ready submit a Pull Request! For a step-by-step guide on how to submit a PR check the <a class="reference external" href="https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request-from-a-fork">GitHub official documentation</a></p></li>
+</ol>
+</section>
+<section id="testing">
+<h2>Testing<a class="headerlink" href="#testing" title="Link to this heading">#</a></h2>
+<p>PhysioEx uses <strong>pytest</strong>. Install the dev extra (<code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">-e</span> <span class="pre">.[dev]</span></code>) to get
+<code class="docutils literal notranslate"><span class="pre">pytest</span></code> and <code class="docutils literal notranslate"><span class="pre">pytest-cov</span></code>. The suite mirrors the library layout under <code class="docutils literal notranslate"><span class="pre">tests/</span></code>
+(<code class="docutils literal notranslate"><span class="pre">tests/data</span></code>, <code class="docutils literal notranslate"><span class="pre">tests/models</span></code>, <code class="docutils literal notranslate"><span class="pre">tests/train</span></code>, <code class="docutils literal notranslate"><span class="pre">tests/explain</span></code>), with shared
+fixtures in <code class="docutils literal notranslate"><span class="pre">tests/conftest.py</span></code> and synthetic-data generators in
+<code class="docutils literal notranslate"><span class="pre">tests/factories/</span></code>. The test architecture is documented in the
+<a class="reference internal" href="architecture/testing/overview.html"><span class="std std-doc">testing class diagram</span></a>.</p>
+<section id="running-the-tests">
+<h3>Running the tests<a class="headerlink" href="#running-the-tests" title="Link to this heading">#</a></h3>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Fast unit/integration suite — exactly what CI runs (no data, network, or GPU):</span>
+pytest<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;not real_data and not gpu and not hf&quot;</span>
+
+<span class="c1"># With the coverage gate (CI fails below the threshold):</span>
+pytest<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;not real_data and not gpu and not hf&quot;</span><span class="w"> </span>--cov<span class="o">=</span>physioex<span class="w"> </span>--cov-report<span class="o">=</span>term-missing
+
+<span class="c1"># A single subpackage or file:</span>
+pytest<span class="w"> </span>tests/data
+pytest<span class="w"> </span>tests/models/test_foundation_preproc.py<span class="w"> </span>-q
+</pre></div>
+</div>
+</section>
+<section id="markers">
+<h3>Markers<a class="headerlink" href="#markers" title="Link to this heading">#</a></h3>
+<p>Heavy tests are gated behind markers and <strong>auto-skip / deselect</strong> unless their
+environment is present, so the default run stays hermetic:</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Marker</p></th>
+<th class="head"><p>Runs only when…</p></th>
+<th class="head"><p>What it covers</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">real_data</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">PHYSIOEX_TEST_REAL_DATA=1</span></code></p></td>
+<td><p>real PSG datasets on disk (e.g. MASS SS02)</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">hf</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">PHYSIOEX_TEST_HF=1</span></code></p></td>
+<td><p>building foundation encoders from HuggingFace weights</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">gpu</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">torch.cuda.is_available()</span></code></p></td>
+<td><p>CUDA-specific code paths</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">slow</span></code></p></td>
+<td><p>always (opt-out with <code class="docutils literal notranslate"><span class="pre">-m</span> <span class="pre">&quot;not</span> <span class="pre">slow&quot;</span></code>)</p></td>
+<td><p>long-running builds</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">unit</span></code>, <code class="docutils literal notranslate"><span class="pre">integration</span></code></p></td>
+<td><p>always</p></td>
+<td><p>plain classification of scope</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Enable a gated tier explicitly, e.g. on a GPU box with data mounted:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nv">PHYSIOEX_TEST_REAL_DATA</span><span class="o">=</span><span class="m">1</span><span class="w"> </span>pytest<span class="w"> </span>-m<span class="w"> </span>real_data
+<span class="nv">PHYSIOEX_TEST_HF</span><span class="o">=</span><span class="m">1</span><span class="w">        </span>pytest<span class="w"> </span>-m<span class="w"> </span>hf
+</pre></div>
+</div>
+</section>
+<section id="conventions">
+<h3>Conventions<a class="headerlink" href="#conventions" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p>Assert with native <code class="docutils literal notranslate"><span class="pre">assert</span></code> (a thin 2-line <code class="docutils literal notranslate"><span class="pre">report(name,</span> <span class="pre">ok,</span> <span class="pre">detail)</span></code> shim
+wrapping <code class="docutils literal notranslate"><span class="pre">assert</span></code> is retained in the large dataset files).</p></li>
+<li><p>Reuse the synthetic-data factories in <code class="docutils literal notranslate"><span class="pre">tests/factories/</span></code>; don’t re-implement
+EDF/annotation writers per test.</p></li>
+<li><p>New public API must be reachable from <code class="docutils literal notranslate"><span class="pre">tests/test_api_surface.py</span></code> (its
+<code class="docutils literal notranslate"><span class="pre">__all__</span></code> export) and covered by a behavioural test in the matching subpackage.</p></li>
+<li><p>CI (<code class="docutils literal notranslate"><span class="pre">.github/workflows/test.yml</span></code>) runs the fast suite on Python 3.11 and 3.12
+and enforces a coverage gate; the target is being raised progressively.</p></li>
+</ul>
+</section>
+</section>
+<section id="architecture-internals">
+<h2>Architecture (internals)<a class="headerlink" href="#architecture-internals" title="Link to this heading">#</a></h2>
+<p>Living <strong>class diagrams</strong>, extracted directly from the source and kept in sync
+with the code — a map for contributors of how the library and its test suite are
+structured. These are internal references, not needed to <em>use</em> PhysioEx.</p>
+<p><strong>Library (Diagram A):</strong></p>
+<ul class="simple">
+<li><p><a class="reference internal" href="architecture/library/overview.html"><span class="std std-doc">Overview</span></a> — subsystem map and cross-cutting types</p></li>
+<li><p><a class="reference internal" href="architecture/library/data.html"><span class="std std-doc">Data</span></a> — datasets, pipeline, cache, readers, events</p></li>
+<li><p><a class="reference internal" href="architecture/library/models.html"><span class="std std-doc">Models</span></a> — foundation encoders, classic architectures</p></li>
+<li><p><a class="reference internal" href="architecture/library/train.html"><span class="std std-doc">Train</span></a> — training/eval loop, metrics, logging, CLIs</p></li>
+<li><p><a class="reference internal" href="architecture/library/explain.html"><span class="std std-doc">Explain</span></a> — post-hoc, foundational (CSD), prototypes</p></li>
+</ul>
+<p><strong>Test suite (Diagram B):</strong></p>
+<ul class="simple">
+<li><p><a class="reference internal" href="architecture/testing/overview.html"><span class="std std-doc">Testing suite architecture</span></a> — fixtures, factories, markers, test layout</p></li>
+</ul>
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="../api/_generated/physioex.explain.prototypes.posthoc.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">physioex.explain.prototypes.posthoc</p>
+      </div>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#ways-to-contribute">Ways to contribute</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#adviced-contributing-fields">Adviced contributing fields</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#how-to-contribute">How to Contribute</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#testing">Testing</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#running-the-tests">Running the tests</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#markers">Markers</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#conventions">Conventions</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#architecture-internals">Architecture (internals)</a></li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/pages/contribute.md.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2023, Guido Gagliardi.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 8.1.3.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.16.1.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

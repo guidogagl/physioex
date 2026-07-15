@@ -1,0 +1,6 @@
+﻿physioex.train.trainer.seed\_everything
+=======================================
+
+.. currentmodule:: physioex.train.trainer
+
+.. autofunction:: seed_everything

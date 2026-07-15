@@ -1,0 +1,87 @@
+﻿physioex.models.CBraModEncoder
+==============================
+
+.. currentmodule:: physioex.models
+
+.. autoclass:: CBraModEncoder
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~CBraModEncoder.__init__
+      ~CBraModEncoder.add_module
+      ~CBraModEncoder.apply
+      ~CBraModEncoder.bfloat16
+      ~CBraModEncoder.buffers
+      ~CBraModEncoder.children
+      ~CBraModEncoder.compile
+      ~CBraModEncoder.cpu
+      ~CBraModEncoder.cuda
+      ~CBraModEncoder.double
+      ~CBraModEncoder.encode
+      ~CBraModEncoder.eval
+      ~CBraModEncoder.extra_repr
+      ~CBraModEncoder.float
+      ~CBraModEncoder.forward
+      ~CBraModEncoder.get_buffer
+      ~CBraModEncoder.get_dataset
+      ~CBraModEncoder.get_extra_state
+      ~CBraModEncoder.get_parameter
+      ~CBraModEncoder.get_pipeline
+      ~CBraModEncoder.get_submodule
+      ~CBraModEncoder.half
+      ~CBraModEncoder.ipu
+      ~CBraModEncoder.load_state_dict
+      ~CBraModEncoder.modules
+      ~CBraModEncoder.mtia
+      ~CBraModEncoder.named_buffers
+      ~CBraModEncoder.named_children
+      ~CBraModEncoder.named_modules
+      ~CBraModEncoder.named_parameters
+      ~CBraModEncoder.parameters
+      ~CBraModEncoder.register_backward_hook
+      ~CBraModEncoder.register_buffer
+      ~CBraModEncoder.register_forward_hook
+      ~CBraModEncoder.register_forward_pre_hook
+      ~CBraModEncoder.register_full_backward_hook
+      ~CBraModEncoder.register_full_backward_pre_hook
+      ~CBraModEncoder.register_load_state_dict_post_hook
+      ~CBraModEncoder.register_load_state_dict_pre_hook
+      ~CBraModEncoder.register_module
+      ~CBraModEncoder.register_parameter
+      ~CBraModEncoder.register_state_dict_post_hook
+      ~CBraModEncoder.register_state_dict_pre_hook
+      ~CBraModEncoder.requires_grad_
+      ~CBraModEncoder.set_extra_state
+      ~CBraModEncoder.set_submodule
+      ~CBraModEncoder.share_memory
+      ~CBraModEncoder.state_dict
+      ~CBraModEncoder.to
+      ~CBraModEncoder.to_empty
+      ~CBraModEncoder.train
+      ~CBraModEncoder.type
+      ~CBraModEncoder.xpu
+      ~CBraModEncoder.zero_grad
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~CBraModEncoder.CHANNEL_STRATEGY
+      ~CBraModEncoder.MODEL_NAME
+      ~CBraModEncoder.PIPELINE_PRESET
+      ~CBraModEncoder.T_destination
+      ~CBraModEncoder.call_super_init
+      ~CBraModEncoder.dump_patches
+      ~CBraModEncoder.training
+   
+   

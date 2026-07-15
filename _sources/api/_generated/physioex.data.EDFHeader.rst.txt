@@ -1,0 +1,36 @@
+﻿physioex.data.EDFHeader
+=======================
+
+.. currentmodule:: physioex.data
+
+.. autoclass:: EDFHeader
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~EDFHeader.__init__
+      ~EDFHeader.from_dict
+      ~EDFHeader.to_dict
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~EDFHeader.start_sec
+      ~EDFHeader.available_channels
+      ~EDFHeader.channel_fs
+      ~EDFHeader.channel_units
+      ~EDFHeader.patient_meta
+      ~EDFHeader.duration_sec
+      ~EDFHeader.source_mtime
+   
+   

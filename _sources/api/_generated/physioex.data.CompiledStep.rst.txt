@@ -1,0 +1,29 @@
+﻿physioex.data.CompiledStep
+==========================
+
+.. currentmodule:: physioex.data
+
+.. autoclass:: CompiledStep
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~CompiledStep.__init__
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~CompiledStep.apply
+      ~CompiledStep.fs_out
+   
+   

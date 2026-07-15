@@ -1,0 +1,6 @@
+﻿physioex.data.datasets.available\_datasets
+==========================================
+
+.. currentmodule:: physioex.data.datasets
+
+.. autofunction:: available_datasets

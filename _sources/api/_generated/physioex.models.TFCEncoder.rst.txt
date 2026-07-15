@@ -1,0 +1,87 @@
+﻿physioex.models.TFCEncoder
+==========================
+
+.. currentmodule:: physioex.models
+
+.. autoclass:: TFCEncoder
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~TFCEncoder.__init__
+      ~TFCEncoder.add_module
+      ~TFCEncoder.apply
+      ~TFCEncoder.bfloat16
+      ~TFCEncoder.buffers
+      ~TFCEncoder.children
+      ~TFCEncoder.compile
+      ~TFCEncoder.cpu
+      ~TFCEncoder.cuda
+      ~TFCEncoder.double
+      ~TFCEncoder.encode
+      ~TFCEncoder.eval
+      ~TFCEncoder.extra_repr
+      ~TFCEncoder.float
+      ~TFCEncoder.forward
+      ~TFCEncoder.get_buffer
+      ~TFCEncoder.get_dataset
+      ~TFCEncoder.get_extra_state
+      ~TFCEncoder.get_parameter
+      ~TFCEncoder.get_pipeline
+      ~TFCEncoder.get_submodule
+      ~TFCEncoder.half
+      ~TFCEncoder.ipu
+      ~TFCEncoder.load_state_dict
+      ~TFCEncoder.modules
+      ~TFCEncoder.mtia
+      ~TFCEncoder.named_buffers
+      ~TFCEncoder.named_children
+      ~TFCEncoder.named_modules
+      ~TFCEncoder.named_parameters
+      ~TFCEncoder.parameters
+      ~TFCEncoder.register_backward_hook
+      ~TFCEncoder.register_buffer
+      ~TFCEncoder.register_forward_hook
+      ~TFCEncoder.register_forward_pre_hook
+      ~TFCEncoder.register_full_backward_hook
+      ~TFCEncoder.register_full_backward_pre_hook
+      ~TFCEncoder.register_load_state_dict_post_hook
+      ~TFCEncoder.register_load_state_dict_pre_hook
+      ~TFCEncoder.register_module
+      ~TFCEncoder.register_parameter
+      ~TFCEncoder.register_state_dict_post_hook
+      ~TFCEncoder.register_state_dict_pre_hook
+      ~TFCEncoder.requires_grad_
+      ~TFCEncoder.set_extra_state
+      ~TFCEncoder.set_submodule
+      ~TFCEncoder.share_memory
+      ~TFCEncoder.state_dict
+      ~TFCEncoder.to
+      ~TFCEncoder.to_empty
+      ~TFCEncoder.train
+      ~TFCEncoder.type
+      ~TFCEncoder.xpu
+      ~TFCEncoder.zero_grad
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~TFCEncoder.CHANNEL_STRATEGY
+      ~TFCEncoder.MODEL_NAME
+      ~TFCEncoder.PIPELINE_PRESET
+      ~TFCEncoder.T_destination
+      ~TFCEncoder.call_super_init
+      ~TFCEncoder.dump_patches
+      ~TFCEncoder.training
+   
+   

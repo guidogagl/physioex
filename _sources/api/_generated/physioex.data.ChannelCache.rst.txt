@@ -1,0 +1,43 @@
+﻿physioex.data.ChannelCache
+==========================
+
+.. currentmodule:: physioex.data
+
+.. autoclass:: ChannelCache
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~ChannelCache.__init__
+      ~ChannelCache.atomic_save_array
+      ~ChannelCache.clear
+      ~ChannelCache.dataset_root
+      ~ChannelCache.events_path
+      ~ChannelCache.exists
+      ~ChannelCache.header_path
+      ~ChannelCache.labels_meta_path
+      ~ChannelCache.labels_path
+      ~ChannelCache.load_json
+      ~ChannelCache.load_memmap
+      ~ChannelCache.save_json
+      ~ChannelCache.signal_dir
+      ~ChannelCache.signal_meta_path
+      ~ChannelCache.signal_path
+      ~ChannelCache.subject_meta_path
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~ChannelCache.SCHEMA_VERSION
+   
+   

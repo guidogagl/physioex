@@ -1,0 +1,25 @@
+﻿physioex.data.PreprocessingPipeline
+===================================
+
+.. currentmodule:: physioex.data
+
+.. autoclass:: PreprocessingPipeline
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~PreprocessingPipeline.__init__
+      ~PreprocessingPipeline.compile
+      ~PreprocessingPipeline.hash
+      ~PreprocessingPipeline.spec
+   
+   
+
+   
+   
+   

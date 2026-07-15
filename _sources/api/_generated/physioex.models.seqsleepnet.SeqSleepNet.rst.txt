@@ -1,0 +1,82 @@
+﻿physioex.models.seqsleepnet.SeqSleepNet
+=======================================
+
+.. currentmodule:: physioex.models.seqsleepnet
+
+.. autoclass:: SeqSleepNet
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~SeqSleepNet.__init__
+      ~SeqSleepNet.add_module
+      ~SeqSleepNet.apply
+      ~SeqSleepNet.bfloat16
+      ~SeqSleepNet.buffers
+      ~SeqSleepNet.children
+      ~SeqSleepNet.compile
+      ~SeqSleepNet.cpu
+      ~SeqSleepNet.cuda
+      ~SeqSleepNet.double
+      ~SeqSleepNet.encode
+      ~SeqSleepNet.eval
+      ~SeqSleepNet.extra_repr
+      ~SeqSleepNet.float
+      ~SeqSleepNet.forward
+      ~SeqSleepNet.get_buffer
+      ~SeqSleepNet.get_extra_state
+      ~SeqSleepNet.get_parameter
+      ~SeqSleepNet.get_submodule
+      ~SeqSleepNet.half
+      ~SeqSleepNet.ipu
+      ~SeqSleepNet.load_state_dict
+      ~SeqSleepNet.modules
+      ~SeqSleepNet.mtia
+      ~SeqSleepNet.named_buffers
+      ~SeqSleepNet.named_children
+      ~SeqSleepNet.named_modules
+      ~SeqSleepNet.named_parameters
+      ~SeqSleepNet.parameters
+      ~SeqSleepNet.register_backward_hook
+      ~SeqSleepNet.register_buffer
+      ~SeqSleepNet.register_forward_hook
+      ~SeqSleepNet.register_forward_pre_hook
+      ~SeqSleepNet.register_full_backward_hook
+      ~SeqSleepNet.register_full_backward_pre_hook
+      ~SeqSleepNet.register_load_state_dict_post_hook
+      ~SeqSleepNet.register_load_state_dict_pre_hook
+      ~SeqSleepNet.register_module
+      ~SeqSleepNet.register_parameter
+      ~SeqSleepNet.register_state_dict_post_hook
+      ~SeqSleepNet.register_state_dict_pre_hook
+      ~SeqSleepNet.requires_grad_
+      ~SeqSleepNet.set_extra_state
+      ~SeqSleepNet.set_submodule
+      ~SeqSleepNet.share_memory
+      ~SeqSleepNet.state_dict
+      ~SeqSleepNet.to
+      ~SeqSleepNet.to_empty
+      ~SeqSleepNet.train
+      ~SeqSleepNet.type
+      ~SeqSleepNet.xpu
+      ~SeqSleepNet.zero_grad
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~SeqSleepNet.T_destination
+      ~SeqSleepNet.call_super_init
+      ~SeqSleepNet.dump_patches
+      ~SeqSleepNet.training
+   
+   

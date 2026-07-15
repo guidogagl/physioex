@@ -1,0 +1,21 @@
+﻿physioex.train.metrics
+======================
+
+.. automodule:: physioex.train.metrics
+
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      accuracy_score
+      cohen_kappa_score
+      confusion_matrix
+      f1_score
+      mae_score
+      mse_score
+      precision_score
+      r2_score
+      recall_score
+      support_score
+   

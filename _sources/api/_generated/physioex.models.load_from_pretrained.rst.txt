@@ -1,0 +1,6 @@
+﻿physioex.models.load\_from\_pretrained
+======================================
+
+.. currentmodule:: physioex.models
+
+.. autofunction:: load_from_pretrained

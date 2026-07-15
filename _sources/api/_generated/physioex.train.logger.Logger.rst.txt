@@ -1,0 +1,33 @@
+﻿physioex.train.logger.Logger
+============================
+
+.. currentmodule:: physioex.train.logger
+
+.. autoclass:: Logger
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~Logger.__init__
+      ~Logger.close
+      ~Logger.log
+      ~Logger.log_figure
+      ~Logger.log_graph
+      ~Logger.log_histogram
+      ~Logger.log_hparams
+      ~Logger.log_learning_rate
+      ~Logger.log_scalars
+      ~Logger.log_update_norm
+      ~Logger.update
+      ~Logger.watch_model
+   
+   
+
+   
+   
+   

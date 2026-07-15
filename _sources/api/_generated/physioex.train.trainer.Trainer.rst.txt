@@ -1,0 +1,28 @@
+﻿physioex.train.trainer.Trainer
+==============================
+
+.. currentmodule:: physioex.train.trainer
+
+.. autoclass:: Trainer
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~Trainer.__init__
+      ~Trainer.build_dataloaders
+      ~Trainer.evaluate
+      ~Trainer.load_checkpoint
+      ~Trainer.save_checkpoint
+      ~Trainer.train
+      ~Trainer.voting_evaluate
+   
+   
+
+   
+   
+   

@@ -1,0 +1,6 @@
+﻿physioex.data.is\_dict\_batch
+=============================
+
+.. currentmodule:: physioex.data
+
+.. autofunction:: is_dict_batch

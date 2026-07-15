@@ -1,0 +1,87 @@
+﻿physioex.models.NeuroLMEncoder
+==============================
+
+.. currentmodule:: physioex.models
+
+.. autoclass:: NeuroLMEncoder
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~NeuroLMEncoder.__init__
+      ~NeuroLMEncoder.add_module
+      ~NeuroLMEncoder.apply
+      ~NeuroLMEncoder.bfloat16
+      ~NeuroLMEncoder.buffers
+      ~NeuroLMEncoder.children
+      ~NeuroLMEncoder.compile
+      ~NeuroLMEncoder.cpu
+      ~NeuroLMEncoder.cuda
+      ~NeuroLMEncoder.double
+      ~NeuroLMEncoder.encode
+      ~NeuroLMEncoder.eval
+      ~NeuroLMEncoder.extra_repr
+      ~NeuroLMEncoder.float
+      ~NeuroLMEncoder.forward
+      ~NeuroLMEncoder.get_buffer
+      ~NeuroLMEncoder.get_dataset
+      ~NeuroLMEncoder.get_extra_state
+      ~NeuroLMEncoder.get_parameter
+      ~NeuroLMEncoder.get_pipeline
+      ~NeuroLMEncoder.get_submodule
+      ~NeuroLMEncoder.half
+      ~NeuroLMEncoder.ipu
+      ~NeuroLMEncoder.load_state_dict
+      ~NeuroLMEncoder.modules
+      ~NeuroLMEncoder.mtia
+      ~NeuroLMEncoder.named_buffers
+      ~NeuroLMEncoder.named_children
+      ~NeuroLMEncoder.named_modules
+      ~NeuroLMEncoder.named_parameters
+      ~NeuroLMEncoder.parameters
+      ~NeuroLMEncoder.register_backward_hook
+      ~NeuroLMEncoder.register_buffer
+      ~NeuroLMEncoder.register_forward_hook
+      ~NeuroLMEncoder.register_forward_pre_hook
+      ~NeuroLMEncoder.register_full_backward_hook
+      ~NeuroLMEncoder.register_full_backward_pre_hook
+      ~NeuroLMEncoder.register_load_state_dict_post_hook
+      ~NeuroLMEncoder.register_load_state_dict_pre_hook
+      ~NeuroLMEncoder.register_module
+      ~NeuroLMEncoder.register_parameter
+      ~NeuroLMEncoder.register_state_dict_post_hook
+      ~NeuroLMEncoder.register_state_dict_pre_hook
+      ~NeuroLMEncoder.requires_grad_
+      ~NeuroLMEncoder.set_extra_state
+      ~NeuroLMEncoder.set_submodule
+      ~NeuroLMEncoder.share_memory
+      ~NeuroLMEncoder.state_dict
+      ~NeuroLMEncoder.to
+      ~NeuroLMEncoder.to_empty
+      ~NeuroLMEncoder.train
+      ~NeuroLMEncoder.type
+      ~NeuroLMEncoder.xpu
+      ~NeuroLMEncoder.zero_grad
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~NeuroLMEncoder.CHANNEL_STRATEGY
+      ~NeuroLMEncoder.MODEL_NAME
+      ~NeuroLMEncoder.PIPELINE_PRESET
+      ~NeuroLMEncoder.T_destination
+      ~NeuroLMEncoder.call_super_init
+      ~NeuroLMEncoder.dump_patches
+      ~NeuroLMEncoder.training
+   
+   

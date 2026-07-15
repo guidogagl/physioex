@@ -1,0 +1,6 @@
+﻿physioex.data.resolve\_channels
+===============================
+
+.. currentmodule:: physioex.data
+
+.. autofunction:: resolve_channels

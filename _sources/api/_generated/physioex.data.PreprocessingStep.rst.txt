@@ -1,0 +1,24 @@
+﻿physioex.data.PreprocessingStep
+===============================
+
+.. currentmodule:: physioex.data
+
+.. autoclass:: PreprocessingStep
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~PreprocessingStep.__init__
+      ~PreprocessingStep.compile
+      ~PreprocessingStep.spec
+   
+   
+
+   
+   
+   

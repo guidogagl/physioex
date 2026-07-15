@@ -1,0 +1,600 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../../" data-theme="light">
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>physioex.train — class diagram &#8212; PhysioEx</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "light";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "light";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/custom.css?v=885a8570" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="../../../_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" />
+<link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" />
+
+    <script src="../../../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../../_static/design-tabs.js?v=f930bc37"></script>
+    <script type="module" src="https://cdn.jsdelivr.net/npm/mermaid@11.4.0/dist/mermaid.esm.min.mjs"></script>
+    <script type="module" src="https://cdn.jsdelivr.net/npm/@mermaid-js/layout-elk@0.1.4/dist/mermaid-layout-elk.esm.min.mjs"></script>
+    <script type="module">import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.4.0/dist/mermaid.esm.min.mjs";import elkLayouts from "https://cdn.jsdelivr.net/npm/@mermaid-js/layout-elk@0.1.4/dist/mermaid-layout-elk.esm.min.mjs";mermaid.registerLayoutLoaders(elkLayouts);mermaid.initialize({startOnLoad:false});</script>
+    <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
+    <script type="module">
+import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.4.0/dist/mermaid.esm.min.mjs";
+window.addEventListener("load", () => mermaid.run());
+</script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'pages/architecture/library/train';</script>
+    <link rel="icon" href="../../../_static/logo_bar.svg"/>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="light">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../../index.html">
+  
+  
+  
+  
+  
+    
+    
+    
+    <img src="../../../_static/logo_bar.svg" class="logo__image only-light" alt="PhysioEx - Home"/>
+    <img src="../../../_static/logo_bar.svg" class="logo__image only-dark pst-js-only" alt="PhysioEx - Home"/>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../user_guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../related/index.html">
+    Related Works
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../api/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../contribute.html">
+    Contributing to PhysioEx
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/guidogagl/physioex" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://guidogagl.github.io/" title="Website" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-globe fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Website</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar hide-on-wide">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../user_guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../related/index.html">
+    Related Works
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../api/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../contribute.html">
+    Contributing to PhysioEx
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/guidogagl/physioex" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://guidogagl.github.io/" title="Website" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-globe fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Website</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis"><code class="docutils literal notranslate"><span class="pre">physioex.train</span></code> — class diagram</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section class="tex2jax_ignore mathjax_ignore" id="physioex-train-class-diagram">
+<h1><code class="docutils literal notranslate"><span class="pre">physioex.train</span></code> — class diagram<a class="headerlink" href="#physioex-train-class-diagram" title="Link to this heading">#</a></h1>
+<p>A <strong>hand-written PyTorch training/evaluation loop</strong> (not Lightning), with metric
+and statistics helpers, pluggable logging, and three CLI entry points that share
+one data path. Source: <code class="docutils literal notranslate"><span class="pre">physioex/train/</span></code>.</p>
+<section id="trainer">
+<h2>Trainer<a class="headerlink" href="#trainer" title="Link to this heading">#</a></h2>
+<pre  class="mermaid">
+        classDiagram
+    class Trainer {
+        +build_dataloaders(dataset, ...)$
+        +save_checkpoint(model, path, epoch, optimizer)$
+        +load_checkpoint(model, path, optimizer)$
+        +evaluate(model, dataset, ...)$
+        +voting_evaluate(model, dataset, L, ...)$
+        +train(model, dataset, max_epochs, lr, ...)$
+    }
+    class MultiDeviceTrainer {
+        +build_dataloaders(dataset, ...)$
+        +save_checkpoint(...)$
+        +train(model, dataset, gpu_ids, ...)$
+        +ddp_train_worker(rank, world_size, ...)$
+    }
+    class _BasePhysioEvalDataset {
+        +__getitem__(idx)
+    }
+    Trainer &lt;|-- MultiDeviceTrainer
+    Trainer ..&gt; _BasePhysioEvalDataset : per-subject eval
+    </pre><p><code class="docutils literal notranslate"><span class="pre">Trainer</span></code> (<code class="docutils literal notranslate"><span class="pre">trainer.py</span></code>) exposes only static/classmethods: <code class="docutils literal notranslate"><span class="pre">build_dataloaders</span></code>
+(detects new <code class="docutils literal notranslate"><span class="pre">BasePhysioDataset</span></code>/<code class="docutils literal notranslate"><span class="pre">MultiDataset</span></code> vs legacy, wires <code class="docutils literal notranslate"><span class="pre">dict_collate_fn</span></code></p>
+<ul class="simple">
+<li><p>per-subject <code class="docutils literal notranslate"><span class="pre">_BasePhysioEvalDataset</span></code>), <code class="docutils literal notranslate"><span class="pre">train</span></code> (epoch loop, AMP, grad accum,
+early stopping), <code class="docutils literal notranslate"><span class="pre">evaluate</span></code> and <code class="docutils literal notranslate"><span class="pre">voting_evaluate</span></code> (sliding-window per-subject
+voting), <code class="docutils literal notranslate"><span class="pre">save_checkpoint</span></code>/<code class="docutils literal notranslate"><span class="pre">load_checkpoint</span></code> (dual <code class="docutils literal notranslate"><span class="pre">.pt</span></code>/<code class="docutils literal notranslate"><span class="pre">.ckpt</span></code> load). Module fn
+<code class="docutils literal notranslate"><span class="pre">seed_everything(seed)</span></code>. <code class="docutils literal notranslate"><span class="pre">MultiDeviceTrainer</span></code> (<code class="docutils literal notranslate"><span class="pre">multidevicetrainer.py</span></code>) subclasses
+it for DDP (<code class="docutils literal notranslate"><span class="pre">ddp_setup</span></code>, <code class="docutils literal notranslate"><span class="pre">ddp_train_worker</span></code>), now on the same raw-EDF data path.</p></li>
+</ul>
+</section>
+<section id="logging">
+<h2>Logging<a class="headerlink" href="#logging" title="Link to this heading">#</a></h2>
+<pre  class="mermaid">
+        classDiagram
+    class Logger {
+        &lt;&lt;abstract&gt;&gt;
+        +log(stage, epoch, step, loss, accuracy, extra)*
+        +log_scalars(mapping, step)
+        +log_figure(tag, figure, step)
+        +log_histogram(tag, values, step)
+        +update()
+        +close()
+    }
+    Logger &lt;|-- NoOpLogger
+    Logger &lt;|-- TensorBoardLogger
+    Logger &lt;|-- WandbLogger
+    </pre><p><code class="docutils literal notranslate"><span class="pre">build_logger(kind,</span> <span class="pre">...)</span></code> factory + <code class="docutils literal notranslate"><span class="pre">add_logger_cli_args</span></code>/<code class="docutils literal notranslate"><span class="pre">logger_train_kwargs</span></code>
+bridge argparse → logger. TensorBoard/W&amp;B live behind the <code class="docutils literal notranslate"><span class="pre">tracking</span></code> extra.</p>
+</section>
+<section id="metrics-stats-progress-clis-module-level">
+<h2>Metrics, stats, progress, CLIs (module-level)<a class="headerlink" href="#metrics-stats-progress-clis-module-level" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">metrics.py</span></code></strong> — classification (<code class="docutils literal notranslate"><span class="pre">accuracy_score</span></code>, <code class="docutils literal notranslate"><span class="pre">f1_score</span></code>, <code class="docutils literal notranslate"><span class="pre">precision_score</span></code>, <code class="docutils literal notranslate"><span class="pre">recall_score</span></code>, <code class="docutils literal notranslate"><span class="pre">cohen_kappa_score</span></code>, <code class="docutils literal notranslate"><span class="pre">support_score</span></code>, <code class="docutils literal notranslate"><span class="pre">confusion_matrix</span></code>) and regression (<code class="docutils literal notranslate"><span class="pre">mse_score</span></code>, <code class="docutils literal notranslate"><span class="pre">mae_score</span></code>, <code class="docutils literal notranslate"><span class="pre">r2_score</span></code>) with <code class="docutils literal notranslate"><span class="pre">ignore_index</span></code>/<code class="docutils literal notranslate"><span class="pre">average</span></code>.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">stats.py</span></code></strong> — <code class="docutils literal notranslate"><span class="pre">per_subject_metrics</span></code>, <code class="docutils literal notranslate"><span class="pre">aggregate</span></code> (mean/std/CI, bootstrap or normal), <code class="docutils literal notranslate"><span class="pre">aggregated_scalars</span></code>, <code class="docutils literal notranslate"><span class="pre">confusion_matrix_figure</span></code>, <code class="docutils literal notranslate"><span class="pre">figure_from_cm</span></code>.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">progress.py</span></code></strong> — <code class="docutils literal notranslate"><span class="pre">PhysioExTrainProgressBar</span></code>, <code class="docutils literal notranslate"><span class="pre">PhysioExEvalProgressBar</span></code> (Rich).</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">bin/</span></code></strong> — <code class="docutils literal notranslate"><span class="pre">train_script</span></code>, <code class="docutils literal notranslate"><span class="pre">finetune_script</span></code>, <code class="docutils literal notranslate"><span class="pre">test_script</span></code> (console scripts <code class="docutils literal notranslate"><span class="pre">train</span></code>/<code class="docutils literal notranslate"><span class="pre">finetune</span></code>/<code class="docutils literal notranslate"><span class="pre">test_model</span></code>), all built on the shared <strong><code class="docutils literal notranslate"><span class="pre">bin/_common.py</span></code></strong> helpers: <code class="docutils literal notranslate"><span class="pre">import_class</span></code>, <code class="docutils literal notranslate"><span class="pre">parse_kwargs</span></code>, <code class="docutils literal notranslate"><span class="pre">add_dataset_cli_args</span></code>, <code class="docutils literal notranslate"><span class="pre">apply_config_overlay</span></code>, <code class="docutils literal notranslate"><span class="pre">build_dataset_from_args</span></code>, <code class="docutils literal notranslate"><span class="pre">inject_in_chan</span></code>.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">models/load.py</span></code></strong> — <code class="docutils literal notranslate"><span class="pre">load_model(model_class,</span> <span class="pre">model_kwargs,</span> <span class="pre">ckpt_path,</span> <span class="pre">model_name,</span> <span class="pre">device)</span></code> (CSV registry <code class="docutils literal notranslate"><span class="pre">check_table.csv</span></code> + HF auto-download).</p></li>
+</ul>
+<pre  class="mermaid">
+        classDiagram
+    class train_script
+    class finetune_script
+    class test_script
+    class _common {
+        +import_class(spec)
+        +build_dataset_from_args(args)
+        +add_dataset_cli_args(parser)
+        +inject_in_chan(kwargs, n)
+    }
+    train_script ..&gt; _common
+    finetune_script ..&gt; _common
+    test_script ..&gt; _common
+    _common ..&gt; Trainer
+    _common ..&gt; BasePhysioDataset : get_dataset()
+    </pre></section>
+<section id="class-reference-responsibilities">
+<h2>Class reference (responsibilities)<a class="headerlink" href="#class-reference-responsibilities" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">Trainer</span></code></strong> — orchestrates training/eval without owning state (pure static/class methods). Accepts any dataset exposing <code class="docutils literal notranslate"><span class="pre">.split(fold)</span></code> and <code class="docutils literal notranslate"><span class="pre">.sequence_length</span></code> (new layer, <code class="docutils literal notranslate"><span class="pre">MultiDataset</span></code>, or legacy) plus raw <code class="docutils literal notranslate"><span class="pre">DataLoader</span></code>s.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">MultiDeviceTrainer</span></code></strong> — DDP variant; <code class="docutils literal notranslate"><span class="pre">build_dataloaders</span></code> mirrors the single-device detection and adds <code class="docutils literal notranslate"><span class="pre">DistributedSampler</span></code>.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">_BasePhysioEvalDataset</span></code></strong> — internal wrapper yielding the full recording per subject for voting evaluation.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">Logger</span></code> hierarchy</strong> — uniform logging surface; <code class="docutils literal notranslate"><span class="pre">NoOpLogger</span></code> is the default (no external deps).</p></li>
+</ul>
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#trainer">Trainer</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#logging">Logging</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#metrics-stats-progress-clis-module-level">Metrics, stats, progress, CLIs (module-level)</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#class-reference-responsibilities">Class reference (responsibilities)</a></li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../../../_sources/pages/architecture/library/train.md.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer src="../../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2023, Guido Gagliardi.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 8.1.3.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.16.1.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

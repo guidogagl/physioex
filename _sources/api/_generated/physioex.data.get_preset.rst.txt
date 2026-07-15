@@ -1,0 +1,6 @@
+﻿physioex.data.get\_preset
+=========================
+
+.. currentmodule:: physioex.data
+
+.. autofunction:: get_preset

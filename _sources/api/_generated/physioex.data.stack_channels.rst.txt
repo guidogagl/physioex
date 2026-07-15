@@ -1,0 +1,6 @@
+﻿physioex.data.stack\_channels
+=============================
+
+.. currentmodule:: physioex.data
+
+.. autofunction:: stack_channels

@@ -1,0 +1,13 @@
+﻿physioex.train.progress
+=======================
+
+.. automodule:: physioex.train.progress
+
+   
+   .. rubric:: Classes
+
+   .. autosummary::
+   
+      PhysioExEvalProgressBar
+      PhysioExTrainProgressBar
+   

@@ -1,0 +1,32 @@
+﻿physioex.data.SleepEvent
+========================
+
+.. currentmodule:: physioex.data
+
+.. autoclass:: SleepEvent
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~SleepEvent.__init__
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~SleepEvent.type
+      ~SleepEvent.concept
+      ~SleepEvent.onset_sec
+      ~SleepEvent.duration_sec
+      ~SleepEvent.extra
+   
+   

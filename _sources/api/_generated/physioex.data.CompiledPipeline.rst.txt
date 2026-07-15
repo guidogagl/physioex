@@ -1,0 +1,22 @@
+﻿physioex.data.CompiledPipeline
+==============================
+
+.. currentmodule:: physioex.data
+
+.. autoclass:: CompiledPipeline
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~CompiledPipeline.__init__
+   
+   
+
+   
+   
+   

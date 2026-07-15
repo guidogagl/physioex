@@ -1,0 +1,87 @@
+﻿physioex.models.SleepFMEncoder
+==============================
+
+.. currentmodule:: physioex.models
+
+.. autoclass:: SleepFMEncoder
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~SleepFMEncoder.__init__
+      ~SleepFMEncoder.add_module
+      ~SleepFMEncoder.apply
+      ~SleepFMEncoder.bfloat16
+      ~SleepFMEncoder.buffers
+      ~SleepFMEncoder.children
+      ~SleepFMEncoder.compile
+      ~SleepFMEncoder.cpu
+      ~SleepFMEncoder.cuda
+      ~SleepFMEncoder.double
+      ~SleepFMEncoder.encode
+      ~SleepFMEncoder.eval
+      ~SleepFMEncoder.extra_repr
+      ~SleepFMEncoder.float
+      ~SleepFMEncoder.forward
+      ~SleepFMEncoder.get_buffer
+      ~SleepFMEncoder.get_dataset
+      ~SleepFMEncoder.get_extra_state
+      ~SleepFMEncoder.get_parameter
+      ~SleepFMEncoder.get_pipeline
+      ~SleepFMEncoder.get_submodule
+      ~SleepFMEncoder.half
+      ~SleepFMEncoder.ipu
+      ~SleepFMEncoder.load_state_dict
+      ~SleepFMEncoder.modules
+      ~SleepFMEncoder.mtia
+      ~SleepFMEncoder.named_buffers
+      ~SleepFMEncoder.named_children
+      ~SleepFMEncoder.named_modules
+      ~SleepFMEncoder.named_parameters
+      ~SleepFMEncoder.parameters
+      ~SleepFMEncoder.register_backward_hook
+      ~SleepFMEncoder.register_buffer
+      ~SleepFMEncoder.register_forward_hook
+      ~SleepFMEncoder.register_forward_pre_hook
+      ~SleepFMEncoder.register_full_backward_hook
+      ~SleepFMEncoder.register_full_backward_pre_hook
+      ~SleepFMEncoder.register_load_state_dict_post_hook
+      ~SleepFMEncoder.register_load_state_dict_pre_hook
+      ~SleepFMEncoder.register_module
+      ~SleepFMEncoder.register_parameter
+      ~SleepFMEncoder.register_state_dict_post_hook
+      ~SleepFMEncoder.register_state_dict_pre_hook
+      ~SleepFMEncoder.requires_grad_
+      ~SleepFMEncoder.set_extra_state
+      ~SleepFMEncoder.set_submodule
+      ~SleepFMEncoder.share_memory
+      ~SleepFMEncoder.state_dict
+      ~SleepFMEncoder.to
+      ~SleepFMEncoder.to_empty
+      ~SleepFMEncoder.train
+      ~SleepFMEncoder.type
+      ~SleepFMEncoder.xpu
+      ~SleepFMEncoder.zero_grad
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~SleepFMEncoder.CHANNEL_STRATEGY
+      ~SleepFMEncoder.MODEL_NAME
+      ~SleepFMEncoder.PIPELINE_PRESET
+      ~SleepFMEncoder.T_destination
+      ~SleepFMEncoder.call_super_init
+      ~SleepFMEncoder.dump_patches
+      ~SleepFMEncoder.training
+   
+   

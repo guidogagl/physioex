@@ -1,0 +1,6 @@
+﻿physioex.data.map\_events\_to\_epochs
+=====================================
+
+.. currentmodule:: physioex.data
+
+.. autofunction:: map_events_to_epochs

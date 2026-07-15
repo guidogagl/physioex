@@ -1,0 +1,87 @@
+﻿physioex.models.BIOTEncoder
+===========================
+
+.. currentmodule:: physioex.models
+
+.. autoclass:: BIOTEncoder
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~BIOTEncoder.__init__
+      ~BIOTEncoder.add_module
+      ~BIOTEncoder.apply
+      ~BIOTEncoder.bfloat16
+      ~BIOTEncoder.buffers
+      ~BIOTEncoder.children
+      ~BIOTEncoder.compile
+      ~BIOTEncoder.cpu
+      ~BIOTEncoder.cuda
+      ~BIOTEncoder.double
+      ~BIOTEncoder.encode
+      ~BIOTEncoder.eval
+      ~BIOTEncoder.extra_repr
+      ~BIOTEncoder.float
+      ~BIOTEncoder.forward
+      ~BIOTEncoder.get_buffer
+      ~BIOTEncoder.get_dataset
+      ~BIOTEncoder.get_extra_state
+      ~BIOTEncoder.get_parameter
+      ~BIOTEncoder.get_pipeline
+      ~BIOTEncoder.get_submodule
+      ~BIOTEncoder.half
+      ~BIOTEncoder.ipu
+      ~BIOTEncoder.load_state_dict
+      ~BIOTEncoder.modules
+      ~BIOTEncoder.mtia
+      ~BIOTEncoder.named_buffers
+      ~BIOTEncoder.named_children
+      ~BIOTEncoder.named_modules
+      ~BIOTEncoder.named_parameters
+      ~BIOTEncoder.parameters
+      ~BIOTEncoder.register_backward_hook
+      ~BIOTEncoder.register_buffer
+      ~BIOTEncoder.register_forward_hook
+      ~BIOTEncoder.register_forward_pre_hook
+      ~BIOTEncoder.register_full_backward_hook
+      ~BIOTEncoder.register_full_backward_pre_hook
+      ~BIOTEncoder.register_load_state_dict_post_hook
+      ~BIOTEncoder.register_load_state_dict_pre_hook
+      ~BIOTEncoder.register_module
+      ~BIOTEncoder.register_parameter
+      ~BIOTEncoder.register_state_dict_post_hook
+      ~BIOTEncoder.register_state_dict_pre_hook
+      ~BIOTEncoder.requires_grad_
+      ~BIOTEncoder.set_extra_state
+      ~BIOTEncoder.set_submodule
+      ~BIOTEncoder.share_memory
+      ~BIOTEncoder.state_dict
+      ~BIOTEncoder.to
+      ~BIOTEncoder.to_empty
+      ~BIOTEncoder.train
+      ~BIOTEncoder.type
+      ~BIOTEncoder.xpu
+      ~BIOTEncoder.zero_grad
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~BIOTEncoder.CHANNEL_STRATEGY
+      ~BIOTEncoder.MODEL_NAME
+      ~BIOTEncoder.PIPELINE_PRESET
+      ~BIOTEncoder.T_destination
+      ~BIOTEncoder.call_super_init
+      ~BIOTEncoder.dump_patches
+      ~BIOTEncoder.training
+   
+   

@@ -1,0 +1,33 @@
+﻿physioex.train.logger.NoOpLogger
+================================
+
+.. currentmodule:: physioex.train.logger
+
+.. autoclass:: NoOpLogger
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~NoOpLogger.__init__
+      ~NoOpLogger.close
+      ~NoOpLogger.log
+      ~NoOpLogger.log_figure
+      ~NoOpLogger.log_graph
+      ~NoOpLogger.log_histogram
+      ~NoOpLogger.log_hparams
+      ~NoOpLogger.log_learning_rate
+      ~NoOpLogger.log_scalars
+      ~NoOpLogger.log_update_norm
+      ~NoOpLogger.update
+      ~NoOpLogger.watch_model
+   
+   
+
+   
+   
+   

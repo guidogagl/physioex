@@ -1,0 +1,6 @@
+﻿physioex.data.probe\_edf\_header
+================================
+
+.. currentmodule:: physioex.data
+
+.. autofunction:: probe_edf_header
