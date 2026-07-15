@@ -23,6 +23,16 @@ from docutils.parsers.rst import Directive
 from docutils.statemachine import StringList
 
 _SPECIAL = ("\\", "`", "*", "_", "[", "]", "<", ">", "|")
+_PLACEHOLDER = "_thumbs/_placeholder.svg"   # under docs/related/
+
+
+def _thumb_src(entry: dict) -> str:
+    """Resolve a card image: a remote URL as-is, a repo path made absolute from
+    the source root, or a neutral placeholder when none is set."""
+    t = (entry.get("thumbnail") or "").strip() or _PLACEHOLDER
+    if t.startswith(("http://", "https://")):
+        return t
+    return "/related/" + t.lstrip("/")
 
 
 def _esc(text) -> str:
@@ -56,7 +66,7 @@ def _meta_line(entry: dict) -> str:
 def _card(entry: dict) -> list[str]:
     """One MyST ``grid-item-card`` colon-fence as a list of lines."""
     title = _esc(entry.get("title") or "Untitled")
-    lines = [f":::{{grid-item-card}} {title}", ""]
+    lines = [f":::{{grid-item-card}} {title}", f":img-top: {_thumb_src(entry)}", ""]
 
     meta = _meta_line(entry)
     if meta:
@@ -87,7 +97,8 @@ def _card(entry: dict) -> list[str]:
 
 
 def _grid(entries: list[dict]) -> list[str]:
-    out = ["::::{grid} 1 2 2 3", ":gutter: 3", ""]
+    # 1 column on mobile, 2 from tablet up — wider, more readable cards.
+    out = ["::::{grid} 1 1 2 2", ":gutter: 3", ":margin: 2", ""]
     for e in entries:
         out += _card(e)
     out += ["::::", ""]

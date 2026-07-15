@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 180" role="img" aria-label="Publication">
+  <rect width="320" height="180" fill="#e0f2f1"/>
+  <g transform="translate(130 40)" fill="none" stroke="#009688" stroke-width="3">
+    <rect x="0" y="0" width="60" height="80" rx="4" fill="#ffffff"/>
+    <line x1="12" y1="18" x2="48" y2="18"/>
+    <line x1="12" y1="32" x2="48" y2="32"/>
+    <line x1="12" y1="46" x2="48" y2="46"/>
+    <line x1="12" y1="60" x2="36" y2="60"/>
+  </g>
+  <text x="160" y="150" text-anchor="middle" font-family="sans-serif" font-size="14"
+        fill="#00796b">PhysioEx · citing work</text>
+</svg>
