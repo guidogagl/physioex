@@ -109,6 +109,8 @@ class VitalDBDataset(BasePhysioDataset):
         self._ane_type = ane_type
         self._require_tracks = tuple(require_tracks)
         self._cases: Dict[str, Dict[str, Any]] = {}
+        # caseid -> resolved target, filled eagerly in _list_subjects
+        self._targets: Dict[str, int] = {}
 
         # Sleep-specific runtime transforms are meaningless here: label 0 means
         # "negative outcome", not Wake.
@@ -177,6 +179,10 @@ class VitalDBDataset(BasePhysioDataset):
             path = raw_dir / f"{caseid}.vital"
             if not path.exists():
                 continue
+            # Resolve the target here, not in _read_subject_labels: that runs
+            # under _build_index's skip_corrupt guard, which would turn a bad
+            # target into every case being silently dropped.
+            self._targets[caseid] = self._resolve_target(row, caseid)
             subjects.append(
                 SubjectSpec(
                     subject_id=caseid,
@@ -213,11 +219,16 @@ class VitalDBDataset(BasePhysioDataset):
     # Case-level target broadcast over epochs
     # ------------------------------------------------------------------
 
-    def _target_value(self, spec: SubjectSpec) -> int:
-        """Resolve the case-level target for one case; ``-1`` when undefined."""
+    def _resolve_target(self, row: Dict[str, Any], caseid: str) -> int:
+        """Evaluate the target for one case row; ``-1`` when undefined.
+
+        Raises:
+            ValueError: if the target is outside ``{-1, 0, 1}``.  Called from
+            ``_list_subjects`` so the error surfaces at construction time
+            instead of being swallowed by the ``skip_corrupt`` guard.
+        """
         if self._target is None:
             return -1
-        row = spec.external_meta or {}
         try:
             if callable(self._target):
                 value = self._target(row)
@@ -228,8 +239,8 @@ class VitalDBDataset(BasePhysioDataset):
                 value = int(float(raw))
         except (TypeError, ValueError) as exc:
             logger.warning(
-                f"[{self.DATASET_NAME}] case {spec.subject_id}: cannot resolve "
-                f"target ({exc}); labelling as -1"
+                f"[{self.DATASET_NAME}] case {caseid}: cannot resolve target "
+                f"({exc}); labelling as -1"
             )
             return -1
         if value is None:
@@ -237,11 +248,15 @@ class VitalDBDataset(BasePhysioDataset):
         value = int(value)
         if value not in (-1, 0, 1):
             raise ValueError(
-                f"[{self.DATASET_NAME}] case {spec.subject_id}: target={value} is "
+                f"[{self.DATASET_NAME}] case {caseid}: target={value} is "
                 "outside {-1, 0, 1}; _sanitize_labels would coerce it to -1. "
                 "Encode the outcome as a binary label."
             )
         return value
+
+    def _target_value(self, spec: SubjectSpec) -> int:
+        """Case-level target, resolved once during subject discovery."""
+        return self._targets.get(spec.subject_id, -1)
 
     def _read_subject_labels(self, spec: SubjectSpec) -> np.ndarray:
         """One epoch label per physical epoch, all equal to the case target."""
