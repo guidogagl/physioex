@@ -197,6 +197,40 @@ class VitalDBDataset(BasePhysioDataset):
         return subjects
 
     # ------------------------------------------------------------------
+    # Splits
+    # ------------------------------------------------------------------
+
+    def get_splits(self, fold: int = 0):
+        """Train/valid/test case ids, split **by patient**.
+
+        Overrides the base 70/15/15 split, which shuffles ``subject_id`` — here
+        the case, not the person.  225 of the 5,397 patients in the cohort
+        contribute more than one operation, so a case-level split puts the same
+        patient on both sides and inflates every score.  Patients are shuffled
+        instead, and all of a patient's cases follow them into one split.
+        """
+        import random as _random
+
+        by_patient: Dict[str, List[str]] = {}
+        for spec in self._subjects:
+            patient = (spec.external_meta or {}).get("subjectid") or spec.subject_id
+            by_patient.setdefault(str(patient), []).append(spec.subject_id)
+
+        patients = sorted(by_patient)
+        _random.Random(42 + int(fold)).shuffle(patients)
+        n = len(patients)
+        n_train, n_valid = int(0.70 * n), int(0.15 * n)
+
+        def cases_of(group):
+            return [cid for p in group for cid in by_patient[p]]
+
+        return (
+            cases_of(patients[:n_train]),
+            cases_of(patients[n_train : n_train + n_valid]),
+            cases_of(patients[n_train + n_valid :]),
+        )
+
+    # ------------------------------------------------------------------
     # Non-EDF reading
     # ------------------------------------------------------------------
 

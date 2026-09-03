@@ -233,6 +233,23 @@ def test_two_channels_resolve_to_both_eeg_leads(vitaldb_root, tmp_path):
     assert [r.physical for r in resolved] == [EEG1, EEG2]
 
 
+def test_splits_group_cases_by_patient(vitaldb_root, tmp_path):
+    """Cases 1 and 2 belong to one patient and must never straddle a split."""
+    ds = make_dataset(vitaldb_root, tmp_path / "cache")
+    for fold in range(6):
+        train, valid, test = ds.get_splits(fold=fold)
+        assert sorted(train + valid + test) == sorted(ds.get_subjects())
+        for split in (train, valid, test):
+            assert ("1" in split) == ("2" in split)
+
+
+def test_split_is_a_partition_with_no_repeated_case(vitaldb_root, tmp_path):
+    ds = make_dataset(vitaldb_root, tmp_path / "cache")
+    train, valid, test = ds.get_splits()
+    everything = train + valid + test
+    assert len(everything) == len(set(everything)) == ds.get_n_subjects()
+
+
 @pytest.mark.skipif(
     os.environ.get("PHYSIOEX_TEST_REAL_DATA") != "1",
     reason="set PHYSIOEX_TEST_REAL_DATA=1 to run against the downloaded VitalDB",
