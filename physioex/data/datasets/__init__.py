@@ -15,6 +15,7 @@ from physioex.data.datasets.alzheimers import AlzheimersDataset
 from physioex.data.datasets.parkinsons import ParkinsonsDataset
 from physioex.data.datasets.shhs import SHHSDataset
 from physioex.data.datasets.stages import STAGESDataset
+from physioex.data.datasets.vitaldb import VitalDBDataset
 
 REGISTRY = {
     "hmc": HMCDataset,
@@ -29,6 +30,7 @@ REGISTRY = {
     "parkinsons": ParkinsonsDataset,
     "shhs": SHHSDataset,
     "stages": STAGESDataset,
+    "vitaldb": VitalDBDataset,
 }
 
 

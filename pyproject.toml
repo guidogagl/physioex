@@ -41,7 +41,10 @@ gpu-monitor = ["nvitop>=1.0.0"]
 tracking = ["tensorboard>=2.14", "wandb>=0.16"]
 # Heavyweight, feature-specific deps imported lazily; install only if needed.
 foundation = ["transformers>=4.40.0"]  # REVE encoder (physioex.models.reve)
-datasets = ["mne>=1.6.0"]              # HOMEPAP EDF fallback reader (data.datasets.hpap)
+datasets = [
+    "mne>=1.6.0",       # HOMEPAP EDF fallback reader (data.datasets.hpap)
+    "vitaldb>=1.4.0",   # .vital reader (data.readers.vital, data.datasets.vitaldb)
+]
 dev = ["ruff", "pytest", "pytest-cov", "black~=22.0"]
 legacy = ["pytorch_lightning>=2.5.0", "lightning>=2.5.0", "torchmetrics>=1.8.0"]
 docs = [

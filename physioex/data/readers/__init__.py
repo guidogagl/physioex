@@ -10,6 +10,12 @@ from physioex.data.readers.edf import (
     read_channel,
     read_channels_from_edf,
 )
+from physioex.data.readers.vital import (
+    VitalTrackNotFoundError,
+    probe_vital_header,
+    read_vital_channel,
+    list_vital_tracks,
+)
 from physioex.data.readers.annotations import (
     NSRR_STAGE_MAP,
     parse_nsrr_xml,
@@ -29,6 +35,10 @@ __all__ = [
     "resolve_channels",
     "read_channel",
     "read_channels_from_edf",
+    "VitalTrackNotFoundError",
+    "probe_vital_header",
+    "read_vital_channel",
+    "list_vital_tracks",
     "NSRR_STAGE_MAP",
     "parse_nsrr_xml",
     "parse_tsv_annotations",
