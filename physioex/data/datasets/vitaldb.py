@@ -115,7 +115,12 @@ class VitalDBDataset(BasePhysioDataset):
         # Sleep-specific runtime transforms are meaningless here: label 0 means
         # "negative outcome", not Wake.
         kwargs.setdefault("trim_excess_wake", False)
-        kwargs.setdefault("channels", ["EEG"])
+        # Request the modality twice rather than the two track names: channel
+        # keys are derived from the *request* string, and "BIS/EEG1_WAV"
+        # normalises to "BISEEG1WAV", which infer_channel_modality classifies as
+        # OTHER.  Asking for "EEG" twice walks CHANNEL_PREFERENCES, claiming
+        # EEG1 then EEG2, and yields the EEG_0 / EEG_1 keys models expect.
+        kwargs.setdefault("channels", ["EEG", "EEG"])
 
         super().__init__(root=root, **kwargs)
 

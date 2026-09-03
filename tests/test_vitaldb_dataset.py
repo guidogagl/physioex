@@ -212,25 +212,41 @@ def test_item_shape_and_contents(vitaldb_root, tmp_path):
         tmp_path / "cache",
         sequence_length=2,
         target=lambda row: int(float(row["icu_days"] or 0) > 0),
-        channels=["EEG"],
         pipelines="raw",
     )
     item = ds[0]
     assert torch.is_tensor(item["labels"])
     assert item["labels"].shape[0] == 2
     assert item["subject"]["dataset"] == "vitaldb"
-    assert len(item["channel_order"]) == 1
-    signal = item[item["channel_order"][0]] if item["channel_order"][0] in item else None
-    if signal is not None:
-        assert signal.shape[0] == 2  # one row per epoch in the sequence
+    assert len(item["channel_order"]) == 2
+
+    # Signals live under item["signals"], keyed by channel_order -- asserting
+    # on item[key] would silently pass on a dataset that returns no signal.
+    signals = item["signals"]
+    for key in item["channel_order"]:
+        assert key in signals, f"{key} missing from signals"
+        assert signals[key].shape[0] == 2  # one row per epoch in the sequence
+        assert signals[key].shape[1] == int(EPOCH * 128)
 
 
-def test_two_channels_resolve_to_both_eeg_leads(vitaldb_root, tmp_path):
-    ds = make_dataset(
-        vitaldb_root, tmp_path / "cache", channels=[EEG1, EEG2], cache_enabled=False
-    )
+def test_default_channels_are_named_as_eeg(vitaldb_root, tmp_path):
+    """Keys must be EEG_0/EEG_1, not OTHER_0/OTHER_1.
+
+    physioex derives the channel key from the *request* string, and the track
+    name ``BIS/EEG1_WAV`` normalises to ``BISEEG1WAV``, which is classified as
+    OTHER.  Downstream models key off the modality name, so requesting the
+    tracks by name silently mislabels both leads.
+    """
+    ds = make_dataset(vitaldb_root, tmp_path / "cache", cache_enabled=False)
+    assert ds.channels == ["EEG", "EEG"]
+    assert ds[0]["channel_order"] == ["EEG_0", "EEG_1"]
+
+
+def test_two_eeg_requests_claim_the_two_distinct_leads(vitaldb_root, tmp_path):
+    ds = make_dataset(vitaldb_root, tmp_path / "cache", cache_enabled=False)
     resolved = ds._resolved[ds._subjects[0].subject_id]
     assert [r.physical for r in resolved] == [EEG1, EEG2]
+    assert [r.fs_in for r in resolved] == [128.0, 128.0]
 
 
 def test_splits_group_cases_by_patient(vitaldb_root, tmp_path):
