@@ -73,6 +73,15 @@ class VitalDBDataset(BasePhysioDataset):
         epoch_length_sec: defaults to 120 s -- the 2-minute window used by the
             intraoperative-EEG outcome literature, not the 30 s sleep epoch.
 
+    Warning:
+        The inherited default ``pipelines="raw"`` is **not** a passthrough: it
+        bandpasses 0.3-40 Hz and resamples 128 Hz to 100 Hz, so a 120 s window
+        arrives as 12,000 samples.  Those are sleep-staging defaults.  The
+        resampling is harmless for anaesthesia (all the content of interest is
+        below 40 Hz), but the 0.3 Hz high-pass attenuates the slow oscillations
+        (0.1-1 Hz) that characterise deep anaesthesia.  Pass an explicit
+        pipeline if that band matters for your endpoint.
+
     Note:
         ``BasePhysioDataset._sanitize_labels`` enforces the AASM range
         ``{-1, 0..4}``.  Binary targets (0/1) pass through unchanged, but a

@@ -32,6 +32,8 @@ from tests.factories.vital import (  # noqa: E402
 
 EPOCH = 120.0
 DURATION = 600.0  # 5 epochs of 120 s
+NATIVE_FS = 128.0  # rate of BIS/EEG*_WAV in the .vital file
+PIPELINE_FS = 100.0  # rate after the default "raw" preset resamples
 
 
 @pytest.fixture
@@ -226,7 +228,24 @@ def test_item_shape_and_contents(vitaldb_root, tmp_path):
     for key in item["channel_order"]:
         assert key in signals, f"{key} missing from signals"
         assert signals[key].shape[0] == 2  # one row per epoch in the sequence
-        assert signals[key].shape[1] == int(EPOCH * 128)
+        # The "raw" preset resamples 128 Hz -> PIPELINE_FS, so a window is
+        # EPOCH * PIPELINE_FS samples, not EPOCH * the native rate.
+        assert signals[key].shape[1] == int(EPOCH * PIPELINE_FS)
+
+
+def test_raw_preset_resamples_the_native_rate(vitaldb_root, tmp_path):
+    """The default pipeline is not a passthrough.
+
+    ``pipelines="raw"`` bandpasses 0.3-40 Hz and resamples to 100 Hz -- a sleep
+    default inherited by every dataset.  Pinning it here makes any change to the
+    preset show up as a failure on this dataset rather than as a quietly
+    different input tensor.
+    """
+    ds = make_dataset(vitaldb_root, tmp_path / "cache", cache_enabled=False)
+    resolved = ds._resolved[ds._subjects[0].subject_id]
+    assert resolved[0].fs_in == 128.0  # native rate off the .vital file
+    window = ds[0]["signals"]["EEG_0"].shape[-1]
+    assert window == int(EPOCH * PIPELINE_FS)  # 100 Hz after the pipeline
 
 
 def test_default_channels_are_named_as_eeg(vitaldb_root, tmp_path):
