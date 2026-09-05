@@ -86,6 +86,15 @@ class VitalDBDataset(BasePhysioDataset):
         (0.1-1 Hz) that characterise deep anaesthesia.  Pass an explicit
         pipeline if that band matters for your endpoint.
 
+    Warning:
+        The signal cache is **lossy on CUDA machines**: ``recommended_dtype()``
+        returns ``bfloat16`` where the GPU supports it, so a cached window is an
+        8-bit-mantissa version of the computed one -- a few µV of difference on
+        a window with 1000 µV peaks.  bfloat16 keeps float32's exponent range,
+        so low-amplitude suppression retains its relative precision, and the
+        full cohort costs 28 GB instead of 56 GB.  Do not expect bit-exact
+        agreement between a cached and an uncached read.
+
     Note:
         ``BasePhysioDataset._sanitize_labels`` enforces the AASM range
         ``{-1, 0..4}``.  Binary targets (0/1) pass through unchanged, but a
