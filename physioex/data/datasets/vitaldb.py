@@ -39,7 +39,7 @@ from __future__ import annotations
 import csv
 import logging
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any, Callable, Dict, Iterable, List, Optional, Union
 
 import numpy as np
 
@@ -68,6 +68,10 @@ class VitalDBDataset(BasePhysioDataset):
             (the sentinel ignored by ``CrossEntropyLoss(ignore_index=-1)``).
         ane_type: keep only cases with this ``ane_type`` in ``cases.csv``.
             Defaults to ``"General"``; pass ``None`` to keep every case.
+        cases: restrict the dataset to these case ids.  Without it every case
+            on disk is listed, so a caller holding a cohort or a split would
+            silently load the whole archive; ``target`` only decides labels,
+            not membership.
         require_tracks: cases must carry all of these tracks (checked against
             ``meta/trks.csv``, no file opening).  Defaults to the EEG channel.
         epoch_length_sec: defaults to 120 s -- the 2-minute window used by the
@@ -106,6 +110,7 @@ class VitalDBDataset(BasePhysioDataset):
         root: Optional[str] = None,
         target: TargetSpec = None,
         ane_type: Optional[str] = "General",
+        cases: Optional[Iterable[str]] = None,
         require_tracks: tuple = (EEG1,),
         **kwargs,
     ):
@@ -116,6 +121,7 @@ class VitalDBDataset(BasePhysioDataset):
         # _list_subjects() and then _read_subject_labels().
         self._target = target
         self._ane_type = ane_type
+        self._case_filter = {str(c) for c in cases} if cases is not None else None
         self._require_tracks = tuple(require_tracks)
         self._cases: Dict[str, Dict[str, Any]] = {}
         # caseid -> resolved target, filled eagerly in _list_subjects
@@ -186,6 +192,8 @@ class VitalDBDataset(BasePhysioDataset):
 
         subjects: List[SubjectSpec] = []
         for caseid, row in self._cases.items():
+            if self._case_filter is not None and caseid not in self._case_filter:
+                continue
             if self._ane_type is not None and row.get("ane_type") != self._ane_type:
                 continue
             if with_tracks is not None and caseid not in with_tracks:

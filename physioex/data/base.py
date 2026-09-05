@@ -162,7 +162,7 @@ class BasePhysioDataset(Dataset):
         # which are expensive on NFS (~0.16ms per call on network filesystems).
         # Cache key is (subject_id, physical_channel, pipeline_hash).
         self._memmap_cache: OrderedDict[str, np.ndarray] = OrderedDict()
-        self._memmap_cache_size = int(memmap_cache_size)
+        self._memmap_cache_size = self._safe_memmap_cache_size(memmap_cache_size)
         self._memmap_cache_hits = 0
         self._memmap_cache_misses = 0
 
@@ -202,6 +202,40 @@ class BasePhysioDataset(Dataset):
     # ------------------------------------------------------------------
     # Subclass hooks
     # ------------------------------------------------------------------
+
+    @staticmethod
+    def _safe_memmap_cache_size(requested: int) -> int:
+        """Cap the memmap LRU so it cannot exhaust the process file limit.
+
+        Every cached memmap holds an open file descriptor.  The default of 1000
+        sits just under the usual 1024 soft ``RLIMIT_NOFILE``, so a dataset with
+        more than ~1000 (subject, channel) pairs runs the process out of
+        descriptors.  The symptom is not an exception: caching fails with a
+        warning and every read falls back to recomputing from the source file,
+        turning a cached dataset into an uncached one at a fraction of the speed,
+        silently.
+
+        Leaves at least a quarter of the budget for everything else the process
+        needs to open -- source files, the cache writes themselves, sockets.
+        """
+        try:
+            import resource
+
+            soft, _hard = resource.getrlimit(resource.RLIMIT_NOFILE)
+        except Exception:  # pragma: no cover - non-POSIX
+            return int(requested)
+        if soft in (resource.RLIM_INFINITY, -1):
+            return int(requested)
+
+        budget = max(16, int(soft * 0.75))
+        if requested > budget:
+            logger.warning(
+                f"memmap_cache_size={requested} exceeds the safe budget for a "
+                f"file-descriptor limit of {soft}; capping at {budget}. Raise "
+                f"the limit (ulimit -n) to cache more."
+            )
+            return budget
+        return int(requested)
 
     @abstractmethod
     def _list_subjects(self) -> List[SubjectSpec]:

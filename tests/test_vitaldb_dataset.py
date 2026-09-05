@@ -298,3 +298,40 @@ def test_real_vitaldb_smoke():
     assert ds.get_n_subjects() > 5_000
     item = ds[0]
     assert torch.is_tensor(item["labels"])
+
+
+def test_cases_whitelist_restricts_membership(vitaldb_root, tmp_path):
+    """Without this, holding a cohort or a split still loads every case.
+
+    ``target`` only decides labels: a caller that passed a 40-case cohort and
+    expected a 40-case dataset would quietly get the whole archive.
+    """
+    ds = make_dataset(vitaldb_root, tmp_path / "c1", cases=["1", "3"])
+    assert ds.get_subjects() == ["1", "3"]
+    assert make_dataset(vitaldb_root, tmp_path / "c2").get_subjects() == ["1", "2", "3"]
+
+
+def test_cases_whitelist_ignores_ids_not_on_disk(vitaldb_root, tmp_path):
+    ds = make_dataset(vitaldb_root, tmp_path / "cache", cases=["1", "9999"])
+    assert ds.get_subjects() == ["1"]
+
+
+def test_memmap_cache_is_capped_below_the_file_descriptor_limit(vitaldb_root, tmp_path):
+    """Every cached memmap holds an fd; the default 1000 sits under a 1024 limit.
+
+    Exhausting them does not raise -- caching fails with a warning and every
+    read recomputes from source, so a cached dataset silently becomes an
+    uncached one.
+    """
+    import resource
+
+    soft, _ = resource.getrlimit(resource.RLIMIT_NOFILE)
+    ds = make_dataset(vitaldb_root, tmp_path / "cache", memmap_cache_size=1_000_000)
+    if soft not in (resource.RLIM_INFINITY, -1):
+        assert ds._memmap_cache_size < soft
+        assert ds._memmap_cache_size == max(16, int(soft * 0.75))
+
+
+def test_a_modest_memmap_cache_size_is_left_alone(vitaldb_root, tmp_path):
+    ds = make_dataset(vitaldb_root, tmp_path / "cache", memmap_cache_size=8)
+    assert ds._memmap_cache_size == 8
