@@ -65,12 +65,21 @@ class LRP(nn.Module):
         self.composite = composite
 
     def _target_seed(self, out: torch.Tensor) -> torch.Tensor:
-        """One-hot seed selecting ``out[:, in_index, out_index]`` per sample."""
+        """Relevance seed selecting the target neuron.
+
+        Seeds the *output relevance* with the target **logit value**
+        ``f_c(x) = out[:, in_index, out_index]`` (zero elsewhere), so total
+        relevance conserves to the class evidence: ``Σ R ≈ f_c(x)`` — the
+        defining LRP property.  (Seeding with a bare ``1.0`` one-hot would
+        instead normalise the relevance to sum to 1.)
+        """
         seed = torch.zeros_like(out)
         if out.dim() == 3:  # (B, L, n_classes)
-            seed[:, self.in_index, self.out_index] = 1.0
+            seed[:, self.in_index, self.out_index] = out[
+                :, self.in_index, self.out_index
+            ].detach()
         elif out.dim() == 2:  # (B, n_classes)
-            seed[:, self.out_index] = 1.0
+            seed[:, self.out_index] = out[:, self.out_index].detach()
         else:
             raise ValueError(
                 f"Unexpected model output rank {out.dim()}; expected 2 or 3."
