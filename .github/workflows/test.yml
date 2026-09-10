@@ -29,10 +29,11 @@ jobs:
           # and fails to load its compiled _torchaudio.so.
           pip install torch torchaudio --index-url https://download.pytorch.org/whl/cpu
 
-      - name: Install package (editable) with dev + legacy extras
+      - name: Install package (editable) with dev + legacy + explain extras
         # Editable so coverage's source=["physioex"] measures the executed tree
         # (a non-editable install runs the site-packages copy -> 0% reported).
-        run: pip install -e .[dev,legacy]
+        # 'explain' pulls in zennit/lxt so the LRP tests run instead of skipping.
+        run: pip install -e .[dev,legacy,explain]
 
       - name: Run test suite with coverage gate
         env:
