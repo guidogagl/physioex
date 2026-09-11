@@ -149,6 +149,29 @@ class LRPMultiheadAttention(nn.Module):
         )
 
 
+class LRPMultiheadAttentionModule(nn.Module):
+    """``nn.MultiheadAttention``-compatible wrapper for standalone attention.
+
+    Host models call ``nn.MultiheadAttention`` as ``out, _ = mha(query=, key=,
+    value=, ...)`` — a 2-tuple return with keyword args.  This adapter mirrors
+    that interface around :class:`LRPMultiheadAttention` (which itself returns a
+    bare tensor for the transformer-layer internals), returning ``(out, None)``
+    and ignoring the extra kwargs (need_weights, attn_mask, …).
+    """
+
+    def __init__(self, attn: "LRPMultiheadAttention"):
+        super().__init__()
+        self.attn = attn
+        self.batch_first = True
+
+    @classmethod
+    def from_torch(cls, mha: nn.MultiheadAttention) -> "LRPMultiheadAttentionModule":
+        return cls(LRPMultiheadAttention.from_torch(mha))
+
+    def forward(self, query, key, value, **kwargs):
+        return self.attn(query, key, value), None
+
+
 class LRPTransformerEncoderLayer(nn.Module):
     """LRP-instrumented ``nn.TransformerEncoderLayer`` (post- and pre-norm).
 

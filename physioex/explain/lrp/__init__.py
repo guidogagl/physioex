@@ -22,6 +22,7 @@ from physioex.explain.lrp.pooling import LRPAttentionLayer, LRPAttentionPooling
 from physioex.explain.lrp.recurrent import LRPGRU, LRPLSTM
 from physioex.explain.lrp.transformer import (
     LRPMultiheadAttention,
+    LRPMultiheadAttentionModule,
     LRPTransformerEncoder,
     LRPTransformerEncoderLayer,
     swap_transformer_layers,
@@ -38,6 +39,7 @@ __all__ = [
     "LRPGRU",
     # transformer / attention (Phase 2b)
     "LRPMultiheadAttention",
+    "LRPMultiheadAttentionModule",
     "LRPTransformerEncoderLayer",
     "LRPTransformerEncoder",
     "swap_transformer_layers",

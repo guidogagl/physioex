@@ -133,3 +133,31 @@ class TestModelConservation:
         x = torch.randn(2, 3, 6, 16)
         rel = ModelLRP(model, out_index=1)(x)
         assert rel.shape == x.shape and torch.isfinite(rel).all()
+
+
+class DictModel(nn.Module):
+    """CoReSleep-like: a standalone ``nn.MultiheadAttention`` used with a tuple
+    unpack + keyword args, and a dict output."""
+
+    def __init__(self, d=16, heads=4, n_classes=5):
+        super().__init__()
+        self.proj = nn.Linear(8, d)
+        self.norm = nn.LayerNorm(d)
+        self.attn = nn.MultiheadAttention(d, heads, batch_first=True)
+        self.head = nn.Linear(d, n_classes)
+
+    def forward(self, x):  # (B, L, T, 8)
+        B, L, T, _ = x.shape
+        h = self.proj(x.reshape(B * L, T, -1))
+        a, _ = self.attn(query=self.norm(h), key=h, value=h, need_weights=False)
+        h = h + a
+        return {"combined": self.head(h.mean(dim=1)).view(B, L, -1)}
+
+
+class TestDictAndStandaloneMHA:
+    def test_dict_output_and_mha_adapter_wire_up(self):
+        torch.manual_seed(0)
+        model = DictModel().eval()
+        x = torch.randn(2, 3, 5, 8)
+        rel = ModelLRP(model, out_index=1, output_key="combined")(x)
+        assert rel.shape == x.shape and torch.isfinite(rel).all()

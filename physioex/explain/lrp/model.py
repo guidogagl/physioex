@@ -27,7 +27,7 @@ import torch.nn as nn
 from physioex.explain.lrp.pooling import LRPAttentionLayer, LRPAttentionPooling
 from physioex.explain.lrp.recurrent import LRPGRU, LRPLSTM
 from physioex.explain.lrp.transformer import (
-    LRPMultiheadAttention,
+    LRPMultiheadAttentionModule,
     LRPTransformerEncoder,
     LRPTransformerEncoderLayer,
 )
@@ -58,7 +58,7 @@ def prepare_model_for_lrp(model: nn.Module, epsilon: float = 1e-6) -> nn.Module:
         elif isinstance(child, nn.TransformerEncoderLayer):
             setattr(model, name, LRPTransformerEncoderLayer.from_torch(child))
         elif isinstance(child, nn.MultiheadAttention):
-            setattr(model, name, LRPMultiheadAttention.from_torch(child))
+            setattr(model, name, LRPMultiheadAttentionModule.from_torch(child))
         elif cname in _POOLING_BY_NAME:
             setattr(model, name, _POOLING_BY_NAME[cname](child, epsilon))
         elif isinstance(child, (nn.Linear, nn.Conv1d, nn.Conv2d, nn.Conv3d)):
