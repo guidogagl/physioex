@@ -6,23 +6,28 @@ Recurrent Neural Network Predictions in Sentiment Analysis*, WASSA@EMNLP 2017;
 recipe:
 
 * **weighted (linear) connections** — the gate pre-activations ``W x + U h + b``
-  → ε-LRP (``lxt.explicit.functional.linear_epsilon``);
+  → ε-LRP (:func:`~physioex.explain.lrp._functional.linear_eps`);
 * **sums** — ``c = f⊙c₋₁ + i⊙g`` → relevance split *proportionally* to the
-  summands (``lxt.explicit.functional.add2``);
+  summands (:func:`~physioex.explain.lrp._functional.add_eps`);
 * **multiplicative gates** ``z = gate ⊙ source`` → the **signal-take rule**: all
   relevance to the *source* (the information signal), none to the *gate* (a
-  learned control).  LXT's ``mul2`` splits 50/50 (uniform), so signal-take is a
-  small custom autograd Function here.
+  learned control);
+* the *source* nonlinearities (``tanh``) pass relevance as identity
+  (:func:`~physioex.explain.lrp._functional.st_identity`).
 
-PyTorch's ``nn.LSTM``/``nn.GRU`` are *fused* cuDNN kernels whose internal gate
-products are invisible to hooks.  So :class:`LRPLSTM` / :class:`LRPGRU`
-**subclass** ``nn.LSTM`` / ``nn.GRU`` (so ``isinstance`` checks and the
-``(output, states)`` return interface keep working in host models) and override
-``forward`` to re-run the recurrence at cell level with the LRP functionals.
+Applying ε-LRP separately to ``W x`` and ``U h`` and combining with the
+proportional ``add_eps`` is equivalent to Arras's single ε-rule on the full
+pre-activation up to ``O(ε)``.  Stabilisers are **signed** (``z + ε·sign z``),
+as in Arras, so near-zero *negative* sums (cell states crossing zero) cannot
+blow up.  Bias relevance is absorbed (LRP-ε convention, Arras δ=0): with biases,
+``Σ R`` is a *fraction* of ``f`` — use the conservation diagnostics to see it.
+
+PyTorch's ``nn.LSTM``/``nn.GRU`` are *fused* kernels whose gate products are
+invisible to hooks.  :class:`LRPLSTM` / :class:`LRPGRU` **subclass** them (so
+``isinstance`` checks and the ``(output, states)`` interface keep working in
+host models) and override ``forward`` to re-run the recurrence at cell level.
 Build with :meth:`from_torch`; the forward output is numerically identical to
 the fused module, only the backward carries relevance.
-
-Requires the ``explain`` extra (``lxt``).
 """
 
 from __future__ import annotations
@@ -30,119 +35,92 @@ from __future__ import annotations
 import torch
 import torch.nn as nn
 
+from physioex.explain.lrp._functional import (
+    add_eps,
+    linear_eps,
+    mul_signal_take,
+    st_identity,
+)
 
-# ---------------------------------------------------------------------------
-# LRP primitives for the recurrence
-# ---------------------------------------------------------------------------
-
-
-class _MulSignalTake(torch.autograd.Function):
-    """``y = gate * source`` — forward is the product; backward routes **all**
-    relevance to ``source`` and **none** to ``gate`` (Arras signal-take)."""
-
-    @staticmethod
-    def forward(ctx, gate, source):
-        return gate * source
-
-    @staticmethod
-    def backward(ctx, relevance):
-        return torch.zeros_like(relevance), relevance
+# backwards-compatible aliases (used by tests / older code)
+_st_act = st_identity
 
 
-def mul_signal_take(gate: torch.Tensor, source: torch.Tensor) -> torch.Tensor:
-    """Elementwise ``gate * source`` with the signal-take LRP backward."""
-    return _MulSignalTake.apply(gate, source)
-
-
-def _st_act(preact: torch.Tensor, act: torch.Tensor) -> torch.Tensor:
-    """Straight-through activation: forward value ``act``, backward identity to
-    ``preact`` (relevance passes through the source nonlinearity unchanged)."""
-    return preact + (act - preact).detach()
-
-
-def _copy_config_and_weights(dst, src):
-    """Load ``src``'s trained weights into ``dst`` and freeze them."""
+def _load_frozen(dst, src, epsilon: float):
     dst.load_state_dict(src.state_dict())
     dst.eval()
     for p in dst.parameters():
         p.requires_grad_(False)
-    dst.epsilon = 1e-6
+    dst.epsilon = float(epsilon)
     return dst
 
 
-# ---------------------------------------------------------------------------
-# LRP-instrumented LSTM (subclasses nn.LSTM)
-# ---------------------------------------------------------------------------
+def _check_supported(rnn):
+    if getattr(rnn, "proj_size", 0):
+        raise NotImplementedError("LRP recurrent layers do not support proj_size > 0")
 
 
 class LRPLSTM(nn.LSTM):
     """Cell-level LSTM carrying LRP relevance; drop-in for a trained ``nn.LSTM``.
 
-    Build with :meth:`from_torch`.  ``forward`` returns ``(output, (h_n, c_n))``
-    like ``nn.LSTM``.  Supports ``num_layers``, ``bidirectional``,
-    ``batch_first`` and biases; ``dropout`` is ignored (eval-time attribution);
-    initial states default to zeros.
+    Build with :meth:`from_torch`.  ``forward(x)`` returns ``(output,
+    (h_n, c_n))`` like ``nn.LSTM``; an explicit initial state ``hx`` is not
+    supported (raises), ``dropout`` is ignored (eval-time attribution).
     """
 
     epsilon: float = 1e-6
 
     @classmethod
-    def from_torch(cls, lstm: nn.LSTM) -> "LRPLSTM":
+    def from_torch(cls, lstm: nn.LSTM, epsilon: float = 1e-6) -> "LRPLSTM":
+        _check_supported(lstm)
         obj = cls(
-            lstm.input_size,
-            lstm.hidden_size,
-            num_layers=lstm.num_layers,
-            bias=lstm.bias,
-            batch_first=lstm.batch_first,
+            lstm.input_size, lstm.hidden_size, num_layers=lstm.num_layers,
+            bias=lstm.bias, batch_first=lstm.batch_first,
             bidirectional=lstm.bidirectional,
         )
-        return _copy_config_and_weights(obj, lstm)
+        return _load_frozen(obj, lstm, epsilon)
 
     def _p(self, name):
         return getattr(self, name, None)
 
     def _layer_dir(self, x, w_ih, w_hh, b_ih, b_hh, reverse: bool):
-        from lxt.explicit.functional import add2, linear_epsilon
-
         T, B, _ = x.shape
-        H = self.hidden_size
+        H, eps = self.hidden_size, self.epsilon
         h = x.new_zeros(B, H)
         c = x.new_zeros(B, H)
         steps = range(T - 1, -1, -1) if reverse else range(T)
         outs = [None] * T
         for t in steps:
-            gi = linear_epsilon(x[t], w_ih, b_ih, epsilon=self.epsilon)
-            gh = linear_epsilon(h, w_hh, b_hh, epsilon=self.epsilon)
-            gates = add2(gi, gh)
+            gates = add_eps(
+                linear_eps(x[t], w_ih, b_ih, eps), linear_eps(h, w_hh, b_hh, eps), eps
+            )
             ii, ff, gg, oo = gates.split(H, dim=-1)
-            i = torch.sigmoid(ii)
-            f = torch.sigmoid(ff)
-            g = _st_act(gg, torch.tanh(gg))
-            o = torch.sigmoid(oo)
-            c = add2(mul_signal_take(f, c), mul_signal_take(i, g))
-            h = mul_signal_take(o, _st_act(c, torch.tanh(c)))
+            i, f, o = torch.sigmoid(ii), torch.sigmoid(ff), torch.sigmoid(oo)
+            g = st_identity(gg, torch.tanh(gg))  # source nonlinearity → identity
+            c = add_eps(mul_signal_take(f, c), mul_signal_take(i, g), eps)
+            h = mul_signal_take(o, st_identity(c, torch.tanh(c)))
             outs[t] = h
         return torch.stack(outs, dim=0), h, c
 
     def forward(self, x, hx=None):
+        if hx is not None:
+            raise NotImplementedError("LRPLSTM: explicit initial state hx is not supported")
+        if x.dim() != 3:
+            raise ValueError("LRPLSTM expects a batched 3-D input")
         if self.batch_first:
             x = x.transpose(0, 1)
-        layer_in = x
-        h_states, c_states = [], []
+        layer_in, h_states, c_states = x, [], []
         for layer in range(self.num_layers):
-            suff = f"_l{layer}"
+            s = f"_l{layer}"
             fwd, hf, cf = self._layer_dir(
-                layer_in, self._p("weight_ih" + suff), self._p("weight_hh" + suff),
-                self._p("bias_ih" + suff), self._p("bias_hh" + suff), reverse=False,
+                layer_in, self._p("weight_ih" + s), self._p("weight_hh" + s),
+                self._p("bias_ih" + s), self._p("bias_hh" + s), reverse=False,
             )
             if self.bidirectional:
+                r = s + "_reverse"
                 bwd, hb, cb = self._layer_dir(
-                    layer_in,
-                    self._p("weight_ih" + suff + "_reverse"),
-                    self._p("weight_hh" + suff + "_reverse"),
-                    self._p("bias_ih" + suff + "_reverse"),
-                    self._p("bias_hh" + suff + "_reverse"),
-                    reverse=True,
+                    layer_in, self._p("weight_ih" + r), self._p("weight_hh" + r),
+                    self._p("bias_ih" + r), self._p("bias_hh" + r), reverse=True,
                 )
                 layer_in = torch.cat([fwd, bwd], dim=-1)
                 h_states += [hf, hb]
@@ -151,89 +129,77 @@ class LRPLSTM(nn.LSTM):
                 layer_in = fwd
                 h_states.append(hf)
                 c_states.append(cf)
-        out = layer_in
-        if self.batch_first:
-            out = out.transpose(0, 1)
+        out = layer_in.transpose(0, 1) if self.batch_first else layer_in
         return out, (torch.stack(h_states, 0), torch.stack(c_states, 0))
-
-
-# ---------------------------------------------------------------------------
-# LRP-instrumented GRU (subclasses nn.GRU)
-# ---------------------------------------------------------------------------
 
 
 class LRPGRU(nn.GRU):
     """Cell-level GRU carrying LRP relevance; drop-in for a trained ``nn.GRU``.
 
-    ``forward`` returns ``(output, h_n)`` like ``nn.GRU``.  PyTorch GRU gate
-    order is ``[r, z, n]``.
+    ``forward(x)`` returns ``(output, h_n)`` like ``nn.GRU``.  PyTorch gate order
+    is ``[r, z, n]`` with ``n = tanh(W_in x + b_in + r ⊙ (W_hn h + b_hn))`` and
+    ``h' = (1−z)⊙n + z⊙h``; sources are ``n``, ``h`` and the recurrent
+    pre-activation gated by ``r``.
     """
 
     epsilon: float = 1e-6
 
     @classmethod
-    def from_torch(cls, gru: nn.GRU) -> "LRPGRU":
+    def from_torch(cls, gru: nn.GRU, epsilon: float = 1e-6) -> "LRPGRU":
+        _check_supported(gru)
         obj = cls(
-            gru.input_size,
-            gru.hidden_size,
-            num_layers=gru.num_layers,
-            bias=gru.bias,
-            batch_first=gru.batch_first,
+            gru.input_size, gru.hidden_size, num_layers=gru.num_layers,
+            bias=gru.bias, batch_first=gru.batch_first,
             bidirectional=gru.bidirectional,
         )
-        return _copy_config_and_weights(obj, gru)
+        return _load_frozen(obj, gru, epsilon)
 
     def _p(self, name):
         return getattr(self, name, None)
 
     def _layer_dir(self, x, w_ih, w_hh, b_ih, b_hh, reverse: bool):
-        from lxt.explicit.functional import add2, linear_epsilon
-
         T, B, _ = x.shape
-        H = self.hidden_size
+        H, eps = self.hidden_size, self.epsilon
         h = x.new_zeros(B, H)
         steps = range(T - 1, -1, -1) if reverse else range(T)
         outs = [None] * T
         for t in steps:
-            gi = linear_epsilon(x[t], w_ih, b_ih, epsilon=self.epsilon)
-            gh = linear_epsilon(h, w_hh, b_hh, epsilon=self.epsilon)
+            gi = linear_eps(x[t], w_ih, b_ih, eps)
+            gh = linear_eps(h, w_hh, b_hh, eps)
             i_r, i_z, i_n = gi.split(H, dim=-1)
             h_r, h_z, h_n = gh.split(H, dim=-1)
-            r = torch.sigmoid(add2(i_r, h_r))
-            z = torch.sigmoid(add2(i_z, h_z))
-            n_pre = add2(i_n, mul_signal_take(r, h_n))
-            n = _st_act(n_pre, torch.tanh(n_pre))
-            one_minus_z = 1.0 - z
-            h = add2(mul_signal_take(one_minus_z, n), mul_signal_take(z, h))
+            r = torch.sigmoid(add_eps(i_r, h_r, eps))
+            z = torch.sigmoid(add_eps(i_z, h_z, eps))
+            n_pre = add_eps(i_n, mul_signal_take(r, h_n), eps)
+            n = st_identity(n_pre, torch.tanh(n_pre))
+            h = add_eps(mul_signal_take(1.0 - z, n), mul_signal_take(z, h), eps)
             outs[t] = h
         return torch.stack(outs, dim=0), h
 
     def forward(self, x, hx=None):
+        if hx is not None:
+            raise NotImplementedError("LRPGRU: explicit initial state hx is not supported")
+        if x.dim() != 3:
+            raise ValueError("LRPGRU expects a batched 3-D input")
         if self.batch_first:
             x = x.transpose(0, 1)
-        layer_in = x
-        h_states = []
+        layer_in, h_states = x, []
         for layer in range(self.num_layers):
-            suff = f"_l{layer}"
+            s = f"_l{layer}"
             fwd, hf = self._layer_dir(
-                layer_in, self._p("weight_ih" + suff), self._p("weight_hh" + suff),
-                self._p("bias_ih" + suff), self._p("bias_hh" + suff), reverse=False,
+                layer_in, self._p("weight_ih" + s), self._p("weight_hh" + s),
+                self._p("bias_ih" + s), self._p("bias_hh" + s), reverse=False,
             )
             if self.bidirectional:
+                r = s + "_reverse"
                 bwd, hb = self._layer_dir(
-                    layer_in,
-                    self._p("weight_ih" + suff + "_reverse"),
-                    self._p("weight_hh" + suff + "_reverse"),
-                    self._p("bias_ih" + suff + "_reverse"),
-                    self._p("bias_hh" + suff + "_reverse"),
-                    reverse=True,
+                    layer_in, self._p("weight_ih" + r), self._p("weight_hh" + r),
+                    self._p("bias_ih" + r), self._p("bias_hh" + r), reverse=True,
                 )
                 layer_in = torch.cat([fwd, bwd], dim=-1)
                 h_states += [hf, hb]
             else:
                 layer_in = fwd
                 h_states.append(hf)
-        out = layer_in
-        if self.batch_first:
-            out = out.transpose(0, 1)
+        out = layer_in.transpose(0, 1) if self.batch_first else layer_in
         return out, torch.stack(h_states, 0)

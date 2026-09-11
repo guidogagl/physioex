@@ -46,7 +46,7 @@ dev = ["ruff", "pytest", "pytest-cov", "black~=22.0"]
 legacy = ["pytorch_lightning>=2.5.0", "lightning>=2.5.0", "torchmetrics>=1.8.0"]
 explain = [
     "zennit>=0.5.1",   # LRP rules/composites/canonizers for CNN/RNN architectures
-    "lxt>=0.6.0",      # AttnLRP: attention + LayerNorm rules for transformer/foundation models
+    "lxt>=2.0",        # lxt.explicit rules (EpsilonRule/IdentityRule); 0.x lacks the explicit API
 ]
 docs = [
     "sphinx==8.1.3",

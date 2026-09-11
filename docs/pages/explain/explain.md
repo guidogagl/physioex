@@ -64,29 +64,57 @@ is **optional** — install the extra:
 pip install "physioex[explain]"
 ```
 
-- **`LRP`** (`lrp/attributor.py`) wraps a trained model directly (LRP needs the
-  layered `nn.Module` graph, unlike the `Funct`/`SeqFunct` scalar wrappers) and
-  returns relevance shaped like the input `(B, L, C, T)`:
+Two entry points, both seeding the target neuron with its **logit value** so
+that `Σ R ≈ f_c(x)` and returning relevance shaped like the input:
 
-  ```python
-  from physioex.explain.lrp import LRP
-  relevance = LRP(model, out_index=target_class)(x)
-  ```
+| Model family | Entry point | Rules |
+|---|---|---|
+| Feed-forward / CNN (Tsinalis, Chambon2018) | `LRP` (Zennit) | ε dense · γ conv · **w²** first layer (unbounded EEG, *not* the pixel z-box) · BatchNorm canonized · αβ/flat/z-box configurable via `physioex_composite` |
+| Recurrent (TinySleepNet, SeqSleepNet, L-SeqSleepNet, ProtoSleepNet-seq) | `ModelLRP` | **Arras signal-take** LSTM/GRU (`LRPLSTM`/`LRPGRU`, cell-level, forward identical to the fused module) · ε on the learnable filterbank / linears · CP-LRP on the attention poolings |
+| Attention / transformer (SleepTransformer, CoReSleep, ProtoSleepNet-tf) | `ModelLRP` | **CP-LRP** attention (value path; Ali et al. 2022) · identity rule on LayerNorm/GELU · proportional rule on residuals · ε on projections/FFN |
 
-- **Composites** (`lrp/composites.py`) map module types to rules following the
-  best-practice recipe (Montavon et al. 2019): `physioex_composite` uses
-  **ε** on dense layers, **γ** on convolutions and the **w²-rule** on the first
-  layer — the correct input rule for PhysioEx's *unbounded* z-scored EEG (the
-  pixel-domain `z-box` rule applies only to bounded inputs). `epsilon_composite`
-  is a pure-ε composite that conserves relevance, used as the reference for the
-  conservation checks.
-- **Canonizers** (`lrp/canonizers.py`) merge `BatchNorm` into adjacent
-  linear/convolution layers (`default_canonizers`), required because LRP is not
-  implementation-invariant across `BN ↔ Dense` ordering.
-- **Backends**: built on [Zennit](https://github.com/chr5tphr/zennit) for the
-  CNN/RNN architectures; attention + LayerNorm in the transformer and foundation
-  encoders use [LXT / AttnLRP](https://github.com/rachtibat/LRP-eXplains-Transformers)
-  (Achtibat et al., ICML 2024).
+```python
+from physioex.explain.lrp import LRP, ModelLRP
+
+relevance = LRP(cnn_model, out_index=2)(x)                       # Zennit path
+relevance, report = ModelLRP(seq_model, in_index=10, out_index=2)(x, return_report=True)
+print(report)   # Σ R / f per sample — 1.0 = exact conservation
+relevance = ModelLRP(coresleep, output_key="combined")(x)      # dict outputs
+```
+
+**How `ModelLRP` works.** The trained model is deep-copied and rewritten
+(`prepare_model_for_lrp`): fused `nn.LSTM`/`nn.GRU` become `LRPLSTM`/`LRPGRU`
+(subclasses, so `isinstance` checks and the `(output, states)` interface keep
+working), `nn.TransformerEncoder`/`MultiheadAttention` become their CP-LRP
+versions, PhysioEx's softmax poolings (`AttentionPooling`, `AttentionLayer`,
+`ChannelMixer`) and the `LearnableFilterbank` get dedicated adapters, remaining
+`Linear`/`Conv` leaves get ε-LRP, BatchNorm is folded into the preceding layer,
+and norms/activations use the identity rule. Plain `+` residuals written in a
+model's own `forward` are redirected at runtime to the proportional rule
+(`patch_residuals=True`) — a plain add would give both branches the full
+relevance and over-count. Register your own blocks with
+`register_lrp_adapter(cls, factory)`; `audit_lrp_coverage(model)` (also
+`ModelLRP(...).uncovered`, and `strict=True`) lists parametric leaves left on
+plain autograd, which would propagate *gradient* instead of relevance.
+
+**Reading the numbers.** Conservation is exact (up to ε) for bias-free
+networks; **biases absorb relevance** (LRP-ε convention), so on real models
+`Σ R / f` is below 1 — `ConservationReport.absorbed` shows how much. CP-LRP
+treats the attention matrix as constant: features acting only through *where
+to attend* (query/key path) receive zero relevance by design; full AttnLRP
+(Achtibat et al. 2024) is non-conserving and not implemented. All stabilisers
+are signed (`z + ε·sign z`), as in Arras et al. Not supported (raise): attention
+masks, `batch_first=False` transformers, explicit RNN initial states, `proj_size`;
+ProtoSleepNet's VQ path (`quantize=True`) runs under `no_grad` and stops relevance.
+
+- **Composites** (`lrp/composites.py`): `physioex_composite` (ε/γ/w²),
+  `epsilon_composite` (pure-ε reference). **Canonizers** (`lrp/canonizers.py`):
+  `default_canonizers` (BatchNorm merge).
+- **Blocks**: `lrp/recurrent.py`, `lrp/transformer.py`, `lrp/pooling.py`;
+  shared primitives in `lrp/_functional.py`; diagnostics in `lrp/diagnostics.py`.
+- **Backends**: [Zennit](https://github.com/chr5tphr/zennit) (composites,
+  canonizers) and [LXT](https://github.com/rachtibat/LRP-eXplains-Transformers)
+  ≥ 2.0 (`EpsilonRule`/`IdentityRule` module wrappers).
 
 See the [API Reference](../../api/index.md) for verified signatures across all
 families.
