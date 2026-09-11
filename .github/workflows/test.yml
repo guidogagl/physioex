@@ -27,7 +27,7 @@ jobs:
           # torchaudio must come from the same CPU index as torch, otherwise the
           # transitively-installed (braindecode) torchaudio has a mismatched ABI
           # and fails to load its compiled _torchaudio.so.
-          pip install torch torchaudio --index-url https://download.pytorch.org/whl/cpu
+          pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
 
       - name: Install package (editable) with dev + legacy + explain extras
         # Editable so coverage's source=["physioex"] measures the executed tree
