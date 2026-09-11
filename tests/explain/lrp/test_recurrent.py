@@ -22,7 +22,7 @@ def _seed_and_relevance(module, x, t, k):
     """Seed output relevance at ``out[:, t, k]`` (logit value) and return
     (target_value, total_input_relevance) per sample."""
     x = x.detach().requires_grad_(True)
-    out = module(x)  # (B, T, dir*H)
+    out = module(x)[0]  # (output, states) like nn.LSTM/GRU -> take output
     seed = torch.zeros_like(out)
     seed[:, t, k] = out[:, t, k].detach()
     out.backward(seed)
@@ -47,7 +47,7 @@ class TestLRPLSTM:
         x = torch.randn(3, 7, 6)
         with torch.no_grad():
             ref, _ = lstm(x)
-            got = lrp(x)
+            got = lrp(x)[0]
         assert got.shape == ref.shape
         assert torch.allclose(got, ref, atol=1e-5), (got - ref).abs().max()
 
@@ -85,7 +85,7 @@ class TestLRPGRU:
         x = torch.randn(3, 7, 6)
         with torch.no_grad():
             ref, _ = gru(x)
-            got = lrp(x)
+            got = lrp(x)[0]
         assert got.shape == ref.shape
         assert torch.allclose(got, ref, atol=1e-5), (got - ref).abs().max()
 

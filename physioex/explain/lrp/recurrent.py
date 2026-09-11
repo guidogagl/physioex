@@ -146,16 +146,17 @@ class LRPLSTM(nn.Module):
             # h' = o⊙tanh(c') ; source is tanh(c') → identity bwd to c'
             h = mul_signal_take(o, _st_act(c, torch.tanh(c)))
             outs[t] = h
-        return torch.stack(outs, dim=0)
+        return torch.stack(outs, dim=0), h, c  # (T,B,H), final (h, c)
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: torch.Tensor):
+        """Returns ``(output, (h_n, c_n))`` like ``nn.LSTM``."""
         if self.batch_first:
             x = x.transpose(0, 1)  # (B, T, in) -> (T, B, in)
-        num_dir = 2 if self.bidirectional else 1
         layer_in = x
+        h_states, c_states = [], []
         for layer in range(self.num_layers):
             suff = f"_l{layer}"
-            fwd = self._layer_dir(
+            fwd, hf, cf = self._layer_dir(
                 layer_in,
                 self._p("weight_ih" + suff),
                 self._p("weight_hh" + suff),
@@ -164,7 +165,7 @@ class LRPLSTM(nn.Module):
                 reverse=False,
             )
             if self.bidirectional:
-                bwd = self._layer_dir(
+                bwd, hb, cb = self._layer_dir(
                     layer_in,
                     self._p("weight_ih" + suff + "_reverse"),
                     self._p("weight_hh" + suff + "_reverse"),
@@ -173,12 +174,16 @@ class LRPLSTM(nn.Module):
                     reverse=True,
                 )
                 layer_in = torch.cat([fwd, bwd], dim=-1)  # (T, B, 2H)
+                h_states += [hf, hb]
+                c_states += [cf, cb]
             else:
                 layer_in = fwd
+                h_states.append(hf)
+                c_states.append(cf)
         out = layer_in
         if self.batch_first:
             out = out.transpose(0, 1)  # (T, B, dir*H) -> (B, T, dir*H)
-        return out
+        return out, (torch.stack(h_states, 0), torch.stack(c_states, 0))
 
 
 # ---------------------------------------------------------------------------
@@ -256,15 +261,17 @@ class LRPGRU(nn.Module):
             one_minus_z = 1.0 - z
             h = add2(mul_signal_take(one_minus_z, n), mul_signal_take(z, h))
             outs[t] = h
-        return torch.stack(outs, dim=0)
+        return torch.stack(outs, dim=0), h  # (T,B,H), final h
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: torch.Tensor):
+        """Returns ``(output, h_n)`` like ``nn.GRU``."""
         if self.batch_first:
             x = x.transpose(0, 1)
         layer_in = x
+        h_states = []
         for layer in range(self.num_layers):
             suff = f"_l{layer}"
-            fwd = self._layer_dir(
+            fwd, hf = self._layer_dir(
                 layer_in,
                 self._p("weight_ih" + suff),
                 self._p("weight_hh" + suff),
@@ -273,7 +280,7 @@ class LRPGRU(nn.Module):
                 reverse=False,
             )
             if self.bidirectional:
-                bwd = self._layer_dir(
+                bwd, hb = self._layer_dir(
                     layer_in,
                     self._p("weight_ih" + suff + "_reverse"),
                     self._p("weight_hh" + suff + "_reverse"),
@@ -282,9 +289,11 @@ class LRPGRU(nn.Module):
                     reverse=True,
                 )
                 layer_in = torch.cat([fwd, bwd], dim=-1)
+                h_states += [hf, hb]
             else:
                 layer_in = fwd
+                h_states.append(hf)
         out = layer_in
         if self.batch_first:
             out = out.transpose(0, 1)
-        return out
+        return out, torch.stack(h_states, 0)
