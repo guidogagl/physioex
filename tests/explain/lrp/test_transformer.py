@@ -4,7 +4,6 @@ import pytest
 import torch
 import torch.nn as nn
 
-pytest.importorskip("lxt.explicit", reason="requires the 'explain' extra (lxt>=2.0)")
 
 from physioex.explain.lrp.transformer import (  # noqa: E402
     LRPMultiheadAttention,

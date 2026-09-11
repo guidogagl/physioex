@@ -8,7 +8,7 @@ pass carries relevance:
 * standalone ``nn.MultiheadAttention``    → :class:`LRPMultiheadAttentionModule`
 * registered custom blocks (PhysioEx's softmax poolings, the learnable
   filterbank; see :func:`register_lrp_adapter`) → their CP-LRP / ε adapters
-* leaf ``Linear`` / ``Conv``              → LXT ``EpsilonRule`` (ε-LRP)
+* leaf ``Linear`` / ``Conv``              → ``EpsilonRule`` (ε-LRP, vjp)
 * ``BatchNorm``                           → merged into the preceding linear layer
   (Zennit canonizer), then identity
 * ``LayerNorm`` / ``GroupNorm`` / element-wise activations → identity rule
@@ -23,7 +23,7 @@ target-seeded backward.  Plain ``+`` residuals written in a model's own
 ``TorchFunctionMode`` (``patch_residuals=True``); without it a residual gives
 both branches the full relevance and total relevance is over-counted.
 
-Requires the ``explain`` extra (``zennit``, ``lxt>=2.0``).
+Requires the ``explain`` extra (``zennit``, for composites and BatchNorm canonization).
 """
 
 from __future__ import annotations
@@ -37,6 +37,7 @@ import torch
 import torch.nn as nn
 
 from physioex.explain.lrp._functional import add_eps, target_seed
+from physioex.explain.lrp._rules import EpsilonRule, IdentityRule, _RuleWrapper
 from physioex.explain.lrp.diagnostics import ConservationReport
 from physioex.explain.lrp.pooling import (
     LRPAttentionLayer,
@@ -62,10 +63,8 @@ _ADAPTERS_BY_CLASS: Dict[type, AdapterFactory] = {}
 
 
 def _epsilon_rule_factory(module: nn.Module, epsilon: float) -> nn.Module:
-    """ε-LRP via LXT's vjp super-function — exact for modules linear in their
+    """ε-LRP via a vector-Jacobian product — exact for modules linear in their
     input (e.g. ``LearnableFilterbank``: ``x @ (sigmoid(W)·S)``)."""
-    from lxt.explicit.rules import EpsilonRule
-
     return EpsilonRule(module, epsilon)
 
 
@@ -130,11 +129,7 @@ _CONSTANT_LEAVES = (nn.Embedding,)
 
 
 def _is_lrp_module(m: nn.Module) -> bool:
-    try:
-        from lxt.explicit.rules import WrapModule
-    except ImportError:  # pragma: no cover
-        WrapModule = ()
-    return isinstance(m, _LRP_TYPES) or isinstance(m, WrapModule)
+    return isinstance(m, _LRP_TYPES) or isinstance(m, _RuleWrapper)
 
 
 def _bn_is_identity(bn: nn.Module) -> bool:
@@ -162,8 +157,6 @@ def _merge_batchnorm(model: nn.Module):
 
 def _replace(child: nn.Module, epsilon: float):
     """Return the LRP replacement for ``child`` or ``None`` to recurse into it."""
-    from lxt.explicit.rules import EpsilonRule, IdentityRule
-
     if _is_lrp_module(child):
         return child  # already prepared (idempotence)
     if isinstance(child, nn.LSTM):

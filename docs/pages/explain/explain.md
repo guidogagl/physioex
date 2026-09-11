@@ -112,9 +112,10 @@ ProtoSleepNet's VQ path (`quantize=True`) runs under `no_grad` and stops relevan
   `default_canonizers` (BatchNorm merge).
 - **Blocks**: `lrp/recurrent.py`, `lrp/transformer.py`, `lrp/pooling.py`;
   shared primitives in `lrp/_functional.py`; diagnostics in `lrp/diagnostics.py`.
-- **Backends**: [Zennit](https://github.com/chr5tphr/zennit) (composites,
-  canonizers) and [LXT](https://github.com/rachtibat/LRP-eXplains-Transformers)
-  ≥ 2.0 (`EpsilonRule`/`IdentityRule` module wrappers).
+- **Backends**: [Zennit](https://github.com/chr5tphr/zennit) for the composites
+  and BatchNorm canonization; the recurrent, attention and pooling rules are
+  implemented in PhysioEx (`_functional.py`, `_rules.py`) following Arras et al.,
+  Ali et al. (CP-LRP) and the LXT conventions — no LXT dependency.
 
 See the [API Reference](../../api/index.md) for verified signatures across all
 families.

@@ -18,6 +18,7 @@ Requires the optional ``explain`` extra::
     pip install "physioex[explain]"
 """
 
+from physioex.explain.lrp._rules import EpsilonRule, IdentityRule
 from physioex.explain.lrp._functional import (
     add_eps,
     linear_eps,
@@ -77,7 +78,9 @@ __all__ = [
     "LRPAttentionLayer",
     "LRPChannelMixer",
     "cp_weighted_pool",
-    # primitives
+    # rules & primitives
+    "EpsilonRule",
+    "IdentityRule",
     "linear_eps",
     "add_eps",
     "mul_signal_take",

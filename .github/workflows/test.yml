@@ -32,7 +32,7 @@ jobs:
       - name: Install package (editable) with dev + legacy + explain extras
         # Editable so coverage's source=["physioex"] measures the executed tree
         # (a non-editable install runs the site-packages copy -> 0% reported).
-        # 'explain' pulls in zennit/lxt so the LRP tests run instead of skipping.
+        # 'explain' pulls in zennit so the LRP tests run instead of skipping.
         run: pip install -e .[dev,legacy,explain]
 
       - name: Run test suite with coverage gate

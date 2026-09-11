@@ -3,7 +3,6 @@
 import pytest
 import torch
 
-pytest.importorskip("lxt.explicit", reason="requires the 'explain' extra (lxt>=2.0)")
 
 from physioex.explain.lrp._functional import (  # noqa: E402
     add_eps,

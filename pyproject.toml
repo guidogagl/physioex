@@ -45,8 +45,7 @@ datasets = ["mne>=1.6.0"]              # HOMEPAP EDF fallback reader (data.datas
 dev = ["ruff", "pytest", "pytest-cov", "black~=22.0"]
 legacy = ["pytorch_lightning>=2.5.0", "lightning>=2.5.0", "torchmetrics>=1.8.0"]
 explain = [
-    "zennit>=0.5.1",   # LRP rules/composites/canonizers for CNN/RNN architectures
-    "lxt>=2.0",        # lxt.explicit rules (EpsilonRule/IdentityRule); 0.x lacks the explicit API
+    "zennit>=0.5.1",   # LRP composites/canonizers (Zennit path) + BatchNorm merging; attention/RNN rules are built in
 ]
 docs = [
     "sphinx==8.1.3",

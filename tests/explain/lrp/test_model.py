@@ -14,7 +14,6 @@ import pytest
 import torch
 import torch.nn as nn
 
-pytest.importorskip("lxt.explicit", reason="requires the 'explain' extra (lxt>=2.0)")
 pytest.importorskip("zennit")
 
 from physioex.explain.lrp import (  # noqa: E402
