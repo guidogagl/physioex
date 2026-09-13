@@ -113,6 +113,24 @@ def mul_signal_take(gate, source):
     return _MulSignalTake.apply(gate, source)
 
 
+class _MulUniform(torch.autograd.Function):
+    """``y = a * b``; backward splits relevance 50/50 between the factors (the
+    "uniform" product rule used e.g. by LXT's ``mul2`` and Arras 2019's LRP-all)."""
+
+    @staticmethod
+    def forward(ctx, a, b):
+        return a * b
+
+    @staticmethod
+    def backward(ctx, relevance):
+        half = 0.5 * relevance
+        return half, half
+
+
+def mul_uniform(a, b):
+    return _MulUniform.apply(a, b)
+
+
 class _STIdentity(torch.autograd.Function):
     """Forward returns ``act`` bit-exactly; backward passes relevance to ``pre``."""
 

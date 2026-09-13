@@ -39,6 +39,7 @@ from physioex.explain.lrp._functional import (
     add_eps,
     linear_eps,
     mul_signal_take,
+    mul_uniform,
     st_identity,
 )
 
@@ -46,12 +47,18 @@ from physioex.explain.lrp._functional import (
 _st_act = st_identity
 
 
-def _load_frozen(dst, src, epsilon: float):
+_GATE_RULES = {"signal_take": mul_signal_take, "uniform": mul_uniform}
+
+
+def _load_frozen(dst, src, epsilon: float, gate_rule: str = "signal_take"):
+    if gate_rule not in _GATE_RULES:
+        raise ValueError(f"gate_rule must be one of {sorted(_GATE_RULES)}, got {gate_rule!r}")
     dst.load_state_dict(src.state_dict())
     dst.eval()
     for p in dst.parameters():
         p.requires_grad_(False)
     dst.epsilon = float(epsilon)
+    dst.gate_rule = gate_rule
     return dst
 
 
@@ -69,9 +76,12 @@ class LRPLSTM(nn.LSTM):
     """
 
     epsilon: float = 1e-6
+    gate_rule: str = "signal_take"  # or "uniform" (50/50 product rule)
 
     @classmethod
-    def from_torch(cls, lstm: nn.LSTM, epsilon: float = 1e-6) -> "LRPLSTM":
+    def from_torch(
+        cls, lstm: nn.LSTM, epsilon: float = 1e-6, gate_rule: str = "signal_take"
+    ) -> "LRPLSTM":
         _check_supported(lstm)
         ref = next(lstm.parameters())
         obj = cls(
@@ -84,7 +94,7 @@ class LRPLSTM(nn.LSTM):
             device=ref.device,
             dtype=ref.dtype,
         )
-        return _load_frozen(obj, lstm, epsilon)
+        return _load_frozen(obj, lstm, epsilon, gate_rule)
 
     def _p(self, name):
         return getattr(self, name, None)
@@ -92,6 +102,7 @@ class LRPLSTM(nn.LSTM):
     def _layer_dir(self, x, w_ih, w_hh, b_ih, b_hh, reverse: bool):
         T, B, _ = x.shape
         H, eps = self.hidden_size, self.epsilon
+        mul = _GATE_RULES[self.gate_rule]
         h = x.new_zeros(B, H)
         c = x.new_zeros(B, H)
         steps = range(T - 1, -1, -1) if reverse else range(T)
@@ -103,8 +114,8 @@ class LRPLSTM(nn.LSTM):
             ii, ff, gg, oo = gates.split(H, dim=-1)
             i, f, o = torch.sigmoid(ii), torch.sigmoid(ff), torch.sigmoid(oo)
             g = st_identity(gg, torch.tanh(gg))  # source nonlinearity → identity
-            c = add_eps(mul_signal_take(f, c), mul_signal_take(i, g), eps)
-            h = mul_signal_take(o, st_identity(c, torch.tanh(c)))
+            c = add_eps(mul(f, c), mul(i, g), eps)
+            h = mul(o, st_identity(c, torch.tanh(c)))
             outs[t] = h
         return torch.stack(outs, dim=0), h, c
 
@@ -159,9 +170,12 @@ class LRPGRU(nn.GRU):
     """
 
     epsilon: float = 1e-6
+    gate_rule: str = "signal_take"  # or "uniform" (50/50 product rule)
 
     @classmethod
-    def from_torch(cls, gru: nn.GRU, epsilon: float = 1e-6) -> "LRPGRU":
+    def from_torch(
+        cls, gru: nn.GRU, epsilon: float = 1e-6, gate_rule: str = "signal_take"
+    ) -> "LRPGRU":
         _check_supported(gru)
         ref = next(gru.parameters())
         obj = cls(
@@ -174,7 +188,7 @@ class LRPGRU(nn.GRU):
             device=ref.device,
             dtype=ref.dtype,
         )
-        return _load_frozen(obj, gru, epsilon)
+        return _load_frozen(obj, gru, epsilon, gate_rule)
 
     def _p(self, name):
         return getattr(self, name, None)
@@ -182,6 +196,7 @@ class LRPGRU(nn.GRU):
     def _layer_dir(self, x, w_ih, w_hh, b_ih, b_hh, reverse: bool):
         T, B, _ = x.shape
         H, eps = self.hidden_size, self.epsilon
+        mul = _GATE_RULES[self.gate_rule]
         h = x.new_zeros(B, H)
         steps = range(T - 1, -1, -1) if reverse else range(T)
         outs = [None] * T
@@ -192,9 +207,9 @@ class LRPGRU(nn.GRU):
             h_r, h_z, h_n = gh.split(H, dim=-1)
             r = torch.sigmoid(add_eps(i_r, h_r, eps))
             z = torch.sigmoid(add_eps(i_z, h_z, eps))
-            n_pre = add_eps(i_n, mul_signal_take(r, h_n), eps)
+            n_pre = add_eps(i_n, mul(r, h_n), eps)
             n = st_identity(n_pre, torch.tanh(n_pre))
-            h = add_eps(mul_signal_take(1.0 - z, n), mul_signal_take(z, h), eps)
+            h = add_eps(mul(1.0 - z, n), mul(z, h), eps)
             outs[t] = h
         return torch.stack(outs, dim=0), h
 

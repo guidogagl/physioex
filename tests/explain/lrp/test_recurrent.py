@@ -128,3 +128,33 @@ class TestInterface:
         lstm = nn.LSTM(4, 3, batch_first=True)
         LRPLSTM.from_torch(lstm)
         assert all(p.requires_grad for p in lstm.parameters())
+
+
+class TestGateRule:
+    def test_uniform_gate_rule_forward_and_conservation(self):
+        torch.manual_seed(2)
+        lstm = nn.LSTM(4, 3, batch_first=True, bidirectional=True, bias=False).eval()
+        lrp = LRPLSTM.from_torch(lstm, gate_rule="uniform")
+        x = torch.randn(2, 5, 4)
+        with torch.no_grad():
+            assert torch.allclose(lrp(x)[0], lstm(x)[0], atol=1e-5)
+        f, r = _conservation(lrp, x, t=2, k=4)
+        assert torch.allclose(r, f, rtol=1e-3, atol=1e-5), (r, f)  # 50/50 split also conserves
+
+    def test_gate_rules_differ_and_invalid_raises(self):
+        torch.manual_seed(2)
+        gru = nn.GRU(4, 3, batch_first=True, bias=False).eval()
+        x = torch.randn(2, 5, 4)
+        _, r_st = _conservation(LRPGRU.from_torch(gru, gate_rule="signal_take"), x, t=4, k=1)
+        a = LRPGRU.from_torch(gru, gate_rule="signal_take")
+        b = LRPGRU.from_torch(gru, gate_rule="uniform")
+        xa = x.clone().requires_grad_(True)
+        xb = x.clone().requires_grad_(True)
+        for m, xx in ((a, xa), (b, xb)):
+            out = m(xx)[0]
+            seed = torch.zeros_like(out)
+            seed[:, 4, 1] = out[:, 4, 1].detach()
+            out.backward(seed)
+        assert not torch.allclose(xa.grad, xb.grad)  # different per-element attribution
+        with pytest.raises(ValueError):
+            LRPGRU.from_torch(gru, gate_rule="bogus")
