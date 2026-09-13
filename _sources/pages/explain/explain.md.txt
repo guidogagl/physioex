@@ -64,6 +64,12 @@ is **optional** — install the extra:
 pip install "physioex[explain]"
 ```
 
+The extra pulls in `zennit`, and therefore `torchvision`. On a CPU-only `torch`
+from the PyTorch index, install `torch torchvision` from that same index *first*
+(`pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu`),
+or pip will fetch a mismatched CUDA `torchvision` from PyPI that fails at import
+(`operator torchvision::nms does not exist`).
+
 Two entry points, both seeding the target neuron with its **logit value** so
 that `Σ R ≈ f_c(x)` and returning relevance shaped like the input:
 

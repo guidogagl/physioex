@@ -481,6 +481,11 @@ is <strong>optional</strong> — install the extra:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"physioex[explain]"</span>
 </pre></div>
 </div>
+<p>The extra pulls in <code class="docutils literal notranslate"><span class="pre">zennit</span></code>, and therefore <code class="docutils literal notranslate"><span class="pre">torchvision</span></code>. On a CPU-only <code class="docutils literal notranslate"><span class="pre">torch</span></code>
+from the PyTorch index, install <code class="docutils literal notranslate"><span class="pre">torch</span> <span class="pre">torchvision</span></code> from that same index <em>first</em>
+(<code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">torch</span> <span class="pre">torchvision</span> <span class="pre">--index-url</span> <span class="pre">https://download.pytorch.org/whl/cpu</span></code>),
+or pip will fetch a mismatched CUDA <code class="docutils literal notranslate"><span class="pre">torchvision</span></code> from PyPI that fails at import
+(<code class="docutils literal notranslate"><span class="pre">operator</span> <span class="pre">torchvision::nms</span> <span class="pre">does</span> <span class="pre">not</span> <span class="pre">exist</span></code>).</p>
 <p>Two entry points, both seeding the target neuron with its <strong>logit value</strong> so
 that <code class="docutils literal notranslate"><span class="pre">Σ</span> <span class="pre">R</span> <span class="pre">≈</span> <span class="pre">f_c(x)</span></code> and returning relevance shaped like the input:</p>
 <div class="pst-scrollable-table-container"><table class="table">

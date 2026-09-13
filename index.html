@@ -481,8 +481,20 @@ $<span class="w"> </span><span class="nb">cd</span><span class="w"> </span>physi
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"physioex[foundation]"</span><span class="w">   </span><span class="c1"># transformers, for the REVE encoder</span>
 $<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"physioex[datasets]"</span><span class="w">     </span><span class="c1"># mne, for the HOMEPAP EDF fallback reader</span>
 $<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"physioex[tracking]"</span><span class="w">     </span><span class="c1"># tensorboard / wandb logging</span>
+$<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"physioex[explain]"</span><span class="w">      </span><span class="c1"># zennit, for Layer-wise Relevance Propagation</span>
 </pre></div>
 </div>
+<blockquote>
+<div><p><strong>Note on <code class="docutils literal notranslate"><span class="pre">torchvision</span></code> (CPU-only installs).</strong> The <code class="docutils literal notranslate"><span class="pre">explain</span></code> extra depends on
+<code class="docutils literal notranslate"><span class="pre">zennit</span></code>, which requires <code class="docutils literal notranslate"><span class="pre">torchvision</span></code>. If your <code class="docutils literal notranslate"><span class="pre">torch</span></code> comes from the PyTorch
+CPU index, install <code class="docutils literal notranslate"><span class="pre">torchvision</span></code> from the <strong>same</strong> index <em>before</em> the extra,
+otherwise pip pulls a CUDA build from PyPI that fails at import with
+<code class="docutils literal notranslate"><span class="pre">operator</span> <span class="pre">torchvision::nms</span> <span class="pre">does</span> <span class="pre">not</span> <span class="pre">exist</span></code>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>torch<span class="w"> </span>torchvision<span class="w"> </span>--index-url<span class="w"> </span>https://download.pytorch.org/whl/cpu
+$<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"physioex[explain]"</span>
+</pre></div>
+</div>
+</div></blockquote>
 </section>
 </section>
 <section id="quickstart">
