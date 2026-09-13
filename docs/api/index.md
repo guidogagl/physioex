@@ -128,7 +128,7 @@ Metrics, statistics and progress helpers are documented at module level:
 ## `physioex.explain`
 
 Post-hoc attribution, the foundational Conceptual Spectral Decomposition (CSD),
-and prototype discovery.
+prototype discovery, and Layer-wise Relevance Propagation (`explain` extra).
 
 ```{eval-rst}
 .. autosummary::
@@ -136,4 +136,5 @@ and prototype discovery.
 
    physioex.explain.foundational
    physioex.explain.prototypes.posthoc
+   physioex.explain.lrp
 ```
