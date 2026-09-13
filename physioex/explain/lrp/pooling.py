@@ -100,7 +100,8 @@ class LRPChannelMixer(_PoolAdapter):
     @staticmethod
     def matches(module: nn.Module) -> bool:
         return all(
-            hasattr(module, n) for n in ("modality_emb", "mcy", "mixer", "attn_pool", "dropout")
+            hasattr(module, n)
+            for n in ("modality_emb", "mcy", "mixer", "attn_pool", "dropout")
         )
 
     def forward(self, x, zero_emb):

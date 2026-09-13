@@ -91,11 +91,17 @@ class LRPMultiheadAttention(nn.Module):
     @classmethod
     def from_torch(cls, mha: nn.MultiheadAttention, epsilon: float = 1e-6):
         if not getattr(mha, "_qkv_same_embed_dim", True):
-            raise NotImplementedError("LRPMultiheadAttention: q/k/v embed dims must match")
+            raise NotImplementedError(
+                "LRPMultiheadAttention: q/k/v embed dims must match"
+            )
         if not mha.batch_first:
-            raise NotImplementedError("LRPMultiheadAttention: batch_first=False is not supported")
+            raise NotImplementedError(
+                "LRPMultiheadAttention: batch_first=False is not supported"
+            )
         if mha.bias_k is not None or mha.add_zero_attn:
-            raise NotImplementedError("LRPMultiheadAttention: bias_k/add_zero_attn unsupported")
+            raise NotImplementedError(
+                "LRPMultiheadAttention: bias_k/add_zero_attn unsupported"
+            )
         obj = cls(mha.embed_dim, mha.num_heads, epsilon)
 
         def frozen(t):
@@ -159,14 +165,29 @@ class LRPMultiheadAttentionModule(nn.Module):
     def from_torch(cls, mha: nn.MultiheadAttention, epsilon: float = 1e-6):
         return cls(LRPMultiheadAttention.from_torch(mha, epsilon))
 
-    def forward(self, query, key, value, need_weights=True, **kwargs):
-        for name in ("attn_mask", "key_padding_mask"):
-            if kwargs.get(name) is not None:
-                raise NotImplementedError(f"LRP attention does not support {name}")
-        if kwargs.get("is_causal"):
+    def forward(  # mirrors nn.MultiheadAttention.forward's positional order
+        self,
+        query,
+        key,
+        value,
+        key_padding_mask=None,
+        need_weights=True,
+        attn_mask=None,
+        average_attn_weights=True,
+        is_causal=False,
+    ):
+        if key_padding_mask is not None or attn_mask is not None:
+            raise NotImplementedError("LRP attention does not support attention masks")
+        if is_causal:
             raise NotImplementedError("LRP attention does not support is_causal=True")
         out = self.attn(query, key, value)
-        weights = self.attn.attention_weights(query, key) if need_weights else None
+        weights = None
+        if need_weights:
+            if not average_attn_weights:
+                raise NotImplementedError(
+                    "per-head attention weights are not supported"
+                )
+            weights = self.attn.attention_weights(query, key)
         return out, weights
 
 
@@ -206,7 +227,9 @@ class LRPTransformerEncoderLayer(nn.Module):
 
     def forward(self, x, src_mask=None, src_key_padding_mask=None, is_causal=False):
         if src_mask is not None or src_key_padding_mask is not None or is_causal:
-            raise NotImplementedError("LRPTransformerEncoderLayer does not support masks")
+            raise NotImplementedError(
+                "LRPTransformerEncoderLayer does not support masks"
+            )
         eps = self.epsilon
         if self.norm_first:
             x = add_eps(x, self.self_attn(*(_ln_identity(self.norm1, x),) * 3), eps)
@@ -229,7 +252,9 @@ class LRPTransformerEncoder(nn.Module):
 
     @classmethod
     def from_torch(cls, encoder: nn.TransformerEncoder, epsilon: float = 1e-6):
-        layers = [LRPTransformerEncoderLayer.from_torch(l, epsilon) for l in encoder.layers]
+        layers = [
+            LRPTransformerEncoderLayer.from_torch(l, epsilon) for l in encoder.layers
+        ]
         norm = getattr(encoder, "norm", None)
         if norm is not None:
             norm = copy.deepcopy(norm).eval()

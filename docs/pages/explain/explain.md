@@ -105,7 +105,8 @@ to attend* (query/key path) receive zero relevance by design; full AttnLRP
 (Achtibat et al. 2024) is non-conserving and not implemented. All stabilisers
 are signed (`z + ε·sign z`), as in Arras et al. Not supported (raise): attention
 masks, `batch_first=False` transformers, explicit RNN initial states, `proj_size`;
-ProtoSleepNet's VQ path (`quantize=True`) runs under `no_grad` and stops relevance.
+ProtoSleepNet's VQ path (`quantize=True`) runs under `no_grad`, so no relevance can
+flow through it — `ModelLRP` explains the default `quantize=False` forward.
 
 - **Composites** (`lrp/composites.py`): `physioex_composite` (ε/γ/w²),
   `epsilon_composite` (pure-ε reference). **Canonizers** (`lrp/canonizers.py`):

@@ -32,7 +32,7 @@ class TestLinearEps:
         y = linear_eps(x, W, None, 1e-6)
         R = torch.randn_like(y)
         y.backward(R)
-        z = (x.detach() @ W.T)
+        z = x.detach() @ W.T
         expected = x.detach() * ((R / (z + 1e-6 * torch.sign(z))) @ W)
         assert torch.allclose(x.grad, expected, atol=1e-6)
         assert torch.allclose(x.grad.sum(), R.sum(), rtol=1e-4)

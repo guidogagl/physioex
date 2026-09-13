@@ -9,7 +9,7 @@ Sub-packages:
       extra: ``pip install "physioex[explain]"``).
 
 The LRP entry points are re-exported lazily so that ``import physioex.explain``
-does not pull in the optional ``zennit`` / ``lxt`` dependencies.
+does not pull in the optional ``zennit`` dependency.
 """
 
 _LAZY = {

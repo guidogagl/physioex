@@ -61,7 +61,12 @@ class _AddEps(torch.autograd.Function):
     @staticmethod
     def forward(ctx, a, b, eps):
         y = a + b
-        ctx.save_for_backward(a, b, y)
+        # Operands may be views into storage the host model later writes in
+        # place (CoReSleep: ``x[:, 0] = x[:, 0] + r``); saving copies keeps
+        # autograd's version check from firing during the LRP backward.
+        ctx.save_for_backward(
+            a.clone() if a._is_view() else a, b.clone() if b._is_view() else b, y
+        )
         ctx.eps = eps
         return y
 

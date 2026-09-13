@@ -39,7 +39,9 @@ RTOL, ATOL = 1e-3, 1e-3
 class AttentionPooling(nn.Module):
     def __init__(self, d, a=8):
         super().__init__()
-        self.attention = nn.Sequential(nn.Linear(d, a), nn.Tanh(), nn.Linear(a, 1, bias=False))
+        self.attention = nn.Sequential(
+            nn.Linear(d, a), nn.Tanh(), nn.Linear(a, 1, bias=False)
+        )
 
     def forward(self, x):
         return (x * torch.softmax(self.attention(x), dim=1)).sum(dim=1)
@@ -79,12 +81,17 @@ class ChannelMixer(nn.Module):  # like protosleepnet.ChannelMixer (eval path)
     def __init__(self, C, d, n_classes, bias):
         super().__init__()
         self.modality_emb = nn.Embedding(C, d)
-        nn.init.zeros_(self.modality_emb.weight)  # constant add = 0 keeps conservation exact
+        nn.init.zeros_(
+            self.modality_emb.weight
+        )  # constant add = 0 keeps conservation exact
         self.mcy = nn.Linear(d, n_classes)
         self.dropout = _NoDropout()
         self.register_buffer("channels_acc", torch.zeros(C))
         self.mixer = nn.TransformerEncoder(
-            nn.TransformerEncoderLayer(d, 4, 2 * d, batch_first=True, dropout=0.0, bias=bias), 1
+            nn.TransformerEncoderLayer(
+                d, 4, 2 * d, batch_first=True, dropout=0.0, bias=bias
+            ),
+            1,
         )
         self.attn_pool = nn.Linear(d, 1)
 
@@ -111,7 +118,10 @@ class TransModel(nn.Module):
     def __init__(self, d=16, bias=True):
         super().__init__()
         self.enc = nn.TransformerEncoder(
-            nn.TransformerEncoderLayer(d, 4, 32, batch_first=True, dropout=0.0, bias=bias), 2
+            nn.TransformerEncoderLayer(
+                d, 4, 32, batch_first=True, dropout=0.0, bias=bias
+            ),
+            2,
         )
         self.pool = AttentionPooling(d)
         self.head = nn.Linear(d, 5, bias=bias)
@@ -164,7 +174,9 @@ class MixerModel(nn.Module):
         return self.head(h).view(B, L, -1)
 
 
-class DictModel(nn.Module):  # CoReSleep-like: standalone MHA (tuple/kwargs) + residual + dict
+class DictModel(
+    nn.Module
+):  # CoReSleep-like: standalone MHA (tuple/kwargs) + residual + dict
     def __init__(self, d=16, bias=False):
         super().__init__()
         self.proj = nn.Linear(8, d, bias=bias)
@@ -205,7 +217,11 @@ def _report(model, x, **kw):
 class TestPrepareForwardEquivalence:
     @pytest.mark.parametrize(
         "Model,shape",
-        [(TransModel, (2, 3, 6, 16)), (SpecRNNModel, (2, 3, 6, 20)), (MixerModel, (2, 3, 3, 16))],
+        [
+            (TransModel, (2, 3, 6, 16)),
+            (SpecRNNModel, (2, 3, 6, 20)),
+            (MixerModel, (2, 3, 3, 16)),
+        ],
     )
     def test_prepared_forward_matches(self, Model, shape):
         torch.manual_seed(0)
@@ -260,7 +276,9 @@ class TestConservation:
 
     def test_dict_output_and_standalone_mha_conserve(self):
         torch.manual_seed(0)
-        rel, rep = _report(DictModel(bias=False).eval(), torch.randn(2, 3, 5, 8), output_key="combined")
+        rel, rep = _report(
+            DictModel(bias=False).eval(), torch.randn(2, 3, 5, 8), output_key="combined"
+        )
         assert rep.is_conserved(RTOL, ATOL), rep.ratio
 
     def test_plain_residual_is_fixed_by_patch(self):
@@ -269,7 +287,9 @@ class TestConservation:
         _, patched = _report(model, x, patch_residuals=True)
         _, raw = _report(model, x, patch_residuals=False)
         assert patched.is_conserved(RTOL, ATOL), patched.ratio
-        assert torch.allclose(raw.ratio, torch.full_like(raw.ratio, 2.0), rtol=1e-2)  # over-count
+        assert torch.allclose(
+            raw.ratio, torch.full_like(raw.ratio, 2.0), rtol=1e-2
+        )  # over-count
 
     def test_biased_model_finite_and_absorbs(self):
         rel, rep = _report(TransModel(bias=True).eval(), torch.randn(2, 3, 6, 16))
@@ -302,7 +322,9 @@ class TestRobustness:
             def forward(self, x):
                 return self.fc(x.flatten(1))
 
-        rel, rep = ModelLRP(Flat().eval(), out_index=3)(torch.randn(3, 8), return_report=True)
+        rel, rep = ModelLRP(Flat().eval(), out_index=3)(
+            torch.randn(3, 8), return_report=True
+        )
         assert rel.shape == (3, 8) and rep.is_conserved(RTOL, ATOL)
 
     def test_original_model_untouched(self):
@@ -332,6 +354,8 @@ class TestRobustness:
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
             prep = prepare_model_for_lrp(copy.deepcopy(Net()))
-        assert audit_lrp_coverage(prep) == ["weird"] and any("weird" in str(m.message) for m in w)
+        assert audit_lrp_coverage(prep) == ["weird"] and any(
+            "weird" in str(m.message) for m in w
+        )
         with pytest.raises(RuntimeError):
             prepare_model_for_lrp(Net(), strict=True)

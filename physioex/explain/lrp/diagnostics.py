@@ -30,18 +30,28 @@ class ConservationReport:
     absorbed: torch.Tensor
 
     @classmethod
-    def from_relevance(cls, target: torch.Tensor, relevance: torch.Tensor) -> "ConservationReport":
+    def from_relevance(
+        cls, target: torch.Tensor, relevance: torch.Tensor
+    ) -> "ConservationReport":
         target = target.detach().reshape(-1)
         rsum = relevance.detach().reshape(target.shape[0], -1).sum(dim=1)
         safe = torch.where(target.abs() > 1e-12, target, torch.ones_like(target))
-        return cls(target=target, relevance_sum=rsum, ratio=rsum / safe, absorbed=target - rsum)
+        return cls(
+            target=target, relevance_sum=rsum, ratio=rsum / safe, absorbed=target - rsum
+        )
 
     def is_conserved(self, rtol: float = 1e-3, atol: float = 1e-5) -> bool:
-        return bool(torch.allclose(self.relevance_sum, self.target, rtol=rtol, atol=atol))
+        return bool(
+            torch.allclose(self.relevance_sum, self.target, rtol=rtol, atol=atol)
+        )
 
     def __str__(self) -> str:  # pragma: no cover - formatting
         r = self.ratio.tolist()
-        return "ConservationReport(ratio Σ R / f per sample = " + ", ".join(f"{v:.4f}" for v in r) + ")"
+        return (
+            "ConservationReport(ratio Σ R / f per sample = "
+            + ", ".join(f"{v:.4f}" for v in r)
+            + ")"
+        )
 
 
 def check_conservation(explainer, x: torch.Tensor) -> ConservationReport:

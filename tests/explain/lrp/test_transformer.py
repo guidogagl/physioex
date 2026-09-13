@@ -34,12 +34,14 @@ class TestCPAttentionCore:
         mask = (torch.rand_like(out) < 0.5).to(out.dtype)
         R = out.detach() * mask
         out.backward(R)
-        assert q.grad is None or q.grad.abs().max() == 0
-        assert k.grad is None or k.grad.abs().max() == 0
+        assert q.grad is None and k.grad is None  # CP-LRP: zero relevance to Q/K
         assert torch.allclose(v.grad.sum(), R.sum(), rtol=1e-4, atol=1e-5)
 
     def test_half_precision_backward(self):
-        q, k, v = (torch.randn(1, 2, 3, 4, dtype=torch.half, requires_grad=True) for _ in range(3))
+        q, k, v = (
+            torch.randn(1, 2, 3, 4, dtype=torch.half, requires_grad=True)
+            for _ in range(3)
+        )
         out = _cp_attention(q, k, v, 0.5, 1e-3)
         out.backward(torch.ones_like(out))
         assert v.grad.dtype == torch.half and torch.isfinite(v.grad).all()
@@ -51,7 +53,9 @@ class TestMultiheadAttention:
         mha = nn.MultiheadAttention(16, 4, batch_first=True, dropout=0.0).eval()
         x = torch.randn(2, 5, 16)
         ref = mha(x, x, x, need_weights=False)[0]
-        assert torch.allclose(LRPMultiheadAttention.from_torch(mha)(x, x, x), ref, atol=1e-4)
+        assert torch.allclose(
+            LRPMultiheadAttention.from_torch(mha)(x, x, x), ref, atol=1e-4
+        )
 
     def test_cross_attention_conservation_and_zero_query_path(self):
         torch.manual_seed(0)
@@ -64,21 +68,29 @@ class TestMultiheadAttention:
         seed[0, 1, 2] = out[0, 1, 2].detach()
         out.backward(seed)
         assert q.grad.abs().max() == 0
-        assert torch.allclose(kv.grad.sum(), out[0, 1, 2].detach(), rtol=1e-3, atol=1e-5)
+        assert torch.allclose(
+            kv.grad.sum(), out[0, 1, 2].detach(), rtol=1e-3, atol=1e-5
+        )
 
     def test_multihead_consistency(self):
         torch.manual_seed(0)
         x = torch.randn(2, 5, 16)
         for heads in (1, 2, 4):
             mha = nn.MultiheadAttention(16, heads, batch_first=True, bias=False).eval()
-            f, r = _conservation(lambda z: LRPMultiheadAttention.from_torch(mha)(z, z, z), x, (0, 2, 3))
+            f, r = _conservation(
+                lambda z: LRPMultiheadAttention.from_torch(mha)(z, z, z), x, (0, 2, 3)
+            )
             assert torch.allclose(r, f, rtol=1e-3, atol=1e-5)
 
     def test_unsupported_configs_raise(self):
         with pytest.raises(NotImplementedError):
-            LRPMultiheadAttention.from_torch(nn.MultiheadAttention(16, 4, batch_first=False))
+            LRPMultiheadAttention.from_torch(
+                nn.MultiheadAttention(16, 4, batch_first=False)
+            )
         with pytest.raises(NotImplementedError):
-            LRPMultiheadAttention.from_torch(nn.MultiheadAttention(16, 4, batch_first=True, add_bias_kv=True))
+            LRPMultiheadAttention.from_torch(
+                nn.MultiheadAttention(16, 4, batch_first=True, add_bias_kv=True)
+            )
 
     def test_module_adapter_interface(self):
         mha = nn.MultiheadAttention(16, 4, batch_first=True).eval()
@@ -95,23 +107,41 @@ class TestTransformerEncoderLayer:
     @pytest.mark.parametrize("norm_first", [False, True])
     def test_forward_matches(self, norm_first):
         torch.manual_seed(0)
-        tel = nn.TransformerEncoderLayer(16, 4, 32, batch_first=True, dropout=0.0,
-                                         norm_first=norm_first).eval()
+        tel = nn.TransformerEncoderLayer(
+            16, 4, 32, batch_first=True, dropout=0.0, norm_first=norm_first
+        ).eval()
         x = torch.randn(2, 5, 16)
-        assert torch.allclose(LRPTransformerEncoderLayer.from_torch(tel)(x), tel(x), atol=1e-4)
+        assert torch.allclose(
+            LRPTransformerEncoderLayer.from_torch(tel)(x), tel(x), atol=1e-4
+        )
 
     @pytest.mark.parametrize("norm_first", [False, True])
     @pytest.mark.parametrize("activation", ["relu", "gelu"])
     def test_conservation_biasfree(self, norm_first, activation):
         torch.manual_seed(0)
-        tel = nn.TransformerEncoderLayer(16, 4, 32, batch_first=True, dropout=0.0,
-                                         norm_first=norm_first, bias=False,
-                                         activation=activation).eval()
-        f, r = _conservation(LRPTransformerEncoderLayer.from_torch(tel), torch.randn(2, 5, 16), (0, 2, 3))
+        tel = nn.TransformerEncoderLayer(
+            16,
+            4,
+            32,
+            batch_first=True,
+            dropout=0.0,
+            norm_first=norm_first,
+            bias=False,
+            activation=activation,
+        ).eval()
+        f, r = _conservation(
+            LRPTransformerEncoderLayer.from_torch(tel), torch.randn(2, 5, 16), (0, 2, 3)
+        )
         assert torch.allclose(r, f, rtol=1e-3, atol=1e-5), (r, f)
 
     def test_half_precision(self):
-        tel = nn.TransformerEncoderLayer(16, 4, 32, batch_first=True, dropout=0.0, bias=False).eval().half()
+        tel = (
+            nn.TransformerEncoderLayer(
+                16, 4, 32, batch_first=True, dropout=0.0, bias=False
+            )
+            .eval()
+            .half()
+        )
         lay = LRPTransformerEncoderLayer.from_torch(tel)
         x = torch.randn(2, 5, 16, dtype=torch.half, requires_grad=True)
         out = lay(x)
@@ -124,20 +154,28 @@ class TestTransformerEncoderLayer:
         assert all(p.requires_grad for p in tel.parameters())
 
     def test_masks_raise(self):
-        lay = LRPTransformerEncoderLayer.from_torch(nn.TransformerEncoderLayer(16, 4, 32, batch_first=True))
+        lay = LRPTransformerEncoderLayer.from_torch(
+            nn.TransformerEncoderLayer(16, 4, 32, batch_first=True)
+        )
         with pytest.raises(NotImplementedError):
-            lay(torch.randn(2, 5, 16), src_key_padding_mask=torch.zeros(2, 5, dtype=torch.bool))
+            lay(
+                torch.randn(2, 5, 16),
+                src_key_padding_mask=torch.zeros(2, 5, dtype=torch.bool),
+            )
 
     def test_seq_first_raises(self):
         with pytest.raises(NotImplementedError):
-            LRPTransformerEncoderLayer.from_torch(nn.TransformerEncoderLayer(16, 4, 32, batch_first=False))
+            LRPTransformerEncoderLayer.from_torch(
+                nn.TransformerEncoderLayer(16, 4, 32, batch_first=False)
+            )
 
 
 class _Net(nn.Module):
     def __init__(self):
         super().__init__()
         self.enc = nn.TransformerEncoder(
-            nn.TransformerEncoderLayer(16, 4, 32, batch_first=True, dropout=0.0), num_layers=2
+            nn.TransformerEncoderLayer(16, 4, 32, batch_first=True, dropout=0.0),
+            num_layers=2,
         )
 
     def forward(self, x):

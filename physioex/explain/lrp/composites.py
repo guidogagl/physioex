@@ -53,9 +53,9 @@ def physioex_composite(
 
     # Rule per module type; the first matching entry wins.
     layer_map = [
-        (Activation, Pass()),          # ReLU/GELU: relevance passes through
-        (AvgPool, Norm()),             # average pooling: normalised redistribution
-        (BatchNorm, Pass()),           # merged by the canonizer; guard otherwise
+        (Activation, Pass()),  # ReLU/GELU: relevance passes through
+        (AvgPool, Norm()),  # average pooling: normalised redistribution
+        (BatchNorm, Pass()),  # merged by the canonizer; guard otherwise
         (Convolution, Gamma(gamma=gamma)),
         (Linear, Epsilon(epsilon=epsilon)),
     ]

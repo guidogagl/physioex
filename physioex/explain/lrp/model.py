@@ -116,8 +116,18 @@ _LRP_TYPES = (
     _PoolAdapter,
 )
 _ACTIVATIONS = (
-    nn.ReLU, nn.GELU, nn.SiLU, nn.ELU, nn.LeakyReLU, nn.Tanh, nn.Sigmoid,
-    nn.Softplus, nn.Hardswish, nn.Hardsigmoid, nn.Mish, nn.PReLU,
+    nn.ReLU,
+    nn.GELU,
+    nn.SiLU,
+    nn.ELU,
+    nn.LeakyReLU,
+    nn.Tanh,
+    nn.Sigmoid,
+    nn.Softplus,
+    nn.Hardswish,
+    nn.Hardsigmoid,
+    nn.Mish,
+    nn.PReLU,
 )
 _NORMS_IDENTITY = (nn.LayerNorm, nn.GroupNorm) + (
     (nn.RMSNorm,) if hasattr(nn, "RMSNorm") else ()
@@ -143,11 +153,27 @@ def _bn_is_identity(bn: nn.Module) -> bool:
 def _merge_batchnorm(model: nn.Module):
     """Fold sequential BatchNorm layers into the preceding linear/conv (Zennit
     canonizer).  Returns the handles (keep them alive to keep the merge)."""
+    has_bn = any(isinstance(m, _BATCHNORMS) for m in model.modules())
     try:
         from zennit.canonizers import SequentialMergeBatchNorm
     except ImportError:
+        if has_bn:
+            warnings.warn(
+                "zennit is not installed: BatchNorm layers are not merged and get the "
+                "ε-rule (their shift leaks relevance like a bias)",
+                RuntimeWarning,
+                stacklevel=3,
+            )
         return []
-    return SequentialMergeBatchNorm().apply(model)
+    try:
+        return SequentialMergeBatchNorm().apply(model)
+    except Exception as exc:  # e.g. BatchNorm(affine=False) → zennit shape check
+        warnings.warn(
+            f"BatchNorm merging failed ({exc!r}); BatchNorm layers get the ε-rule",
+            RuntimeWarning,
+            stacklevel=3,
+        )
+        return []
 
 
 # ---------------------------------------------------------------------------
@@ -177,7 +203,11 @@ def _replace(child: nn.Module, epsilon: float):
     if isinstance(child, _BATCHNORMS):
         # after canonization BN is the identity; otherwise treat it as the
         # affine-linear map it is in eval mode (its shift leaks like a bias)
-        return IdentityRule(child) if _bn_is_identity(child) else EpsilonRule(child, epsilon)
+        return (
+            IdentityRule(child)
+            if _bn_is_identity(child)
+            else EpsilonRule(child, epsilon)
+        )
     if isinstance(child, _NORMS_IDENTITY) or isinstance(child, _ACTIVATIONS):
         return IdentityRule(child)
     return None
@@ -200,6 +230,18 @@ def prepare_model_for_lrp(
     top = _memo is None
     memo: Dict[int, nn.Module] = {} if top else _memo
     if top:
+        if model.training:
+            warnings.warn(
+                "prepare_model_for_lrp: model is in training mode — call .eval() first "
+                "(BatchNorm/Dropout would change the forward being explained)",
+                RuntimeWarning,
+                stacklevel=2,
+            )
+        for (
+            m
+        ) in model.modules():  # in-place ops would corrupt tensors saved by the rules
+            if getattr(m, "inplace", False):
+                m.inplace = False
         model._lrp_bn_handles = _merge_batchnorm(model)
     for name, child in list(model._modules.items()):
         if child is None:
@@ -273,7 +315,12 @@ class _ResidualAddMode(torch.overrides.TorchFunctionMode):
     Custom autograd Functions run their forward with grad disabled, so the
     adds *inside* the LRP rules are never intercepted (no recursion)."""
 
-    _ADD_FUNCS = (torch.add, torch.Tensor.add, torch.Tensor.__add__, torch.Tensor.__radd__)
+    _ADD_FUNCS = (
+        torch.add,
+        torch.Tensor.add,
+        torch.Tensor.__add__,
+        torch.Tensor.__radd__,
+    )
 
     def __init__(self, epsilon: float):
         super().__init__()
@@ -336,12 +383,11 @@ class ModelLRP(nn.Module):
         self.patch_residuals = patch_residuals
         prepared = copy.deepcopy(model) if copy_model else model
         prepared.eval()
-        for m in prepared.modules():
-            if getattr(m, "inplace", False):
-                m.inplace = False  # in-place ops would corrupt saved tensors
         for p in prepared.parameters():
             p.requires_grad_(False)
-        self.model = prepare_model_for_lrp(prepared, epsilon=self.epsilon, strict=strict)
+        self.model = prepare_model_for_lrp(
+            prepared, epsilon=self.epsilon, strict=strict
+        )
         for p in self.model.parameters():  # BN merging may create new bias params
             p.requires_grad_(False)
         self.uncovered = audit_lrp_coverage(self.model)
@@ -352,7 +398,11 @@ class ModelLRP(nn.Module):
     def forward(self, x: torch.Tensor, return_report: bool = False):
         with torch.enable_grad():
             x = x.detach().requires_grad_(True)
-            mode = _ResidualAddMode(self.epsilon) if self.patch_residuals else contextlib.nullcontext()
+            mode = (
+                _ResidualAddMode(self.epsilon)
+                if self.patch_residuals
+                else contextlib.nullcontext()
+            )
             with mode:
                 out = self._output(self.model(x))
             seed, target = target_seed(out, self.in_index, self.out_index)

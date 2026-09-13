@@ -28,20 +28,29 @@ def _conservation(module, x, t, k):
 class TestLSTM:
     def test_forward_matches(self, num_layers, bidirectional):
         torch.manual_seed(0)
-        lstm = nn.LSTM(6, 5, num_layers=num_layers, batch_first=True,
-                       bidirectional=bidirectional).eval()
+        lstm = nn.LSTM(
+            6, 5, num_layers=num_layers, batch_first=True, bidirectional=bidirectional
+        ).eval()
         lrp = LRPLSTM.from_torch(lstm)
         x = torch.randn(3, 7, 6)
         with torch.no_grad():
             ref, (h_ref, c_ref) = lstm(x)
             got, (h, c) = lrp(x)
         assert torch.allclose(got, ref, atol=1e-5)
-        assert torch.allclose(h, h_ref, atol=1e-5) and torch.allclose(c, c_ref, atol=1e-5)
+        assert torch.allclose(h, h_ref, atol=1e-5) and torch.allclose(
+            c, c_ref, atol=1e-5
+        )
 
     def test_conservation_biasfree(self, num_layers, bidirectional):
         torch.manual_seed(1)
-        lstm = nn.LSTM(4, 3, num_layers=num_layers, batch_first=True,
-                       bidirectional=bidirectional, bias=False).eval()
+        lstm = nn.LSTM(
+            4,
+            3,
+            num_layers=num_layers,
+            batch_first=True,
+            bidirectional=bidirectional,
+            bias=False,
+        ).eval()
         lrp = LRPLSTM.from_torch(lstm)
         k = 3 + 1 if bidirectional else 1  # seed the reverse half when present
         f, r = _conservation(lrp, torch.randn(2, 5, 4), t=2, k=k)
@@ -52,19 +61,28 @@ class TestLSTM:
 class TestGRU:
     def test_forward_matches(self, num_layers, bidirectional):
         torch.manual_seed(0)
-        gru = nn.GRU(6, 5, num_layers=num_layers, batch_first=True,
-                     bidirectional=bidirectional).eval()
+        gru = nn.GRU(
+            6, 5, num_layers=num_layers, batch_first=True, bidirectional=bidirectional
+        ).eval()
         lrp = LRPGRU.from_torch(gru)
         x = torch.randn(3, 7, 6)
         with torch.no_grad():
             ref, h_ref = gru(x)
             got, h = lrp(x)
-        assert torch.allclose(got, ref, atol=1e-5) and torch.allclose(h, h_ref, atol=1e-5)
+        assert torch.allclose(got, ref, atol=1e-5) and torch.allclose(
+            h, h_ref, atol=1e-5
+        )
 
     def test_conservation_biasfree(self, num_layers, bidirectional):
         torch.manual_seed(1)
-        gru = nn.GRU(4, 3, num_layers=num_layers, batch_first=True,
-                     bidirectional=bidirectional, bias=False).eval()
+        gru = nn.GRU(
+            4,
+            3,
+            num_layers=num_layers,
+            batch_first=True,
+            bidirectional=bidirectional,
+            bias=False,
+        ).eval()
         lrp = LRPGRU.from_torch(gru)
         k = 3 + 1 if bidirectional else 1
         f, r = _conservation(lrp, torch.randn(2, 5, 4), t=2, k=k)
@@ -100,7 +118,9 @@ class TestInterface:
                 assert torch.allclose(lrp(x)[0], lstm(x)[0], atol=1e-5)
 
     def test_biased_relevance_finite(self):
-        lrp = LRPGRU.from_torch(nn.GRU(4, 3, batch_first=True, bidirectional=True).eval())
+        lrp = LRPGRU.from_torch(
+            nn.GRU(4, 3, batch_first=True, bidirectional=True).eval()
+        )
         _, r = _conservation(lrp, torch.randn(2, 5, 4), t=0, k=2)
         assert torch.isfinite(r).all()
 

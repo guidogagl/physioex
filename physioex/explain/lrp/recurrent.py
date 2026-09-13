@@ -73,10 +73,16 @@ class LRPLSTM(nn.LSTM):
     @classmethod
     def from_torch(cls, lstm: nn.LSTM, epsilon: float = 1e-6) -> "LRPLSTM":
         _check_supported(lstm)
+        ref = next(lstm.parameters())
         obj = cls(
-            lstm.input_size, lstm.hidden_size, num_layers=lstm.num_layers,
-            bias=lstm.bias, batch_first=lstm.batch_first,
+            lstm.input_size,
+            lstm.hidden_size,
+            num_layers=lstm.num_layers,
+            bias=lstm.bias,
+            batch_first=lstm.batch_first,
             bidirectional=lstm.bidirectional,
+            device=ref.device,
+            dtype=ref.dtype,
         )
         return _load_frozen(obj, lstm, epsilon)
 
@@ -104,7 +110,9 @@ class LRPLSTM(nn.LSTM):
 
     def forward(self, x, hx=None):
         if hx is not None:
-            raise NotImplementedError("LRPLSTM: explicit initial state hx is not supported")
+            raise NotImplementedError(
+                "LRPLSTM: explicit initial state hx is not supported"
+            )
         if x.dim() != 3:
             raise ValueError("LRPLSTM expects a batched 3-D input")
         if self.batch_first:
@@ -113,14 +121,22 @@ class LRPLSTM(nn.LSTM):
         for layer in range(self.num_layers):
             s = f"_l{layer}"
             fwd, hf, cf = self._layer_dir(
-                layer_in, self._p("weight_ih" + s), self._p("weight_hh" + s),
-                self._p("bias_ih" + s), self._p("bias_hh" + s), reverse=False,
+                layer_in,
+                self._p("weight_ih" + s),
+                self._p("weight_hh" + s),
+                self._p("bias_ih" + s),
+                self._p("bias_hh" + s),
+                reverse=False,
             )
             if self.bidirectional:
                 r = s + "_reverse"
                 bwd, hb, cb = self._layer_dir(
-                    layer_in, self._p("weight_ih" + r), self._p("weight_hh" + r),
-                    self._p("bias_ih" + r), self._p("bias_hh" + r), reverse=True,
+                    layer_in,
+                    self._p("weight_ih" + r),
+                    self._p("weight_hh" + r),
+                    self._p("bias_ih" + r),
+                    self._p("bias_hh" + r),
+                    reverse=True,
                 )
                 layer_in = torch.cat([fwd, bwd], dim=-1)
                 h_states += [hf, hb]
@@ -147,10 +163,16 @@ class LRPGRU(nn.GRU):
     @classmethod
     def from_torch(cls, gru: nn.GRU, epsilon: float = 1e-6) -> "LRPGRU":
         _check_supported(gru)
+        ref = next(gru.parameters())
         obj = cls(
-            gru.input_size, gru.hidden_size, num_layers=gru.num_layers,
-            bias=gru.bias, batch_first=gru.batch_first,
+            gru.input_size,
+            gru.hidden_size,
+            num_layers=gru.num_layers,
+            bias=gru.bias,
+            batch_first=gru.batch_first,
             bidirectional=gru.bidirectional,
+            device=ref.device,
+            dtype=ref.dtype,
         )
         return _load_frozen(obj, gru, epsilon)
 
@@ -178,7 +200,9 @@ class LRPGRU(nn.GRU):
 
     def forward(self, x, hx=None):
         if hx is not None:
-            raise NotImplementedError("LRPGRU: explicit initial state hx is not supported")
+            raise NotImplementedError(
+                "LRPGRU: explicit initial state hx is not supported"
+            )
         if x.dim() != 3:
             raise ValueError("LRPGRU expects a batched 3-D input")
         if self.batch_first:
@@ -187,14 +211,22 @@ class LRPGRU(nn.GRU):
         for layer in range(self.num_layers):
             s = f"_l{layer}"
             fwd, hf = self._layer_dir(
-                layer_in, self._p("weight_ih" + s), self._p("weight_hh" + s),
-                self._p("bias_ih" + s), self._p("bias_hh" + s), reverse=False,
+                layer_in,
+                self._p("weight_ih" + s),
+                self._p("weight_hh" + s),
+                self._p("bias_ih" + s),
+                self._p("bias_hh" + s),
+                reverse=False,
             )
             if self.bidirectional:
                 r = s + "_reverse"
                 bwd, hb = self._layer_dir(
-                    layer_in, self._p("weight_ih" + r), self._p("weight_hh" + r),
-                    self._p("bias_ih" + r), self._p("bias_hh" + r), reverse=True,
+                    layer_in,
+                    self._p("weight_ih" + r),
+                    self._p("weight_hh" + r),
+                    self._p("bias_ih" + r),
+                    self._p("bias_hh" + r),
+                    reverse=True,
                 )
                 layer_in = torch.cat([fwd, bwd], dim=-1)
                 h_states += [hf, hb]

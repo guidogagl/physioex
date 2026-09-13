@@ -145,7 +145,9 @@ class TestComposites:
     def test_zbox_first_rule_builds_and_runs(self):
         model = TinyCNN().eval()
         comp = physioex_composite(
-            first_rule="zbox", zbox_low=-5.0, zbox_high=5.0,
+            first_rule="zbox",
+            zbox_low=-5.0,
+            zbox_high=5.0,
             canonizers=default_canonizers(model),
         )
         rel = LRP(model, composite=comp)(_input())
