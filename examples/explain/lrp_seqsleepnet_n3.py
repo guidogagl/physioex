@@ -58,7 +58,8 @@ def load_model(model_dir):
 
 def n3_training_sequences(cfg, n, target_idx, log):
     """``n`` training-split sequences (fold 0, all cohorts) whose target epoch is N3."""
-    from physioex.data.datasets import MultiDataset, get_dataset
+    from physioex.data.datasets import get_dataset
+    from physioex.data.multi import MultiDataset
 
     MASS = get_dataset("mass")
     L = cfg["training"]["sequence_length"]
