@@ -460,8 +460,8 @@ class — no instance is created:</p>
 <span class="n">seed_everything</span><span class="p">(</span><span class="mi">42</span><span class="p">)</span>
 
 <span class="c1"># 1. Build a dataset (raw-EDF, lazy) — see the Data and Preprocessing pages.</span>
-<span class="n">dataset</span> <span class="o">=</span> <span class="n">get_dataset</span><span class="p">(</span><span class="s2">&quot;hmc&quot;</span><span class="p">)(</span>
-    <span class="n">channels</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;EEG&quot;</span><span class="p">],</span> <span class="n">pipelines</span><span class="o">=</span><span class="s2">&quot;time_domain&quot;</span><span class="p">,</span> <span class="n">sequence_length</span><span class="o">=</span><span class="mi">21</span><span class="p">,</span>
+<span class="n">dataset</span> <span class="o">=</span> <span class="n">get_dataset</span><span class="p">(</span><span class="s2">"hmc"</span><span class="p">)(</span>
+    <span class="n">channels</span><span class="o">=</span><span class="p">[</span><span class="s2">"EEG"</span><span class="p">],</span> <span class="n">pipelines</span><span class="o">=</span><span class="s2">"time_domain"</span><span class="p">,</span> <span class="n">sequence_length</span><span class="o">=</span><span class="mi">21</span><span class="p">,</span>
 <span class="p">)</span>
 
 <span class="c1"># 2. Build a model (a plain nn.Module). in_chan matches the channel count.</span>
@@ -471,7 +471,7 @@ class — no instance is created:</p>
 <span class="n">model</span> <span class="o">=</span> <span class="n">Trainer</span><span class="o">.</span><span class="n">train</span><span class="p">(</span>
     <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
     <span class="n">dataset</span><span class="o">=</span><span class="n">dataset</span><span class="p">,</span>
-    <span class="n">checkpoint_path</span><span class="o">=</span><span class="s2">&quot;runs/tsn&quot;</span><span class="p">,</span>
+    <span class="n">checkpoint_path</span><span class="o">=</span><span class="s2">"runs/tsn"</span><span class="p">,</span>
     <span class="n">max_epochs</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span>
     <span class="n">lr</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">,</span>
     <span class="n">fold</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
@@ -511,8 +511,8 @@ This matches the evaluation protocol of the current library’s voting_strategy(
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>model</strong> (<a class="reference external" href="https://docs.pytorch.org/docs/stable/generated/torch.nn.Module.html#torch.nn.Module" title="(in PyTorch v2.13)"><em>Module</em></a>) – model with forward(x) accepting shape (batch, L, …) and returning (batch, L, n_classes)</p></li>
-<li><p><strong>dataset</strong> (<em>PhysioExDataset</em><em> | </em><a class="reference external" href="https://docs.pytorch.org/docs/stable/data.html#torch.utils.data.DataLoader" title="(in PyTorch v2.13)"><em>DataLoader</em></a>) – a PhysioExDataset (will be wrapped in eval loader) OR a DataLoader</p></li>
+<li><p><strong>model</strong> (<a class="reference external" href="https://docs.pytorch.org/docs/stable/generated/torch.nn.Module.html#torch.nn.Module" title="(in PyTorch v2.14)"><em>Module</em></a>) – model with forward(x) accepting shape (batch, L, …) and returning (batch, L, n_classes)</p></li>
+<li><p><strong>dataset</strong> (<em>PhysioExDataset</em><em> | </em><a class="reference external" href="https://docs.pytorch.org/docs/stable/data.html#torch.utils.data.DataLoader" title="(in PyTorch v2.14)"><em>DataLoader</em></a>) – a PhysioExDataset (will be wrapped in eval loader) OR a DataLoader</p></li>
 <li><p><strong>L</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>) – sequence length the model was trained on (default 21)</p></li>
 <li><p><strong>metrics</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a>) – dict of metric_name -&gt; callable(preds, targets, ignore_index=…).
 Defaults to accuracy/f1/precision/recall/cohen_kappa/confusion_matrix/support.</p></li>

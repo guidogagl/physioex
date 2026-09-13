@@ -405,19 +405,19 @@ window.addEventListener("load", () => mermaid.run());
 <span class="kn">from</span><span class="w"> </span><span class="nn">scipy.signal</span><span class="w"> </span><span class="kn">import</span> <span class="n">iirnotch</span><span class="p">,</span> <span class="n">sosfilt</span><span class="p">,</span> <span class="n">sosfiltfilt</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">physioex.data.pipeline</span><span class="w"> </span><span class="kn">import</span> <span class="n">PreprocessingStep</span><span class="p">,</span> <span class="n">CompiledStep</span>
 
-<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">&quot;physioex.data.steps&quot;</span><span class="p">)</span>
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">"physioex.data.steps"</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="NotchFilter">
 <a class="viewcode-back" href="../../../../api/_generated/physioex.data.NotchFilter.html#physioex.data.NotchFilter">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">NotchFilter</span><span class="p">(</span><span class="n">PreprocessingStep</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;IIR notch filter (powerline removal).</span>
+<span class="w">    </span><span class="sd">"""IIR notch filter (powerline removal).</span>
 
 <span class="sd">    Uses second-order sections (SOS) for numerical stability on long signals.</span>
 
 <span class="sd">    If the notch frequency is out of range (freq &gt;= Nyquist), returns the</span>
 <span class="sd">    unfiltered signal with a warning instead of raising an error.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
 <div class="viewcode-block" id="NotchFilter.__init__">
 <a class="viewcode-back" href="../../../../api/_generated/physioex.data.NotchFilter.html#physioex.data.NotchFilter.__init__">[docs]</a>
@@ -438,8 +438,8 @@ window.addEventListener("load", () => mermaid.run());
         <span class="n">nyq</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">fs_in</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="mi">0</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">freq</span> <span class="o">&lt;</span> <span class="n">nyq</span><span class="p">:</span>
             <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;NotchFilter(freq=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">freq</span><span class="si">}</span><span class="s2">) skipped: freq &gt;= &quot;</span>
-                <span class="sa">f</span><span class="s2">&quot;Nyquist (</span><span class="si">{</span><span class="n">nyq</span><span class="si">}</span><span class="s2"> Hz at fs=</span><span class="si">{</span><span class="n">fs_in</span><span class="si">}</span><span class="s2">). Signal passed through unfiltered.&quot;</span>
+                <span class="sa">f</span><span class="s2">"NotchFilter(freq=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">freq</span><span class="si">}</span><span class="s2">) skipped: freq &gt;= "</span>
+                <span class="sa">f</span><span class="s2">"Nyquist (</span><span class="si">{</span><span class="n">nyq</span><span class="si">}</span><span class="s2"> Hz at fs=</span><span class="si">{</span><span class="n">fs_in</span><span class="si">}</span><span class="s2">). Signal passed through unfiltered."</span>
             <span class="p">)</span>
             <span class="k">return</span> <span class="n">CompiledStep</span><span class="p">(</span>
                 <span class="n">apply</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">),</span>

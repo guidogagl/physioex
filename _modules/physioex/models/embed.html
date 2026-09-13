@@ -400,7 +400,7 @@ window.addEventListener("load", () => mermaid.run());
                 <article class="bd-article">
                   
   <h1>Source code for physioex.models.embed</h1><div class="highlight"><pre>
-<span></span><span class="sd">&quot;&quot;&quot;Generic embedding extraction for any PhysioEx model with encode().</span>
+<span></span><span class="sd">"""Generic embedding extraction for any PhysioEx model with encode().</span>
 
 <span class="sd">Extracts contextualized per-epoch embeddings using sliding-window voting</span>
 <span class="sd">(same approach as Trainer.voting_evaluate), caches them to disk, and</span>
@@ -424,7 +424,7 @@ window.addEventListener("load", () => mermaid.run());
 <span class="sd">model) mirror the same structure.</span>
 <span class="sd">``load_embeddings()`` downloads from HF automatically if not in local cache.</span>
 <span class="sd">``linear_probe()`` evaluates embedding quality via 5-fold subject-wise CV.</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
@@ -441,14 +441,14 @@ window.addEventListener("load", () => mermaid.run());
     <span class="n">cast_to_cache_dtype</span><span class="p">,</span>
 <span class="p">)</span>
 
-<span class="n">HF_EMBEDDINGS_ORG</span> <span class="o">=</span> <span class="s2">&quot;4rooms&quot;</span>
+<span class="n">HF_EMBEDDINGS_ORG</span> <span class="o">=</span> <span class="s2">"4rooms"</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_cache_root</span><span class="p">(</span><span class="n">cache_dir</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
     <span class="n">root</span> <span class="o">=</span> <span class="n">cache_dir</span> <span class="ow">or</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
-        <span class="s2">&quot;PHYSIOEX_CACHE_DIR&quot;</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expanduser</span><span class="p">(</span><span class="s2">&quot;~/.cache/physioex&quot;</span><span class="p">)</span>
+        <span class="s2">"PHYSIOEX_CACHE_DIR"</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expanduser</span><span class="p">(</span><span class="s2">"~/.cache/physioex"</span><span class="p">)</span>
     <span class="p">)</span>
-    <span class="k">return</span> <span class="n">Path</span><span class="p">(</span><span class="n">root</span><span class="p">)</span> <span class="o">/</span> <span class="s2">&quot;embeddings&quot;</span>
+    <span class="k">return</span> <span class="n">Path</span><span class="p">(</span><span class="n">root</span><span class="p">)</span> <span class="o">/</span> <span class="s2">"embeddings"</span>
 
 
 <span class="nd">@torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">()</span>
@@ -458,7 +458,7 @@ window.addEventListener("load", () => mermaid.run());
     <span class="n">L</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
     <span class="n">device</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Extract contextualized embeddings for one full-night recording.</span>
+<span class="w">    </span><span class="sd">"""Extract contextualized embeddings for one full-night recording.</span>
 
 <span class="sd">    Uses the same sliding-window approach as Trainer.voting_evaluate:</span>
 <span class="sd">    slides L-sized windows at L different offsets, encodes each window</span>
@@ -472,7 +472,7 @@ window.addEventListener("load", () => mermaid.run());
 
 <span class="sd">    Returns:</span>
 <span class="sd">        (N, D) numpy array of averaged embeddings.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">signals</span> <span class="o">=</span> <span class="n">signals</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
     <span class="n">N</span> <span class="o">=</span> <span class="n">signals</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
 
@@ -515,12 +515,12 @@ window.addEventListener("load", () => mermaid.run());
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_hf_repo_id</span><span class="p">(</span><span class="n">model_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the HF dataset repo id for a model&#39;s embeddings.&quot;&quot;&quot;</span>
-    <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">HF_EMBEDDINGS_ORG</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">model_name</span><span class="si">}</span><span class="s2">-embeddings&quot;</span>
+<span class="w">    </span><span class="sd">"""Return the HF dataset repo id for a model's embeddings."""</span>
+    <span class="k">return</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">HF_EMBEDDINGS_ORG</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">model_name</span><span class="si">}</span><span class="s2">-embeddings"</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_upload_to_hf</span><span class="p">(</span><span class="n">out_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">model_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">dataset_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Upload embeddings for one dataset to HuggingFace Hub.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Upload embeddings for one dataset to HuggingFace Hub."""</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">huggingface_hub</span><span class="w"> </span><span class="kn">import</span> <span class="n">HfApi</span>
 
     <span class="n">api</span> <span class="o">=</span> <span class="n">HfApi</span><span class="p">()</span>
@@ -529,7 +529,7 @@ window.addEventListener("load", () => mermaid.run());
     <span class="c1"># Ensure repo exists</span>
     <span class="n">api</span><span class="o">.</span><span class="n">create_repo</span><span class="p">(</span>
         <span class="n">repo_id</span><span class="o">=</span><span class="n">repo_id</span><span class="p">,</span>
-        <span class="n">repo_type</span><span class="o">=</span><span class="s2">&quot;dataset&quot;</span><span class="p">,</span>
+        <span class="n">repo_type</span><span class="o">=</span><span class="s2">"dataset"</span><span class="p">,</span>
         <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
     <span class="p">)</span>
 
@@ -538,11 +538,11 @@ window.addEventListener("load", () => mermaid.run());
         <span class="n">folder_path</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">out_dir</span><span class="p">),</span>
         <span class="n">path_in_repo</span><span class="o">=</span><span class="n">dataset_name</span><span class="p">,</span>
         <span class="n">repo_id</span><span class="o">=</span><span class="n">repo_id</span><span class="p">,</span>
-        <span class="n">repo_type</span><span class="o">=</span><span class="s2">&quot;dataset&quot;</span><span class="p">,</span>
-        <span class="n">commit_message</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;Upload </span><span class="si">{</span><span class="n">dataset_name</span><span class="si">}</span><span class="s2"> embeddings&quot;</span><span class="p">,</span>
+        <span class="n">repo_type</span><span class="o">=</span><span class="s2">"dataset"</span><span class="p">,</span>
+        <span class="n">commit_message</span><span class="o">=</span><span class="sa">f</span><span class="s2">"Upload </span><span class="si">{</span><span class="n">dataset_name</span><span class="si">}</span><span class="s2"> embeddings"</span><span class="p">,</span>
     <span class="p">)</span>
 
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Uploaded to </span><span class="si">{</span><span class="n">repo_id</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">dataset_name</span><span class="si">}</span><span class="s2">/&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Uploaded to </span><span class="si">{</span><span class="n">repo_id</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">dataset_name</span><span class="si">}</span><span class="s2">/"</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="extract_embeddings">
@@ -553,12 +553,12 @@ window.addEventListener("load", () => mermaid.run());
     <span class="n">model_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">dataset_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">L</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
-    <span class="n">device</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;cpu&quot;</span><span class="p">,</span>
+    <span class="n">device</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"cpu"</span><span class="p">,</span>
     <span class="n">overwrite</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="n">upload</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="n">cache_dir</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Extract and cache contextualized embeddings for all subjects.</span>
+<span class="w">    </span><span class="sd">"""Extract and cache contextualized embeddings for all subjects.</span>
 
 <span class="sd">    For each subject in the dataset, extracts per-epoch embeddings using</span>
 <span class="sd">    sliding-window encoding (same as voting evaluation) and saves them</span>
@@ -567,17 +567,17 @@ window.addEventListener("load", () => mermaid.run());
 <span class="sd">    Args:</span>
 <span class="sd">        model: Model with ``encode(x) -&gt; (B, L, D)`` method.</span>
 <span class="sd">        dataset: A ``BasePhysioDataset`` instance.</span>
-<span class="sd">        model_name: Identifier for cache directory (e.g. ``&quot;seqsleepnet-phan&quot;``).</span>
-<span class="sd">        dataset_name: Dataset name for cache (e.g. ``&quot;sleepedf&quot;``).</span>
+<span class="sd">        model_name: Identifier for cache directory (e.g. ``"seqsleepnet-phan"``).</span>
+<span class="sd">        dataset_name: Dataset name for cache (e.g. ``"sleepedf"``).</span>
 <span class="sd">        L: Sequence length the model was trained with.</span>
-<span class="sd">        device: Device string (``&quot;cpu&quot;`` or ``&quot;cuda:0&quot;``).</span>
+<span class="sd">        device: Device string (``"cpu"`` or ``"cuda:0"``).</span>
 <span class="sd">        overwrite: If True, re-extract even if cached.</span>
 <span class="sd">        upload: If True, upload all embeddings to HuggingFace Hub.</span>
 <span class="sd">        cache_dir: Override cache root directory.</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">        Path to the embeddings directory.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">out_dir</span> <span class="o">=</span> <span class="n">_cache_root</span><span class="p">(</span><span class="n">cache_dir</span><span class="p">)</span> <span class="o">/</span> <span class="n">model_name</span> <span class="o">/</span> <span class="n">dataset_name</span>
     <span class="n">out_dir</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
@@ -592,11 +592,11 @@ window.addEventListener("load", () => mermaid.run());
 
     <span class="k">for</span> <span class="n">subj_idx</span><span class="p">,</span> <span class="n">subject_id</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">subjects</span><span class="p">):</span>
         <span class="n">subj_dir</span> <span class="o">=</span> <span class="n">out_dir</span> <span class="o">/</span> <span class="n">subject_id</span>
-        <span class="n">emb_path</span> <span class="o">=</span> <span class="n">subj_dir</span> <span class="o">/</span> <span class="s2">&quot;embeddings.npy&quot;</span>
+        <span class="n">emb_path</span> <span class="o">=</span> <span class="n">subj_dir</span> <span class="o">/</span> <span class="s2">"embeddings.npy"</span>
 
         <span class="k">if</span> <span class="n">emb_path</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">overwrite</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">embedding_dim</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="n">existing</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">emb_path</span><span class="p">),</span> <span class="n">mmap_mode</span><span class="o">=</span><span class="s2">&quot;r&quot;</span><span class="p">)</span>
+                <span class="n">existing</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">emb_path</span><span class="p">),</span> <span class="n">mmap_mode</span><span class="o">=</span><span class="s2">"r"</span><span class="p">)</span>
                 <span class="n">embedding_dim</span> <span class="o">=</span> <span class="n">existing</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
             <span class="n">n_extracted</span> <span class="o">+=</span> <span class="mi">1</span>
             <span class="k">continue</span>
@@ -608,16 +608,16 @@ window.addEventListener("load", () => mermaid.run());
             <span class="n">item</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">_build_item</span><span class="p">(</span><span class="n">spec</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">n_epochs</span><span class="p">)</span>
 
             <span class="c1"># Stack channels: (n_epochs, C, ...)</span>
-            <span class="n">ch_tensors</span> <span class="o">=</span> <span class="p">[</span><span class="n">item</span><span class="p">[</span><span class="s2">&quot;signals&quot;</span><span class="p">][</span><span class="n">ch</span><span class="p">]</span> <span class="k">for</span> <span class="n">ch</span> <span class="ow">in</span> <span class="n">item</span><span class="p">[</span><span class="s2">&quot;channel_order&quot;</span><span class="p">]]</span>
+            <span class="n">ch_tensors</span> <span class="o">=</span> <span class="p">[</span><span class="n">item</span><span class="p">[</span><span class="s2">"signals"</span><span class="p">][</span><span class="n">ch</span><span class="p">]</span> <span class="k">for</span> <span class="n">ch</span> <span class="ow">in</span> <span class="n">item</span><span class="p">[</span><span class="s2">"channel_order"</span><span class="p">]]</span>
             <span class="n">signals</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">ch_tensors</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>  <span class="c1"># (n_epochs, C, ...)</span>
             <span class="n">signals</span> <span class="o">=</span> <span class="n">signals</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>  <span class="c1"># (1, n_epochs, C, ...)</span>
 
-            <span class="n">labels</span> <span class="o">=</span> <span class="n">item</span><span class="p">[</span><span class="s2">&quot;labels&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span>
+            <span class="n">labels</span> <span class="o">=</span> <span class="n">item</span><span class="p">[</span><span class="s2">"labels"</span><span class="p">]</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span>
 
             <span class="c1"># Extract embeddings</span>
             <span class="n">embeddings</span> <span class="o">=</span> <span class="n">_extract_subject_sliding</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">signals</span><span class="p">,</span> <span class="n">L</span><span class="p">,</span> <span class="n">dev</span><span class="p">)</span>
         <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  [SKIP] </span><span class="si">{</span><span class="n">subject_id</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  [SKIP] </span><span class="si">{</span><span class="n">subject_id</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
             <span class="k">continue</span>
 
         <span class="k">if</span> <span class="n">embedding_dim</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
@@ -631,42 +631,42 @@ window.addEventListener("load", () => mermaid.run());
             <span class="n">emb_path</span><span class="p">,</span>
             <span class="n">cast_to_cache_dtype</span><span class="p">(</span><span class="n">embeddings</span><span class="p">,</span> <span class="n">dtype_name</span><span class="p">),</span>
             <span class="n">meta</span><span class="o">=</span><span class="p">{</span>
-                <span class="s2">&quot;model_name&quot;</span><span class="p">:</span> <span class="n">model_name</span><span class="p">,</span>
-                <span class="s2">&quot;dataset_name&quot;</span><span class="p">:</span> <span class="n">dataset_name</span><span class="p">,</span>
-                <span class="s2">&quot;subject_id&quot;</span><span class="p">:</span> <span class="n">subject_id</span><span class="p">,</span>
-                <span class="s2">&quot;embedding_dim&quot;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">embeddings</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
-                <span class="s2">&quot;n_epochs&quot;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">embeddings</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span>
+                <span class="s2">"model_name"</span><span class="p">:</span> <span class="n">model_name</span><span class="p">,</span>
+                <span class="s2">"dataset_name"</span><span class="p">:</span> <span class="n">dataset_name</span><span class="p">,</span>
+                <span class="s2">"subject_id"</span><span class="p">:</span> <span class="n">subject_id</span><span class="p">,</span>
+                <span class="s2">"embedding_dim"</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">embeddings</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
+                <span class="s2">"n_epochs"</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">embeddings</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span>
             <span class="p">},</span>
         <span class="p">)</span>
 
-        <span class="n">lbl_path</span> <span class="o">=</span> <span class="n">subj_dir</span> <span class="o">/</span> <span class="s2">&quot;labels.npy&quot;</span>
+        <span class="n">lbl_path</span> <span class="o">=</span> <span class="n">subj_dir</span> <span class="o">/</span> <span class="s2">"labels.npy"</span>
         <span class="n">cache</span><span class="o">.</span><span class="n">atomic_save_array</span><span class="p">(</span>
             <span class="n">lbl_path</span><span class="p">,</span>
             <span class="n">labels</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int16</span><span class="p">),</span>
             <span class="n">meta</span><span class="o">=</span><span class="p">{</span>
-                <span class="s2">&quot;subject_id&quot;</span><span class="p">:</span> <span class="n">subject_id</span><span class="p">,</span>
-                <span class="s2">&quot;n_epochs&quot;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">labels</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span>
+                <span class="s2">"subject_id"</span><span class="p">:</span> <span class="n">subject_id</span><span class="p">,</span>
+                <span class="s2">"n_epochs"</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">labels</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span>
             <span class="p">},</span>
         <span class="p">)</span>
 
         <span class="n">n_extracted</span> <span class="o">+=</span> <span class="mi">1</span>
         <span class="nb">print</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;  [</span><span class="si">{</span><span class="n">n_extracted</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">subjects</span><span class="p">)</span><span class="si">}</span><span class="s2">] </span><span class="si">{</span><span class="n">subject_id</span><span class="si">}</span><span class="s2">: &quot;</span>
-            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">embeddings</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2"> epochs, dim=</span><span class="si">{</span><span class="n">embeddings</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="sa">f</span><span class="s2">"  [</span><span class="si">{</span><span class="n">n_extracted</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">subjects</span><span class="p">)</span><span class="si">}</span><span class="s2">] </span><span class="si">{</span><span class="n">subject_id</span><span class="si">}</span><span class="s2">: "</span>
+            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">embeddings</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2"> epochs, dim=</span><span class="si">{</span><span class="n">embeddings</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="s2">"</span>
         <span class="p">)</span>
 
     <span class="c1"># Save global metadata</span>
     <span class="n">metadata</span> <span class="o">=</span> <span class="p">{</span>
-        <span class="s2">&quot;model_name&quot;</span><span class="p">:</span> <span class="n">model_name</span><span class="p">,</span>
-        <span class="s2">&quot;dataset_name&quot;</span><span class="p">:</span> <span class="n">dataset_name</span><span class="p">,</span>
-        <span class="s2">&quot;embedding_dim&quot;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">embedding_dim</span><span class="p">)</span> <span class="k">if</span> <span class="n">embedding_dim</span> <span class="k">else</span> <span class="mi">0</span><span class="p">,</span>
-        <span class="s2">&quot;n_subjects&quot;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">subjects</span><span class="p">),</span>
+        <span class="s2">"model_name"</span><span class="p">:</span> <span class="n">model_name</span><span class="p">,</span>
+        <span class="s2">"dataset_name"</span><span class="p">:</span> <span class="n">dataset_name</span><span class="p">,</span>
+        <span class="s2">"embedding_dim"</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">embedding_dim</span><span class="p">)</span> <span class="k">if</span> <span class="n">embedding_dim</span> <span class="k">else</span> <span class="mi">0</span><span class="p">,</span>
+        <span class="s2">"n_subjects"</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">subjects</span><span class="p">),</span>
     <span class="p">}</span>
-    <span class="n">meta_path</span> <span class="o">=</span> <span class="n">out_dir</span> <span class="o">/</span> <span class="s2">&quot;metadata.json&quot;</span>
-    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">meta_path</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+    <span class="n">meta_path</span> <span class="o">=</span> <span class="n">out_dir</span> <span class="o">/</span> <span class="s2">"metadata.json"</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">meta_path</span><span class="p">,</span> <span class="s2">"w"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
         <span class="n">json</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">metadata</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
 
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Extracted </span><span class="si">{</span><span class="n">n_extracted</span><span class="si">}</span><span class="s2"> subjects to </span><span class="si">{</span><span class="n">out_dir</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Extracted </span><span class="si">{</span><span class="n">n_extracted</span><span class="si">}</span><span class="s2"> subjects to </span><span class="si">{</span><span class="n">out_dir</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 
     <span class="k">if</span> <span class="n">upload</span><span class="p">:</span>
         <span class="n">_upload_to_hf</span><span class="p">(</span><span class="n">out_dir</span><span class="p">,</span> <span class="n">model_name</span><span class="p">,</span> <span class="n">dataset_name</span><span class="p">)</span>
@@ -683,15 +683,15 @@ window.addEventListener("load", () => mermaid.run());
     <span class="n">cache_dir</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">verbose</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Load cached embeddings, downloading from HuggingFace if needed.</span>
+<span class="w">    </span><span class="sd">"""Load cached embeddings, downloading from HuggingFace if needed.</span>
 
 <span class="sd">    Checks the local cache first. If embeddings are not found locally,</span>
 <span class="sd">    downloads them from ``4rooms/{model_name}-embeddings`` on HuggingFace</span>
 <span class="sd">    Hub (one dataset repo per model).</span>
 
 <span class="sd">    Args:</span>
-<span class="sd">        model_name: Model identifier (e.g. ``&quot;seqsleepnet-phan&quot;``).</span>
-<span class="sd">        dataset_name: Dataset name (e.g. ``&quot;sleepedf&quot;``).</span>
+<span class="sd">        model_name: Model identifier (e.g. ``"seqsleepnet-phan"``).</span>
+<span class="sd">        dataset_name: Dataset name (e.g. ``"sleepedf"``).</span>
 <span class="sd">        cache_dir: Override cache root directory.</span>
 <span class="sd">        verbose: If True, print embedding metadata and linear probe</span>
 <span class="sd">            results (if available).</span>
@@ -704,11 +704,11 @@ window.addEventListener("load", () => mermaid.run());
 
 <span class="sd">        from physioex.models import load_embeddings</span>
 
-<span class="sd">        path = load_embeddings(&quot;seqsleepnet-phan&quot;, &quot;sleepedf&quot;, verbose=True)</span>
-<span class="sd">        # path / &quot;SC4001E0&quot; / &quot;embeddings.npy&quot;  -&gt;  (n_epochs, 128)</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">        path = load_embeddings("seqsleepnet-phan", "sleepedf", verbose=True)</span>
+<span class="sd">        # path / "SC4001E0" / "embeddings.npy"  -&gt;  (n_epochs, 128)</span>
+<span class="sd">    """</span>
     <span class="n">out_dir</span> <span class="o">=</span> <span class="n">_cache_root</span><span class="p">(</span><span class="n">cache_dir</span><span class="p">)</span> <span class="o">/</span> <span class="n">model_name</span> <span class="o">/</span> <span class="n">dataset_name</span>
-    <span class="n">meta_path</span> <span class="o">=</span> <span class="n">out_dir</span> <span class="o">/</span> <span class="s2">&quot;metadata.json&quot;</span>
+    <span class="n">meta_path</span> <span class="o">=</span> <span class="n">out_dir</span> <span class="o">/</span> <span class="s2">"metadata.json"</span>
 
     <span class="c1"># Check if already cached locally</span>
     <span class="k">if</span> <span class="n">meta_path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
@@ -725,18 +725,18 @@ window.addEventListener("load", () => mermaid.run());
     <span class="k">try</span><span class="p">:</span>
         <span class="n">snapshot_download</span><span class="p">(</span>
             <span class="n">repo_id</span><span class="o">=</span><span class="n">repo_id</span><span class="p">,</span>
-            <span class="n">repo_type</span><span class="o">=</span><span class="s2">&quot;dataset&quot;</span><span class="p">,</span>
-            <span class="n">allow_patterns</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dataset_name</span><span class="si">}</span><span class="s2">/**&quot;</span><span class="p">,</span>
+            <span class="n">repo_type</span><span class="o">=</span><span class="s2">"dataset"</span><span class="p">,</span>
+            <span class="n">allow_patterns</span><span class="o">=</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">dataset_name</span><span class="si">}</span><span class="s2">/**"</span><span class="p">,</span>
             <span class="n">local_dir</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">model_cache</span><span class="p">),</span>
         <span class="p">)</span>
     <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;No embeddings for </span><span class="si">{</span><span class="n">model_name</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">dataset_name</span><span class="si">}</span><span class="s2"> on HuggingFace &quot;</span>
-            <span class="sa">f</span><span class="s2">&quot;(</span><span class="si">{</span><span class="n">repo_id</span><span class="si">}</span><span class="s2">). Extract them first with &quot;</span>
-            <span class="sa">f</span><span class="s2">&quot;extract_embeddings(). Error: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="sa">f</span><span class="s2">"No embeddings for </span><span class="si">{</span><span class="n">model_name</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">dataset_name</span><span class="si">}</span><span class="s2"> on HuggingFace "</span>
+            <span class="sa">f</span><span class="s2">"(</span><span class="si">{</span><span class="n">repo_id</span><span class="si">}</span><span class="s2">). Extract them first with "</span>
+            <span class="sa">f</span><span class="s2">"extract_embeddings(). Error: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">"</span>
         <span class="p">)</span>
 
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Downloaded </span><span class="si">{</span><span class="n">model_name</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">dataset_name</span><span class="si">}</span><span class="s2"> from </span><span class="si">{</span><span class="n">repo_id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Downloaded </span><span class="si">{</span><span class="n">model_name</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">dataset_name</span><span class="si">}</span><span class="s2"> from </span><span class="si">{</span><span class="n">repo_id</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 
     <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
         <span class="n">_print_embedding_info</span><span class="p">(</span><span class="n">out_dir</span><span class="p">)</span>
@@ -746,84 +746,84 @@ window.addEventListener("load", () => mermaid.run());
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_print_embedding_info</span><span class="p">(</span><span class="n">emb_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Print metadata and linear probe results for a cached embedding dir.&quot;&quot;&quot;</span>
-    <span class="n">meta_path</span> <span class="o">=</span> <span class="n">emb_dir</span> <span class="o">/</span> <span class="s2">&quot;metadata.json&quot;</span>
-    <span class="n">probe_path</span> <span class="o">=</span> <span class="n">emb_dir</span> <span class="o">/</span> <span class="s2">&quot;linear_probe_results.json&quot;</span>
+<span class="w">    </span><span class="sd">"""Print metadata and linear probe results for a cached embedding dir."""</span>
+    <span class="n">meta_path</span> <span class="o">=</span> <span class="n">emb_dir</span> <span class="o">/</span> <span class="s2">"metadata.json"</span>
+    <span class="n">probe_path</span> <span class="o">=</span> <span class="n">emb_dir</span> <span class="o">/</span> <span class="s2">"linear_probe_results.json"</span>
 
     <span class="k">if</span> <span class="n">meta_path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
         <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">meta_path</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
             <span class="n">meta</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
-        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="si">{</span><span class="s1">&#39;=&#39;</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">60</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Embeddings: </span><span class="si">{</span><span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;model_name&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;?&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;dataset_name&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;?&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  Subjects:      </span><span class="si">{</span><span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;n_subjects&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;?&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  Embedding dim: </span><span class="si">{</span><span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;embedding_dim&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;?&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  Cache:         </span><span class="si">{</span><span class="n">emb_dir</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="se">\n</span><span class="si">{</span><span class="s1">'='</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">60</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Embeddings: </span><span class="si">{</span><span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'model_name'</span><span class="p">,</span><span class="w"> </span><span class="s1">'?'</span><span class="p">)</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'dataset_name'</span><span class="p">,</span><span class="w"> </span><span class="s1">'?'</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  Subjects:      </span><span class="si">{</span><span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'n_subjects'</span><span class="p">,</span><span class="w"> </span><span class="s1">'?'</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  Embedding dim: </span><span class="si">{</span><span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'embedding_dim'</span><span class="p">,</span><span class="w"> </span><span class="s1">'?'</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  Cache:         </span><span class="si">{</span><span class="n">emb_dir</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 
     <span class="k">if</span> <span class="n">probe_path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
         <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">probe_path</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
             <span class="n">probe</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
 
-        <span class="n">pooled</span> <span class="o">=</span> <span class="n">probe</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;pooled&quot;</span><span class="p">,</span> <span class="p">{})</span>
-        <span class="n">mean_std</span> <span class="o">=</span> <span class="n">probe</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;mean_std&quot;</span><span class="p">,</span> <span class="p">{})</span>
-        <span class="n">class_names</span> <span class="o">=</span> <span class="n">probe</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;class_names&quot;</span><span class="p">,</span> <span class="p">[])</span>
+        <span class="n">pooled</span> <span class="o">=</span> <span class="n">probe</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"pooled"</span><span class="p">,</span> <span class="p">{})</span>
+        <span class="n">mean_std</span> <span class="o">=</span> <span class="n">probe</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"mean_std"</span><span class="p">,</span> <span class="p">{})</span>
+        <span class="n">class_names</span> <span class="o">=</span> <span class="n">probe</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"class_names"</span><span class="p">,</span> <span class="p">[])</span>
 
-        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Linear probe (</span><span class="si">{</span><span class="n">probe</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;n_folds&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;?&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">-fold subject-wise CV):&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="se">\n</span><span class="s2">Linear probe (</span><span class="si">{</span><span class="n">probe</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'n_folds'</span><span class="p">,</span><span class="w"> </span><span class="s1">'?'</span><span class="p">)</span><span class="si">}</span><span class="s2">-fold subject-wise CV):"</span><span class="p">)</span>
 
         <span class="c1"># Pooled metrics</span>
         <span class="nb">print</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;  Pooled:   ACC=</span><span class="si">{</span><span class="n">pooled</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;accuracy&#39;</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">  &quot;</span>
-            <span class="sa">f</span><span class="s2">&quot;MF1=</span><span class="si">{</span><span class="n">pooled</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;macro_f1&#39;</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">  &quot;</span>
-            <span class="sa">f</span><span class="s2">&quot;</span><span class="se">\u03ba</span><span class="s2">=</span><span class="si">{</span><span class="n">pooled</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;kappa&#39;</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="sa">f</span><span class="s2">"  Pooled:   ACC=</span><span class="si">{</span><span class="n">pooled</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'accuracy'</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">  "</span>
+            <span class="sa">f</span><span class="s2">"MF1=</span><span class="si">{</span><span class="n">pooled</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'macro_f1'</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">  "</span>
+            <span class="sa">f</span><span class="s2">"</span><span class="se">\u03ba</span><span class="s2">=</span><span class="si">{</span><span class="n">pooled</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'kappa'</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">"</span>
         <span class="p">)</span>
 
         <span class="c1"># Mean +/- std</span>
-        <span class="n">acc_ms</span> <span class="o">=</span> <span class="n">mean_std</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;accuracy&quot;</span><span class="p">,</span> <span class="p">{})</span>
-        <span class="n">mf1_ms</span> <span class="o">=</span> <span class="n">mean_std</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;macro_f1&quot;</span><span class="p">,</span> <span class="p">{})</span>
-        <span class="n">kap_ms</span> <span class="o">=</span> <span class="n">mean_std</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;kappa&quot;</span><span class="p">,</span> <span class="p">{})</span>
+        <span class="n">acc_ms</span> <span class="o">=</span> <span class="n">mean_std</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"accuracy"</span><span class="p">,</span> <span class="p">{})</span>
+        <span class="n">mf1_ms</span> <span class="o">=</span> <span class="n">mean_std</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"macro_f1"</span><span class="p">,</span> <span class="p">{})</span>
+        <span class="n">kap_ms</span> <span class="o">=</span> <span class="n">mean_std</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"kappa"</span><span class="p">,</span> <span class="p">{})</span>
         <span class="nb">print</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;  Mean</span><span class="se">\u00b1</span><span class="s2">SD: ACC=</span><span class="si">{</span><span class="n">acc_ms</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;mean&#39;</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="se">\u00b1</span><span class="si">{</span><span class="n">acc_ms</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;std&#39;</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">  &quot;</span>
-            <span class="sa">f</span><span class="s2">&quot;MF1=</span><span class="si">{</span><span class="n">mf1_ms</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;mean&#39;</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="se">\u00b1</span><span class="si">{</span><span class="n">mf1_ms</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;std&#39;</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">  &quot;</span>
-            <span class="sa">f</span><span class="s2">&quot;</span><span class="se">\u03ba</span><span class="s2">=</span><span class="si">{</span><span class="n">kap_ms</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;mean&#39;</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="se">\u00b1</span><span class="si">{</span><span class="n">kap_ms</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;std&#39;</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="sa">f</span><span class="s2">"  Mean</span><span class="se">\u00b1</span><span class="s2">SD: ACC=</span><span class="si">{</span><span class="n">acc_ms</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'mean'</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="se">\u00b1</span><span class="si">{</span><span class="n">acc_ms</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'std'</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">  "</span>
+            <span class="sa">f</span><span class="s2">"MF1=</span><span class="si">{</span><span class="n">mf1_ms</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'mean'</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="se">\u00b1</span><span class="si">{</span><span class="n">mf1_ms</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'std'</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">  "</span>
+            <span class="sa">f</span><span class="s2">"</span><span class="se">\u03ba</span><span class="s2">=</span><span class="si">{</span><span class="n">kap_ms</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'mean'</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="se">\u00b1</span><span class="si">{</span><span class="n">kap_ms</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'std'</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">"</span>
         <span class="p">)</span>
 
         <span class="c1"># Per-class F1</span>
-        <span class="n">pcf1</span> <span class="o">=</span> <span class="n">pooled</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;per_class_f1&quot;</span><span class="p">,</span> <span class="p">{})</span>
+        <span class="n">pcf1</span> <span class="o">=</span> <span class="n">pooled</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"per_class_f1"</span><span class="p">,</span> <span class="p">{})</span>
         <span class="k">if</span> <span class="n">pcf1</span><span class="p">:</span>
-            <span class="n">pcf1_str</span> <span class="o">=</span> <span class="s2">&quot;  &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">=</span><span class="si">{</span><span class="n">pcf1</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">class_names</span>
+            <span class="n">pcf1_str</span> <span class="o">=</span> <span class="s2">"  "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">=</span><span class="si">{</span><span class="n">pcf1</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">"</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">class_names</span>
             <span class="p">)</span>
-            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  Per-class F1: </span><span class="si">{</span><span class="n">pcf1_str</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  Per-class F1: </span><span class="si">{</span><span class="n">pcf1_str</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 
         <span class="c1"># Support</span>
-        <span class="n">support</span> <span class="o">=</span> <span class="n">pooled</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;support&quot;</span><span class="p">,</span> <span class="p">{})</span>
+        <span class="n">support</span> <span class="o">=</span> <span class="n">pooled</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"support"</span><span class="p">,</span> <span class="p">{})</span>
         <span class="k">if</span> <span class="n">support</span><span class="p">:</span>
-            <span class="n">sup_str</span> <span class="o">=</span> <span class="s2">&quot;  &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">=</span><span class="si">{</span><span class="nb">int</span><span class="p">(</span><span class="n">support</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">))</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">class_names</span>
+            <span class="n">sup_str</span> <span class="o">=</span> <span class="s2">"  "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">=</span><span class="si">{</span><span class="nb">int</span><span class="p">(</span><span class="n">support</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">))</span><span class="si">}</span><span class="s2">"</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">class_names</span>
             <span class="p">)</span>
-            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  Support:      </span><span class="si">{</span><span class="n">sup_str</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  Support:      </span><span class="si">{</span><span class="n">sup_str</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 
-        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="s1">&#39;=&#39;</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">60</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="s1">'='</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">60</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;  Linear probe: not yet computed&quot;</span><span class="p">)</span>
-        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="s1">&#39;=&#39;</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">60</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">"  Linear probe: not yet computed"</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="s1">'='</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">60</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 
 
 <span class="c1"># ---------------------------------------------------------------------------</span>
 <span class="c1"># Linear probing</span>
 <span class="c1"># ---------------------------------------------------------------------------</span>
 
-<span class="n">SLEEP_CLASS_NAMES</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;W&quot;</span><span class="p">,</span> <span class="s2">&quot;N1&quot;</span><span class="p">,</span> <span class="s2">&quot;N2&quot;</span><span class="p">,</span> <span class="s2">&quot;N3&quot;</span><span class="p">,</span> <span class="s2">&quot;REM&quot;</span><span class="p">]</span>
+<span class="n">SLEEP_CLASS_NAMES</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"W"</span><span class="p">,</span> <span class="s2">"N1"</span><span class="p">,</span> <span class="s2">"N2"</span><span class="p">,</span> <span class="s2">"N3"</span><span class="p">,</span> <span class="s2">"REM"</span><span class="p">]</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_load_npy_as_float32</span><span class="p">(</span><span class="n">npy_path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Load a .npy file as float32, handling bfloat16 (|V2) transparently.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Load a .npy file as float32, handling bfloat16 (|V2) transparently."""</span>
     <span class="n">arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">npy_path</span><span class="p">))</span>
     <span class="k">if</span> <span class="n">arr</span><span class="o">.</span><span class="n">dtype</span> <span class="o">==</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span> <span class="ow">or</span> <span class="n">arr</span><span class="o">.</span><span class="n">dtype</span> <span class="o">==</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">arr</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">arr</span><span class="o">.</span><span class="n">dtype</span> <span class="o">==</span> <span class="n">np</span><span class="o">.</span><span class="n">int16</span> <span class="ow">or</span> <span class="n">arr</span><span class="o">.</span><span class="n">dtype</span> <span class="o">==</span> <span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">arr</span>
     <span class="c1"># bfloat16 stored as void (|V2): convert via raw bytes → torch → numpy</span>
-    <span class="k">if</span> <span class="n">arr</span><span class="o">.</span><span class="n">dtype</span><span class="o">.</span><span class="n">kind</span> <span class="o">==</span> <span class="s2">&quot;V&quot;</span> <span class="ow">and</span> <span class="n">arr</span><span class="o">.</span><span class="n">dtype</span><span class="o">.</span><span class="n">itemsize</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">arr</span><span class="o">.</span><span class="n">dtype</span><span class="o">.</span><span class="n">kind</span> <span class="o">==</span> <span class="s2">"V"</span> <span class="ow">and</span> <span class="n">arr</span><span class="o">.</span><span class="n">dtype</span><span class="o">.</span><span class="n">itemsize</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
         <span class="n">flat</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">frombuffer</span><span class="p">(</span><span class="n">arr</span><span class="o">.</span><span class="n">tobytes</span><span class="p">(),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">bfloat16</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">flat</span><span class="o">.</span><span class="n">float</span><span class="p">()</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">arr</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
     <span class="c1"># Fallback: try direct cast</span>
@@ -840,12 +840,12 @@ window.addEventListener("load", () => mermaid.run());
     <span class="n">lr</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1e-3</span><span class="p">,</span>
     <span class="n">weight_decay</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1e-4</span><span class="p">,</span>
     <span class="n">batch_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">512</span><span class="p">,</span>
-    <span class="n">device</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;cpu&quot;</span><span class="p">,</span>
+    <span class="n">device</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"cpu"</span><span class="p">,</span>
     <span class="n">upload</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="n">cache_dir</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">save_predictions</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;5-fold subject-wise cross-validated linear probe on cached embeddings.</span>
+<span class="w">    </span><span class="sd">"""5-fold subject-wise cross-validated linear probe on cached embeddings.</span>
 
 <span class="sd">    Loads per-subject embeddings and labels from the local cache, splits</span>
 <span class="sd">    subjects into *n_folds* folds, trains a ``nn.Linear`` classifier per</span>
@@ -856,7 +856,7 @@ window.addEventListener("load", () => mermaid.run());
 <span class="sd">    * **Accuracy (ACC)** — overall classification accuracy.</span>
 <span class="sd">    * **Macro F1 (MF1)** — unweighted mean of per-class F1; handles class</span>
 <span class="sd">      imbalance.</span>
-<span class="sd">    * **Cohen&#39;s Kappa (κ)** — chance-corrected agreement; the standard</span>
+<span class="sd">    * **Cohen's Kappa (κ)** — chance-corrected agreement; the standard</span>
 <span class="sd">      metric in sleep medicine.</span>
 <span class="sd">    * **Per-class F1** — shows per-stage performance (N1 is typically</span>
 <span class="sd">      the hardest).</span>
@@ -873,7 +873,7 @@ window.addEventListener("load", () => mermaid.run());
 <span class="sd">        lr: Learning rate (default 1e-3).</span>
 <span class="sd">        weight_decay: L2 regularization (default 1e-4).</span>
 <span class="sd">        batch_size: Training batch size (default 512).</span>
-<span class="sd">        device: Device string (``&quot;cpu&quot;`` or ``&quot;cuda:0&quot;``).</span>
+<span class="sd">        device: Device string (``"cpu"`` or ``"cuda:0"``).</span>
 <span class="sd">        upload: If True, upload results to HuggingFace Hub.</span>
 <span class="sd">        cache_dir: Override cache root directory.</span>
 <span class="sd">        save_predictions: If True, save per-subject softmax probabilities</span>
@@ -883,7 +883,7 @@ window.addEventListener("load", () => mermaid.run());
 
 <span class="sd">    Returns:</span>
 <span class="sd">        Results dict with ``per_fold``, ``pooled``, and ``mean_std`` keys.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">physioex.train.metrics</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
         <span class="n">accuracy_score</span> <span class="k">as</span> <span class="n">_accuracy_score</span><span class="p">,</span>
         <span class="n">f1_score</span> <span class="k">as</span> <span class="n">_f1_score</span><span class="p">,</span>
@@ -894,7 +894,7 @@ window.addEventListener("load", () => mermaid.run());
 
     <span class="n">emb_dir</span> <span class="o">=</span> <span class="n">_cache_root</span><span class="p">(</span><span class="n">cache_dir</span><span class="p">)</span> <span class="o">/</span> <span class="n">model_name</span> <span class="o">/</span> <span class="n">dataset_name</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">emb_dir</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
-        <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;No embeddings found at </span><span class="si">{</span><span class="n">emb_dir</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"No embeddings found at </span><span class="si">{</span><span class="n">emb_dir</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 
     <span class="c1"># ------------------------------------------------------------------</span>
     <span class="c1"># 1. Load all subject embeddings &amp; labels</span>
@@ -903,21 +903,21 @@ window.addEventListener("load", () => mermaid.run());
     <span class="k">for</span> <span class="n">subj_dir</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">emb_dir</span><span class="o">.</span><span class="n">iterdir</span><span class="p">()):</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">subj_dir</span><span class="o">.</span><span class="n">is_dir</span><span class="p">():</span>
             <span class="k">continue</span>
-        <span class="n">emb_path</span> <span class="o">=</span> <span class="n">subj_dir</span> <span class="o">/</span> <span class="s2">&quot;embeddings.npy&quot;</span>
-        <span class="n">lbl_path</span> <span class="o">=</span> <span class="n">subj_dir</span> <span class="o">/</span> <span class="s2">&quot;labels.npy&quot;</span>
+        <span class="n">emb_path</span> <span class="o">=</span> <span class="n">subj_dir</span> <span class="o">/</span> <span class="s2">"embeddings.npy"</span>
+        <span class="n">lbl_path</span> <span class="o">=</span> <span class="n">subj_dir</span> <span class="o">/</span> <span class="s2">"labels.npy"</span>
         <span class="k">if</span> <span class="n">emb_path</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span> <span class="ow">and</span> <span class="n">lbl_path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
             <span class="n">subjects</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
                 <span class="p">{</span>
-                    <span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="n">subj_dir</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
-                    <span class="s2">&quot;embeddings&quot;</span><span class="p">:</span> <span class="n">_load_npy_as_float32</span><span class="p">(</span><span class="n">emb_path</span><span class="p">),</span>
-                    <span class="s2">&quot;labels&quot;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">lbl_path</span><span class="p">))</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">),</span>
+                    <span class="s2">"id"</span><span class="p">:</span> <span class="n">subj_dir</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                    <span class="s2">"embeddings"</span><span class="p">:</span> <span class="n">_load_npy_as_float32</span><span class="p">(</span><span class="n">emb_path</span><span class="p">),</span>
+                    <span class="s2">"labels"</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">lbl_path</span><span class="p">))</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">),</span>
                 <span class="p">}</span>
             <span class="p">)</span>
 
     <span class="k">if</span> <span class="ow">not</span> <span class="n">subjects</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;No subject data found in </span><span class="si">{</span><span class="n">emb_dir</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"No subject data found in </span><span class="si">{</span><span class="n">emb_dir</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 
-    <span class="n">all_labels</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([</span><span class="n">s</span><span class="p">[</span><span class="s2">&quot;labels&quot;</span><span class="p">]</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">subjects</span><span class="p">])</span>
+    <span class="n">all_labels</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([</span><span class="n">s</span><span class="p">[</span><span class="s2">"labels"</span><span class="p">]</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">subjects</span><span class="p">])</span>
     <span class="n">valid_labels</span> <span class="o">=</span> <span class="n">all_labels</span><span class="p">[</span><span class="n">all_labels</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">]</span>
     <span class="n">n_classes</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">valid_labels</span><span class="o">.</span><span class="n">max</span><span class="p">())</span> <span class="o">+</span> <span class="mi">1</span>
     <span class="n">class_names</span> <span class="o">=</span> <span class="p">(</span>
@@ -941,8 +941,8 @@ window.addEventListener("load", () => mermaid.run());
     <span class="n">subject_predictions</span> <span class="o">=</span> <span class="p">[]</span>  <span class="c1"># for save_predictions</span>
 
     <span class="nb">print</span><span class="p">(</span>
-        <span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Linear probe: </span><span class="si">{</span><span class="n">n_subjects</span><span class="si">}</span><span class="s2"> subjects, </span><span class="si">{</span><span class="n">n_folds</span><span class="si">}</span><span class="s2">-fold CV, &quot;</span>
-        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">n_classes</span><span class="si">}</span><span class="s2"> classes (</span><span class="si">{</span><span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">class_names</span><span class="p">)</span><span class="si">}</span><span class="s2">)&quot;</span>
+        <span class="sa">f</span><span class="s2">"</span><span class="se">\n</span><span class="s2">Linear probe: </span><span class="si">{</span><span class="n">n_subjects</span><span class="si">}</span><span class="s2"> subjects, </span><span class="si">{</span><span class="n">n_folds</span><span class="si">}</span><span class="s2">-fold CV, "</span>
+        <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">n_classes</span><span class="si">}</span><span class="s2"> classes (</span><span class="si">{</span><span class="s1">', '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">class_names</span><span class="p">)</span><span class="si">}</span><span class="s2">)"</span>
     <span class="p">)</span>
 
     <span class="c1"># ------------------------------------------------------------------</span>
@@ -954,10 +954,10 @@ window.addEventListener("load", () => mermaid.run());
         <span class="n">test_idx</span> <span class="o">=</span> <span class="n">folds</span><span class="p">[</span><span class="n">fold_idx</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
 
         <span class="c1"># Concatenate per-subject arrays</span>
-        <span class="n">train_embs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([</span><span class="n">subjects</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;embeddings&quot;</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">train_idx</span><span class="p">])</span>
-        <span class="n">train_lbls</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([</span><span class="n">subjects</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;labels&quot;</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">train_idx</span><span class="p">])</span>
-        <span class="n">test_embs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([</span><span class="n">subjects</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;embeddings&quot;</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">test_idx</span><span class="p">])</span>
-        <span class="n">test_lbls</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([</span><span class="n">subjects</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;labels&quot;</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">test_idx</span><span class="p">])</span>
+        <span class="n">train_embs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([</span><span class="n">subjects</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">"embeddings"</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">train_idx</span><span class="p">])</span>
+        <span class="n">train_lbls</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([</span><span class="n">subjects</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">"labels"</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">train_idx</span><span class="p">])</span>
+        <span class="n">test_embs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([</span><span class="n">subjects</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">"embeddings"</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">test_idx</span><span class="p">])</span>
+        <span class="n">test_lbls</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([</span><span class="n">subjects</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">"labels"</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">test_idx</span><span class="p">])</span>
 
         <span class="c1"># Drop unscored epochs (label == -1)</span>
         <span class="n">train_mask</span> <span class="o">=</span> <span class="n">train_lbls</span> <span class="o">&gt;=</span> <span class="mi">0</span>
@@ -1015,16 +1015,16 @@ window.addEventListener("load", () => mermaid.run());
             <span class="n">offset</span> <span class="o">=</span> <span class="mi">0</span>
             <span class="k">for</span> <span class="n">subj_i</span> <span class="ow">in</span> <span class="n">test_idx</span><span class="p">:</span>
                 <span class="n">subj</span> <span class="o">=</span> <span class="n">subjects</span><span class="p">[</span><span class="n">subj_i</span><span class="p">]</span>
-                <span class="n">subj_labels</span> <span class="o">=</span> <span class="n">subj</span><span class="p">[</span><span class="s2">&quot;labels&quot;</span><span class="p">]</span>
+                <span class="n">subj_labels</span> <span class="o">=</span> <span class="n">subj</span><span class="p">[</span><span class="s2">"labels"</span><span class="p">]</span>
                 <span class="n">valid_mask_subj</span> <span class="o">=</span> <span class="n">subj_labels</span> <span class="o">&gt;=</span> <span class="mi">0</span>
                 <span class="n">n_valid</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">valid_mask_subj</span><span class="o">.</span><span class="n">sum</span><span class="p">())</span>
                 <span class="n">subj_logits</span> <span class="o">=</span> <span class="n">test_logits</span><span class="p">[</span><span class="n">offset</span> <span class="p">:</span> <span class="n">offset</span> <span class="o">+</span> <span class="n">n_valid</span><span class="p">]</span>
                 <span class="n">subj_proba</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">functional</span><span class="o">.</span><span class="n">softmax</span><span class="p">(</span><span class="n">subj_logits</span><span class="p">,</span> <span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
                 <span class="n">subject_predictions</span><span class="o">.</span><span class="n">append</span><span class="p">({</span>
-                    <span class="s2">&quot;subject_id&quot;</span><span class="p">:</span> <span class="n">subj</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">],</span>
-                    <span class="s2">&quot;fold&quot;</span><span class="p">:</span> <span class="n">fold_idx</span><span class="p">,</span>
-                    <span class="s2">&quot;proba&quot;</span><span class="p">:</span> <span class="n">subj_proba</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span>
-                    <span class="s2">&quot;labels&quot;</span><span class="p">:</span> <span class="n">subj_labels</span><span class="p">[</span><span class="n">valid_mask_subj</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span>
+                    <span class="s2">"subject_id"</span><span class="p">:</span> <span class="n">subj</span><span class="p">[</span><span class="s2">"id"</span><span class="p">],</span>
+                    <span class="s2">"fold"</span><span class="p">:</span> <span class="n">fold_idx</span><span class="p">,</span>
+                    <span class="s2">"proba"</span><span class="p">:</span> <span class="n">subj_proba</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span>
+                    <span class="s2">"labels"</span><span class="p">:</span> <span class="n">subj_labels</span><span class="p">[</span><span class="n">valid_mask_subj</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span>
                 <span class="p">})</span>
                 <span class="n">offset</span> <span class="o">+=</span> <span class="n">n_valid</span>
 
@@ -1038,32 +1038,32 @@ window.addEventListener("load", () => mermaid.run());
         <span class="n">pcf1</span><span class="p">,</span> <span class="n">support</span> <span class="o">=</span> <span class="n">_per_class_f1</span><span class="p">(</span><span class="n">preds</span><span class="p">,</span> <span class="n">y_test</span><span class="p">,</span> <span class="n">n_classes</span><span class="p">)</span>
 
         <span class="n">fold_result</span> <span class="o">=</span> <span class="p">{</span>
-            <span class="s2">&quot;fold&quot;</span><span class="p">:</span> <span class="n">fold_idx</span><span class="p">,</span>
-            <span class="s2">&quot;accuracy&quot;</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="n">acc</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span>
-            <span class="s2">&quot;macro_f1&quot;</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="n">mf1</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span>
-            <span class="s2">&quot;kappa&quot;</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="n">kappa</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span>
-            <span class="s2">&quot;per_class_f1&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">"fold"</span><span class="p">:</span> <span class="n">fold_idx</span><span class="p">,</span>
+            <span class="s2">"accuracy"</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="n">acc</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span>
+            <span class="s2">"macro_f1"</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="n">mf1</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span>
+            <span class="s2">"kappa"</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="n">kappa</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span>
+            <span class="s2">"per_class_f1"</span><span class="p">:</span> <span class="p">{</span>
                 <span class="n">name</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="n">pcf1</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="mi">4</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">name</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">class_names</span><span class="p">)</span>
             <span class="p">},</span>
-            <span class="s2">&quot;support&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">"support"</span><span class="p">:</span> <span class="p">{</span>
                 <span class="n">name</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">support</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">name</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">class_names</span><span class="p">)</span>
             <span class="p">},</span>
-            <span class="s2">&quot;n_train_subjects&quot;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">train_idx</span><span class="p">),</span>
-            <span class="s2">&quot;n_test_subjects&quot;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">test_idx</span><span class="p">),</span>
-            <span class="s2">&quot;n_train_epochs&quot;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">train_mask</span><span class="o">.</span><span class="n">sum</span><span class="p">()),</span>
-            <span class="s2">&quot;n_test_epochs&quot;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">test_mask</span><span class="o">.</span><span class="n">sum</span><span class="p">()),</span>
-            <span class="s2">&quot;confusion_matrix&quot;</span><span class="p">:</span> <span class="n">cm</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span>
+            <span class="s2">"n_train_subjects"</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">train_idx</span><span class="p">),</span>
+            <span class="s2">"n_test_subjects"</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">test_idx</span><span class="p">),</span>
+            <span class="s2">"n_train_epochs"</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">train_mask</span><span class="o">.</span><span class="n">sum</span><span class="p">()),</span>
+            <span class="s2">"n_test_epochs"</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">test_mask</span><span class="o">.</span><span class="n">sum</span><span class="p">()),</span>
+            <span class="s2">"confusion_matrix"</span><span class="p">:</span> <span class="n">cm</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span>
         <span class="p">}</span>
         <span class="n">per_fold</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">fold_result</span><span class="p">)</span>
         <span class="n">all_logits_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">test_logits</span><span class="p">)</span>
         <span class="n">all_targets_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">y_test</span><span class="p">)</span>
 
-        <span class="n">pcf1_str</span> <span class="o">=</span> <span class="s2">&quot;  &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">=</span><span class="si">{</span><span class="n">pcf1</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">name</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">class_names</span><span class="p">)</span>
+        <span class="n">pcf1_str</span> <span class="o">=</span> <span class="s2">"  "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">=</span><span class="si">{</span><span class="n">pcf1</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">"</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">name</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">class_names</span><span class="p">)</span>
         <span class="p">)</span>
         <span class="nb">print</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;  Fold </span><span class="si">{</span><span class="n">fold_idx</span><span class="si">}</span><span class="s2">: ACC=</span><span class="si">{</span><span class="n">acc</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">  MF1=</span><span class="si">{</span><span class="n">mf1</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">  &quot;</span>
-            <span class="sa">f</span><span class="s2">&quot;</span><span class="se">\u03ba</span><span class="s2">=</span><span class="si">{</span><span class="n">kappa</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">  [</span><span class="si">{</span><span class="n">pcf1_str</span><span class="si">}</span><span class="s2">]&quot;</span>
+            <span class="sa">f</span><span class="s2">"  Fold </span><span class="si">{</span><span class="n">fold_idx</span><span class="si">}</span><span class="s2">: ACC=</span><span class="si">{</span><span class="n">acc</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">  MF1=</span><span class="si">{</span><span class="n">mf1</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">  "</span>
+            <span class="sa">f</span><span class="s2">"</span><span class="se">\u03ba</span><span class="s2">=</span><span class="si">{</span><span class="n">kappa</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">  [</span><span class="si">{</span><span class="n">pcf1_str</span><span class="si">}</span><span class="s2">]"</span>
         <span class="p">)</span>
 
     <span class="c1"># ------------------------------------------------------------------</span>
@@ -1082,50 +1082,50 @@ window.addEventListener("load", () => mermaid.run());
     <span class="p">)</span>
 
     <span class="c1"># Mean +/- std across folds</span>
-    <span class="n">fold_accs</span> <span class="o">=</span> <span class="p">[</span><span class="n">f</span><span class="p">[</span><span class="s2">&quot;accuracy&quot;</span><span class="p">]</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">per_fold</span><span class="p">]</span>
-    <span class="n">fold_mf1s</span> <span class="o">=</span> <span class="p">[</span><span class="n">f</span><span class="p">[</span><span class="s2">&quot;macro_f1&quot;</span><span class="p">]</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">per_fold</span><span class="p">]</span>
-    <span class="n">fold_kappas</span> <span class="o">=</span> <span class="p">[</span><span class="n">f</span><span class="p">[</span><span class="s2">&quot;kappa&quot;</span><span class="p">]</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">per_fold</span><span class="p">]</span>
+    <span class="n">fold_accs</span> <span class="o">=</span> <span class="p">[</span><span class="n">f</span><span class="p">[</span><span class="s2">"accuracy"</span><span class="p">]</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">per_fold</span><span class="p">]</span>
+    <span class="n">fold_mf1s</span> <span class="o">=</span> <span class="p">[</span><span class="n">f</span><span class="p">[</span><span class="s2">"macro_f1"</span><span class="p">]</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">per_fold</span><span class="p">]</span>
+    <span class="n">fold_kappas</span> <span class="o">=</span> <span class="p">[</span><span class="n">f</span><span class="p">[</span><span class="s2">"kappa"</span><span class="p">]</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">per_fold</span><span class="p">]</span>
 
     <span class="n">results</span> <span class="o">=</span> <span class="p">{</span>
-        <span class="s2">&quot;model_name&quot;</span><span class="p">:</span> <span class="n">model_name</span><span class="p">,</span>
-        <span class="s2">&quot;dataset_name&quot;</span><span class="p">:</span> <span class="n">dataset_name</span><span class="p">,</span>
-        <span class="s2">&quot;n_folds&quot;</span><span class="p">:</span> <span class="n">n_folds</span><span class="p">,</span>
-        <span class="s2">&quot;n_classes&quot;</span><span class="p">:</span> <span class="n">n_classes</span><span class="p">,</span>
-        <span class="s2">&quot;class_names&quot;</span><span class="p">:</span> <span class="n">class_names</span><span class="p">,</span>
-        <span class="s2">&quot;n_subjects&quot;</span><span class="p">:</span> <span class="n">n_subjects</span><span class="p">,</span>
-        <span class="s2">&quot;probe_config&quot;</span><span class="p">:</span> <span class="p">{</span>
-            <span class="s2">&quot;max_epochs&quot;</span><span class="p">:</span> <span class="n">max_epochs</span><span class="p">,</span>
-            <span class="s2">&quot;lr&quot;</span><span class="p">:</span> <span class="n">lr</span><span class="p">,</span>
-            <span class="s2">&quot;weight_decay&quot;</span><span class="p">:</span> <span class="n">weight_decay</span><span class="p">,</span>
-            <span class="s2">&quot;batch_size&quot;</span><span class="p">:</span> <span class="n">batch_size</span><span class="p">,</span>
+        <span class="s2">"model_name"</span><span class="p">:</span> <span class="n">model_name</span><span class="p">,</span>
+        <span class="s2">"dataset_name"</span><span class="p">:</span> <span class="n">dataset_name</span><span class="p">,</span>
+        <span class="s2">"n_folds"</span><span class="p">:</span> <span class="n">n_folds</span><span class="p">,</span>
+        <span class="s2">"n_classes"</span><span class="p">:</span> <span class="n">n_classes</span><span class="p">,</span>
+        <span class="s2">"class_names"</span><span class="p">:</span> <span class="n">class_names</span><span class="p">,</span>
+        <span class="s2">"n_subjects"</span><span class="p">:</span> <span class="n">n_subjects</span><span class="p">,</span>
+        <span class="s2">"probe_config"</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">"max_epochs"</span><span class="p">:</span> <span class="n">max_epochs</span><span class="p">,</span>
+            <span class="s2">"lr"</span><span class="p">:</span> <span class="n">lr</span><span class="p">,</span>
+            <span class="s2">"weight_decay"</span><span class="p">:</span> <span class="n">weight_decay</span><span class="p">,</span>
+            <span class="s2">"batch_size"</span><span class="p">:</span> <span class="n">batch_size</span><span class="p">,</span>
         <span class="p">},</span>
-        <span class="s2">&quot;per_fold&quot;</span><span class="p">:</span> <span class="n">per_fold</span><span class="p">,</span>
-        <span class="s2">&quot;pooled&quot;</span><span class="p">:</span> <span class="p">{</span>
-            <span class="s2">&quot;accuracy&quot;</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="n">pooled_acc</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span>
-            <span class="s2">&quot;macro_f1&quot;</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="n">pooled_mf1</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span>
-            <span class="s2">&quot;kappa&quot;</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="n">pooled_kappa</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span>
-            <span class="s2">&quot;per_class_f1&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">"per_fold"</span><span class="p">:</span> <span class="n">per_fold</span><span class="p">,</span>
+        <span class="s2">"pooled"</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">"accuracy"</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="n">pooled_acc</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span>
+            <span class="s2">"macro_f1"</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="n">pooled_mf1</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span>
+            <span class="s2">"kappa"</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="n">pooled_kappa</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span>
+            <span class="s2">"per_class_f1"</span><span class="p">:</span> <span class="p">{</span>
                 <span class="n">name</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="n">pooled_pcf1</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="mi">4</span><span class="p">)</span>
                 <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">name</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">class_names</span><span class="p">)</span>
             <span class="p">},</span>
-            <span class="s2">&quot;support&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">"support"</span><span class="p">:</span> <span class="p">{</span>
                 <span class="n">name</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">pooled_support</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
                 <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">name</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">class_names</span><span class="p">)</span>
             <span class="p">},</span>
-            <span class="s2">&quot;confusion_matrix&quot;</span><span class="p">:</span> <span class="n">pooled_cm</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span>
+            <span class="s2">"confusion_matrix"</span><span class="p">:</span> <span class="n">pooled_cm</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span>
         <span class="p">},</span>
-        <span class="s2">&quot;mean_std&quot;</span><span class="p">:</span> <span class="p">{</span>
-            <span class="s2">&quot;accuracy&quot;</span><span class="p">:</span> <span class="p">{</span>
-                <span class="s2">&quot;mean&quot;</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">fold_accs</span><span class="p">)),</span> <span class="mi">4</span><span class="p">),</span>
-                <span class="s2">&quot;std&quot;</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">fold_accs</span><span class="p">)),</span> <span class="mi">4</span><span class="p">),</span>
+        <span class="s2">"mean_std"</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">"accuracy"</span><span class="p">:</span> <span class="p">{</span>
+                <span class="s2">"mean"</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">fold_accs</span><span class="p">)),</span> <span class="mi">4</span><span class="p">),</span>
+                <span class="s2">"std"</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">fold_accs</span><span class="p">)),</span> <span class="mi">4</span><span class="p">),</span>
             <span class="p">},</span>
-            <span class="s2">&quot;macro_f1&quot;</span><span class="p">:</span> <span class="p">{</span>
-                <span class="s2">&quot;mean&quot;</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">fold_mf1s</span><span class="p">)),</span> <span class="mi">4</span><span class="p">),</span>
-                <span class="s2">&quot;std&quot;</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">fold_mf1s</span><span class="p">)),</span> <span class="mi">4</span><span class="p">),</span>
+            <span class="s2">"macro_f1"</span><span class="p">:</span> <span class="p">{</span>
+                <span class="s2">"mean"</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">fold_mf1s</span><span class="p">)),</span> <span class="mi">4</span><span class="p">),</span>
+                <span class="s2">"std"</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">fold_mf1s</span><span class="p">)),</span> <span class="mi">4</span><span class="p">),</span>
             <span class="p">},</span>
-            <span class="s2">&quot;kappa&quot;</span><span class="p">:</span> <span class="p">{</span>
-                <span class="s2">&quot;mean&quot;</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">fold_kappas</span><span class="p">)),</span> <span class="mi">4</span><span class="p">),</span>
-                <span class="s2">&quot;std&quot;</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">fold_kappas</span><span class="p">)),</span> <span class="mi">4</span><span class="p">),</span>
+            <span class="s2">"kappa"</span><span class="p">:</span> <span class="p">{</span>
+                <span class="s2">"mean"</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">fold_kappas</span><span class="p">)),</span> <span class="mi">4</span><span class="p">),</span>
+                <span class="s2">"std"</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">fold_kappas</span><span class="p">)),</span> <span class="mi">4</span><span class="p">),</span>
             <span class="p">},</span>
         <span class="p">},</span>
     <span class="p">}</span>
@@ -1133,33 +1133,33 @@ window.addEventListener("load", () => mermaid.run());
     <span class="c1"># ------------------------------------------------------------------</span>
     <span class="c1"># 5. Print summary</span>
     <span class="c1"># ------------------------------------------------------------------</span>
-    <span class="n">pcf1_str</span> <span class="o">=</span> <span class="s2">&quot;  &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
-        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">=</span><span class="si">{</span><span class="n">pooled_pcf1</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">name</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">class_names</span><span class="p">)</span>
+    <span class="n">pcf1_str</span> <span class="o">=</span> <span class="s2">"  "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">=</span><span class="si">{</span><span class="n">pooled_pcf1</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">"</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">name</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">class_names</span><span class="p">)</span>
     <span class="p">)</span>
     <span class="nb">print</span><span class="p">(</span>
-        <span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">  Pooled:   ACC=</span><span class="si">{</span><span class="n">pooled_acc</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">  MF1=</span><span class="si">{</span><span class="n">pooled_mf1</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">  &quot;</span>
-        <span class="sa">f</span><span class="s2">&quot;</span><span class="se">\u03ba</span><span class="s2">=</span><span class="si">{</span><span class="n">pooled_kappa</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="sa">f</span><span class="s2">"</span><span class="se">\n</span><span class="s2">  Pooled:   ACC=</span><span class="si">{</span><span class="n">pooled_acc</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">  MF1=</span><span class="si">{</span><span class="n">pooled_mf1</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">  "</span>
+        <span class="sa">f</span><span class="s2">"</span><span class="se">\u03ba</span><span class="s2">=</span><span class="si">{</span><span class="n">pooled_kappa</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">"</span>
     <span class="p">)</span>
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  Per-class F1: </span><span class="si">{</span><span class="n">pcf1_str</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  Per-class F1: </span><span class="si">{</span><span class="n">pcf1_str</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
     <span class="nb">print</span><span class="p">(</span>
-        <span class="sa">f</span><span class="s2">&quot;  Mean</span><span class="se">\u00b1</span><span class="s2">SD: ACC=</span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">fold_accs</span><span class="p">)</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="se">\u00b1</span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">fold_accs</span><span class="p">)</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">  &quot;</span>
-        <span class="sa">f</span><span class="s2">&quot;MF1=</span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">fold_mf1s</span><span class="p">)</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="se">\u00b1</span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">fold_mf1s</span><span class="p">)</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">  &quot;</span>
-        <span class="sa">f</span><span class="s2">&quot;</span><span class="se">\u03ba</span><span class="s2">=</span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">fold_kappas</span><span class="p">)</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="se">\u00b1</span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">fold_kappas</span><span class="p">)</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="sa">f</span><span class="s2">"  Mean</span><span class="se">\u00b1</span><span class="s2">SD: ACC=</span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">fold_accs</span><span class="p">)</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="se">\u00b1</span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">fold_accs</span><span class="p">)</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">  "</span>
+        <span class="sa">f</span><span class="s2">"MF1=</span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">fold_mf1s</span><span class="p">)</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="se">\u00b1</span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">fold_mf1s</span><span class="p">)</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">  "</span>
+        <span class="sa">f</span><span class="s2">"</span><span class="se">\u03ba</span><span class="s2">=</span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">fold_kappas</span><span class="p">)</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="se">\u00b1</span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">fold_kappas</span><span class="p">)</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">"</span>
     <span class="p">)</span>
 
     <span class="c1"># ------------------------------------------------------------------</span>
     <span class="c1"># 6. Save &amp; upload</span>
     <span class="c1"># ------------------------------------------------------------------</span>
-    <span class="n">results_path</span> <span class="o">=</span> <span class="n">emb_dir</span> <span class="o">/</span> <span class="s2">&quot;linear_probe_results.json&quot;</span>
-    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">results_path</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+    <span class="n">results_path</span> <span class="o">=</span> <span class="n">emb_dir</span> <span class="o">/</span> <span class="s2">"linear_probe_results.json"</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">results_path</span><span class="p">,</span> <span class="s2">"w"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
         <span class="n">json</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">results</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  Results saved to </span><span class="si">{</span><span class="n">results_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  Results saved to </span><span class="si">{</span><span class="n">results_path</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 
     <span class="k">if</span> <span class="n">save_predictions</span><span class="p">:</span>
-        <span class="n">predictions_path</span> <span class="o">=</span> <span class="n">emb_dir</span> <span class="o">/</span> <span class="s2">&quot;linear_probe_predictions.json&quot;</span>
-        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">predictions_path</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="n">predictions_path</span> <span class="o">=</span> <span class="n">emb_dir</span> <span class="o">/</span> <span class="s2">"linear_probe_predictions.json"</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">predictions_path</span><span class="p">,</span> <span class="s2">"w"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
             <span class="n">json</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">subject_predictions</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span>
-        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  Predictions saved to </span><span class="si">{</span><span class="n">predictions_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  Predictions saved to </span><span class="si">{</span><span class="n">predictions_path</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 
     <span class="k">if</span> <span class="n">upload</span><span class="p">:</span>
         <span class="n">_upload_to_hf</span><span class="p">(</span><span class="n">emb_dir</span><span class="p">,</span> <span class="n">model_name</span><span class="p">,</span> <span class="n">dataset_name</span><span class="p">)</span>

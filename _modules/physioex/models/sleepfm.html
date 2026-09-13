@@ -400,7 +400,7 @@ window.addEventListener("load", () => mermaid.run());
                 <article class="bd-article">
                   
   <h1>Source code for physioex.models.sleepfm</h1><div class="highlight"><pre>
-<span></span><span class="sd">&quot;&quot;&quot;SleepFM — Sleep Foundation Model (Thapa et al., ICML 2024 / Nature Medicine 2025).</span>
+<span></span><span class="sd">"""SleepFM — Sleep Foundation Model (Thapa et al., ICML 2024 / Nature Medicine 2025).</span>
 
 <span class="sd">BAS (brain-activity-signals) branch: pads to 10 channel slots.</span>
 <span class="sd">Embeddings: SetTransformer temporal pooling -&gt; (B, 128).</span>
@@ -412,7 +412,7 @@ window.addEventListener("load", () => mermaid.run());
 <span class="sd">  4. Create padding mask</span>
 
 <span class="sd">Vendored from: https://github.com/zou-group/sleepfm-clinical</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
@@ -433,16 +433,16 @@ window.addEventListener("load", () => mermaid.run());
 
 <span class="n">_BAS_CHANNELS</span> <span class="o">=</span> <span class="mi">10</span>
 <span class="n">_DEFAULT_CONFIG</span> <span class="o">=</span> <span class="p">{</span>
-    <span class="s2">&quot;in_channels&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
-    <span class="s2">&quot;patch_size&quot;</span><span class="p">:</span> <span class="mi">640</span><span class="p">,</span>
-    <span class="s2">&quot;embed_dim&quot;</span><span class="p">:</span> <span class="mi">128</span><span class="p">,</span>
-    <span class="s2">&quot;num_heads&quot;</span><span class="p">:</span> <span class="mi">8</span><span class="p">,</span>
-    <span class="s2">&quot;num_layers&quot;</span><span class="p">:</span> <span class="mi">6</span><span class="p">,</span>
-    <span class="s2">&quot;pooling_head&quot;</span><span class="p">:</span> <span class="mi">8</span><span class="p">,</span>
-    <span class="s2">&quot;dropout&quot;</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span>
-    <span class="s2">&quot;sampling_freq&quot;</span><span class="p">:</span> <span class="mi">128</span><span class="p">,</span>
-    <span class="s2">&quot;BAS_CHANNELS&quot;</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span>
-    <span class="s2">&quot;max_seq_length&quot;</span><span class="p">:</span> <span class="mi">128</span><span class="p">,</span>
+    <span class="s2">"in_channels"</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+    <span class="s2">"patch_size"</span><span class="p">:</span> <span class="mi">640</span><span class="p">,</span>
+    <span class="s2">"embed_dim"</span><span class="p">:</span> <span class="mi">128</span><span class="p">,</span>
+    <span class="s2">"num_heads"</span><span class="p">:</span> <span class="mi">8</span><span class="p">,</span>
+    <span class="s2">"num_layers"</span><span class="p">:</span> <span class="mi">6</span><span class="p">,</span>
+    <span class="s2">"pooling_head"</span><span class="p">:</span> <span class="mi">8</span><span class="p">,</span>
+    <span class="s2">"dropout"</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span>
+    <span class="s2">"sampling_freq"</span><span class="p">:</span> <span class="mi">128</span><span class="p">,</span>
+    <span class="s2">"BAS_CHANNELS"</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span>
+    <span class="s2">"max_seq_length"</span><span class="p">:</span> <span class="mi">128</span><span class="p">,</span>
 <span class="p">}</span>
 
 
@@ -531,14 +531,14 @@ window.addEventListener("load", () => mermaid.run());
         <span class="n">pe</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">max_seq_len</span><span class="p">,</span> <span class="n">d_model</span><span class="p">)</span>
         <span class="n">pe</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">::</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">position</span> <span class="o">*</span> <span class="n">div_term</span><span class="p">)</span>
         <span class="n">pe</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">::</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">position</span> <span class="o">*</span> <span class="n">div_term</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">register_buffer</span><span class="p">(</span><span class="s2">&quot;pe&quot;</span><span class="p">,</span> <span class="n">pe</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">register_buffer</span><span class="p">(</span><span class="s2">"pe"</span><span class="p">,</span> <span class="n">pe</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">x</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">pe</span><span class="p">[:,</span> <span class="p">:</span> <span class="n">x</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="p">:]</span>
 
 
 <span class="k">class</span><span class="w"> </span><span class="nc">SetTransformer</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;SleepFM&#39;s per-modality encoder.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""SleepFM's per-modality encoder."""</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
@@ -577,9 +577,9 @@ window.addEventListener("load", () => mermaid.run());
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]:</span>
         <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">patch_embedding</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
         <span class="n">B</span><span class="p">,</span> <span class="n">C</span><span class="p">,</span> <span class="n">S</span><span class="p">,</span> <span class="n">E</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">shape</span>
-        <span class="n">x</span> <span class="o">=</span> <span class="n">rearrange</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="s2">&quot;b c s e -&gt; (b s) c e&quot;</span><span class="p">)</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">rearrange</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="s2">"b c s e -&gt; (b s) c e"</span><span class="p">)</span>
         <span class="n">mask</span> <span class="o">=</span> <span class="n">mask</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">expand</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">S</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
-        <span class="n">mask</span> <span class="o">=</span> <span class="n">rearrange</span><span class="p">(</span><span class="n">mask</span><span class="p">,</span> <span class="s2">&quot;b t c -&gt; (b t) c&quot;</span><span class="p">)</span>
+        <span class="n">mask</span> <span class="o">=</span> <span class="n">rearrange</span><span class="p">(</span><span class="n">mask</span><span class="p">,</span> <span class="s2">"b t c -&gt; (b t) c"</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">mask</span><span class="o">.</span><span class="n">dtype</span> <span class="o">!=</span> <span class="n">torch</span><span class="o">.</span><span class="n">bool</span><span class="p">:</span>
             <span class="n">mask</span> <span class="o">=</span> <span class="n">mask</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">bool</span><span class="p">)</span>
         <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">spatial_pooling</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">mask</span><span class="p">)</span>
@@ -594,7 +594,7 @@ window.addEventListener("load", () => mermaid.run());
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_strip_module_prefix</span><span class="p">(</span><span class="n">state_dict</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
     <span class="k">return</span> <span class="p">{</span>
-        <span class="n">k</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="s2">&quot;module.&quot;</span><span class="p">)</span> <span class="p">:]</span> <span class="k">if</span> <span class="n">k</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;module.&quot;</span><span class="p">)</span> <span class="k">else</span> <span class="n">k</span><span class="p">:</span> <span class="n">v</span>
+        <span class="n">k</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="s2">"module."</span><span class="p">)</span> <span class="p">:]</span> <span class="k">if</span> <span class="n">k</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"module."</span><span class="p">)</span> <span class="k">else</span> <span class="n">k</span><span class="p">:</span> <span class="n">v</span>
         <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">state_dict</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
     <span class="p">}</span>
 
@@ -602,11 +602,11 @@ window.addEventListener("load", () => mermaid.run());
 <div class="viewcode-block" id="SleepFMEncoder">
 <a class="viewcode-back" href="../../../api/_generated/physioex.models.SleepFMEncoder.html#physioex.models.SleepFMEncoder">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">SleepFMEncoder</span><span class="p">(</span><span class="n">FoundationEncoder</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;SleepFM pads input to 10 channel slots and masks unused ones.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""SleepFM pads input to 10 channel slots and masks unused ones."""</span>
 
-    <span class="n">MODEL_NAME</span> <span class="o">=</span> <span class="s2">&quot;sleepfm&quot;</span>
-    <span class="n">PIPELINE_PRESET</span> <span class="o">=</span> <span class="s2">&quot;sleepfm&quot;</span>
-    <span class="n">CHANNEL_STRATEGY</span> <span class="o">=</span> <span class="s2">&quot;pad_fixed&quot;</span>
+    <span class="n">MODEL_NAME</span> <span class="o">=</span> <span class="s2">"sleepfm"</span>
+    <span class="n">PIPELINE_PRESET</span> <span class="o">=</span> <span class="s2">"sleepfm"</span>
+    <span class="n">CHANNEL_STRATEGY</span> <span class="o">=</span> <span class="s2">"pad_fixed"</span>
 
 <div class="viewcode-block" id="SleepFMEncoder.__init__">
 <a class="viewcode-back" href="../../../api/_generated/physioex.models.SleepFMEncoder.html#physioex.models.SleepFMEncoder.__init__">[docs]</a>
@@ -622,26 +622,26 @@ window.addEventListener("load", () => mermaid.run());
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_channel_names</span> <span class="o">=</span> <span class="n">channel_names</span> <span class="ow">or</span> <span class="p">[]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_channel_map</span> <span class="o">=</span> <span class="n">channel_map</span> <span class="ow">or</span> <span class="p">{}</span>
-        <span class="n">resolved</span> <span class="o">=</span> <span class="n">ensure_checkpoint</span><span class="p">(</span><span class="s2">&quot;sleepfm&quot;</span><span class="p">,</span> <span class="n">checkpoint_path</span><span class="p">)</span>
+        <span class="n">resolved</span> <span class="o">=</span> <span class="n">ensure_checkpoint</span><span class="p">(</span><span class="s2">"sleepfm"</span><span class="p">,</span> <span class="n">checkpoint_path</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_ckpt_path</span> <span class="o">=</span> <span class="n">resolved</span>
 
-        <span class="n">cfg_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">resolved</span><span class="p">)</span><span class="o">.</span><span class="n">parent</span> <span class="o">/</span> <span class="s2">&quot;config.json&quot;</span>
+        <span class="n">cfg_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">resolved</span><span class="p">)</span><span class="o">.</span><span class="n">parent</span> <span class="o">/</span> <span class="s2">"config.json"</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_cfg</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">_DEFAULT_CONFIG</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">cfg_path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
             <span class="n">on_disk</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">cfg_path</span><span class="o">.</span><span class="n">read_text</span><span class="p">())</span>
             <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="p">(</span>
-                <span class="s2">&quot;patch_size&quot;</span><span class="p">,</span>
-                <span class="s2">&quot;embed_dim&quot;</span><span class="p">,</span>
-                <span class="s2">&quot;num_heads&quot;</span><span class="p">,</span>
-                <span class="s2">&quot;num_layers&quot;</span><span class="p">,</span>
-                <span class="s2">&quot;pooling_head&quot;</span><span class="p">,</span>
-                <span class="s2">&quot;sampling_freq&quot;</span><span class="p">,</span>
-                <span class="s2">&quot;BAS_CHANNELS&quot;</span><span class="p">,</span>
+                <span class="s2">"patch_size"</span><span class="p">,</span>
+                <span class="s2">"embed_dim"</span><span class="p">,</span>
+                <span class="s2">"num_heads"</span><span class="p">,</span>
+                <span class="s2">"num_layers"</span><span class="p">,</span>
+                <span class="s2">"pooling_head"</span><span class="p">,</span>
+                <span class="s2">"sampling_freq"</span><span class="p">,</span>
+                <span class="s2">"BAS_CHANNELS"</span><span class="p">,</span>
             <span class="p">):</span>
                 <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">on_disk</span><span class="p">:</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">_cfg</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">on_disk</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">_bas_channels</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_cfg</span><span class="p">[</span><span class="s2">&quot;BAS_CHANNELS&quot;</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_bas_channels</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_cfg</span><span class="p">[</span><span class="s2">"BAS_CHANNELS"</span><span class="p">])</span>
 
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
             <span class="n">in_chan</span><span class="o">=</span><span class="n">in_chan</span><span class="p">,</span>
@@ -652,33 +652,33 @@ window.addEventListener("load", () => mermaid.run());
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_build_encoder</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">SetTransformer</span><span class="p">(</span>
-            <span class="n">in_channels</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_cfg</span><span class="p">[</span><span class="s2">&quot;in_channels&quot;</span><span class="p">]),</span>
-            <span class="n">patch_size</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_cfg</span><span class="p">[</span><span class="s2">&quot;patch_size&quot;</span><span class="p">]),</span>
-            <span class="n">embed_dim</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_cfg</span><span class="p">[</span><span class="s2">&quot;embed_dim&quot;</span><span class="p">]),</span>
-            <span class="n">num_heads</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_cfg</span><span class="p">[</span><span class="s2">&quot;num_heads&quot;</span><span class="p">]),</span>
-            <span class="n">num_layers</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_cfg</span><span class="p">[</span><span class="s2">&quot;num_layers&quot;</span><span class="p">]),</span>
-            <span class="n">pooling_head</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_cfg</span><span class="p">[</span><span class="s2">&quot;pooling_head&quot;</span><span class="p">]),</span>
+            <span class="n">in_channels</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_cfg</span><span class="p">[</span><span class="s2">"in_channels"</span><span class="p">]),</span>
+            <span class="n">patch_size</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_cfg</span><span class="p">[</span><span class="s2">"patch_size"</span><span class="p">]),</span>
+            <span class="n">embed_dim</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_cfg</span><span class="p">[</span><span class="s2">"embed_dim"</span><span class="p">]),</span>
+            <span class="n">num_heads</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_cfg</span><span class="p">[</span><span class="s2">"num_heads"</span><span class="p">]),</span>
+            <span class="n">num_layers</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_cfg</span><span class="p">[</span><span class="s2">"num_layers"</span><span class="p">]),</span>
+            <span class="n">pooling_head</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_cfg</span><span class="p">[</span><span class="s2">"pooling_head"</span><span class="p">]),</span>
             <span class="n">dropout</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
-            <span class="n">max_seq_length</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_cfg</span><span class="p">[</span><span class="s2">&quot;max_seq_length&quot;</span><span class="p">]),</span>
+            <span class="n">max_seq_length</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_cfg</span><span class="p">[</span><span class="s2">"max_seq_length"</span><span class="p">]),</span>
         <span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_get_embedding_dim</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-        <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_cfg</span><span class="p">[</span><span class="s2">&quot;embed_dim&quot;</span><span class="p">])</span>
+        <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_cfg</span><span class="p">[</span><span class="s2">"embed_dim"</span><span class="p">])</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_load_pretrained</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">checkpoint_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">if</span> <span class="n">checkpoint_path</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">return</span>
-        <span class="n">payload</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">checkpoint_path</span><span class="p">,</span> <span class="n">map_location</span><span class="o">=</span><span class="s2">&quot;cpu&quot;</span><span class="p">,</span> <span class="n">weights_only</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">payload</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">checkpoint_path</span><span class="p">,</span> <span class="n">map_location</span><span class="o">=</span><span class="s2">"cpu"</span><span class="p">,</span> <span class="n">weights_only</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
         <span class="n">state</span> <span class="o">=</span> <span class="p">(</span>
-            <span class="n">payload</span><span class="p">[</span><span class="s2">&quot;state_dict&quot;</span><span class="p">]</span>
-            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">payload</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="ow">and</span> <span class="s2">&quot;state_dict&quot;</span> <span class="ow">in</span> <span class="n">payload</span>
+            <span class="n">payload</span><span class="p">[</span><span class="s2">"state_dict"</span><span class="p">]</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">payload</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="ow">and</span> <span class="s2">"state_dict"</span> <span class="ow">in</span> <span class="n">payload</span>
             <span class="k">else</span> <span class="n">payload</span>
         <span class="p">)</span>
         <span class="n">state</span> <span class="o">=</span> <span class="n">_strip_module_prefix</span><span class="p">(</span><span class="n">state</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">encoder</span><span class="o">.</span><span class="n">load_state_dict</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_preprocess</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;(B, C, T) -&gt; (B, 10, T) with z-score + pad to BAS channels.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""(B, C, T) -&gt; (B, 10, T) with z-score + pad to BAS channels."""</span>
         <span class="n">x</span> <span class="o">=</span> <span class="n">zscore</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
         <span class="n">x</span><span class="p">,</span> <span class="n">kept</span> <span class="o">=</span> <span class="n">strip_zero_channels</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
         <span class="n">n_valid</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
@@ -687,7 +687,7 @@ window.addEventListener("load", () => mermaid.run());
         <span class="k">return</span> <span class="n">x</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_encode</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;(B, 10, T) -&gt; (B, 128) embeddings.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""(B, 10, T) -&gt; (B, 128) embeddings."""</span>
         <span class="n">B</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
         <span class="n">mask</span> <span class="o">=</span> <span class="n">create_padding_mask</span><span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_bas_channels</span><span class="p">,</span>

@@ -400,12 +400,12 @@ window.addEventListener("load", () => mermaid.run());
                 <article class="bd-article">
                   
   <h1>Source code for physioex.data.events</h1><div class="highlight"><pre>
-<span></span><span class="sd">&quot;&quot;&quot;Per-epoch event metadata for sleep staging datasets.</span>
+<span></span><span class="sd">"""Per-epoch event metadata for sleep staging datasets.</span>
 
 <span class="sd">Provides a ``SleepEvent`` dataclass for representing temporal events</span>
 <span class="sd">(respiratory, arousal, limb movement, etc.) and utilities for mapping</span>
 <span class="sd">them to per-epoch event lists suitable for use in training/analysis.</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span>
@@ -415,8 +415,8 @@ window.addEventListener("load", () => mermaid.run());
 <a class="viewcode-back" href="../../../api/_generated/physioex.data.SleepEvent.html#physioex.data.SleepEvent">[docs]</a>
 <span class="nd">@dataclass</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">SleepEvent</span><span class="p">:</span>
-    <span class="nb">type</span><span class="p">:</span> <span class="nb">str</span>  <span class="c1"># &quot;respiratory&quot; | &quot;arousal&quot; | &quot;limb_movement&quot; | &quot;position&quot; | &quot;desaturation&quot; | &quot;other&quot;</span>
-    <span class="n">concept</span><span class="p">:</span> <span class="nb">str</span>  <span class="c1"># e.g. &quot;Hypopnea&quot;, &quot;ASDA arousal&quot;, &quot;PLM (Left)&quot;, &quot;Supine&quot;</span>
+    <span class="nb">type</span><span class="p">:</span> <span class="nb">str</span>  <span class="c1"># "respiratory" | "arousal" | "limb_movement" | "position" | "desaturation" | "other"</span>
+    <span class="n">concept</span><span class="p">:</span> <span class="nb">str</span>  <span class="c1"># e.g. "Hypopnea", "ASDA arousal", "PLM (Left)", "Supine"</span>
     <span class="n">onset_sec</span><span class="p">:</span> <span class="nb">float</span>  <span class="c1"># absolute seconds from recording start</span>
     <span class="n">duration_sec</span><span class="p">:</span> <span class="nb">float</span>
     <span class="n">extra</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">dict</span><span class="p">)</span></div>
@@ -430,14 +430,14 @@ window.addEventListener("load", () => mermaid.run());
     <span class="n">n_epochs</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
     <span class="n">epoch_length_sec</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">30.0</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Map a flat list of events to per-epoch event lists.</span>
+<span class="w">    </span><span class="sd">"""Map a flat list of events to per-epoch event lists.</span>
 
 <span class="sd">    An event overlaps epoch *N* if ``[onset, onset+dur)`` intersects</span>
 <span class="sd">    ``[N*epoch_len, (N+1)*epoch_len)``.</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">        List of length *n_epochs*, each element a list of event dicts.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">result</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]]</span> <span class="o">=</span> <span class="p">[[]</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_epochs</span><span class="p">)]</span>
     <span class="k">for</span> <span class="n">ev</span> <span class="ow">in</span> <span class="n">events</span><span class="p">:</span>
         <span class="n">ev_start</span> <span class="o">=</span> <span class="n">ev</span><span class="o">.</span><span class="n">onset_sec</span>
@@ -454,22 +454,22 @@ window.addEventListener("load", () => mermaid.run());
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">event_to_dict</span><span class="p">(</span><span class="n">ev</span><span class="p">:</span> <span class="n">SleepEvent</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Convert a ``SleepEvent`` to a plain dict.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Convert a ``SleepEvent`` to a plain dict."""</span>
     <span class="n">d</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
-        <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="n">ev</span><span class="o">.</span><span class="n">type</span><span class="p">,</span>
-        <span class="s2">&quot;concept&quot;</span><span class="p">:</span> <span class="n">ev</span><span class="o">.</span><span class="n">concept</span><span class="p">,</span>
-        <span class="s2">&quot;onset_sec&quot;</span><span class="p">:</span> <span class="n">ev</span><span class="o">.</span><span class="n">onset_sec</span><span class="p">,</span>
-        <span class="s2">&quot;duration_sec&quot;</span><span class="p">:</span> <span class="n">ev</span><span class="o">.</span><span class="n">duration_sec</span><span class="p">,</span>
+        <span class="s2">"type"</span><span class="p">:</span> <span class="n">ev</span><span class="o">.</span><span class="n">type</span><span class="p">,</span>
+        <span class="s2">"concept"</span><span class="p">:</span> <span class="n">ev</span><span class="o">.</span><span class="n">concept</span><span class="p">,</span>
+        <span class="s2">"onset_sec"</span><span class="p">:</span> <span class="n">ev</span><span class="o">.</span><span class="n">onset_sec</span><span class="p">,</span>
+        <span class="s2">"duration_sec"</span><span class="p">:</span> <span class="n">ev</span><span class="o">.</span><span class="n">duration_sec</span><span class="p">,</span>
     <span class="p">}</span>
     <span class="k">if</span> <span class="n">ev</span><span class="o">.</span><span class="n">extra</span><span class="p">:</span>
-        <span class="n">d</span><span class="p">[</span><span class="s2">&quot;extra&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">ev</span><span class="o">.</span><span class="n">extra</span>
+        <span class="n">d</span><span class="p">[</span><span class="s2">"extra"</span><span class="p">]</span> <span class="o">=</span> <span class="n">ev</span><span class="o">.</span><span class="n">extra</span>
     <span class="k">return</span> <span class="n">d</span>
 
 
 <div class="viewcode-block" id="events_to_dicts">
 <a class="viewcode-back" href="../../../api/_generated/physioex.data.events_to_dicts.html#physioex.data.events_to_dicts">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">events_to_dicts</span><span class="p">(</span><span class="n">events</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">SleepEvent</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Convert a list of ``SleepEvent`` objects to a list of dicts.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Convert a list of ``SleepEvent`` objects to a list of dicts."""</span>
     <span class="k">return</span> <span class="p">[</span><span class="n">event_to_dict</span><span class="p">(</span><span class="n">ev</span><span class="p">)</span> <span class="k">for</span> <span class="n">ev</span> <span class="ow">in</span> <span class="n">events</span><span class="p">]</span></div>
 
 
@@ -477,14 +477,14 @@ window.addEventListener("load", () => mermaid.run());
 <div class="viewcode-block" id="dicts_to_events">
 <a class="viewcode-back" href="../../../api/_generated/physioex.data.dicts_to_events.html#physioex.data.dicts_to_events">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">dicts_to_events</span><span class="p">(</span><span class="n">dicts</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">SleepEvent</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Reconstruct ``SleepEvent`` objects from a list of dicts.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Reconstruct ``SleepEvent`` objects from a list of dicts."""</span>
     <span class="k">return</span> <span class="p">[</span>
         <span class="n">SleepEvent</span><span class="p">(</span>
-            <span class="nb">type</span><span class="o">=</span><span class="n">d</span><span class="p">[</span><span class="s2">&quot;type&quot;</span><span class="p">],</span>
-            <span class="n">concept</span><span class="o">=</span><span class="n">d</span><span class="p">[</span><span class="s2">&quot;concept&quot;</span><span class="p">],</span>
-            <span class="n">onset_sec</span><span class="o">=</span><span class="n">d</span><span class="p">[</span><span class="s2">&quot;onset_sec&quot;</span><span class="p">],</span>
-            <span class="n">duration_sec</span><span class="o">=</span><span class="n">d</span><span class="p">[</span><span class="s2">&quot;duration_sec&quot;</span><span class="p">],</span>
-            <span class="n">extra</span><span class="o">=</span><span class="n">d</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;extra&quot;</span><span class="p">,</span> <span class="p">{}),</span>
+            <span class="nb">type</span><span class="o">=</span><span class="n">d</span><span class="p">[</span><span class="s2">"type"</span><span class="p">],</span>
+            <span class="n">concept</span><span class="o">=</span><span class="n">d</span><span class="p">[</span><span class="s2">"concept"</span><span class="p">],</span>
+            <span class="n">onset_sec</span><span class="o">=</span><span class="n">d</span><span class="p">[</span><span class="s2">"onset_sec"</span><span class="p">],</span>
+            <span class="n">duration_sec</span><span class="o">=</span><span class="n">d</span><span class="p">[</span><span class="s2">"duration_sec"</span><span class="p">],</span>
+            <span class="n">extra</span><span class="o">=</span><span class="n">d</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"extra"</span><span class="p">,</span> <span class="p">{}),</span>
         <span class="p">)</span>
         <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">dicts</span>
     <span class="p">]</span></div>

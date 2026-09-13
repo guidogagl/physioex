@@ -1,0 +1,1363 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../" data-theme="light">
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>physioex.explain.lrp &#8212; PhysioEx</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "light";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "light";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=885a8570" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="../../_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" />
+
+    <script src="../../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'api/_generated/physioex.explain.lrp';</script>
+    <link rel="icon" href="../../_static/logo_bar.svg"/>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="Contributing to PhysioEx" href="../../pages/contribute.html" />
+    <link rel="prev" title="physioex.explain.prototypes.posthoc" href="physioex.explain.prototypes.posthoc.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="light">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../index.html">
+  
+  
+  
+  
+  
+    
+    
+    
+    <img src="../../_static/logo_bar.svg" class="logo__image only-light" alt="PhysioEx - Home"/>
+    <img src="../../_static/logo_bar.svg" class="logo__image only-dark pst-js-only" alt="PhysioEx - Home"/>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../pages/user_guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../related/index.html">
+    Related Works
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="../index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../pages/contribute.html">
+    Contributing to PhysioEx
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/guidogagl/physioex" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://guidogagl.github.io/" title="Website" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-globe fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Website</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../pages/user_guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../related/index.html">
+    Related Works
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="../index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../pages/contribute.html">
+    Contributing to PhysioEx
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/guidogagl/physioex" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://guidogagl.github.io/" title="Website" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-globe fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Website</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.BasePhysioDataset.html">physioex.data.BasePhysioDataset</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.MultiDataset.html">physioex.data.MultiDataset</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.SubjectSpec.html">physioex.data.SubjectSpec</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.PreprocessingStep.html">physioex.data.PreprocessingStep</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.PreprocessingPipeline.html">physioex.data.PreprocessingPipeline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.CompiledPipeline.html">physioex.data.CompiledPipeline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.CompiledStep.html">physioex.data.CompiledStep</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.Identity.html">physioex.data.Identity</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.BandpassFilter.html">physioex.data.BandpassFilter</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.NotchFilter.html">physioex.data.NotchFilter</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.Resample.html">physioex.data.Resample</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.ZScoreNormalize.html">physioex.data.ZScoreNormalize</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.XSleepNetSpectrogram.html">physioex.data.XSleepNetSpectrogram</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.get_preset.html">physioex.data.get_preset</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.available_presets.html">physioex.data.available_presets</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.ChannelCache.html">physioex.data.ChannelCache</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.dict_collate_fn.html">physioex.data.dict_collate_fn</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.stack_channels.html">physioex.data.stack_channels</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.is_dict_batch.html">physioex.data.is_dict_batch</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.EDFHeader.html">physioex.data.EDFHeader</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.ResolvedChannel.html">physioex.data.ResolvedChannel</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.probe_edf_header.html">physioex.data.probe_edf_header</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.resolve_channels.html">physioex.data.resolve_channels</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.SleepEvent.html">physioex.data.SleepEvent</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.map_events_to_epochs.html">physioex.data.map_events_to_epochs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.events_to_dicts.html">physioex.data.events_to_dicts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.dicts_to_events.html">physioex.data.dicts_to_events</a></li>
+</ul>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.datasets.get_dataset.html">physioex.data.datasets.get_dataset</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.datasets.available_datasets.html">physioex.data.datasets.available_datasets</a></li>
+</ul>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="physioex.models.FoundationEncoder.html">physioex.models.FoundationEncoder</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.models.CBraModEncoder.html">physioex.models.CBraModEncoder</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.models.BENDREncoder.html">physioex.models.BENDREncoder</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.models.LaBraMEncoder.html">physioex.models.LaBraMEncoder</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.models.BIOTEncoder.html">physioex.models.BIOTEncoder</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.models.SleepFMEncoder.html">physioex.models.SleepFMEncoder</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.models.TFCEncoder.html">physioex.models.TFCEncoder</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.models.REVEEncoder.html">physioex.models.REVEEncoder</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.models.SJEEncoder.html">physioex.models.SJEEncoder</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.models.NeuroLMEncoder.html">physioex.models.NeuroLMEncoder</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.models.load_from_pretrained.html">physioex.models.load_from_pretrained</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.models.extract_embeddings.html">physioex.models.extract_embeddings</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.models.load_embeddings.html">physioex.models.load_embeddings</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.models.linear_probe.html">physioex.models.linear_probe</a></li>
+</ul>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="physioex.models.chambon2018.Chambon2018Net.html">physioex.models.chambon2018.Chambon2018Net</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.models.tinysleepnet.TinySleepNet.html">physioex.models.tinysleepnet.TinySleepNet</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.models.seqsleepnet.SeqSleepNet.html">physioex.models.seqsleepnet.SeqSleepNet</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.models.sleeptransformer.SleepTransformer.html">physioex.models.sleeptransformer.SleepTransformer</a></li>
+</ul>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="physioex.train.trainer.Trainer.html">physioex.train.trainer.Trainer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.train.trainer.seed_everything.html">physioex.train.trainer.seed_everything</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.train.multidevicetrainer.Trainer.html">physioex.train.multidevicetrainer.Trainer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.train.logger.Logger.html">physioex.train.logger.Logger</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.train.logger.NoOpLogger.html">physioex.train.logger.NoOpLogger</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.train.logger.build_logger.html">physioex.train.logger.build_logger</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.train.models.load.load_model.html">physioex.train.models.load.load_model</a></li>
+</ul>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="physioex.train.metrics.html">physioex.train.metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.train.stats.html">physioex.train.stats</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.train.progress.html">physioex.train.progress</a></li>
+</ul>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="physioex.explain.foundational.html">physioex.explain.foundational</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.explain.prototypes.posthoc.html">physioex.explain.prototypes.posthoc</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">physioex.explain.lrp</a></li>
+</ul>
+</div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../index.html" class="nav-link">API Reference</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">physioex.explain.lrp</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="module-physioex.explain.lrp">
+<span id="physioex-explain-lrp"></span><h1>physioex.explain.lrp<a class="headerlink" href="#module-physioex.explain.lrp" title="Link to this heading">#</a></h1>
+<p>Layer-wise Relevance Propagation (LRP) for PhysioEx.</p>
+<p>Conservation-based attribution (Bach et al. 2015).  Two entry points:</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="#physioex.explain.lrp.LRP" title="physioex.explain.lrp.LRP"><code class="xref py py-class docutils literal notranslate"><span class="pre">LRP</span></code></a> — Zennit composites for feed-forward / CNN models
+(ε, γ, w², z-box, flat; BatchNorm canonization).</p></li>
+<li><p><a class="reference internal" href="#physioex.explain.lrp.ModelLRP" title="physioex.explain.lrp.ModelLRP"><code class="xref py py-class docutils literal notranslate"><span class="pre">ModelLRP</span></code></a> — whole-model LRP for architectures with LSTM/GRU
+(Arras signal-take), attention / transformers (CP-LRP, Ali et al. 2022) and
+PhysioEx’s softmax poolings; leaves get ε-LRP, norms/activations the identity
+rule, residual <code class="docutils literal notranslate"><span class="pre">+</span></code> the proportional rule.</p></li>
+</ul>
+<p>Both seed the target logit so <code class="docutils literal notranslate"><span class="pre">Σ</span> <span class="pre">R</span> <span class="pre">≈</span> <span class="pre">f_c(x)</span></code>; use <code class="docutils literal notranslate"><span class="pre">return_report=True</span></code> /
+<a class="reference internal" href="#physioex.explain.lrp.check_conservation" title="physioex.explain.lrp.check_conservation"><code class="xref py py-func docutils literal notranslate"><span class="pre">check_conservation()</span></code></a> to see how much biases absorb, and
+<a class="reference internal" href="#physioex.explain.lrp.audit_lrp_coverage" title="physioex.explain.lrp.audit_lrp_coverage"><code class="xref py py-func docutils literal notranslate"><span class="pre">audit_lrp_coverage()</span></code></a> to list blocks left on plain autograd.</p>
+<p>Requires the optional <code class="docutils literal notranslate"><span class="pre">explain</span></code> extra:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pip</span> <span class="n">install</span> <span class="s2">"physioex[explain]"</span>
+</pre></div>
+</div>
+<dl class="py class">
+<dt class="sig sig-object py" id="physioex.explain.lrp.ConservationReport">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">physioex.explain.lrp.</span></span><span class="sig-name descname"><span class="pre">ConservationReport</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">target</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">relevance_sum</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ratio</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">absorbed</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/physioex/explain/lrp/diagnostics.html#ConservationReport"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#physioex.explain.lrp.ConservationReport" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<p>Per-sample conservation summary.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>target</strong> (<a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.14)"><em>Tensor</em></a>)</p></li>
+<li><p><strong>relevance_sum</strong> (<a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.14)"><em>Tensor</em></a>)</p></li>
+<li><p><strong>ratio</strong> (<a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.14)"><em>Tensor</em></a>)</p></li>
+<li><p><strong>absorbed</strong> (<a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.14)"><em>Tensor</em></a>)</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="physioex.explain.lrp.ConservationReport.target">
+<span class="sig-name descname"><span class="pre">target</span></span><a class="headerlink" href="#physioex.explain.lrp.ConservationReport.target" title="Link to this definition">#</a></dt>
+<dd><p>the explained logit <code class="docutils literal notranslate"><span class="pre">f_c(x)</span></code> per sample, <code class="docutils literal notranslate"><span class="pre">(B,)</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.14)">torch.Tensor</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="physioex.explain.lrp.ConservationReport.relevance_sum">
+<span class="sig-name descname"><span class="pre">relevance_sum</span></span><a class="headerlink" href="#physioex.explain.lrp.ConservationReport.relevance_sum" title="Link to this definition">#</a></dt>
+<dd><p><code class="docutils literal notranslate"><span class="pre">Σ</span> <span class="pre">R</span></code> over all input elements per sample, <code class="docutils literal notranslate"><span class="pre">(B,)</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.14)">torch.Tensor</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="physioex.explain.lrp.ConservationReport.ratio">
+<span class="sig-name descname"><span class="pre">ratio</span></span><a class="headerlink" href="#physioex.explain.lrp.ConservationReport.ratio" title="Link to this definition">#</a></dt>
+<dd><p><code class="docutils literal notranslate"><span class="pre">Σ</span> <span class="pre">R</span> <span class="pre">/</span> <span class="pre">f</span></code> (1.0 = exact conservation).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.14)">torch.Tensor</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="physioex.explain.lrp.ConservationReport.absorbed">
+<span class="sig-name descname"><span class="pre">absorbed</span></span><a class="headerlink" href="#physioex.explain.lrp.ConservationReport.absorbed" title="Link to this definition">#</a></dt>
+<dd><p><code class="docutils literal notranslate"><span class="pre">f</span> <span class="pre">−</span> <span class="pre">Σ</span> <span class="pre">R</span></code> — relevance absorbed by biases / unruled ops.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.14)">torch.Tensor</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="physioex.explain.lrp.EpsilonRule">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">physioex.explain.lrp.</span></span><span class="sig-name descname"><span class="pre">EpsilonRule</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">module</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">epsilon</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1e-06</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/physioex/explain/lrp/_rules.html#EpsilonRule"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#physioex.explain.lrp.EpsilonRule" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">_RuleWrapper</span></code></p>
+<p>ε-LRP wrapper for a single-input module linear in its input.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>module</strong> (<em>nn.Module</em>)</p></li>
+<li><p><strong>epsilon</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a>)</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="physioex.explain.lrp.EpsilonRule.forward">
+<span class="sig-name descname"><span class="pre">forward</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/physioex/explain/lrp/_rules.html#EpsilonRule.forward"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#physioex.explain.lrp.EpsilonRule.forward" title="Link to this definition">#</a></dt>
+<dd><p>Define the computation performed at every call.</p>
+<p>Should be overridden by all subclasses.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Although the recipe for forward pass needs to be defined within
+this function, one should call the <code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code> instance afterwards
+instead of this since the former takes care of running the
+registered hooks while the latter silently ignores them.</p>
+</div>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="physioex.explain.lrp.IdentityRule">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">physioex.explain.lrp.</span></span><span class="sig-name descname"><span class="pre">IdentityRule</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">module</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/physioex/explain/lrp/_rules.html#IdentityRule"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#physioex.explain.lrp.IdentityRule" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">_RuleWrapper</span></code></p>
+<p>Identity-rule wrapper: forward is the module’s, backward passes relevance.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>module</strong> (<em>nn.Module</em>)</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="physioex.explain.lrp.IdentityRule.forward">
+<span class="sig-name descname"><span class="pre">forward</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/physioex/explain/lrp/_rules.html#IdentityRule.forward"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#physioex.explain.lrp.IdentityRule.forward" title="Link to this definition">#</a></dt>
+<dd><p>Define the computation performed at every call.</p>
+<p>Should be overridden by all subclasses.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Although the recipe for forward pass needs to be defined within
+this function, one should call the <code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code> instance afterwards
+instead of this since the former takes care of running the
+registered hooks while the latter silently ignores them.</p>
+</div>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="physioex.explain.lrp.LRP">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">physioex.explain.lrp.</span></span><span class="sig-name descname"><span class="pre">LRP</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">in_index</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">out_index</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">composite</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">canonizers</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/physioex/explain/lrp/attributor.html#LRP"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#physioex.explain.lrp.LRP" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.pytorch.org/docs/stable/generated/torch.nn.Module.html#torch.nn.Module" title="(in PyTorch v2.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code></a></p>
+<p>LRP attribution over a trained feed-forward PhysioEx model (Zennit).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>model</strong> – trained model, <code class="docutils literal notranslate"><span class="pre">(B,</span> <span class="pre">L,</span> <span class="pre">C,</span> <span class="pre">T)</span> <span class="pre">-&gt;</span> <span class="pre">(B,</span> <span class="pre">L,</span> <span class="pre">n_classes)</span></code> or
+<code class="docutils literal notranslate"><span class="pre">(B,</span> <span class="pre">n_classes)</span></code>.  Evaluated in <code class="docutils literal notranslate"><span class="pre">eval()</span></code> mode.</p></li>
+<li><p><strong>in_index</strong> – sequence epoch to explain (central-epoch models emit <code class="docutils literal notranslate"><span class="pre">L=1</span></code>).</p></li>
+<li><p><strong>out_index</strong> – class-logit index to explain.</p></li>
+<li><p><strong>composite</strong> – a Zennit composite; default
+<code class="xref py py-func docutils literal notranslate"><span class="pre">physioex_composite()</span></code>
+(ε dense / γ conv / w² first layer) with the BatchNorm canonizer.</p></li>
+<li><p><strong>canonizers</strong> – used only when <code class="docutils literal notranslate"><span class="pre">composite</span></code> is <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p></li>
+</ul>
+</dd>
+</dl>
+<p class="rubric">Example</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">relevance</span> <span class="o">=</span> <span class="n">LRP</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">out_index</span><span class="o">=</span><span class="mi">2</span><span class="p">)(</span><span class="n">x</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">relevance</span><span class="p">,</span> <span class="n">report</span> <span class="o">=</span> <span class="n">LRP</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">out_index</span><span class="o">=</span><span class="mi">2</span><span class="p">)(</span><span class="n">x</span><span class="p">,</span> <span class="n">return_report</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+<dl class="py method">
+<dt class="sig sig-object py" id="physioex.explain.lrp.LRP.forward">
+<span class="sig-name descname"><span class="pre">forward</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_report</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/physioex/explain/lrp/attributor.html#LRP.forward"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#physioex.explain.lrp.LRP.forward" title="Link to this definition">#</a></dt>
+<dd><p>Define the computation performed at every call.</p>
+<p>Should be overridden by all subclasses.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Although the recipe for forward pass needs to be defined within
+this function, one should call the <code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code> instance afterwards
+instead of this since the former takes care of running the
+registered hooks while the latter silently ignores them.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> (<a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.14)"><em>Tensor</em></a>)</p></li>
+<li><p><strong>return_report</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a>)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="physioex.explain.lrp.LRPAttentionLayer">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">physioex.explain.lrp.</span></span><span class="sig-name descname"><span class="pre">LRPAttentionLayer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">orig</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">epsilon</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1e-06</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/physioex/explain/lrp/pooling.html#LRPAttentionLayer"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#physioex.explain.lrp.LRPAttentionLayer" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">_PoolAdapter</span></code></p>
+<p>CP-LRP for <code class="docutils literal notranslate"><span class="pre">seqsleepnet.AttentionLayer</span></code> (additive pooling, manual softmax).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>orig</strong> (<em>nn.Module</em>)</p></li>
+<li><p><strong>epsilon</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a>)</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="physioex.explain.lrp.LRPAttentionLayer.forward">
+<span class="sig-name descname"><span class="pre">forward</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">r_alphas</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/physioex/explain/lrp/pooling.html#LRPAttentionLayer.forward"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#physioex.explain.lrp.LRPAttentionLayer.forward" title="Link to this definition">#</a></dt>
+<dd><p>Define the computation performed at every call.</p>
+<p>Should be overridden by all subclasses.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Although the recipe for forward pass needs to be defined within
+this function, one should call the <code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code> instance afterwards
+instead of this since the former takes care of running the
+registered hooks while the latter silently ignores them.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>r_alphas</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="physioex.explain.lrp.LRPAttentionPooling">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">physioex.explain.lrp.</span></span><span class="sig-name descname"><span class="pre">LRPAttentionPooling</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">orig</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">epsilon</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1e-06</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/physioex/explain/lrp/pooling.html#LRPAttentionPooling"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#physioex.explain.lrp.LRPAttentionPooling" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">_PoolAdapter</span></code></p>
+<p>CP-LRP for <code class="docutils literal notranslate"><span class="pre">sleeptransformer.AttentionPooling</span></code> (<code class="docutils literal notranslate"><span class="pre">self.attention</span></code> MLP,
+softmax over <code class="docutils literal notranslate"><span class="pre">dim=1</span></code>, <code class="docutils literal notranslate"><span class="pre">(B,T,D)</span> <span class="pre">-&gt;</span> <span class="pre">(B,D)</span></code>).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>orig</strong> (<em>nn.Module</em>)</p></li>
+<li><p><strong>epsilon</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a>)</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="physioex.explain.lrp.LRPAttentionPooling.forward">
+<span class="sig-name descname"><span class="pre">forward</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/physioex/explain/lrp/pooling.html#LRPAttentionPooling.forward"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#physioex.explain.lrp.LRPAttentionPooling.forward" title="Link to this definition">#</a></dt>
+<dd><p>Define the computation performed at every call.</p>
+<p>Should be overridden by all subclasses.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Although the recipe for forward pass needs to be defined within
+this function, one should call the <code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code> instance afterwards
+instead of this since the former takes care of running the
+registered hooks while the latter silently ignores them.</p>
+</div>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="physioex.explain.lrp.LRPChannelMixer">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">physioex.explain.lrp.</span></span><span class="sig-name descname"><span class="pre">LRPChannelMixer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">orig</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">epsilon</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1e-06</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/physioex/explain/lrp/pooling.html#LRPChannelMixer"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#physioex.explain.lrp.LRPChannelMixer" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">_PoolAdapter</span></code></p>
+<p>CP-LRP for <code class="docutils literal notranslate"><span class="pre">protosleepnet.ChannelMixer</span></code>: constant modality embedding →
+per-channel <code class="docutils literal notranslate"><span class="pre">mcy</span></code> logits → dropout (eval) → residual <code class="docutils literal notranslate"><span class="pre">x</span> <span class="pre">+</span> <span class="pre">mixer(x)</span></code>
+(proportional split; the mixer itself is swapped by <code class="docutils literal notranslate"><span class="pre">prepare</span></code>) → softmax
+channel pooling (CP-LRP).  <code class="docutils literal notranslate"><span class="pre">forward(x,</span> <span class="pre">zero_emb)</span> <span class="pre">-&gt;</span> <span class="pre">(h,</span> <span class="pre">mcy_logits)</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>orig</strong> (<em>nn.Module</em>)</p></li>
+<li><p><strong>epsilon</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a>)</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="physioex.explain.lrp.LRPChannelMixer.forward">
+<span class="sig-name descname"><span class="pre">forward</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">zero_emb</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/physioex/explain/lrp/pooling.html#LRPChannelMixer.forward"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#physioex.explain.lrp.LRPChannelMixer.forward" title="Link to this definition">#</a></dt>
+<dd><p>Define the computation performed at every call.</p>
+<p>Should be overridden by all subclasses.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Although the recipe for forward pass needs to be defined within
+this function, one should call the <code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code> instance afterwards
+instead of this since the former takes care of running the
+registered hooks while the latter silently ignores them.</p>
+</div>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="physioex.explain.lrp.LRPGRU">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">physioex.explain.lrp.</span></span><span class="sig-name descname"><span class="pre">LRPGRU</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input_size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">hidden_size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_layers</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bias</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">batch_first</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dropout</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bidirectional</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dtype</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/physioex/explain/lrp/recurrent.html#LRPGRU"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#physioex.explain.lrp.LRPGRU" title="Link to this definition">#</a></dt>
+<dt class="sig sig-object py">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">physioex.explain.lrp.</span></span><span class="sig-name descname"><span class="pre">LRPGRU</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.pytorch.org/docs/stable/generated/torch.nn.modules.rnn.GRU.html#torch.nn.modules.rnn.GRU" title="(in PyTorch v2.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">GRU</span></code></a></p>
+<p>Cell-level GRU carrying LRP relevance; drop-in for a trained <code class="docutils literal notranslate"><span class="pre">nn.GRU</span></code>.</p>
+<p><code class="docutils literal notranslate"><span class="pre">forward(x)</span></code> returns <code class="docutils literal notranslate"><span class="pre">(output,</span> <span class="pre">h_n)</span></code> like <code class="docutils literal notranslate"><span class="pre">nn.GRU</span></code>.  PyTorch gate order
+is <code class="docutils literal notranslate"><span class="pre">[r,</span> <span class="pre">z,</span> <span class="pre">n]</span></code> with <code class="docutils literal notranslate"><span class="pre">n</span> <span class="pre">=</span> <span class="pre">tanh(W_in</span> <span class="pre">x</span> <span class="pre">+</span> <span class="pre">b_in</span> <span class="pre">+</span> <span class="pre">r</span> <span class="pre">⊙</span> <span class="pre">(W_hn</span> <span class="pre">h</span> <span class="pre">+</span> <span class="pre">b_hn))</span></code> and
+<code class="docutils literal notranslate"><span class="pre">h'</span> <span class="pre">=</span> <span class="pre">(1−z)⊙n</span> <span class="pre">+</span> <span class="pre">z⊙h</span></code>; sources are <code class="docutils literal notranslate"><span class="pre">n</span></code>, <code class="docutils literal notranslate"><span class="pre">h</span></code> and the recurrent
+pre-activation gated by <code class="docutils literal notranslate"><span class="pre">r</span></code>.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="physioex.explain.lrp.LRPGRU.forward">
+<span class="sig-name descname"><span class="pre">forward</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hx</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/physioex/explain/lrp/recurrent.html#LRPGRU.forward"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#physioex.explain.lrp.LRPGRU.forward" title="Link to this definition">#</a></dt>
+<dd><p>Define the computation performed at every call.</p>
+<p>Should be overridden by all subclasses.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Although the recipe for forward pass needs to be defined within
+this function, one should call the <code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code> instance afterwards
+instead of this since the former takes care of running the
+registered hooks while the latter silently ignores them.</p>
+</div>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="physioex.explain.lrp.LRPLSTM">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">physioex.explain.lrp.</span></span><span class="sig-name descname"><span class="pre">LRPLSTM</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input_size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">hidden_size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_layers</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bias</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">batch_first</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dropout</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bidirectional</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">proj_size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dtype</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/physioex/explain/lrp/recurrent.html#LRPLSTM"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#physioex.explain.lrp.LRPLSTM" title="Link to this definition">#</a></dt>
+<dt class="sig sig-object py">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">physioex.explain.lrp.</span></span><span class="sig-name descname"><span class="pre">LRPLSTM</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.pytorch.org/docs/stable/generated/torch.nn.modules.rnn.LSTM.html#torch.nn.modules.rnn.LSTM" title="(in PyTorch v2.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">LSTM</span></code></a></p>
+<p>Cell-level LSTM carrying LRP relevance; drop-in for a trained <code class="docutils literal notranslate"><span class="pre">nn.LSTM</span></code>.</p>
+<p>Build with <code class="xref py py-meth docutils literal notranslate"><span class="pre">from_torch()</span></code>.  <code class="docutils literal notranslate"><span class="pre">forward(x)</span></code> returns <code class="docutils literal notranslate"><span class="pre">(output,</span>
+<span class="pre">(h_n,</span> <span class="pre">c_n))</span></code> like <code class="docutils literal notranslate"><span class="pre">nn.LSTM</span></code>; an explicit initial state <code class="docutils literal notranslate"><span class="pre">hx</span></code> is not
+supported (raises), <code class="docutils literal notranslate"><span class="pre">dropout</span></code> is ignored (eval-time attribution).</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="physioex.explain.lrp.LRPLSTM.forward">
+<span class="sig-name descname"><span class="pre">forward</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hx</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/physioex/explain/lrp/recurrent.html#LRPLSTM.forward"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#physioex.explain.lrp.LRPLSTM.forward" title="Link to this definition">#</a></dt>
+<dd><p>Define the computation performed at every call.</p>
+<p>Should be overridden by all subclasses.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Although the recipe for forward pass needs to be defined within
+this function, one should call the <code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code> instance afterwards
+instead of this since the former takes care of running the
+registered hooks while the latter silently ignores them.</p>
+</div>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="physioex.explain.lrp.LRPMultiheadAttention">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">physioex.explain.lrp.</span></span><span class="sig-name descname"><span class="pre">LRPMultiheadAttention</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">embed_dim</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_heads</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">epsilon</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1e-06</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/physioex/explain/lrp/transformer.html#LRPMultiheadAttention"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#physioex.explain.lrp.LRPMultiheadAttention" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.pytorch.org/docs/stable/generated/torch.nn.Module.html#torch.nn.Module" title="(in PyTorch v2.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code></a></p>
+<p>LRP-instrumented multi-head attention (self or cross), value-path CP-LRP.</p>
+<p>Reproduces <code class="docutils literal notranslate"><span class="pre">nn.MultiheadAttention</span></code> (<code class="docutils literal notranslate"><span class="pre">batch_first=True</span></code>, same q/k/v
+embed dims, <code class="docutils literal notranslate"><span class="pre">need_weights=False</span></code>).  <code class="docutils literal notranslate"><span class="pre">forward(query,</span> <span class="pre">key,</span> <span class="pre">value)</span></code> returns
+the attention output tensor.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>embed_dim</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>)</p></li>
+<li><p><strong>num_heads</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>)</p></li>
+<li><p><strong>epsilon</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a>)</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="physioex.explain.lrp.LRPMultiheadAttention.attention_weights">
+<span class="sig-name descname"><span class="pre">attention_weights</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">query</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">key</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/physioex/explain/lrp/transformer.html#LRPMultiheadAttention.attention_weights"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#physioex.explain.lrp.LRPMultiheadAttention.attention_weights" title="Link to this definition">#</a></dt>
+<dd><p>Averaged-over-heads attention matrix <code class="docutils literal notranslate"><span class="pre">(B,</span> <span class="pre">Tq,</span> <span class="pre">Tk)</span></code> (no grad).</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="physioex.explain.lrp.LRPMultiheadAttention.forward">
+<span class="sig-name descname"><span class="pre">forward</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">query</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">key</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/physioex/explain/lrp/transformer.html#LRPMultiheadAttention.forward"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#physioex.explain.lrp.LRPMultiheadAttention.forward" title="Link to this definition">#</a></dt>
+<dd><p>Define the computation performed at every call.</p>
+<p>Should be overridden by all subclasses.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Although the recipe for forward pass needs to be defined within
+this function, one should call the <code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code> instance afterwards
+instead of this since the former takes care of running the
+registered hooks while the latter silently ignores them.</p>
+</div>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="physioex.explain.lrp.LRPMultiheadAttentionModule">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">physioex.explain.lrp.</span></span><span class="sig-name descname"><span class="pre">LRPMultiheadAttentionModule</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">attn</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/physioex/explain/lrp/transformer.html#LRPMultiheadAttentionModule"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#physioex.explain.lrp.LRPMultiheadAttentionModule" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.pytorch.org/docs/stable/generated/torch.nn.Module.html#torch.nn.Module" title="(in PyTorch v2.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code></a></p>
+<p><code class="docutils literal notranslate"><span class="pre">nn.MultiheadAttention</span></code>-compatible adapter for <em>standalone</em> attention.</p>
+<p>Host models call <code class="docutils literal notranslate"><span class="pre">out,</span> <span class="pre">w</span> <span class="pre">=</span> <span class="pre">mha(query=,</span> <span class="pre">key=,</span> <span class="pre">value=,</span> <span class="pre">...)</span></code>.  Returns
+<code class="docutils literal notranslate"><span class="pre">(out,</span> <span class="pre">weights_or_None)</span></code>; raises on attention masks (unsupported) instead
+of silently ignoring them.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>attn</strong> (<a class="reference internal" href="#physioex.explain.lrp.LRPMultiheadAttention" title="physioex.explain.lrp.LRPMultiheadAttention"><em>LRPMultiheadAttention</em></a>)</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="physioex.explain.lrp.LRPMultiheadAttentionModule.forward">
+<span class="sig-name descname"><span class="pre">forward</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">query</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">key</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">key_padding_mask</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">need_weights</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">attn_mask</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">average_attn_weights</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_causal</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/physioex/explain/lrp/transformer.html#LRPMultiheadAttentionModule.forward"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#physioex.explain.lrp.LRPMultiheadAttentionModule.forward" title="Link to this definition">#</a></dt>
+<dd><p>Define the computation performed at every call.</p>
+<p>Should be overridden by all subclasses.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Although the recipe for forward pass needs to be defined within
+this function, one should call the <code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code> instance afterwards
+instead of this since the former takes care of running the
+registered hooks while the latter silently ignores them.</p>
+</div>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="physioex.explain.lrp.LRPTransformerEncoder">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">physioex.explain.lrp.</span></span><span class="sig-name descname"><span class="pre">LRPTransformerEncoder</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">layers</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">norm</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/physioex/explain/lrp/transformer.html#LRPTransformerEncoder"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#physioex.explain.lrp.LRPTransformerEncoder" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.pytorch.org/docs/stable/generated/torch.nn.Module.html#torch.nn.Module" title="(in PyTorch v2.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code></a></p>
+<p>LRP replacement for <code class="docutils literal notranslate"><span class="pre">nn.TransformerEncoder</span></code> (the container’s own forward
+introspects <code class="docutils literal notranslate"><span class="pre">layers[0].self_attn.batch_first</span></code>, so the whole stack is
+replaced).  Applies the LRP layers in turn, then the optional final norm.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="physioex.explain.lrp.LRPTransformerEncoder.forward">
+<span class="sig-name descname"><span class="pre">forward</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mask</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">src_key_padding_mask</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_causal</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/physioex/explain/lrp/transformer.html#LRPTransformerEncoder.forward"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#physioex.explain.lrp.LRPTransformerEncoder.forward" title="Link to this definition">#</a></dt>
+<dd><p>Define the computation performed at every call.</p>
+<p>Should be overridden by all subclasses.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Although the recipe for forward pass needs to be defined within
+this function, one should call the <code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code> instance afterwards
+instead of this since the former takes care of running the
+registered hooks while the latter silently ignores them.</p>
+</div>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="physioex.explain.lrp.LRPTransformerEncoderLayer">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">physioex.explain.lrp.</span></span><span class="sig-name descname"><span class="pre">LRPTransformerEncoderLayer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">epsilon</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1e-06</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/physioex/explain/lrp/transformer.html#LRPTransformerEncoderLayer"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#physioex.explain.lrp.LRPTransformerEncoderLayer" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.pytorch.org/docs/stable/generated/torch.nn.Module.html#torch.nn.Module" title="(in PyTorch v2.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code></a></p>
+<p>LRP-instrumented <code class="docutils literal notranslate"><span class="pre">nn.TransformerEncoderLayer</span></code> (post- and pre-norm).</p>
+<p>Build with <code class="xref py py-meth docutils literal notranslate"><span class="pre">from_torch()</span></code>.  Self-attention only; <code class="docutils literal notranslate"><span class="pre">src_mask</span></code> /
+<code class="docutils literal notranslate"><span class="pre">src_key_padding_mask</span></code> are not supported (raise).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>epsilon</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a>)</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="physioex.explain.lrp.LRPTransformerEncoderLayer.forward">
+<span class="sig-name descname"><span class="pre">forward</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">src_mask</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">src_key_padding_mask</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_causal</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/physioex/explain/lrp/transformer.html#LRPTransformerEncoderLayer.forward"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#physioex.explain.lrp.LRPTransformerEncoderLayer.forward" title="Link to this definition">#</a></dt>
+<dd><p>Define the computation performed at every call.</p>
+<p>Should be overridden by all subclasses.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Although the recipe for forward pass needs to be defined within
+this function, one should call the <code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code> instance afterwards
+instead of this since the former takes care of running the
+registered hooks while the latter silently ignores them.</p>
+</div>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="physioex.explain.lrp.ModelLRP">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">physioex.explain.lrp.</span></span><span class="sig-name descname"><span class="pre">ModelLRP</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">in_index</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">out_index</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_key</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">epsilon</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1e-06</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">patch_residuals</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">strict</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">copy_model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/physioex/explain/lrp/model.html#ModelLRP"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#physioex.explain.lrp.ModelLRP" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.pytorch.org/docs/stable/generated/torch.nn.Module.html#torch.nn.Module" title="(in PyTorch v2.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code></a></p>
+<p>LRP attribution for a whole PhysioEx model.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>model</strong> (<em>nn.Module</em>) – trained model <code class="docutils literal notranslate"><span class="pre">(B,</span> <span class="pre">L,</span> <span class="pre">C,</span> <span class="pre">T[,</span> <span class="pre">F])</span> <span class="pre">-&gt;</span> <span class="pre">(B,</span> <span class="pre">L,</span> <span class="pre">n_classes)</span></code> (or a
+dict — set <code class="docutils literal notranslate"><span class="pre">output_key</span></code>).  Deep-copied; the original is untouched.</p></li>
+<li><p><strong>out_index</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>) – sequence epoch and class logit to explain.</p></li>
+<li><p><strong>output_key</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em>]</em>) – for dict outputs (CoReSleep → <code class="docutils literal notranslate"><span class="pre">&quot;combined&quot;</span></code>).</p></li>
+<li><p><strong>epsilon</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a>) – ε of every ε-rule in the prepared model.</p></li>
+<li><p><strong>patch_residuals</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a>) – redirect plain <code class="docutils literal notranslate"><span class="pre">+</span></code> between grad-carrying tensors in
+the model’s own forward to the proportional rule (recommended).</p></li>
+<li><p><strong>strict</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a>) – raise if a parametric leaf is left without an LRP rule.</p></li>
+<li><p><strong>copy_model</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a>) – set <code class="docutils literal notranslate"><span class="pre">False</span></code> to prepare <code class="docutils literal notranslate"><span class="pre">model</span></code> in place (saves memory).</p></li>
+<li><p><strong>in_index</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>)</p></li>
+<li><p><strong>out_index</strong></p></li>
+</ul>
+</dd>
+</dl>
+<p><code class="docutils literal notranslate"><span class="pre">forward(x)</span></code> returns relevance shaped like <code class="docutils literal notranslate"><span class="pre">x</span></code> (seeded with the target
+logit so <code class="docutils literal notranslate"><span class="pre">Σ</span> <span class="pre">R</span> <span class="pre">≈</span> <span class="pre">f_c(x)</span></code>, minus what biases absorb);
+<code class="docutils literal notranslate"><span class="pre">forward(x,</span> <span class="pre">return_report=True)</span></code> also returns a
+<a class="reference internal" href="#physioex.explain.lrp.ConservationReport" title="physioex.explain.lrp.diagnostics.ConservationReport"><code class="xref py py-class docutils literal notranslate"><span class="pre">ConservationReport</span></code></a>.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="physioex.explain.lrp.ModelLRP.forward">
+<span class="sig-name descname"><span class="pre">forward</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_report</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/physioex/explain/lrp/model.html#ModelLRP.forward"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#physioex.explain.lrp.ModelLRP.forward" title="Link to this definition">#</a></dt>
+<dd><p>Define the computation performed at every call.</p>
+<p>Should be overridden by all subclasses.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Although the recipe for forward pass needs to be defined within
+this function, one should call the <code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code> instance afterwards
+instead of this since the former takes care of running the
+registered hooks while the latter silently ignores them.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> (<a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.14)"><em>Tensor</em></a>)</p></li>
+<li><p><strong>return_report</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a>)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="physioex.explain.lrp.audit_lrp_coverage">
+<span class="sig-prename descclassname"><span class="pre">physioex.explain.lrp.</span></span><span class="sig-name descname"><span class="pre">audit_lrp_coverage</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">include_containers</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/physioex/explain/lrp/model.html#audit_lrp_coverage"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#physioex.explain.lrp.audit_lrp_coverage" title="Link to this definition">#</a></dt>
+<dd><p>Names of parametric <strong>leaf</strong> modules that carry no LRP rule (their forward
+runs on plain autograd and propagates gradient, not relevance).</p>
+<p>Container modules that own parameters <em>and</em> have children (e.g. a learned
+CLS token or positional embedding added to the stream) are additive
+constants w.r.t. the input and are only listed with
+<code class="docutils literal notranslate"><span class="pre">include_containers=True</span></code> for manual inspection.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>model</strong> (<a class="reference external" href="https://docs.pytorch.org/docs/stable/generated/torch.nn.Module.html#torch.nn.Module" title="(in PyTorch v2.14)"><em>Module</em></a>)</p></li>
+<li><p><strong>include_containers</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.14)"><em>List</em></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)">str</a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="physioex.explain.lrp.check_conservation">
+<span class="sig-prename descclassname"><span class="pre">physioex.explain.lrp.</span></span><span class="sig-name descname"><span class="pre">check_conservation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">explainer</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/physioex/explain/lrp/diagnostics.html#check_conservation"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#physioex.explain.lrp.check_conservation" title="Link to this definition">#</a></dt>
+<dd><p>Run <code class="docutils literal notranslate"><span class="pre">explainer</span></code> (an <a class="reference internal" href="#physioex.explain.lrp.ModelLRP" title="physioex.explain.lrp.model.ModelLRP"><code class="xref py py-class docutils literal notranslate"><span class="pre">ModelLRP</span></code></a> or
+<a class="reference internal" href="#physioex.explain.lrp.LRP" title="physioex.explain.lrp.attributor.LRP"><code class="xref py py-class docutils literal notranslate"><span class="pre">LRP</span></code></a>) on <code class="docutils literal notranslate"><span class="pre">x</span></code> and report.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>x</strong> (<a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.14)"><em>Tensor</em></a>)</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="#physioex.explain.lrp.ConservationReport" title="physioex.explain.lrp.diagnostics.ConservationReport"><em>ConservationReport</em></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="physioex.explain.lrp.cp_weighted_pool">
+<span class="sig-prename descclassname"><span class="pre">physioex.explain.lrp.</span></span><span class="sig-name descname"><span class="pre">cp_weighted_pool</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">weights</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">epsilon</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1e-06</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/physioex/explain/lrp/pooling.html#cp_weighted_pool"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#physioex.explain.lrp.cp_weighted_pool" title="Link to this definition">#</a></dt>
+<dd><p>Weighted sum over <code class="docutils literal notranslate"><span class="pre">dim=1</span></code> with the CP-LRP backward; <code class="docutils literal notranslate"><span class="pre">weights</span></code> is
+<code class="docutils literal notranslate"><span class="pre">(B,</span> <span class="pre">T,</span> <span class="pre">1)</span></code> and must be detached (constant).</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="physioex.explain.lrp.default_canonizers">
+<span class="sig-prename descclassname"><span class="pre">physioex.explain.lrp.</span></span><span class="sig-name descname"><span class="pre">default_canonizers</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/physioex/explain/lrp/canonizers.html#default_canonizers"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#physioex.explain.lrp.default_canonizers" title="Link to this definition">#</a></dt>
+<dd><p>Return the default canonizer list for a PhysioEx model.</p>
+<p>Currently merges sequential <code class="docutils literal notranslate"><span class="pre">BatchNorm</span></code> layers into their neighbouring
+linear / convolution modules — needed by e.g. <code class="docutils literal notranslate"><span class="pre">tinysleepnet</span></code>,
+<code class="docutils literal notranslate"><span class="pre">sleepfm</span></code> and <code class="docutils literal notranslate"><span class="pre">tfc</span></code>.  Models without BatchNorm are unaffected (the
+canonizer simply finds nothing to merge).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>model</strong> – unused for now; accepted so callers can pass the model and we
+can later dispatch model-specific canonizers (e.g. GroupNorm in
+<code class="docutils literal notranslate"><span class="pre">neurolm</span></code> or the <code class="docutils literal notranslate"><span class="pre">protosleepnet</span></code> prototype head).</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.14)"><em>List</em></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="physioex.explain.lrp.epsilon_composite">
+<span class="sig-prename descclassname"><span class="pre">physioex.explain.lrp.</span></span><span class="sig-name descname"><span class="pre">epsilon_composite</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">epsilon</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1e-06</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">canonizers</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/physioex/explain/lrp/composites.html#epsilon_composite"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#physioex.explain.lrp.epsilon_composite" title="Link to this definition">#</a></dt>
+<dd><p>A pure ε-LRP composite (ε on every linear/conv layer).</p>
+<p>Unlike <a class="reference internal" href="#physioex.explain.lrp.physioex_composite" title="physioex.explain.lrp.physioex_composite"><code class="xref py py-func docutils literal notranslate"><span class="pre">physioex_composite()</span></code></a>, this uses no special first-layer rule,
+so it approximately <strong>conserves relevance</strong> (<code class="docutils literal notranslate"><span class="pre">Σ</span> <span class="pre">R</span> <span class="pre">≈</span> <span class="pre">f(x)</span></code>) — useful as
+the reference for the conservation sanity check in the test suite.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>epsilon</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a>)</p></li>
+<li><p><strong>canonizers</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.14)"><em>List</em></a><em> | </em><em>None</em>)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="physioex.explain.lrp.physioex_composite">
+<span class="sig-prename descclassname"><span class="pre">physioex.explain.lrp.</span></span><span class="sig-name descname"><span class="pre">physioex_composite</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">first_rule</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'w2'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">epsilon</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1e-06</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gamma</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.25</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">zbox_low</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-3.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">zbox_high</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">3.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">canonizers</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/physioex/explain/lrp/composites.html#physioex_composite"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#physioex.explain.lrp.physioex_composite" title="Link to this definition">#</a></dt>
+<dd><p>Build the default PhysioEx LRP composite (ε dense / γ conv / w² first).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>first_rule</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – input-layer rule — <code class="docutils literal notranslate"><span class="pre">&quot;w2&quot;</span></code> (default, unbounded signals),
+<code class="docutils literal notranslate"><span class="pre">&quot;zbox&quot;</span></code> (bounded inputs; needs <code class="docutils literal notranslate"><span class="pre">zbox_low</span></code>/<code class="docutils literal notranslate"><span class="pre">zbox_high</span></code>) or
+<code class="docutils literal notranslate"><span class="pre">&quot;flat&quot;</span></code> (uniform baseline).</p></li>
+<li><p><strong>epsilon</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a>) – stabiliser for the ε-rule on dense layers.</p></li>
+<li><p><strong>gamma</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a>) – positive-weight amplification for the γ-rule on conv layers.</p></li>
+<li><p><strong>zbox_low</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a>) – bounds for the <code class="docutils literal notranslate"><span class="pre">zbox</span></code> first-layer rule.</p></li>
+<li><p><strong>zbox_high</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a>) – bounds for the <code class="docutils literal notranslate"><span class="pre">zbox</span></code> first-layer rule.</p></li>
+<li><p><strong>canonizers</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.14)"><em>List</em></a><em> | </em><em>None</em>) – list of Zennit canonizers to apply (e.g. from
+<code class="xref py py-func docutils literal notranslate"><span class="pre">physioex.explain.lrp.canonizers.default_canonizers()</span></code>).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A <code class="docutils literal notranslate"><span class="pre">zennit.composites.SpecialFirstLayerMapComposite</span></code>.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="physioex.explain.lrp.prepare_model_for_lrp">
+<span class="sig-prename descclassname"><span class="pre">physioex.explain.lrp.</span></span><span class="sig-name descname"><span class="pre">prepare_model_for_lrp</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">epsilon</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1e-06</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">strict</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">_memo</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/physioex/explain/lrp/model.html#prepare_model_for_lrp"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#physioex.explain.lrp.prepare_model_for_lrp" title="Link to this definition">#</a></dt>
+<dd><p>In-place: swap fused / attention / registered blocks for their LRP
+counterparts and wrap the remaining leaves with LRP rules.  Returns
+<code class="docutils literal notranslate"><span class="pre">model</span></code>.  Call on a copy (see <a class="reference internal" href="#physioex.explain.lrp.ModelLRP" title="physioex.explain.lrp.ModelLRP"><code class="xref py py-class docutils literal notranslate"><span class="pre">ModelLRP</span></code></a>).</p>
+<p><code class="docutils literal notranslate"><span class="pre">strict=True</span></code> raises if any parametric leaf is left on plain autograd.
+Shared modules (the same object under several attributes) are replaced by
+a single shared LRP module.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>model</strong> (<a class="reference external" href="https://docs.pytorch.org/docs/stable/generated/torch.nn.Module.html#torch.nn.Module" title="(in PyTorch v2.14)"><em>Module</em></a>)</p></li>
+<li><p><strong>epsilon</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a>)</p></li>
+<li><p><strong>strict</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a>)</p></li>
+<li><p><strong>_memo</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Dict" title="(in Python v3.14)"><em>Dict</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a><em>, </em><a class="reference external" href="https://docs.pytorch.org/docs/stable/generated/torch.nn.Module.html#torch.nn.Module" title="(in PyTorch v2.14)"><em>Module</em></a><em>] </em><em>| </em><em>None</em>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.pytorch.org/docs/stable/generated/torch.nn.Module.html#torch.nn.Module" title="(in PyTorch v2.14)"><em>Module</em></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="physioex.explain.lrp.register_lrp_adapter">
+<span class="sig-prename descclassname"><span class="pre">physioex.explain.lrp.</span></span><span class="sig-name descname"><span class="pre">register_lrp_adapter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cls</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">factory</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/physioex/explain/lrp/model.html#register_lrp_adapter"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#physioex.explain.lrp.register_lrp_adapter" title="Link to this definition">#</a></dt>
+<dd><p>Register <code class="docutils literal notranslate"><span class="pre">factory(module,</span> <span class="pre">epsilon)</span> <span class="pre">-&gt;</span> <span class="pre">nn.Module</span></code> for instances of <code class="docutils literal notranslate"><span class="pre">cls</span></code>.</p>
+<p>Use for custom blocks whose forward contains softmax pooling / attention
+or other non-module ops that plain autograd would attribute as gradient.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>cls</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#type" title="(in Python v3.14)"><em>type</em></a>)</p></li>
+<li><p><strong>factory</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Callable" title="(in Python v3.14)"><em>Callable</em></a><em>[</em><em>[</em><a class="reference external" href="https://docs.pytorch.org/docs/stable/generated/torch.nn.Module.html#torch.nn.Module" title="(in PyTorch v2.14)"><em>Module</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a><em>]</em><em>, </em><a class="reference external" href="https://docs.pytorch.org/docs/stable/generated/torch.nn.Module.html#torch.nn.Module" title="(in PyTorch v2.14)"><em>Module</em></a><em>]</em>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="physioex.explain.lrp.st_identity">
+<span class="sig-prename descclassname"><span class="pre">physioex.explain.lrp.</span></span><span class="sig-name descname"><span class="pre">st_identity</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pre</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">act</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/physioex/explain/lrp/_functional.html#st_identity"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#physioex.explain.lrp.st_identity" title="Link to this definition">#</a></dt>
+<dd><p>Straight-through nonlinearity (identity rule): value <code class="docutils literal notranslate"><span class="pre">act</span></code>, relevance → <code class="docutils literal notranslate"><span class="pre">pre</span></code>.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="physioex.explain.lrp.swap_transformer_layers">
+<span class="sig-prename descclassname"><span class="pre">physioex.explain.lrp.</span></span><span class="sig-name descname"><span class="pre">swap_transformer_layers</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">module</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">epsilon</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1e-06</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/physioex/explain/lrp/transformer.html#swap_transformer_layers"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#physioex.explain.lrp.swap_transformer_layers" title="Link to this definition">#</a></dt>
+<dd><p>In-place: replace <code class="docutils literal notranslate"><span class="pre">nn.TransformerEncoder</span></code> / <code class="docutils literal notranslate"><span class="pre">nn.TransformerEncoderLayer</span></code>
+children with their LRP counterparts (weights copied; the source leaves are
+not modified).  Returns <code class="docutils literal notranslate"><span class="pre">module</span></code>.  Prefer <code class="xref py py-func docutils literal notranslate"><span class="pre">prepare_model_for_lrp()</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>module</strong> (<a class="reference external" href="https://docs.pytorch.org/docs/stable/generated/torch.nn.Module.html#torch.nn.Module" title="(in PyTorch v2.14)"><em>Module</em></a>)</p></li>
+<li><p><strong>epsilon</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.pytorch.org/docs/stable/generated/torch.nn.Module.html#torch.nn.Module" title="(in PyTorch v2.14)"><em>Module</em></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="physioex.explain.lrp.target_seed">
+<span class="sig-prename descclassname"><span class="pre">physioex.explain.lrp.</span></span><span class="sig-name descname"><span class="pre">target_seed</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">out</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">in_index</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">out_index</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/physioex/explain/lrp/_functional.html#target_seed"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#physioex.explain.lrp.target_seed" title="Link to this definition">#</a></dt>
+<dd><p>Relevance seed selecting the target neuron with its <strong>logit value</strong>.</p>
+<p>Seeding with <code class="docutils literal notranslate"><span class="pre">f_c(x)</span></code> (not a bare <code class="docutils literal notranslate"><span class="pre">1.0</span></code>) makes total relevance conserve
+to the class evidence, <code class="docutils literal notranslate"><span class="pre">Σ</span> <span class="pre">R</span> <span class="pre">≈</span> <span class="pre">f_c(x)</span></code>.  Handles <code class="docutils literal notranslate"><span class="pre">(B,</span> <span class="pre">L,</span> <span class="pre">n_classes)</span></code>
+sequence outputs and <code class="docutils literal notranslate"><span class="pre">(B,</span> <span class="pre">n_classes)</span></code>.  Returns <code class="docutils literal notranslate"><span class="pre">(seed,</span> <span class="pre">target_values)</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>out</strong> (<a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.14)"><em>Tensor</em></a>)</p></li>
+<li><p><strong>in_index</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>)</p></li>
+<li><p><strong>out_index</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="physioex.explain.prototypes.posthoc.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">physioex.explain.prototypes.posthoc</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="../../pages/contribute.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Contributing to PhysioEx</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#physioex.explain.lrp.ConservationReport"><code class="docutils literal notranslate"><span class="pre">ConservationReport</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#physioex.explain.lrp.ConservationReport.target"><code class="docutils literal notranslate"><span class="pre">ConservationReport.target</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#physioex.explain.lrp.ConservationReport.relevance_sum"><code class="docutils literal notranslate"><span class="pre">ConservationReport.relevance_sum</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#physioex.explain.lrp.ConservationReport.ratio"><code class="docutils literal notranslate"><span class="pre">ConservationReport.ratio</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#physioex.explain.lrp.ConservationReport.absorbed"><code class="docutils literal notranslate"><span class="pre">ConservationReport.absorbed</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#physioex.explain.lrp.EpsilonRule"><code class="docutils literal notranslate"><span class="pre">EpsilonRule</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#physioex.explain.lrp.EpsilonRule.forward"><code class="docutils literal notranslate"><span class="pre">EpsilonRule.forward()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#physioex.explain.lrp.IdentityRule"><code class="docutils literal notranslate"><span class="pre">IdentityRule</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#physioex.explain.lrp.IdentityRule.forward"><code class="docutils literal notranslate"><span class="pre">IdentityRule.forward()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#physioex.explain.lrp.LRP"><code class="docutils literal notranslate"><span class="pre">LRP</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#physioex.explain.lrp.LRP.forward"><code class="docutils literal notranslate"><span class="pre">LRP.forward()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#physioex.explain.lrp.LRPAttentionLayer"><code class="docutils literal notranslate"><span class="pre">LRPAttentionLayer</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#physioex.explain.lrp.LRPAttentionLayer.forward"><code class="docutils literal notranslate"><span class="pre">LRPAttentionLayer.forward()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#physioex.explain.lrp.LRPAttentionPooling"><code class="docutils literal notranslate"><span class="pre">LRPAttentionPooling</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#physioex.explain.lrp.LRPAttentionPooling.forward"><code class="docutils literal notranslate"><span class="pre">LRPAttentionPooling.forward()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#physioex.explain.lrp.LRPChannelMixer"><code class="docutils literal notranslate"><span class="pre">LRPChannelMixer</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#physioex.explain.lrp.LRPChannelMixer.forward"><code class="docutils literal notranslate"><span class="pre">LRPChannelMixer.forward()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#physioex.explain.lrp.LRPGRU"><code class="docutils literal notranslate"><span class="pre">LRPGRU</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#physioex.explain.lrp.LRPGRU.forward"><code class="docutils literal notranslate"><span class="pre">LRPGRU.forward()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#physioex.explain.lrp.LRPLSTM"><code class="docutils literal notranslate"><span class="pre">LRPLSTM</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#physioex.explain.lrp.LRPLSTM.forward"><code class="docutils literal notranslate"><span class="pre">LRPLSTM.forward()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#physioex.explain.lrp.LRPMultiheadAttention"><code class="docutils literal notranslate"><span class="pre">LRPMultiheadAttention</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#physioex.explain.lrp.LRPMultiheadAttention.attention_weights"><code class="docutils literal notranslate"><span class="pre">LRPMultiheadAttention.attention_weights()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#physioex.explain.lrp.LRPMultiheadAttention.forward"><code class="docutils literal notranslate"><span class="pre">LRPMultiheadAttention.forward()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#physioex.explain.lrp.LRPMultiheadAttentionModule"><code class="docutils literal notranslate"><span class="pre">LRPMultiheadAttentionModule</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#physioex.explain.lrp.LRPMultiheadAttentionModule.forward"><code class="docutils literal notranslate"><span class="pre">LRPMultiheadAttentionModule.forward()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#physioex.explain.lrp.LRPTransformerEncoder"><code class="docutils literal notranslate"><span class="pre">LRPTransformerEncoder</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#physioex.explain.lrp.LRPTransformerEncoder.forward"><code class="docutils literal notranslate"><span class="pre">LRPTransformerEncoder.forward()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#physioex.explain.lrp.LRPTransformerEncoderLayer"><code class="docutils literal notranslate"><span class="pre">LRPTransformerEncoderLayer</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#physioex.explain.lrp.LRPTransformerEncoderLayer.forward"><code class="docutils literal notranslate"><span class="pre">LRPTransformerEncoderLayer.forward()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#physioex.explain.lrp.ModelLRP"><code class="docutils literal notranslate"><span class="pre">ModelLRP</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#physioex.explain.lrp.ModelLRP.forward"><code class="docutils literal notranslate"><span class="pre">ModelLRP.forward()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#physioex.explain.lrp.audit_lrp_coverage"><code class="docutils literal notranslate"><span class="pre">audit_lrp_coverage()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#physioex.explain.lrp.check_conservation"><code class="docutils literal notranslate"><span class="pre">check_conservation()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#physioex.explain.lrp.cp_weighted_pool"><code class="docutils literal notranslate"><span class="pre">cp_weighted_pool()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#physioex.explain.lrp.default_canonizers"><code class="docutils literal notranslate"><span class="pre">default_canonizers()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#physioex.explain.lrp.epsilon_composite"><code class="docutils literal notranslate"><span class="pre">epsilon_composite()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#physioex.explain.lrp.physioex_composite"><code class="docutils literal notranslate"><span class="pre">physioex_composite()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#physioex.explain.lrp.prepare_model_for_lrp"><code class="docutils literal notranslate"><span class="pre">prepare_model_for_lrp()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#physioex.explain.lrp.register_lrp_adapter"><code class="docutils literal notranslate"><span class="pre">register_lrp_adapter()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#physioex.explain.lrp.st_identity"><code class="docutils literal notranslate"><span class="pre">st_identity()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#physioex.explain.lrp.swap_transformer_layers"><code class="docutils literal notranslate"><span class="pre">swap_transformer_layers()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#physioex.explain.lrp.target_seed"><code class="docutils literal notranslate"><span class="pre">target_seed()</span></code></a></li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../../_sources/api/_generated/physioex.explain.lrp.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer src="../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2023, Guido Gagliardi.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 8.1.3.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.16.1.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

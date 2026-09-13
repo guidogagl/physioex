@@ -400,7 +400,7 @@ window.addEventListener("load", () => mermaid.run());
                 <article class="bd-article">
                   
   <h1>Source code for physioex.data.presets</h1><div class="highlight"><pre>
-<span></span><span class="sd">&quot;&quot;&quot;Named preset preprocessing pipelines.</span>
+<span></span><span class="sd">"""Named preset preprocessing pipelines.</span>
 
 <span class="sd">Two families of presets:</span>
 
@@ -408,23 +408,23 @@ window.addEventListener("load", () => mermaid.run());
 <span class="sd">   channel. Good for simple experiments where all modalities share the same</span>
 <span class="sd">   treatment.</span>
 
-<span class="sd">       HMCDataset(pipelines=&quot;raw&quot;)            # per-channel Resample+Bandpass</span>
-<span class="sd">       HMCDataset(pipelines=&quot;seqsleepnet&quot;)    # same + XSleepNet spectrogram</span>
+<span class="sd">       HMCDataset(pipelines="raw")            # per-channel Resample+Bandpass</span>
+<span class="sd">       HMCDataset(pipelines="seqsleepnet")    # same + XSleepNet spectrogram</span>
 
 <span class="sd">2. **Per-modality bundle presets** (``dict`` of pipelines keyed by modality</span>
 <span class="sd">   name) -- different treatment for EEG vs EOG vs EMG vs ECG. Bundles are</span>
 <span class="sd">   returned as a ``dict`` that the ``BasePhysioDataset`` dispatches via its</span>
 <span class="sd">   pipeline-resolution logic (physical-name &gt; modality &gt; __default__).</span>
 
-<span class="sd">       HMCDataset(pipelines=&quot;time_domain&quot;)        # modality-specific filters</span>
-<span class="sd">       HMCDataset(pipelines=&quot;time_frequency&quot;)     # time_domain + spectrogram</span>
+<span class="sd">       HMCDataset(pipelines="time_domain")        # modality-specific filters</span>
+<span class="sd">       HMCDataset(pipelines="time_frequency")     # time_domain + spectrogram</span>
 
 <span class="sd">   The ``time_frequency`` bundle is simply ``time_domain`` with an</span>
 <span class="sd">   ``XSleepNetSpectrogram`` step appended to each per-modality pipeline.</span>
 
 <span class="sd">Users can always compose their own pipelines directly; presets are convenience</span>
-<span class="sd">shortcuts matching the library&#39;s legacy preprocessing conventions.</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">shortcuts matching the library's legacy preprocessing conventions.</span>
+<span class="sd">"""</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Union</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">physioex.data.pipeline</span><span class="w"> </span><span class="kn">import</span> <span class="n">PreprocessingPipeline</span>
@@ -449,7 +449,7 @@ window.addEventListener("load", () => mermaid.run());
     <span class="n">bp_high</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">40.0</span><span class="p">,</span>
     <span class="n">bp_order</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">PreprocessingPipeline</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Minimal preprocessing: bandpass + resample (applied to every channel).&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Minimal preprocessing: bandpass + resample (applied to every channel)."""</span>
     <span class="k">return</span> <span class="n">PreprocessingPipeline</span><span class="p">(</span>
         <span class="p">[</span>
             <span class="n">BandpassFilter</span><span class="p">(</span><span class="n">low</span><span class="o">=</span><span class="n">bp_low</span><span class="p">,</span> <span class="n">high</span><span class="o">=</span><span class="n">bp_high</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="n">bp_order</span><span class="p">),</span>
@@ -466,9 +466,9 @@ window.addEventListener("load", () => mermaid.run());
     <span class="n">nperseg</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">200</span><span class="p">,</span>
     <span class="n">noverlap</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">100</span><span class="p">,</span>
     <span class="n">nfft</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">256</span><span class="p">,</span>
-    <span class="n">window</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;hamming&quot;</span><span class="p">,</span>
+    <span class="n">window</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"hamming"</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">PreprocessingPipeline</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;STFT spectrogram preprocessing (mirrors legacy xsleepnet output).&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""STFT spectrogram preprocessing (mirrors legacy xsleepnet output)."""</span>
     <span class="k">return</span> <span class="n">PreprocessingPipeline</span><span class="p">(</span>
         <span class="p">[</span>
             <span class="n">BandpassFilter</span><span class="p">(</span><span class="n">low</span><span class="o">=</span><span class="n">bp_low</span><span class="p">,</span> <span class="n">high</span><span class="o">=</span><span class="n">bp_high</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="n">bp_order</span><span class="p">),</span>
@@ -481,25 +481,25 @@ window.addEventListener("load", () => mermaid.run());
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">xsleepnet_mouse_pipeline</span><span class="p">(</span><span class="n">target_fs</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">100.0</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">PreprocessingPipeline</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Mouse variant: higher STFT overlap for 4-sec epochs.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Mouse variant: higher STFT overlap for 4-sec epochs."""</span>
     <span class="k">return</span> <span class="n">PreprocessingPipeline</span><span class="p">(</span>
         <span class="p">[</span>
             <span class="n">BandpassFilter</span><span class="p">(</span><span class="n">low</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span> <span class="n">high</span><span class="o">=</span><span class="mf">40.0</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="mi">5</span><span class="p">),</span>
             <span class="n">Resample</span><span class="p">(</span><span class="n">target_fs</span><span class="o">=</span><span class="n">target_fs</span><span class="p">),</span>
-            <span class="n">XSleepNetSpectrogram</span><span class="p">(</span><span class="n">nperseg</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span> <span class="n">noverlap</span><span class="o">=</span><span class="mi">188</span><span class="p">,</span> <span class="n">nfft</span><span class="o">=</span><span class="mi">256</span><span class="p">,</span> <span class="n">window</span><span class="o">=</span><span class="s2">&quot;hamming&quot;</span><span class="p">),</span>
+            <span class="n">XSleepNetSpectrogram</span><span class="p">(</span><span class="n">nperseg</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span> <span class="n">noverlap</span><span class="o">=</span><span class="mi">188</span><span class="p">,</span> <span class="n">nfft</span><span class="o">=</span><span class="mi">256</span><span class="p">,</span> <span class="n">window</span><span class="o">=</span><span class="s2">"hamming"</span><span class="p">),</span>
         <span class="p">]</span>
     <span class="p">)</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">identity_pipeline</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">PreprocessingPipeline</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Pure passthrough -- useful for debugging.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Pure passthrough -- useful for debugging."""</span>
     <span class="k">return</span> <span class="n">PreprocessingPipeline</span><span class="p">([</span><span class="n">Identity</span><span class="p">()])</span>
 
 
 <span class="c1"># ---------------------------------------------------------------------------</span>
 <span class="c1"># Per-modality time-domain pipelines</span>
 <span class="c1">#</span>
-<span class="c1"># Rationale per modality (Huy Phan&#39;s code + AASM standards):</span>
+<span class="c1"># Rationale per modality (Huy Phan's code + AASM standards):</span>
 <span class="c1">#</span>
 <span class="c1">#   EEG -- BP 0.3-40 Hz: captures delta (0.5-4), theta (4-8), alpha (8-13),</span>
 <span class="c1">#          sigma spindles (11-16), beta (13-30). Matches Phan exactly.</span>
@@ -528,7 +528,7 @@ window.addEventListener("load", () => mermaid.run());
 <span class="k">def</span><span class="w"> </span><span class="nf">_bandpass_steps</span><span class="p">(</span>
     <span class="n">bp_low</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">bp_high</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">bp_order</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">target_fs</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">notch_freq</span>
 <span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Build [notch?] -&gt; bandpass -&gt; resample for EEG/EOG/ECG.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Build [notch?] -&gt; bandpass -&gt; resample for EEG/EOG/ECG."""</span>
     <span class="n">steps</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="k">if</span> <span class="n">notch_freq</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">steps</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">NotchFilter</span><span class="p">(</span><span class="n">freq</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">notch_freq</span><span class="p">),</span> <span class="n">quality</span><span class="o">=</span><span class="mf">30.0</span><span class="p">))</span>
@@ -538,7 +538,7 @@ window.addEventListener("load", () => mermaid.run());
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_highpass_steps</span><span class="p">(</span><span class="n">cutoff</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">hp_order</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">target_fs</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">notch_freq</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Build [notch?] -&gt; high-pass -&gt; resample for EMG.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Build [notch?] -&gt; high-pass -&gt; resample for EMG."""</span>
     <span class="n">steps</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="k">if</span> <span class="n">notch_freq</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">steps</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">NotchFilter</span><span class="p">(</span><span class="n">freq</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">notch_freq</span><span class="p">),</span> <span class="n">quality</span><span class="o">=</span><span class="mf">30.0</span><span class="p">))</span>
@@ -554,7 +554,7 @@ window.addEventListener("load", () => mermaid.run());
     <span class="n">bp_high</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">40.0</span><span class="p">,</span>
     <span class="n">bp_order</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">PreprocessingPipeline</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;EEG: [notch?] -&gt; bandpass 0.3-40 Hz -&gt; resample.  Matches Phan/AASM.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""EEG: [notch?] -&gt; bandpass 0.3-40 Hz -&gt; resample.  Matches Phan/AASM."""</span>
     <span class="k">return</span> <span class="n">PreprocessingPipeline</span><span class="p">(</span>
         <span class="n">_bandpass_steps</span><span class="p">(</span><span class="n">bp_low</span><span class="p">,</span> <span class="n">bp_high</span><span class="p">,</span> <span class="n">bp_order</span><span class="p">,</span> <span class="n">target_fs</span><span class="p">,</span> <span class="n">notch_freq</span><span class="p">)</span>
     <span class="p">)</span>
@@ -567,7 +567,7 @@ window.addEventListener("load", () => mermaid.run());
     <span class="n">bp_high</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">40.0</span><span class="p">,</span>
     <span class="n">bp_order</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">PreprocessingPipeline</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;EOG: [notch?] -&gt; bandpass 0.3-40 Hz -&gt; resample.  Matches Phan/AASM.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""EOG: [notch?] -&gt; bandpass 0.3-40 Hz -&gt; resample.  Matches Phan/AASM."""</span>
     <span class="k">return</span> <span class="n">PreprocessingPipeline</span><span class="p">(</span>
         <span class="n">_bandpass_steps</span><span class="p">(</span><span class="n">bp_low</span><span class="p">,</span> <span class="n">bp_high</span><span class="p">,</span> <span class="n">bp_order</span><span class="p">,</span> <span class="n">target_fs</span><span class="p">,</span> <span class="n">notch_freq</span><span class="p">)</span>
     <span class="p">)</span>
@@ -579,12 +579,12 @@ window.addEventListener("load", () => mermaid.run());
     <span class="n">hp_cutoff</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">10.0</span><span class="p">,</span>
     <span class="n">hp_order</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">PreprocessingPipeline</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;EMG (chin): [notch?] -&gt; high-pass &gt;10 Hz -&gt; resample.</span>
+<span class="w">    </span><span class="sd">"""EMG (chin): [notch?] -&gt; high-pass &gt;10 Hz -&gt; resample.</span>
 
-<span class="sd">    Matches Huy Phan&#39;s ``fir1(Nfir, 10*2/fs, &#39;high&#39;)`` and the AASM</span>
+<span class="sd">    Matches Huy Phan's ``fir1(Nfir, 10*2/fs, 'high')`` and the AASM</span>
 <span class="sd">    standard (chin EMG: 10-100 Hz). At 100 Hz sampling the effective</span>
 <span class="sd">    band is 10-50 Hz (Nyquist).</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">return</span> <span class="n">PreprocessingPipeline</span><span class="p">(</span>
         <span class="n">_highpass_steps</span><span class="p">(</span><span class="n">hp_cutoff</span><span class="p">,</span> <span class="n">hp_order</span><span class="p">,</span> <span class="n">target_fs</span><span class="p">,</span> <span class="n">notch_freq</span><span class="p">)</span>
     <span class="p">)</span>
@@ -597,7 +597,7 @@ window.addEventListener("load", () => mermaid.run());
     <span class="n">bp_high</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">40.0</span><span class="p">,</span>
     <span class="n">bp_order</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">PreprocessingPipeline</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;ECG: [notch?] -&gt; bandpass 0.5-40 Hz -&gt; resample.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""ECG: [notch?] -&gt; bandpass 0.5-40 Hz -&gt; resample."""</span>
     <span class="k">return</span> <span class="n">PreprocessingPipeline</span><span class="p">(</span>
         <span class="n">_bandpass_steps</span><span class="p">(</span><span class="n">bp_low</span><span class="p">,</span> <span class="n">bp_high</span><span class="p">,</span> <span class="n">bp_order</span><span class="p">,</span> <span class="n">target_fs</span><span class="p">,</span> <span class="n">notch_freq</span><span class="p">)</span>
     <span class="p">)</span>
@@ -611,21 +611,21 @@ window.addEventListener("load", () => mermaid.run());
 <span class="k">def</span><span class="w"> </span><span class="nf">time_domain_preset</span><span class="p">(</span>
     <span class="n">target_fs</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">100.0</span><span class="p">,</span> <span class="n">notch_freq</span><span class="o">=</span><span class="kc">None</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">PreprocessingPipeline</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Per-modality time-domain preset.</span>
+<span class="w">    </span><span class="sd">"""Per-modality time-domain preset.</span>
 
 <span class="sd">    Returns a dict mapping each modality (EEG/EOG/EMG/ECG) to a modality-</span>
 <span class="sd">    specific ``PreprocessingPipeline``. BasePhysioDataset will dispatch each</span>
-<span class="sd">    channel to its modality&#39;s pipeline.</span>
+<span class="sd">    channel to its modality's pipeline.</span>
 
 <span class="sd">    ``__default__`` provides a fallback that only resamples to target_fs,</span>
 <span class="sd">    ensuring all channels (including Resp, Temp, etc.) end up at the same rate.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">return</span> <span class="p">{</span>
-        <span class="s2">&quot;EEG&quot;</span><span class="p">:</span> <span class="n">eeg_pipeline</span><span class="p">(</span><span class="n">target_fs</span><span class="o">=</span><span class="n">target_fs</span><span class="p">,</span> <span class="n">notch_freq</span><span class="o">=</span><span class="n">notch_freq</span><span class="p">),</span>
-        <span class="s2">&quot;EOG&quot;</span><span class="p">:</span> <span class="n">eog_pipeline</span><span class="p">(</span><span class="n">target_fs</span><span class="o">=</span><span class="n">target_fs</span><span class="p">,</span> <span class="n">notch_freq</span><span class="o">=</span><span class="n">notch_freq</span><span class="p">),</span>
-        <span class="s2">&quot;EMG&quot;</span><span class="p">:</span> <span class="n">emg_pipeline</span><span class="p">(</span><span class="n">target_fs</span><span class="o">=</span><span class="n">target_fs</span><span class="p">,</span> <span class="n">notch_freq</span><span class="o">=</span><span class="n">notch_freq</span><span class="p">),</span>
-        <span class="s2">&quot;ECG&quot;</span><span class="p">:</span> <span class="n">ecg_pipeline</span><span class="p">(</span><span class="n">target_fs</span><span class="o">=</span><span class="n">target_fs</span><span class="p">,</span> <span class="n">notch_freq</span><span class="o">=</span><span class="n">notch_freq</span><span class="p">),</span>
-        <span class="s2">&quot;__default__&quot;</span><span class="p">:</span> <span class="n">PreprocessingPipeline</span><span class="p">([</span><span class="n">Resample</span><span class="p">(</span><span class="n">target_fs</span><span class="o">=</span><span class="n">target_fs</span><span class="p">)]),</span>
+        <span class="s2">"EEG"</span><span class="p">:</span> <span class="n">eeg_pipeline</span><span class="p">(</span><span class="n">target_fs</span><span class="o">=</span><span class="n">target_fs</span><span class="p">,</span> <span class="n">notch_freq</span><span class="o">=</span><span class="n">notch_freq</span><span class="p">),</span>
+        <span class="s2">"EOG"</span><span class="p">:</span> <span class="n">eog_pipeline</span><span class="p">(</span><span class="n">target_fs</span><span class="o">=</span><span class="n">target_fs</span><span class="p">,</span> <span class="n">notch_freq</span><span class="o">=</span><span class="n">notch_freq</span><span class="p">),</span>
+        <span class="s2">"EMG"</span><span class="p">:</span> <span class="n">emg_pipeline</span><span class="p">(</span><span class="n">target_fs</span><span class="o">=</span><span class="n">target_fs</span><span class="p">,</span> <span class="n">notch_freq</span><span class="o">=</span><span class="n">notch_freq</span><span class="p">),</span>
+        <span class="s2">"ECG"</span><span class="p">:</span> <span class="n">ecg_pipeline</span><span class="p">(</span><span class="n">target_fs</span><span class="o">=</span><span class="n">target_fs</span><span class="p">,</span> <span class="n">notch_freq</span><span class="o">=</span><span class="n">notch_freq</span><span class="p">),</span>
+        <span class="s2">"__default__"</span><span class="p">:</span> <span class="n">PreprocessingPipeline</span><span class="p">([</span><span class="n">Resample</span><span class="p">(</span><span class="n">target_fs</span><span class="o">=</span><span class="n">target_fs</span><span class="p">)]),</span>
     <span class="p">}</span>
 
 
@@ -635,10 +635,10 @@ window.addEventListener("load", () => mermaid.run());
     <span class="n">nperseg</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">200</span><span class="p">,</span>
     <span class="n">noverlap</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">100</span><span class="p">,</span>
     <span class="n">nfft</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">256</span><span class="p">,</span>
-    <span class="n">window</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;hamming&quot;</span><span class="p">,</span>
+    <span class="n">window</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"hamming"</span><span class="p">,</span>
     <span class="n">clip_db</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="o">-</span><span class="mf">25.0</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">PreprocessingPipeline</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Per-modality time-frequency preset.</span>
+<span class="w">    </span><span class="sd">"""Per-modality time-frequency preset.</span>
 
 <span class="sd">    Equals ``time_domain_preset`` with an ``XSleepNetSpectrogram`` step</span>
 <span class="sd">    appended to each per-modality pipeline. The spectrogram uses power-dB</span>
@@ -646,7 +646,7 @@ window.addEventListener("load", () => mermaid.run());
 <span class="sd">    -25 dB) to remove low-power noise introduced by filter stop-band</span>
 <span class="sd">    leakage. Output per channel is a ``(n_epochs, T, F)`` tensor suitable</span>
 <span class="sd">    for 2D CNN / transformer models.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">td</span> <span class="o">=</span> <span class="n">time_domain_preset</span><span class="p">(</span><span class="n">target_fs</span><span class="o">=</span><span class="n">target_fs</span><span class="p">,</span> <span class="n">notch_freq</span><span class="o">=</span><span class="n">notch_freq</span><span class="p">)</span>
     <span class="n">spec_step</span> <span class="o">=</span> <span class="n">XSleepNetSpectrogram</span><span class="p">(</span>
         <span class="n">nperseg</span><span class="o">=</span><span class="n">nperseg</span><span class="p">,</span>
@@ -667,11 +667,11 @@ window.addEventListener("load", () => mermaid.run());
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_foundation_pipeline</span><span class="p">(</span><span class="n">target_fs</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">PreprocessingPipeline</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Foundation model pipeline: highpass 0.5 Hz + notch 50 Hz + resample.</span>
+<span class="w">    </span><span class="sd">"""Foundation model pipeline: highpass 0.5 Hz + notch 50 Hz + resample.</span>
 
-<span class="sd">    Matches EEGBenchmarks&#39; pipeline registry exactly so that cache hashes</span>
+<span class="sd">    Matches EEGBenchmarks' pipeline registry exactly so that cache hashes</span>
 <span class="sd">    are compatible and preprocessed data is shared across both systems.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">return</span> <span class="n">PreprocessingPipeline</span><span class="p">(</span>
         <span class="p">[</span>
             <span class="n">HighPassFilter</span><span class="p">(</span><span class="n">cutoff</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="mi">5</span><span class="p">),</span>
@@ -682,64 +682,64 @@ window.addEventListener("load", () => mermaid.run());
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">biot_pipeline</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">PreprocessingPipeline</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;BIOT: HP 0.5 Hz + notch 50 Hz + resample to 200 Hz.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""BIOT: HP 0.5 Hz + notch 50 Hz + resample to 200 Hz."""</span>
     <span class="k">return</span> <span class="n">_foundation_pipeline</span><span class="p">(</span><span class="mf">200.0</span><span class="p">)</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">bendr_pipeline</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">PreprocessingPipeline</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;BENDR: HP 0.5 Hz + notch 50 Hz + resample to 256 Hz.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""BENDR: HP 0.5 Hz + notch 50 Hz + resample to 256 Hz."""</span>
     <span class="k">return</span> <span class="n">_foundation_pipeline</span><span class="p">(</span><span class="mf">256.0</span><span class="p">)</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">cbramod_pipeline</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">PreprocessingPipeline</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;CBraMod: HP 0.5 Hz + notch 50 Hz + resample to 200 Hz.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""CBraMod: HP 0.5 Hz + notch 50 Hz + resample to 200 Hz."""</span>
     <span class="k">return</span> <span class="n">_foundation_pipeline</span><span class="p">(</span><span class="mf">200.0</span><span class="p">)</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">labram_pipeline</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">PreprocessingPipeline</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;LaBraM: HP 0.5 Hz + notch 50 Hz + resample to 200 Hz.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""LaBraM: HP 0.5 Hz + notch 50 Hz + resample to 200 Hz."""</span>
     <span class="k">return</span> <span class="n">_foundation_pipeline</span><span class="p">(</span><span class="mf">200.0</span><span class="p">)</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">sleepfm_pipeline</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">PreprocessingPipeline</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;SleepFM: HP 0.5 Hz + notch 50 Hz + resample to 128 Hz.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""SleepFM: HP 0.5 Hz + notch 50 Hz + resample to 128 Hz."""</span>
     <span class="k">return</span> <span class="n">_foundation_pipeline</span><span class="p">(</span><span class="mf">128.0</span><span class="p">)</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">tfc_pipeline</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">PreprocessingPipeline</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;TF-C: HP 0.5 Hz + notch 50 Hz + resample to 100 Hz.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""TF-C: HP 0.5 Hz + notch 50 Hz + resample to 100 Hz."""</span>
     <span class="k">return</span> <span class="n">_foundation_pipeline</span><span class="p">(</span><span class="mf">100.0</span><span class="p">)</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">reve_pipeline</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">PreprocessingPipeline</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;REVE: HP 0.5 Hz + notch 50 Hz + resample to 200 Hz.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""REVE: HP 0.5 Hz + notch 50 Hz + resample to 200 Hz."""</span>
     <span class="k">return</span> <span class="n">_foundation_pipeline</span><span class="p">(</span><span class="mf">200.0</span><span class="p">)</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">sjepa_pipeline</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">PreprocessingPipeline</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;SJEPA: HP 0.5 Hz + notch 50 Hz + resample to 128 Hz.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""SJEPA: HP 0.5 Hz + notch 50 Hz + resample to 128 Hz."""</span>
     <span class="k">return</span> <span class="n">_foundation_pipeline</span><span class="p">(</span><span class="mf">128.0</span><span class="p">)</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">neurolm_pipeline</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">PreprocessingPipeline</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;NeuroLM: HP 0.5 Hz + notch 50 Hz + resample to 200 Hz.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""NeuroLM: HP 0.5 Hz + notch 50 Hz + resample to 200 Hz."""</span>
     <span class="k">return</span> <span class="n">_foundation_pipeline</span><span class="p">(</span><span class="mf">200.0</span><span class="p">)</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">coresleep_preset</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">PreprocessingPipeline</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Per-modality spectrogram preset for CoRe-Sleep (Kontras et al. 2024).</span>
+<span class="w">    </span><span class="sd">"""Per-modality spectrogram preset for CoRe-Sleep (Kontras et al. 2024).</span>
 
 <span class="sd">    EEG uses the same pipeline as ``seqsleepnet`` (BP 0.3–40 Hz + STFT),</span>
 <span class="sd">    sharing its cache.  EOG uses BP 0.3–23 Hz (paper spec) + same STFT.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">return</span> <span class="p">{</span>
-        <span class="s2">&quot;EEG&quot;</span><span class="p">:</span> <span class="n">seqsleepnet_pipeline</span><span class="p">(),</span>
-        <span class="s2">&quot;EOG&quot;</span><span class="p">:</span> <span class="n">PreprocessingPipeline</span><span class="p">(</span>
+        <span class="s2">"EEG"</span><span class="p">:</span> <span class="n">seqsleepnet_pipeline</span><span class="p">(),</span>
+        <span class="s2">"EOG"</span><span class="p">:</span> <span class="n">PreprocessingPipeline</span><span class="p">(</span>
             <span class="p">[</span>
                 <span class="n">BandpassFilter</span><span class="p">(</span><span class="n">low</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span> <span class="n">high</span><span class="o">=</span><span class="mf">23.0</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="mi">5</span><span class="p">),</span>
                 <span class="n">Resample</span><span class="p">(</span><span class="n">target_fs</span><span class="o">=</span><span class="mf">100.0</span><span class="p">),</span>
                 <span class="n">XSleepNetSpectrogram</span><span class="p">(</span>
-                    <span class="n">nperseg</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span> <span class="n">noverlap</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">nfft</span><span class="o">=</span><span class="mi">256</span><span class="p">,</span> <span class="n">window</span><span class="o">=</span><span class="s2">&quot;hamming&quot;</span>
+                    <span class="n">nperseg</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span> <span class="n">noverlap</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">nfft</span><span class="o">=</span><span class="mi">256</span><span class="p">,</span> <span class="n">window</span><span class="o">=</span><span class="s2">"hamming"</span>
                 <span class="p">),</span>
             <span class="p">]</span>
         <span class="p">),</span>
@@ -748,29 +748,29 @@ window.addEventListener("load", () => mermaid.run());
 
 <span class="n">PRESETS</span> <span class="o">=</span> <span class="p">{</span>
     <span class="c1"># uniform (single-pipeline) presets</span>
-    <span class="s2">&quot;raw&quot;</span><span class="p">:</span> <span class="n">raw_pipeline</span><span class="p">,</span>
-    <span class="s2">&quot;seqsleepnet&quot;</span><span class="p">:</span> <span class="n">seqsleepnet_pipeline</span><span class="p">,</span>
-    <span class="s2">&quot;xsleepnet_mouse&quot;</span><span class="p">:</span> <span class="n">xsleepnet_mouse_pipeline</span><span class="p">,</span>
-    <span class="s2">&quot;identity&quot;</span><span class="p">:</span> <span class="n">identity_pipeline</span><span class="p">,</span>
+    <span class="s2">"raw"</span><span class="p">:</span> <span class="n">raw_pipeline</span><span class="p">,</span>
+    <span class="s2">"seqsleepnet"</span><span class="p">:</span> <span class="n">seqsleepnet_pipeline</span><span class="p">,</span>
+    <span class="s2">"xsleepnet_mouse"</span><span class="p">:</span> <span class="n">xsleepnet_mouse_pipeline</span><span class="p">,</span>
+    <span class="s2">"identity"</span><span class="p">:</span> <span class="n">identity_pipeline</span><span class="p">,</span>
     <span class="c1"># per-modality time-domain pipelines (single-pipeline form)</span>
-    <span class="s2">&quot;eeg&quot;</span><span class="p">:</span> <span class="n">eeg_pipeline</span><span class="p">,</span>
-    <span class="s2">&quot;eog&quot;</span><span class="p">:</span> <span class="n">eog_pipeline</span><span class="p">,</span>
-    <span class="s2">&quot;emg&quot;</span><span class="p">:</span> <span class="n">emg_pipeline</span><span class="p">,</span>
-    <span class="s2">&quot;ecg&quot;</span><span class="p">:</span> <span class="n">ecg_pipeline</span><span class="p">,</span>
+    <span class="s2">"eeg"</span><span class="p">:</span> <span class="n">eeg_pipeline</span><span class="p">,</span>
+    <span class="s2">"eog"</span><span class="p">:</span> <span class="n">eog_pipeline</span><span class="p">,</span>
+    <span class="s2">"emg"</span><span class="p">:</span> <span class="n">emg_pipeline</span><span class="p">,</span>
+    <span class="s2">"ecg"</span><span class="p">:</span> <span class="n">ecg_pipeline</span><span class="p">,</span>
     <span class="c1"># dict presets (per-modality bundles)</span>
-    <span class="s2">&quot;time_domain&quot;</span><span class="p">:</span> <span class="n">time_domain_preset</span><span class="p">,</span>
-    <span class="s2">&quot;time_frequency&quot;</span><span class="p">:</span> <span class="n">time_frequency_preset</span><span class="p">,</span>
-    <span class="s2">&quot;coresleep&quot;</span><span class="p">:</span> <span class="n">coresleep_preset</span><span class="p">,</span>
+    <span class="s2">"time_domain"</span><span class="p">:</span> <span class="n">time_domain_preset</span><span class="p">,</span>
+    <span class="s2">"time_frequency"</span><span class="p">:</span> <span class="n">time_frequency_preset</span><span class="p">,</span>
+    <span class="s2">"coresleep"</span><span class="p">:</span> <span class="n">coresleep_preset</span><span class="p">,</span>
     <span class="c1"># foundation model presets (HP 0.5Hz + Notch 50Hz + Resample, matching EEGBenchmarks)</span>
-    <span class="s2">&quot;biot&quot;</span><span class="p">:</span> <span class="n">biot_pipeline</span><span class="p">,</span>
-    <span class="s2">&quot;bendr&quot;</span><span class="p">:</span> <span class="n">bendr_pipeline</span><span class="p">,</span>
-    <span class="s2">&quot;cbramod&quot;</span><span class="p">:</span> <span class="n">cbramod_pipeline</span><span class="p">,</span>
-    <span class="s2">&quot;labram&quot;</span><span class="p">:</span> <span class="n">labram_pipeline</span><span class="p">,</span>
-    <span class="s2">&quot;sleepfm&quot;</span><span class="p">:</span> <span class="n">sleepfm_pipeline</span><span class="p">,</span>
-    <span class="s2">&quot;tfc&quot;</span><span class="p">:</span> <span class="n">tfc_pipeline</span><span class="p">,</span>
-    <span class="s2">&quot;reve&quot;</span><span class="p">:</span> <span class="n">reve_pipeline</span><span class="p">,</span>
-    <span class="s2">&quot;sjepa&quot;</span><span class="p">:</span> <span class="n">sjepa_pipeline</span><span class="p">,</span>
-    <span class="s2">&quot;neurolm&quot;</span><span class="p">:</span> <span class="n">neurolm_pipeline</span><span class="p">,</span>
+    <span class="s2">"biot"</span><span class="p">:</span> <span class="n">biot_pipeline</span><span class="p">,</span>
+    <span class="s2">"bendr"</span><span class="p">:</span> <span class="n">bendr_pipeline</span><span class="p">,</span>
+    <span class="s2">"cbramod"</span><span class="p">:</span> <span class="n">cbramod_pipeline</span><span class="p">,</span>
+    <span class="s2">"labram"</span><span class="p">:</span> <span class="n">labram_pipeline</span><span class="p">,</span>
+    <span class="s2">"sleepfm"</span><span class="p">:</span> <span class="n">sleepfm_pipeline</span><span class="p">,</span>
+    <span class="s2">"tfc"</span><span class="p">:</span> <span class="n">tfc_pipeline</span><span class="p">,</span>
+    <span class="s2">"reve"</span><span class="p">:</span> <span class="n">reve_pipeline</span><span class="p">,</span>
+    <span class="s2">"sjepa"</span><span class="p">:</span> <span class="n">sjepa_pipeline</span><span class="p">,</span>
+    <span class="s2">"neurolm"</span><span class="p">:</span> <span class="n">neurolm_pipeline</span><span class="p">,</span>
 <span class="p">}</span>
 
 
@@ -779,14 +779,14 @@ window.addEventListener("load", () => mermaid.run());
 <span class="k">def</span><span class="w"> </span><span class="nf">get_preset</span><span class="p">(</span>
     <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">PreprocessingPipeline</span><span class="p">,</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">PreprocessingPipeline</span><span class="p">]]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Instantiate a preset by name.</span>
+<span class="w">    </span><span class="sd">"""Instantiate a preset by name.</span>
 
 <span class="sd">    Returns either a single ``PreprocessingPipeline`` (uniform presets) or a</span>
 <span class="sd">    ``dict`` of modality -&gt; pipeline (bundle presets like ``time_domain``</span>
 <span class="sd">    and ``time_frequency``).</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">if</span> <span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">PRESETS</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unknown preset </span><span class="si">{</span><span class="n">name</span><span class="si">!r}</span><span class="s2">. Available: </span><span class="si">{</span><span class="nb">sorted</span><span class="p">(</span><span class="n">PRESETS</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Unknown preset </span><span class="si">{</span><span class="n">name</span><span class="si">!r}</span><span class="s2">. Available: </span><span class="si">{</span><span class="nb">sorted</span><span class="p">(</span><span class="n">PRESETS</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">PRESETS</span><span class="p">[</span><span class="n">name</span><span class="p">](</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
 
 
@@ -794,7 +794,7 @@ window.addEventListener("load", () => mermaid.run());
 <div class="viewcode-block" id="available_presets">
 <a class="viewcode-back" href="../../../pages/preprocess.html#physioex.data.available_presets">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">available_presets</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return sorted list of available preset names.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Return sorted list of available preset names."""</span>
     <span class="k">return</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">PRESETS</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span></div>
 
 </pre></div>

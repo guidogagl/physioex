@@ -1,0 +1,903 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../../../" data-theme="light">
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>physioex.explain.lrp.model &#8212; PhysioEx</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "light";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "light";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../../_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+<link href="../../../../_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/custom.css?v=885a8570" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="../../../../_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" />
+<link rel="preload" as="script" href="../../../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" />
+
+    <script src="../../../../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../../../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../../../_static/design-tabs.js?v=f930bc37"></script>
+    <script type="module" src="https://cdn.jsdelivr.net/npm/mermaid@11.4.0/dist/mermaid.esm.min.mjs"></script>
+    <script type="module" src="https://cdn.jsdelivr.net/npm/@mermaid-js/layout-elk@0.1.4/dist/mermaid-layout-elk.esm.min.mjs"></script>
+    <script type="module">import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.4.0/dist/mermaid.esm.min.mjs";import elkLayouts from "https://cdn.jsdelivr.net/npm/@mermaid-js/layout-elk@0.1.4/dist/mermaid-layout-elk.esm.min.mjs";mermaid.registerLayoutLoaders(elkLayouts);mermaid.initialize({startOnLoad:false});</script>
+    <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
+    <script type="module">
+import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.4.0/dist/mermaid.esm.min.mjs";
+window.addEventListener("load", () => mermaid.run());
+</script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/physioex/explain/lrp/model';</script>
+    <link rel="icon" href="../../../../_static/logo_bar.svg"/>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="light">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../../../index.html">
+  
+  
+  
+  
+  
+    
+    
+    
+    <img src="../../../../_static/logo_bar.svg" class="logo__image only-light" alt="PhysioEx - Home"/>
+    <img src="../../../../_static/logo_bar.svg" class="logo__image only-dark pst-js-only" alt="PhysioEx - Home"/>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../pages/user_guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../related/index.html">
+    Related Works
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../api/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../pages/contribute.html">
+    Contributing to PhysioEx
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/guidogagl/physioex" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://guidogagl.github.io/" title="Website" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-globe fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Website</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar hide-on-wide">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../pages/user_guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../related/index.html">
+    Related Works
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../api/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../pages/contribute.html">
+    Contributing to PhysioEx
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/guidogagl/physioex" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://guidogagl.github.io/" title="Website" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-globe fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Website</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../../../index.html" class="nav-link">Module code</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">physioex.explain.lrp.model</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for physioex.explain.lrp.model</h1><div class="highlight"><pre>
+<span></span><span class="sd">"""End-to-end LRP for whole PhysioEx models.</span>
+
+<span class="sd">:func:`prepare_model_for_lrp` rewrites a model *in place* so that its backward</span>
+<span class="sd">pass carries relevance:</span>
+
+<span class="sd">* ``nn.LSTM`` / ``nn.GRU``                → :class:`LRPLSTM` / :class:`LRPGRU`</span>
+<span class="sd">* ``nn.TransformerEncoder(Layer)``        → the ``transformer`` LRP versions</span>
+<span class="sd">* standalone ``nn.MultiheadAttention``    → :class:`LRPMultiheadAttentionModule`</span>
+<span class="sd">* registered custom blocks (PhysioEx's softmax poolings, the learnable</span>
+<span class="sd">  filterbank; see :func:`register_lrp_adapter`) → their CP-LRP / ε adapters</span>
+<span class="sd">* leaf ``Linear`` / ``Conv``              → ``EpsilonRule`` (ε-LRP, vjp)</span>
+<span class="sd">* ``BatchNorm``                           → merged into the preceding linear layer</span>
+<span class="sd">  (Zennit canonizer), then identity</span>
+<span class="sd">* ``LayerNorm`` / ``GroupNorm`` / element-wise activations → identity rule</span>
+
+<span class="sd">Everything the walk cannot account for is reported by</span>
+<span class="sd">:func:`audit_lrp_coverage` (parametric leaves left on plain autograd would</span>
+<span class="sd">propagate *gradient*, not relevance).</span>
+
+<span class="sd">:class:`ModelLRP` deep-copies the trained model, prepares it and runs a</span>
+<span class="sd">target-seeded backward.  Plain ``+`` residuals written in a model's own</span>
+<span class="sd">``forward`` are redirected to the proportional ``add_eps`` rule at runtime via a</span>
+<span class="sd">``TorchFunctionMode`` (``patch_residuals=True``); without it a residual gives</span>
+<span class="sd">both branches the full relevance and total relevance is over-counted.</span>
+
+<span class="sd">Requires the ``explain`` extra (``zennit``, for composites and BatchNorm canonization).</span>
+<span class="sd">"""</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">contextlib</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">copy</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch.nn</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">nn</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">physioex.explain.lrp._functional</span><span class="w"> </span><span class="kn">import</span> <span class="n">add_eps</span><span class="p">,</span> <span class="n">target_seed</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">physioex.explain.lrp._rules</span><span class="w"> </span><span class="kn">import</span> <span class="n">EpsilonRule</span><span class="p">,</span> <span class="n">IdentityRule</span><span class="p">,</span> <span class="n">_RuleWrapper</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">physioex.explain.lrp.diagnostics</span><span class="w"> </span><span class="kn">import</span> <span class="n">ConservationReport</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">physioex.explain.lrp.pooling</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">LRPAttentionLayer</span><span class="p">,</span>
+    <span class="n">LRPAttentionPooling</span><span class="p">,</span>
+    <span class="n">LRPChannelMixer</span><span class="p">,</span>
+    <span class="n">_PoolAdapter</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">physioex.explain.lrp.recurrent</span><span class="w"> </span><span class="kn">import</span> <span class="n">LRPGRU</span><span class="p">,</span> <span class="n">LRPLSTM</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">physioex.explain.lrp.transformer</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">LRPMultiheadAttention</span><span class="p">,</span>
+    <span class="n">LRPMultiheadAttentionModule</span><span class="p">,</span>
+    <span class="n">LRPTransformerEncoder</span><span class="p">,</span>
+    <span class="n">LRPTransformerEncoderLayer</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="n">AdapterFactory</span> <span class="o">=</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">,</span> <span class="nb">float</span><span class="p">],</span> <span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">]</span>
+
+<span class="c1"># ---------------------------------------------------------------------------</span>
+<span class="c1"># adapter registry</span>
+<span class="c1"># ---------------------------------------------------------------------------</span>
+
+<span class="n">_ADAPTERS_BY_CLASS</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">type</span><span class="p">,</span> <span class="n">AdapterFactory</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_epsilon_rule_factory</span><span class="p">(</span><span class="n">module</span><span class="p">:</span> <span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">,</span> <span class="n">epsilon</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""ε-LRP via a vector-Jacobian product — exact for modules linear in their</span>
+<span class="sd">    input (e.g. ``LearnableFilterbank``: ``x @ (sigmoid(W)·S)``)."""</span>
+    <span class="k">return</span> <span class="n">EpsilonRule</span><span class="p">(</span><span class="n">module</span><span class="p">,</span> <span class="n">epsilon</span><span class="p">)</span>
+
+
+<span class="c1"># PhysioEx blocks, matched by fully-qualified class name (no model import needed</span>
+<span class="c1"># and no collision with unrelated classes sharing a short name, e.g.</span>
+<span class="c1"># ``sleepfm.AttentionPooling``).  Adapters with a ``matches`` classmethod are</span>
+<span class="c1"># additionally checked structurally.</span>
+<span class="n">_BUILTIN_BY_QUALNAME</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">AdapterFactory</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">"physioex.models.sleeptransformer.AttentionPooling"</span><span class="p">:</span> <span class="n">LRPAttentionPooling</span><span class="p">,</span>
+    <span class="s2">"physioex.models.seqsleepnet.AttentionLayer"</span><span class="p">:</span> <span class="n">LRPAttentionLayer</span><span class="p">,</span>
+    <span class="s2">"physioex.models.seqsleepnet.LearnableFilterbank"</span><span class="p">:</span> <span class="n">_epsilon_rule_factory</span><span class="p">,</span>
+    <span class="s2">"physioex.models.protosleepnet.ChannelMixer"</span><span class="p">:</span> <span class="n">LRPChannelMixer</span><span class="p">,</span>
+<span class="p">}</span>
+
+
+<div class="viewcode-block" id="register_lrp_adapter">
+<a class="viewcode-back" href="../../../../api/_generated/physioex.explain.lrp.html#physioex.explain.lrp.register_lrp_adapter">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">register_lrp_adapter</span><span class="p">(</span><span class="bp">cls</span><span class="p">:</span> <span class="nb">type</span><span class="p">,</span> <span class="n">factory</span><span class="p">:</span> <span class="n">AdapterFactory</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Register ``factory(module, epsilon) -&gt; nn.Module`` for instances of ``cls``.</span>
+
+<span class="sd">    Use for custom blocks whose forward contains softmax pooling / attention</span>
+<span class="sd">    or other non-module ops that plain autograd would attribute as gradient.</span>
+<span class="sd">    """</span>
+    <span class="n">_ADAPTERS_BY_CLASS</span><span class="p">[</span><span class="bp">cls</span><span class="p">]</span> <span class="o">=</span> <span class="n">factory</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_adapter_for</span><span class="p">(</span><span class="n">module</span><span class="p">:</span> <span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">AdapterFactory</span><span class="p">]:</span>
+    <span class="k">for</span> <span class="bp">cls</span><span class="p">,</span> <span class="n">factory</span> <span class="ow">in</span> <span class="n">_ADAPTERS_BY_CLASS</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">module</span><span class="p">,</span> <span class="bp">cls</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">factory</span>
+    <span class="n">qualname</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">module</span><span class="p">)</span><span class="o">.</span><span class="vm">__module__</span><span class="si">}</span><span class="s2">.</span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">module</span><span class="p">)</span><span class="o">.</span><span class="vm">__qualname__</span><span class="si">}</span><span class="s2">"</span>
+    <span class="n">factory</span> <span class="o">=</span> <span class="n">_BUILTIN_BY_QUALNAME</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">qualname</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">factory</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">matches</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">factory</span><span class="p">,</span> <span class="s2">"matches"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">matches</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">matches</span><span class="p">(</span><span class="n">module</span><span class="p">):</span>
+            <span class="k">return</span> <span class="kc">None</span>
+    <span class="k">return</span> <span class="n">factory</span>
+
+
+<span class="c1"># ---------------------------------------------------------------------------</span>
+<span class="c1"># module classification</span>
+<span class="c1"># ---------------------------------------------------------------------------</span>
+
+<span class="n">_LRP_TYPES</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="n">LRPLSTM</span><span class="p">,</span>
+    <span class="n">LRPGRU</span><span class="p">,</span>
+    <span class="n">LRPTransformerEncoder</span><span class="p">,</span>
+    <span class="n">LRPTransformerEncoderLayer</span><span class="p">,</span>
+    <span class="n">LRPMultiheadAttention</span><span class="p">,</span>
+    <span class="n">LRPMultiheadAttentionModule</span><span class="p">,</span>
+    <span class="n">_PoolAdapter</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">_ACTIVATIONS</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="n">nn</span><span class="o">.</span><span class="n">ReLU</span><span class="p">,</span>
+    <span class="n">nn</span><span class="o">.</span><span class="n">GELU</span><span class="p">,</span>
+    <span class="n">nn</span><span class="o">.</span><span class="n">SiLU</span><span class="p">,</span>
+    <span class="n">nn</span><span class="o">.</span><span class="n">ELU</span><span class="p">,</span>
+    <span class="n">nn</span><span class="o">.</span><span class="n">LeakyReLU</span><span class="p">,</span>
+    <span class="n">nn</span><span class="o">.</span><span class="n">Tanh</span><span class="p">,</span>
+    <span class="n">nn</span><span class="o">.</span><span class="n">Sigmoid</span><span class="p">,</span>
+    <span class="n">nn</span><span class="o">.</span><span class="n">Softplus</span><span class="p">,</span>
+    <span class="n">nn</span><span class="o">.</span><span class="n">Hardswish</span><span class="p">,</span>
+    <span class="n">nn</span><span class="o">.</span><span class="n">Hardsigmoid</span><span class="p">,</span>
+    <span class="n">nn</span><span class="o">.</span><span class="n">Mish</span><span class="p">,</span>
+    <span class="n">nn</span><span class="o">.</span><span class="n">PReLU</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">_NORMS_IDENTITY</span> <span class="o">=</span> <span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">LayerNorm</span><span class="p">,</span> <span class="n">nn</span><span class="o">.</span><span class="n">GroupNorm</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span>
+    <span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">RMSNorm</span><span class="p">,)</span> <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">nn</span><span class="p">,</span> <span class="s2">"RMSNorm"</span><span class="p">)</span> <span class="k">else</span> <span class="p">()</span>
+<span class="p">)</span>
+<span class="n">_LINEAR_LEAVES</span> <span class="o">=</span> <span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">,</span> <span class="n">nn</span><span class="o">.</span><span class="n">Conv1d</span><span class="p">,</span> <span class="n">nn</span><span class="o">.</span><span class="n">Conv2d</span><span class="p">,</span> <span class="n">nn</span><span class="o">.</span><span class="n">Conv3d</span><span class="p">)</span>
+<span class="n">_BATCHNORMS</span> <span class="o">=</span> <span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">BatchNorm1d</span><span class="p">,</span> <span class="n">nn</span><span class="o">.</span><span class="n">BatchNorm2d</span><span class="p">,</span> <span class="n">nn</span><span class="o">.</span><span class="n">BatchNorm3d</span><span class="p">)</span>
+<span class="c1"># parametric leaves that are constant w.r.t. the input and need no rule</span>
+<span class="n">_CONSTANT_LEAVES</span> <span class="o">=</span> <span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Embedding</span><span class="p">,)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_is_lrp_module</span><span class="p">(</span><span class="n">m</span><span class="p">:</span> <span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+    <span class="k">return</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="n">_LRP_TYPES</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="n">_RuleWrapper</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_bn_is_identity</span><span class="p">(</span><span class="n">bn</span><span class="p">:</span> <span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+    <span class="n">w_ok</span> <span class="o">=</span> <span class="n">bn</span><span class="o">.</span><span class="n">weight</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">torch</span><span class="o">.</span><span class="n">allclose</span><span class="p">(</span><span class="n">bn</span><span class="o">.</span><span class="n">weight</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">bn</span><span class="o">.</span><span class="n">weight</span><span class="p">))</span>
+    <span class="n">b_ok</span> <span class="o">=</span> <span class="n">bn</span><span class="o">.</span><span class="n">bias</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">torch</span><span class="o">.</span><span class="n">allclose</span><span class="p">(</span><span class="n">bn</span><span class="o">.</span><span class="n">bias</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">bn</span><span class="o">.</span><span class="n">bias</span><span class="p">))</span>
+    <span class="n">m_ok</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">allclose</span><span class="p">(</span><span class="n">bn</span><span class="o">.</span><span class="n">running_mean</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">bn</span><span class="o">.</span><span class="n">running_mean</span><span class="p">))</span>
+    <span class="n">v_ok</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">allclose</span><span class="p">(</span><span class="n">bn</span><span class="o">.</span><span class="n">running_var</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">bn</span><span class="o">.</span><span class="n">running_var</span><span class="p">))</span>
+    <span class="k">return</span> <span class="nb">bool</span><span class="p">(</span><span class="n">w_ok</span> <span class="ow">and</span> <span class="n">b_ok</span> <span class="ow">and</span> <span class="n">m_ok</span> <span class="ow">and</span> <span class="n">v_ok</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_merge_batchnorm</span><span class="p">(</span><span class="n">model</span><span class="p">:</span> <span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Fold sequential BatchNorm layers into the preceding linear/conv (Zennit</span>
+<span class="sd">    canonizer).  Returns the handles (keep them alive to keep the merge)."""</span>
+    <span class="n">has_bn</span> <span class="o">=</span> <span class="nb">any</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="n">_BATCHNORMS</span><span class="p">)</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">model</span><span class="o">.</span><span class="n">modules</span><span class="p">())</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">zennit.canonizers</span><span class="w"> </span><span class="kn">import</span> <span class="n">SequentialMergeBatchNorm</span>
+    <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">has_bn</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                <span class="s2">"zennit is not installed: BatchNorm layers are not merged and get the "</span>
+                <span class="s2">"ε-rule (their shift leaks relevance like a bias)"</span><span class="p">,</span>
+                <span class="ne">RuntimeWarning</span><span class="p">,</span>
+                <span class="n">stacklevel</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="p">[]</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">SequentialMergeBatchNorm</span><span class="p">()</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>  <span class="c1"># e.g. BatchNorm(affine=False) → zennit shape check</span>
+        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"BatchNorm merging failed (</span><span class="si">{</span><span class="n">exc</span><span class="si">!r}</span><span class="s2">); BatchNorm layers get the ε-rule"</span><span class="p">,</span>
+            <span class="ne">RuntimeWarning</span><span class="p">,</span>
+            <span class="n">stacklevel</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="p">[]</span>
+
+
+<span class="c1"># ---------------------------------------------------------------------------</span>
+<span class="c1"># preparation walk</span>
+<span class="c1"># ---------------------------------------------------------------------------</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_replace</span><span class="p">(</span><span class="n">child</span><span class="p">:</span> <span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">,</span> <span class="n">epsilon</span><span class="p">:</span> <span class="nb">float</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Return the LRP replacement for ``child`` or ``None`` to recurse into it."""</span>
+    <span class="k">if</span> <span class="n">_is_lrp_module</span><span class="p">(</span><span class="n">child</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">child</span>  <span class="c1"># already prepared (idempotence)</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">child</span><span class="p">,</span> <span class="n">nn</span><span class="o">.</span><span class="n">LSTM</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">LRPLSTM</span><span class="o">.</span><span class="n">from_torch</span><span class="p">(</span><span class="n">child</span><span class="p">,</span> <span class="n">epsilon</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">child</span><span class="p">,</span> <span class="n">nn</span><span class="o">.</span><span class="n">GRU</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">LRPGRU</span><span class="o">.</span><span class="n">from_torch</span><span class="p">(</span><span class="n">child</span><span class="p">,</span> <span class="n">epsilon</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">child</span><span class="p">,</span> <span class="n">nn</span><span class="o">.</span><span class="n">TransformerEncoder</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">LRPTransformerEncoder</span><span class="o">.</span><span class="n">from_torch</span><span class="p">(</span><span class="n">child</span><span class="p">,</span> <span class="n">epsilon</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">child</span><span class="p">,</span> <span class="n">nn</span><span class="o">.</span><span class="n">TransformerEncoderLayer</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">LRPTransformerEncoderLayer</span><span class="o">.</span><span class="n">from_torch</span><span class="p">(</span><span class="n">child</span><span class="p">,</span> <span class="n">epsilon</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">child</span><span class="p">,</span> <span class="n">nn</span><span class="o">.</span><span class="n">MultiheadAttention</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">LRPMultiheadAttentionModule</span><span class="o">.</span><span class="n">from_torch</span><span class="p">(</span><span class="n">child</span><span class="p">,</span> <span class="n">epsilon</span><span class="p">)</span>
+    <span class="n">factory</span> <span class="o">=</span> <span class="n">_adapter_for</span><span class="p">(</span><span class="n">child</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">factory</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">factory</span><span class="p">(</span><span class="n">child</span><span class="p">,</span> <span class="n">epsilon</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">child</span><span class="p">,</span> <span class="n">_LINEAR_LEAVES</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">EpsilonRule</span><span class="p">(</span><span class="n">child</span><span class="p">,</span> <span class="n">epsilon</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">child</span><span class="p">,</span> <span class="n">_BATCHNORMS</span><span class="p">):</span>
+        <span class="c1"># after canonization BN is the identity; otherwise treat it as the</span>
+        <span class="c1"># affine-linear map it is in eval mode (its shift leaks like a bias)</span>
+        <span class="k">return</span> <span class="p">(</span>
+            <span class="n">IdentityRule</span><span class="p">(</span><span class="n">child</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">_bn_is_identity</span><span class="p">(</span><span class="n">child</span><span class="p">)</span>
+            <span class="k">else</span> <span class="n">EpsilonRule</span><span class="p">(</span><span class="n">child</span><span class="p">,</span> <span class="n">epsilon</span><span class="p">)</span>
+        <span class="p">)</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">child</span><span class="p">,</span> <span class="n">_NORMS_IDENTITY</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">child</span><span class="p">,</span> <span class="n">_ACTIVATIONS</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">IdentityRule</span><span class="p">(</span><span class="n">child</span><span class="p">)</span>
+    <span class="k">return</span> <span class="kc">None</span>
+
+
+<div class="viewcode-block" id="prepare_model_for_lrp">
+<a class="viewcode-back" href="../../../../api/_generated/physioex.explain.lrp.html#physioex.explain.lrp.prepare_model_for_lrp">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">prepare_model_for_lrp</span><span class="p">(</span>
+    <span class="n">model</span><span class="p">:</span> <span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">,</span>
+    <span class="n">epsilon</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1e-6</span><span class="p">,</span>
+    <span class="n">strict</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">_memo</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""In-place: swap fused / attention / registered blocks for their LRP</span>
+<span class="sd">    counterparts and wrap the remaining leaves with LRP rules.  Returns</span>
+<span class="sd">    ``model``.  Call on a copy (see :class:`ModelLRP`).</span>
+
+<span class="sd">    ``strict=True`` raises if any parametric leaf is left on plain autograd.</span>
+<span class="sd">    Shared modules (the same object under several attributes) are replaced by</span>
+<span class="sd">    a single shared LRP module.</span>
+<span class="sd">    """</span>
+    <span class="n">top</span> <span class="o">=</span> <span class="n">_memo</span> <span class="ow">is</span> <span class="kc">None</span>
+    <span class="n">memo</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span> <span class="k">if</span> <span class="n">top</span> <span class="k">else</span> <span class="n">_memo</span>
+    <span class="k">if</span> <span class="n">top</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">model</span><span class="o">.</span><span class="n">training</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                <span class="s2">"prepare_model_for_lrp: model is in training mode — call .eval() first "</span>
+                <span class="s2">"(BatchNorm/Dropout would change the forward being explained)"</span><span class="p">,</span>
+                <span class="ne">RuntimeWarning</span><span class="p">,</span>
+                <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">for</span> <span class="p">(</span>
+            <span class="n">m</span>
+        <span class="p">)</span> <span class="ow">in</span> <span class="n">model</span><span class="o">.</span><span class="n">modules</span><span class="p">():</span>  <span class="c1"># in-place ops would corrupt tensors saved by the rules</span>
+            <span class="k">if</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="s2">"inplace"</span><span class="p">,</span> <span class="kc">False</span><span class="p">):</span>
+                <span class="n">m</span><span class="o">.</span><span class="n">inplace</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="n">model</span><span class="o">.</span><span class="n">_lrp_bn_handles</span> <span class="o">=</span> <span class="n">_merge_batchnorm</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">child</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">_modules</span><span class="o">.</span><span class="n">items</span><span class="p">()):</span>
+        <span class="k">if</span> <span class="n">child</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="n">key</span> <span class="o">=</span> <span class="nb">id</span><span class="p">(</span><span class="n">child</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">memo</span><span class="p">:</span>
+            <span class="nb">setattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">memo</span><span class="p">[</span><span class="n">key</span><span class="p">])</span>
+            <span class="k">continue</span>
+        <span class="n">repl</span> <span class="o">=</span> <span class="n">_replace</span><span class="p">(</span><span class="n">child</span><span class="p">,</span> <span class="n">epsilon</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">repl</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">prepare_model_for_lrp</span><span class="p">(</span><span class="n">child</span><span class="p">,</span> <span class="n">epsilon</span><span class="p">,</span> <span class="n">strict</span><span class="p">,</span> <span class="n">memo</span><span class="p">)</span>
+            <span class="n">memo</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">child</span>
+            <span class="k">continue</span>
+        <span class="n">memo</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">repl</span>
+        <span class="nb">setattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">repl</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">repl</span><span class="p">,</span> <span class="n">_PoolAdapter</span><span class="p">):</span>
+            <span class="c1"># the adapter's inner blocks (e.g. ChannelMixer.mixer) still need rules</span>
+            <span class="n">prepare_model_for_lrp</span><span class="p">(</span><span class="n">repl</span><span class="o">.</span><span class="n">orig</span><span class="p">,</span> <span class="n">epsilon</span><span class="p">,</span> <span class="n">strict</span><span class="p">,</span> <span class="n">memo</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">top</span><span class="p">:</span>
+        <span class="n">uncovered</span> <span class="o">=</span> <span class="n">audit_lrp_coverage</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">uncovered</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="s2">"LRP coverage: these parametric leaves are not wrapped by an LRP "</span>
+                <span class="s2">"rule and will propagate gradient instead of relevance: "</span>
+                <span class="o">+</span> <span class="s2">", "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">uncovered</span><span class="p">)</span>
+            <span class="p">)</span>
+            <span class="k">if</span> <span class="n">strict</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="ne">RuntimeWarning</span><span class="p">,</span> <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">model</span></div>
+
+
+
+<div class="viewcode-block" id="audit_lrp_coverage">
+<a class="viewcode-back" href="../../../../api/_generated/physioex.explain.lrp.html#physioex.explain.lrp.audit_lrp_coverage">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">audit_lrp_coverage</span><span class="p">(</span><span class="n">model</span><span class="p">:</span> <span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">,</span> <span class="n">include_containers</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Names of parametric **leaf** modules that carry no LRP rule (their forward</span>
+<span class="sd">    runs on plain autograd and propagates gradient, not relevance).</span>
+
+<span class="sd">    Container modules that own parameters *and* have children (e.g. a learned</span>
+<span class="sd">    CLS token or positional embedding added to the stream) are additive</span>
+<span class="sd">    constants w.r.t. the input and are only listed with</span>
+<span class="sd">    ``include_containers=True`` for manual inspection.</span>
+<span class="sd">    """</span>
+    <span class="n">uncovered</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">walk</span><span class="p">(</span><span class="n">m</span><span class="p">:</span> <span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">,</span> <span class="n">prefix</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">skip_own</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">_is_lrp_module</span><span class="p">(</span><span class="n">m</span><span class="p">):</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="n">_PoolAdapter</span><span class="p">):</span>
+                <span class="c1"># the adapter uses orig's own parameters as constants (no_grad);</span>
+                <span class="c1"># only orig's inner blocks still need rules</span>
+                <span class="n">walk</span><span class="p">(</span><span class="n">m</span><span class="o">.</span><span class="n">orig</span><span class="p">,</span> <span class="n">prefix</span> <span class="o">+</span> <span class="s2">".orig"</span><span class="p">,</span> <span class="n">skip_own</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="k">return</span>
+        <span class="n">own</span> <span class="o">=</span> <span class="p">(</span><span class="ow">not</span> <span class="n">skip_own</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">any</span><span class="p">(</span><span class="kc">True</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">m</span><span class="o">.</span><span class="n">parameters</span><span class="p">(</span><span class="n">recurse</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span>
+        <span class="n">children</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">m</span><span class="o">.</span><span class="n">named_children</span><span class="p">())</span>
+        <span class="k">if</span> <span class="n">own</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="n">_CONSTANT_LEAVES</span><span class="p">):</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">children</span> <span class="ow">or</span> <span class="n">include_containers</span><span class="p">:</span>
+                <span class="n">uncovered</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">prefix</span> <span class="ow">or</span> <span class="nb">type</span><span class="p">(</span><span class="n">m</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">n</span><span class="p">,</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">children</span><span class="p">:</span>
+            <span class="n">walk</span><span class="p">(</span><span class="n">c</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">prefix</span><span class="si">}</span><span class="s2">.</span><span class="si">{</span><span class="n">n</span><span class="si">}</span><span class="s2">"</span> <span class="k">if</span> <span class="n">prefix</span> <span class="k">else</span> <span class="n">n</span><span class="p">)</span>
+
+    <span class="n">walk</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="s2">""</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">uncovered</span></div>
+
+
+
+<span class="c1"># ---------------------------------------------------------------------------</span>
+<span class="c1"># residual add → proportional rule, at runtime</span>
+<span class="c1"># ---------------------------------------------------------------------------</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">_ResidualAddMode</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">overrides</span><span class="o">.</span><span class="n">TorchFunctionMode</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Redirect ``a + b`` (both requiring grad, grad enabled) to ``add_eps``.</span>
+
+<span class="sd">    Custom autograd Functions run their forward with grad disabled, so the</span>
+<span class="sd">    adds *inside* the LRP rules are never intercepted (no recursion)."""</span>
+
+    <span class="n">_ADD_FUNCS</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">torch</span><span class="o">.</span><span class="n">add</span><span class="p">,</span>
+        <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="o">.</span><span class="n">add</span><span class="p">,</span>
+        <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="o">.</span><span class="fm">__add__</span><span class="p">,</span>
+        <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="o">.</span><span class="fm">__radd__</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">epsilon</span><span class="p">:</span> <span class="nb">float</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">epsilon</span> <span class="o">=</span> <span class="n">epsilon</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">__torch_function__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">func</span><span class="p">,</span> <span class="n">types</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">(),</span> <span class="n">kwargs</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">kwargs</span> <span class="o">=</span> <span class="n">kwargs</span> <span class="ow">or</span> <span class="p">{}</span>
+        <span class="k">if</span> <span class="p">(</span>
+            <span class="n">func</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ADD_FUNCS</span>
+            <span class="ow">and</span> <span class="ow">not</span> <span class="n">kwargs</span>
+            <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">args</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span>
+            <span class="ow">and</span> <span class="n">torch</span><span class="o">.</span><span class="n">is_grad_enabled</span><span class="p">()</span>
+            <span class="ow">and</span> <span class="nb">all</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="ow">and</span> <span class="n">a</span><span class="o">.</span><span class="n">requires_grad</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">args</span><span class="p">)</span>
+        <span class="p">):</span>
+            <span class="k">return</span> <span class="n">add_eps</span><span class="p">(</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">args</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">epsilon</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">func</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+
+<span class="c1"># ---------------------------------------------------------------------------</span>
+<span class="c1"># attributor</span>
+<span class="c1"># ---------------------------------------------------------------------------</span>
+
+
+<div class="viewcode-block" id="ModelLRP">
+<a class="viewcode-back" href="../../../../api/_generated/physioex.explain.lrp.html#physioex.explain.lrp.ModelLRP">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">ModelLRP</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""LRP attribution for a whole PhysioEx model.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        model: trained model ``(B, L, C, T[, F]) -&gt; (B, L, n_classes)`` (or a</span>
+<span class="sd">            dict — set ``output_key``).  Deep-copied; the original is untouched.</span>
+<span class="sd">        in_index / out_index: sequence epoch and class logit to explain.</span>
+<span class="sd">        output_key: for dict outputs (CoReSleep → ``"combined"``).</span>
+<span class="sd">        epsilon: ε of every ε-rule in the prepared model.</span>
+<span class="sd">        patch_residuals: redirect plain ``+`` between grad-carrying tensors in</span>
+<span class="sd">            the model's own forward to the proportional rule (recommended).</span>
+<span class="sd">        strict: raise if a parametric leaf is left without an LRP rule.</span>
+<span class="sd">        copy_model: set ``False`` to prepare ``model`` in place (saves memory).</span>
+
+<span class="sd">    ``forward(x)`` returns relevance shaped like ``x`` (seeded with the target</span>
+<span class="sd">    logit so ``Σ R ≈ f_c(x)``, minus what biases absorb);</span>
+<span class="sd">    ``forward(x, return_report=True)`` also returns a</span>
+<span class="sd">    :class:`~physioex.explain.lrp.diagnostics.ConservationReport`.</span>
+<span class="sd">    """</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">model</span><span class="p">:</span> <span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">,</span>
+        <span class="n">in_index</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+        <span class="n">out_index</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+        <span class="n">output_key</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">epsilon</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1e-6</span><span class="p">,</span>
+        <span class="n">patch_residuals</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="n">strict</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">copy_model</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">in_index</span> <span class="o">=</span> <span class="n">in_index</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">out_index</span> <span class="o">=</span> <span class="n">out_index</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">output_key</span> <span class="o">=</span> <span class="n">output_key</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">epsilon</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">epsilon</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">patch_residuals</span> <span class="o">=</span> <span class="n">patch_residuals</span>
+        <span class="n">prepared</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">model</span><span class="p">)</span> <span class="k">if</span> <span class="n">copy_model</span> <span class="k">else</span> <span class="n">model</span>
+        <span class="n">prepared</span><span class="o">.</span><span class="n">eval</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">prepared</span><span class="o">.</span><span class="n">parameters</span><span class="p">():</span>
+            <span class="n">p</span><span class="o">.</span><span class="n">requires_grad_</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="n">prepare_model_for_lrp</span><span class="p">(</span>
+            <span class="n">prepared</span><span class="p">,</span> <span class="n">epsilon</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">epsilon</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="n">strict</span>
+        <span class="p">)</span>
+        <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">parameters</span><span class="p">():</span>  <span class="c1"># BN merging may create new bias params</span>
+            <span class="n">p</span><span class="o">.</span><span class="n">requires_grad_</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">uncovered</span> <span class="o">=</span> <span class="n">audit_lrp_coverage</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_output</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">out</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">out</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">output_key</span><span class="p">]</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_key</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">out</span>
+
+<div class="viewcode-block" id="ModelLRP.forward">
+<a class="viewcode-back" href="../../../../api/_generated/physioex.explain.lrp.html#physioex.explain.lrp.ModelLRP.forward">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">return_report</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
+        <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">enable_grad</span><span class="p">():</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span><span class="o">.</span><span class="n">requires_grad_</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">mode</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="n">_ResidualAddMode</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">epsilon</span><span class="p">)</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">patch_residuals</span>
+                <span class="k">else</span> <span class="n">contextlib</span><span class="o">.</span><span class="n">nullcontext</span><span class="p">()</span>
+            <span class="p">)</span>
+            <span class="k">with</span> <span class="n">mode</span><span class="p">:</span>
+                <span class="n">out</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_output</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>
+            <span class="n">seed</span><span class="p">,</span> <span class="n">target</span> <span class="o">=</span> <span class="n">target_seed</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">in_index</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">out_index</span><span class="p">)</span>
+            <span class="p">(</span><span class="n">relevance</span><span class="p">,)</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">autograd</span><span class="o">.</span><span class="n">grad</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">seed</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">return_report</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">relevance</span><span class="p">,</span> <span class="n">ConservationReport</span><span class="o">.</span><span class="n">from_relevance</span><span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="n">relevance</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">relevance</span></div>
+</div>
+
+</pre></div>
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer src="../../../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2023, Guido Gagliardi.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 8.1.3.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.16.1.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

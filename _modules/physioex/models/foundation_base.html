@@ -400,7 +400,7 @@ window.addEventListener("load", () => mermaid.run());
                 <article class="bd-article">
                   
   <h1>Source code for physioex.models.foundation_base</h1><div class="highlight"><pre>
-<span></span><span class="sd">&quot;&quot;&quot;Base class for foundation model encoders.</span>
+<span></span><span class="sd">"""Base class for foundation model encoders.</span>
 
 <span class="sd">Adapts a pretrained single-epoch encoder to return embeddings:</span>
 <span class="sd">    (B, L, C, T) -&gt; (B, L, D)</span>
@@ -409,15 +409,15 @@ window.addEventListener("load", () => mermaid.run());
 
 <span class="sd">Each model declares two class attributes that describe its data requirements:</span>
 
-<span class="sd">- ``PIPELINE_PRESET``   — resampling preset name (e.g. ``&quot;biot&quot;`` → 200 Hz)</span>
+<span class="sd">- ``PIPELINE_PRESET``   — resampling preset name (e.g. ``"biot"`` → 200 Hz)</span>
 <span class="sd">- ``CHANNEL_STRATEGY``  — how the model handles channels internally:</span>
-<span class="sd">    - ``&quot;first&quot;`` — uses only the first channel (BIOT, TF-C)</span>
-<span class="sd">    - ``&quot;pad_fixed&quot;`` — zero-pads to a fixed count (SleepFM → 10)</span>
-<span class="sd">    - ``&quot;layout&quot;`` — maps to a named channel layout (BENDR → 20)</span>
-<span class="sd">    - ``&quot;all&quot;`` — uses all input channels as-is (CBraMod, LaBraM)</span>
+<span class="sd">    - ``"first"`` — uses only the first channel (BIOT, TF-C)</span>
+<span class="sd">    - ``"pad_fixed"`` — zero-pads to a fixed count (SleepFM → 10)</span>
+<span class="sd">    - ``"layout"`` — maps to a named channel layout (BENDR → 20)</span>
+<span class="sd">    - ``"all"`` — uses all input channels as-is (CBraMod, LaBraM)</span>
 
 <span class="sd">Channel selection is **per-dataset**, not per-model. The ``_datasets.py``</span>
-<span class="sd">registry (mirroring EEGBenchmarks&#39; DATASET_REGISTRY) specifies exactly which</span>
+<span class="sd">registry (mirroring EEGBenchmarks' DATASET_REGISTRY) specifies exactly which</span>
 <span class="sd">EEG channels to request from each dataset. All models receive the same</span>
 <span class="sd">channels for a given dataset; each model then handles them internally</span>
 <span class="sd">according to its CHANNEL_STRATEGY.</span>
@@ -427,7 +427,7 @@ window.addEventListener("load", () => mermaid.run());
 <span class="sd">    from physioex.models import CBraModEncoder</span>
 
 <span class="sd">    # get_dataset handles everything: pipeline, channels, root path</span>
-<span class="sd">    dataset = CBraModEncoder.get_dataset(&quot;hmc&quot;)</span>
+<span class="sd">    dataset = CBraModEncoder.get_dataset("hmc")</span>
 
 <span class="sd">    # in_chan = number of channels the dataset provides</span>
 <span class="sd">    model = CBraModEncoder(in_chan=len(dataset.channels))</span>
@@ -437,9 +437,9 @@ window.addEventListener("load", () => mermaid.run());
 
 <span class="sd">    # Evaluate via linear probe</span>
 <span class="sd">    from physioex.models.embed import extract_embeddings, linear_probe</span>
-<span class="sd">    extract_embeddings(model, dataset, &quot;cbramod&quot;, &quot;hmc&quot;, L=21)</span>
-<span class="sd">    linear_probe(&quot;cbramod&quot;, &quot;hmc&quot;)</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    extract_embeddings(model, dataset, "cbramod", "hmc", L=21)</span>
+<span class="sd">    linear_probe("cbramod", "hmc")</span>
+<span class="sd">"""</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
@@ -448,40 +448,40 @@ window.addEventListener("load", () => mermaid.run());
 <span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">torch.nn</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">nn</span>
 
-<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">&quot;physioex.foundation&quot;</span><span class="p">)</span>
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">"physioex.foundation"</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="FoundationEncoder">
 <a class="viewcode-back" href="../../../api/_generated/physioex.models.FoundationEncoder.html#physioex.models.FoundationEncoder">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">FoundationEncoder</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Abstract adapter: frozen encoder that returns embeddings.</span>
+<span class="w">    </span><span class="sd">"""Abstract adapter: frozen encoder that returns embeddings.</span>
 
 <span class="sd">    Subclasses implement:</span>
 <span class="sd">      - ``_build_encoder(**kwargs)``  -&gt; nn.Module (the pretrained encoder)</span>
 <span class="sd">      - ``_get_embedding_dim()``      -&gt; int</span>
 <span class="sd">      - ``_load_pretrained(path)``    -&gt; None (load checkpoint into self.encoder)</span>
-<span class="sd">      - ``_encode(x)``               -&gt; (B, D) embeddings from (B, C&#39;, T&#39;) input</span>
-<span class="sd">      - ``_preprocess(x)``           -&gt; (B, C&#39;, T&#39;) (optional: resampling, channel mapping)</span>
+<span class="sd">      - ``_encode(x)``               -&gt; (B, D) embeddings from (B, C', T') input</span>
+<span class="sd">      - ``_preprocess(x)``           -&gt; (B, C', T') (optional: resampling, channel mapping)</span>
 
 <span class="sd">    The wrapper handles:</span>
 <span class="sd">      - Reshaping (B, L, C, T) -&gt; (B*L, C, T) before encoding</span>
 <span class="sd">      - Freezing all encoder parameters</span>
 <span class="sd">      - Reshaping output back to (B, L, D)</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
     <span class="c1"># ── Subclass class attributes ────────────────────────────────────</span>
 
-    <span class="n">MODEL_NAME</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;foundation&quot;</span>
+    <span class="n">MODEL_NAME</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"foundation"</span>
 
     <span class="c1"># Preset name for data resampling (registered in physioex/data/presets.py)</span>
     <span class="n">PIPELINE_PRESET</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
 
     <span class="c1"># How this model handles channels internally:</span>
-    <span class="c1">#   &quot;first&quot;     — uses only channel 0, ignores rest (BIOT, TF-C)</span>
-    <span class="c1">#   &quot;pad_fixed&quot; — zero-pads to a fixed count (SleepFM → 10, BIOT → 16)</span>
-    <span class="c1">#   &quot;layout&quot;    — maps to named layout (BENDR → 20-ch 10-20 system)</span>
-    <span class="c1">#   &quot;all&quot;       — uses all channels as provided (CBraMod, LaBraM)</span>
-    <span class="n">CHANNEL_STRATEGY</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;all&quot;</span>
+    <span class="c1">#   "first"     — uses only channel 0, ignores rest (BIOT, TF-C)</span>
+    <span class="c1">#   "pad_fixed" — zero-pads to a fixed count (SleepFM → 10, BIOT → 16)</span>
+    <span class="c1">#   "layout"    — maps to named layout (BENDR → 20-ch 10-20 system)</span>
+    <span class="c1">#   "all"       — uses all channels as provided (CBraMod, LaBraM)</span>
+    <span class="n">CHANNEL_STRATEGY</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"all"</span>
 
 <div class="viewcode-block" id="FoundationEncoder.__init__">
 <a class="viewcode-back" href="../../../api/_generated/physioex.models.FoundationEncoder.html#physioex.models.FoundationEncoder.__init__">[docs]</a>
@@ -506,7 +506,7 @@ window.addEventListener("load", () => mermaid.run());
 
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_freeze_encoder</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Freeze all encoder parameters.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Freeze all encoder parameters."""</span>
         <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">encoder</span><span class="o">.</span><span class="n">parameters</span><span class="p">():</span>
             <span class="n">p</span><span class="o">.</span><span class="n">requires_grad</span> <span class="o">=</span> <span class="kc">False</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">encoder</span><span class="o">.</span><span class="n">eval</span><span class="p">()</span>
@@ -514,7 +514,7 @@ window.addEventListener("load", () => mermaid.run());
 <div class="viewcode-block" id="FoundationEncoder.forward">
 <a class="viewcode-back" href="../../../api/_generated/physioex.models.FoundationEncoder.html#physioex.models.FoundationEncoder.forward">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;(B, L, C, T) -&gt; (B, L, D) embeddings.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""(B, L, C, T) -&gt; (B, L, D) embeddings."""</span>
         <span class="n">B</span><span class="p">,</span> <span class="n">L</span><span class="p">,</span> <span class="n">C</span><span class="p">,</span> <span class="n">T</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">shape</span>
         <span class="n">x</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">B</span> <span class="o">*</span> <span class="n">L</span><span class="p">,</span> <span class="n">C</span><span class="p">,</span> <span class="n">T</span><span class="p">)</span>
         <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_preprocess</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
@@ -526,7 +526,7 @@ window.addEventListener("load", () => mermaid.run());
 <div class="viewcode-block" id="FoundationEncoder.encode">
 <a class="viewcode-back" href="../../../api/_generated/physioex.models.FoundationEncoder.html#physioex.models.FoundationEncoder.encode">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">encode</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Alias for forward() - compatibility with embed.py.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Alias for forward() - compatibility with embed.py."""</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">forward</span><span class="p">(</span><span class="n">x</span><span class="p">)</span></div>
 
 
@@ -542,14 +542,14 @@ window.addEventListener("load", () => mermaid.run());
         <span class="k">raise</span> <span class="ne">NotImplementedError</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_encode</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;(B, C&#39;, T&#39;) -&gt; (B, D) embeddings.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""(B, C', T') -&gt; (B, D) embeddings."""</span>
         <span class="k">raise</span> <span class="ne">NotImplementedError</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_preprocess</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;(B, C, T) -&gt; (B, C&#39;, T&#39;) with resampling / channel mapping.</span>
+<span class="w">        </span><span class="sd">"""(B, C, T) -&gt; (B, C', T') with resampling / channel mapping.</span>
 
 <span class="sd">        Default: mean-center only.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">return</span> <span class="n">x</span> <span class="o">-</span> <span class="n">x</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">keepdim</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
     <span class="c1"># ── Data loading helpers ────────────────────────────────────────</span>
@@ -557,22 +557,22 @@ window.addEventListener("load", () => mermaid.run());
 <div class="viewcode-block" id="FoundationEncoder.get_pipeline">
 <a class="viewcode-back" href="../../../api/_generated/physioex.models.FoundationEncoder.html#physioex.models.FoundationEncoder.get_pipeline">[docs]</a>
     <span class="nd">@classmethod</span>
-    <span class="k">def</span><span class="w"> </span><span class="nf">get_pipeline</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;PreprocessingPipeline&quot;</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the preprocessing pipeline for this model.</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_pipeline</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">"PreprocessingPipeline"</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Return the preprocessing pipeline for this model.</span>
 
-<span class="sd">        The pipeline is a resample-only pipeline matching the model&#39;s native</span>
+<span class="sd">        The pipeline is a resample-only pipeline matching the model's native</span>
 <span class="sd">        sampling rate. Its hash is identical to the one used in EEGBenchmarks,</span>
 <span class="sd">        so cached preprocessed data is shared between the two systems.</span>
 
 <span class="sd">        Subclasses must set ``PIPELINE_PRESET`` class attribute.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="kn">from</span><span class="w"> </span><span class="nn">physioex.data.presets</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_preset</span>
 
-        <span class="n">preset</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="s2">&quot;PIPELINE_PRESET&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="n">preset</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="s2">"PIPELINE_PRESET"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">preset</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">cls</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2"> must define a PIPELINE_PRESET class attribute &quot;</span>
-                <span class="sa">f</span><span class="s2">&quot;(one of: biot, bendr, cbramod, labram, sleepfm, tfc)&quot;</span>
+                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="bp">cls</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2"> must define a PIPELINE_PRESET class attribute "</span>
+                <span class="sa">f</span><span class="s2">"(one of: biot, bendr, cbramod, labram, sleepfm, tfc)"</span>
             <span class="p">)</span>
         <span class="k">return</span> <span class="n">get_preset</span><span class="p">(</span><span class="n">preset</span><span class="p">)</span></div>
 
@@ -587,18 +587,18 @@ window.addEventListener("load", () => mermaid.run());
         <span class="n">channels</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">sequence_length</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">21</span><span class="p">,</span>
         <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;BasePhysioDataset&quot;</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create a dataset with the correct pipeline AND channels for this model.</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">"BasePhysioDataset"</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Create a dataset with the correct pipeline AND channels for this model.</span>
 
 <span class="sd">        Automatically selects:</span>
 <span class="sd">        - The right resampling pipeline (via ``PIPELINE_PRESET``)</span>
 <span class="sd">        - The right EEG channels for this dataset (via ``_datasets.py`` registry)</span>
 <span class="sd">        - The right constructor kwargs (cohort, visit, subset, ...)</span>
 
-<span class="sd">        The user doesn&#39;t need to know what channels each dataset has or what</span>
+<span class="sd">        The user doesn't need to know what channels each dataset has or what</span>
 <span class="sd">        each model expects — ``get_dataset()`` handles both automatically.</span>
 
-<span class="sd">        The channel registry mirrors EEGBenchmarks&#39; ``DATASET_REGISTRY`` exactly,</span>
+<span class="sd">        The channel registry mirrors EEGBenchmarks' ``DATASET_REGISTRY`` exactly,</span>
 <span class="sd">        so the same cache files are reused across both systems.</span>
 
 <span class="sd">        Args:</span>
@@ -609,7 +609,7 @@ window.addEventListener("load", () => mermaid.run());
 <span class="sd">            channels: override channel requests. If None (recommended), uses the</span>
 <span class="sd">                dataset-specific channels from the registry.</span>
 <span class="sd">            sequence_length: number of epochs per sample (default 21)</span>
-<span class="sd">            **kwargs: extra args merged with the dataset config&#39;s extra_kwargs.</span>
+<span class="sd">            **kwargs: extra args merged with the dataset config's extra_kwargs.</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            A BasePhysioDataset instance ready for this model.</span>
@@ -617,16 +617,16 @@ window.addEventListener("load", () => mermaid.run());
 <span class="sd">        Example::</span>
 
 <span class="sd">            # Everything is automatic — pipeline, channels, root:</span>
-<span class="sd">            dataset = CBraModEncoder.get_dataset(&quot;hmc&quot;)</span>
+<span class="sd">            dataset = CBraModEncoder.get_dataset("hmc")</span>
 
 <span class="sd">            # Override root only:</span>
-<span class="sd">            dataset = CBraModEncoder.get_dataset(&quot;hmc&quot;, root=&quot;/my/data/hmc&quot;)</span>
+<span class="sd">            dataset = CBraModEncoder.get_dataset("hmc", root="/my/data/hmc")</span>
 
 <span class="sd">            # Full manual control:</span>
 <span class="sd">            dataset = CBraModEncoder.get_dataset(</span>
-<span class="sd">                &quot;hmc&quot;, channels=[&quot;EEG C4-M1&quot;], root=&quot;/my/data/hmc&quot;</span>
+<span class="sd">                "hmc", channels=["EEG C4-M1"], root="/my/data/hmc"</span>
 <span class="sd">            )</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="kn">from</span><span class="w"> </span><span class="nn">physioex.models.foundation_datasets</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_dataset_config</span>
 
         <span class="n">config</span> <span class="o">=</span> <span class="n">get_dataset_config</span><span class="p">(</span><span class="n">dataset_name</span><span class="p">)</span>
@@ -639,7 +639,7 @@ window.addEventListener("load", () => mermaid.run());
         <span class="c1"># Channels: dataset-specific defaults, overridable by user</span>
         <span class="n">effective_channels</span> <span class="o">=</span> <span class="n">channels</span> <span class="k">if</span> <span class="n">channels</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">config</span><span class="o">.</span><span class="n">channels</span>
 
-        <span class="c1"># Root: explicit arg wins; else resolve the config&#39;s PHYSIOEX_DATA-relative</span>
+        <span class="c1"># Root: explicit arg wins; else resolve the config's PHYSIOEX_DATA-relative</span>
         <span class="c1"># subpath; else None so the dataset class derives its own root from env.</span>
         <span class="k">if</span> <span class="n">root</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">effective_root</span> <span class="o">=</span> <span class="n">root</span>
@@ -663,10 +663,10 @@ window.addEventListener("load", () => mermaid.run());
         <span class="n">dataset</span> <span class="o">=</span> <span class="n">ds_cls</span><span class="p">(</span><span class="o">**</span><span class="n">ds_kwargs</span><span class="p">)</span>
 
         <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;[</span><span class="si">{</span><span class="bp">cls</span><span class="o">.</span><span class="n">MODEL_NAME</span><span class="si">}</span><span class="s2">] dataset=</span><span class="si">{</span><span class="n">dataset_name</span><span class="si">!r}</span><span class="s2">, &quot;</span>
-            <span class="sa">f</span><span class="s2">&quot;channels=</span><span class="si">{</span><span class="n">effective_channels</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">effective_channels</span><span class="p">)</span><span class="si">}</span><span class="s2">ch), &quot;</span>
-            <span class="sa">f</span><span class="s2">&quot;pipeline=</span><span class="si">{</span><span class="bp">cls</span><span class="o">.</span><span class="n">PIPELINE_PRESET</span><span class="si">!r}</span><span class="s2"> (hash=</span><span class="si">{</span><span class="n">pipeline</span><span class="o">.</span><span class="n">hash</span><span class="p">()</span><span class="si">}</span><span class="s2">), &quot;</span>
-            <span class="sa">f</span><span class="s2">&quot;subjects=</span><span class="si">{</span><span class="n">dataset</span><span class="o">.</span><span class="n">get_n_subjects</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="sa">f</span><span class="s2">"[</span><span class="si">{</span><span class="bp">cls</span><span class="o">.</span><span class="n">MODEL_NAME</span><span class="si">}</span><span class="s2">] dataset=</span><span class="si">{</span><span class="n">dataset_name</span><span class="si">!r}</span><span class="s2">, "</span>
+            <span class="sa">f</span><span class="s2">"channels=</span><span class="si">{</span><span class="n">effective_channels</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">effective_channels</span><span class="p">)</span><span class="si">}</span><span class="s2">ch), "</span>
+            <span class="sa">f</span><span class="s2">"pipeline=</span><span class="si">{</span><span class="bp">cls</span><span class="o">.</span><span class="n">PIPELINE_PRESET</span><span class="si">!r}</span><span class="s2"> (hash=</span><span class="si">{</span><span class="n">pipeline</span><span class="o">.</span><span class="n">hash</span><span class="p">()</span><span class="si">}</span><span class="s2">), "</span>
+            <span class="sa">f</span><span class="s2">"subjects=</span><span class="si">{</span><span class="n">dataset</span><span class="o">.</span><span class="n">get_n_subjects</span><span class="p">()</span><span class="si">}</span><span class="s2">"</span>
         <span class="p">)</span>
 
         <span class="k">return</span> <span class="n">dataset</span></div>

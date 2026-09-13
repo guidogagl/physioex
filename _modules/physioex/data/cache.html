@@ -400,7 +400,7 @@ window.addEventListener("load", () => mermaid.run());
                 <article class="bd-article">
                   
   <h1>Source code for physioex.data.cache</h1><div class="highlight"><pre>
-<span></span><span class="sd">&quot;&quot;&quot;On-disk cache manager for preprocessed per-channel signals.</span>
+<span></span><span class="sd">"""On-disk cache manager for preprocessed per-channel signals.</span>
 
 <span class="sd">Cache key: (SCHEMA_VERSION, dataset, subject_id, physical_channel, pipeline_hash)</span>
 
@@ -416,9 +416,9 @@ window.addEventListener("load", () => mermaid.run());
 <span class="sd">            signal.meta.json                # sidecar with fs_out, shape, dtype, pipeline_spec</span>
 
 <span class="sd">Multi-worker safety: atomic rename (no locks).</span>
-<span class="sd">Dataset names with &quot;/&quot; are flattened to &quot;__&quot; in filesystem paths.</span>
-<span class="sd">Differential channel pairs like (&quot;C4&quot;, &quot;M1&quot;) are encoded as &quot;C4__M1&quot;.</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Dataset names with "/" are flattened to "__" in filesystem paths.</span>
+<span class="sd">Differential channel pairs like ("C4", "M1") are encoded as "C4__M1".</span>
+<span class="sd">"""</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
@@ -442,42 +442,42 @@ window.addEventListener("load", () => mermaid.run());
     <span class="n">_BFLOAT16_SUPPORTED</span> <span class="o">=</span> <span class="kc">False</span>
 
 
-<span class="n">SCHEMA_VERSION</span> <span class="o">=</span> <span class="s2">&quot;v1&quot;</span>
+<span class="n">SCHEMA_VERSION</span> <span class="o">=</span> <span class="s2">"v1"</span>
 
 
 <span class="n">DTYPE_MAP</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">object</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
-    <span class="s2">&quot;float32&quot;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">,</span>
-    <span class="s2">&quot;float64&quot;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span>
-    <span class="s2">&quot;int16&quot;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">int16</span><span class="p">,</span>
-    <span class="s2">&quot;int32&quot;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span>
-    <span class="s2">&quot;int64&quot;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">,</span>
+    <span class="s2">"float32"</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">,</span>
+    <span class="s2">"float64"</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span>
+    <span class="s2">"int16"</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">int16</span><span class="p">,</span>
+    <span class="s2">"int32"</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span>
+    <span class="s2">"int64"</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">,</span>
 <span class="p">}</span>
 <span class="k">if</span> <span class="n">_bfloat16</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-    <span class="n">DTYPE_MAP</span><span class="p">[</span><span class="s2">&quot;bfloat16&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">_bfloat16</span>
+    <span class="n">DTYPE_MAP</span><span class="p">[</span><span class="s2">"bfloat16"</span><span class="p">]</span> <span class="o">=</span> <span class="n">_bfloat16</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_sanitize_name</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Flatten filesystem-unsafe chars. Slash -&gt; double-underscore.&quot;&quot;&quot;</span>
-    <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="n">name</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">,</span> <span class="s2">&quot;__&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\\</span><span class="s2">&quot;</span><span class="p">,</span> <span class="s2">&quot;__&quot;</span><span class="p">)</span>
+<span class="w">    </span><span class="sd">"""Flatten filesystem-unsafe chars. Slash -&gt; double-underscore."""</span>
+    <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="n">name</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">"/"</span><span class="p">,</span> <span class="s2">"__"</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">"</span><span class="se">\\</span><span class="s2">"</span><span class="p">,</span> <span class="s2">"__"</span><span class="p">)</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_encode_physical</span><span class="p">(</span><span class="n">physical</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Encode a physical channel name (string or tuple) into a fs-safe directory name.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Encode a physical channel name (string or tuple) into a fs-safe directory name."""</span>
     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">physical</span><span class="p">,</span> <span class="p">(</span><span class="nb">tuple</span><span class="p">,</span> <span class="nb">list</span><span class="p">)):</span>
-        <span class="k">return</span> <span class="s2">&quot;__&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">_sanitize_name</span><span class="p">(</span><span class="n">p</span><span class="p">)</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">physical</span><span class="p">)</span>
+        <span class="k">return</span> <span class="s2">"__"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">_sanitize_name</span><span class="p">(</span><span class="n">p</span><span class="p">)</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">physical</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">_sanitize_name</span><span class="p">(</span><span class="n">physical</span><span class="p">)</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_dtype_name</span><span class="p">(</span><span class="n">dtype</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Stable string name for a numpy dtype (supports ml_dtypes.bfloat16).&quot;&quot;&quot;</span>
-    <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">dtype</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Stable string name for a numpy dtype (supports ml_dtypes.bfloat16)."""</span>
+    <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">dtype</span><span class="p">,</span> <span class="s2">"name"</span><span class="p">):</span>
         <span class="k">return</span> <span class="n">dtype</span><span class="o">.</span><span class="n">name</span>
     <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="n">dtype</span><span class="p">)</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_resolve_dtype</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
     <span class="k">if</span> <span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">DTYPE_MAP</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unknown dtype name </span><span class="si">{</span><span class="n">name</span><span class="si">!r}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Unknown dtype name </span><span class="si">{</span><span class="n">name</span><span class="si">!r}</span><span class="s2">"</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">DTYPE_MAP</span><span class="p">[</span><span class="n">name</span><span class="p">]</span>
 
 
@@ -491,7 +491,7 @@ window.addEventListener("load", () => mermaid.run());
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cache_root</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
         <span class="k">if</span> <span class="n">cache_root</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">cache_root</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
-                <span class="s2">&quot;PHYSIOEX_CACHE_DIR&quot;</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expanduser</span><span class="p">(</span><span class="s2">&quot;~/.cache/physioex&quot;</span><span class="p">)</span>
+                <span class="s2">"PHYSIOEX_CACHE_DIR"</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expanduser</span><span class="p">(</span><span class="s2">"~/.cache/physioex"</span><span class="p">)</span>
             <span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">cache_root</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">cache_root</span><span class="p">)</span></div>
 
@@ -504,32 +504,32 @@ window.addEventListener("load", () => mermaid.run());
     <span class="k">def</span><span class="w"> </span><span class="nf">header_path</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">subject_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
         <span class="k">return</span> <span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">dataset_root</span><span class="p">(</span><span class="n">dataset</span><span class="p">)</span>
-            <span class="o">/</span> <span class="s2">&quot;headers&quot;</span>
-            <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">_sanitize_name</span><span class="p">(</span><span class="n">subject_id</span><span class="p">)</span><span class="si">}</span><span class="s2">.json&quot;</span>
+            <span class="o">/</span> <span class="s2">"headers"</span>
+            <span class="o">/</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">_sanitize_name</span><span class="p">(</span><span class="n">subject_id</span><span class="p">)</span><span class="si">}</span><span class="s2">.json"</span>
         <span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">subject_meta_path</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">subject_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
         <span class="k">return</span> <span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">dataset_root</span><span class="p">(</span><span class="n">dataset</span><span class="p">)</span>
-            <span class="o">/</span> <span class="s2">&quot;subjects&quot;</span>
-            <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">_sanitize_name</span><span class="p">(</span><span class="n">subject_id</span><span class="p">)</span><span class="si">}</span><span class="s2">.json&quot;</span>
+            <span class="o">/</span> <span class="s2">"subjects"</span>
+            <span class="o">/</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">_sanitize_name</span><span class="p">(</span><span class="n">subject_id</span><span class="p">)</span><span class="si">}</span><span class="s2">.json"</span>
         <span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">labels_path</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">subject_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
         <span class="k">return</span> <span class="p">(</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">dataset_root</span><span class="p">(</span><span class="n">dataset</span><span class="p">)</span> <span class="o">/</span> <span class="s2">&quot;labels&quot;</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">_sanitize_name</span><span class="p">(</span><span class="n">subject_id</span><span class="p">)</span><span class="si">}</span><span class="s2">.npy&quot;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dataset_root</span><span class="p">(</span><span class="n">dataset</span><span class="p">)</span> <span class="o">/</span> <span class="s2">"labels"</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">_sanitize_name</span><span class="p">(</span><span class="n">subject_id</span><span class="p">)</span><span class="si">}</span><span class="s2">.npy"</span>
         <span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">labels_meta_path</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">subject_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
         <span class="k">return</span> <span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">dataset_root</span><span class="p">(</span><span class="n">dataset</span><span class="p">)</span>
-            <span class="o">/</span> <span class="s2">&quot;labels&quot;</span>
-            <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">_sanitize_name</span><span class="p">(</span><span class="n">subject_id</span><span class="p">)</span><span class="si">}</span><span class="s2">.meta.json&quot;</span>
+            <span class="o">/</span> <span class="s2">"labels"</span>
+            <span class="o">/</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">_sanitize_name</span><span class="p">(</span><span class="n">subject_id</span><span class="p">)</span><span class="si">}</span><span class="s2">.meta.json"</span>
         <span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">events_path</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">subject_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
         <span class="k">return</span> <span class="p">(</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">dataset_root</span><span class="p">(</span><span class="n">dataset</span><span class="p">)</span> <span class="o">/</span> <span class="s2">&quot;events&quot;</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">_sanitize_name</span><span class="p">(</span><span class="n">subject_id</span><span class="p">)</span><span class="si">}</span><span class="s2">.json&quot;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dataset_root</span><span class="p">(</span><span class="n">dataset</span><span class="p">)</span> <span class="o">/</span> <span class="s2">"events"</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">_sanitize_name</span><span class="p">(</span><span class="n">subject_id</span><span class="p">)</span><span class="si">}</span><span class="s2">.json"</span>
         <span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">signal_dir</span><span class="p">(</span>
@@ -537,7 +537,7 @@ window.addEventListener("load", () => mermaid.run());
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
         <span class="k">return</span> <span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">dataset_root</span><span class="p">(</span><span class="n">dataset</span><span class="p">)</span>
-            <span class="o">/</span> <span class="s2">&quot;signals&quot;</span>
+            <span class="o">/</span> <span class="s2">"signals"</span>
             <span class="o">/</span> <span class="n">_sanitize_name</span><span class="p">(</span><span class="n">subject_id</span><span class="p">)</span>
             <span class="o">/</span> <span class="n">_encode_physical</span><span class="p">(</span><span class="n">physical</span><span class="p">)</span>
             <span class="o">/</span> <span class="n">pipeline_hash</span>
@@ -547,7 +547,7 @@ window.addEventListener("load", () => mermaid.run());
         <span class="bp">self</span><span class="p">,</span> <span class="n">dataset</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">subject_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">physical</span><span class="p">,</span> <span class="n">pipeline_hash</span><span class="p">:</span> <span class="nb">str</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
         <span class="k">return</span> <span class="p">(</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">signal_dir</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span> <span class="n">subject_id</span><span class="p">,</span> <span class="n">physical</span><span class="p">,</span> <span class="n">pipeline_hash</span><span class="p">)</span> <span class="o">/</span> <span class="s2">&quot;signal.npy&quot;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">signal_dir</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span> <span class="n">subject_id</span><span class="p">,</span> <span class="n">physical</span><span class="p">,</span> <span class="n">pipeline_hash</span><span class="p">)</span> <span class="o">/</span> <span class="s2">"signal.npy"</span>
         <span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">signal_meta_path</span><span class="p">(</span>
@@ -555,7 +555,7 @@ window.addEventListener("load", () => mermaid.run());
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
         <span class="k">return</span> <span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">signal_dir</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span> <span class="n">subject_id</span><span class="p">,</span> <span class="n">physical</span><span class="p">,</span> <span class="n">pipeline_hash</span><span class="p">)</span>
-            <span class="o">/</span> <span class="s2">&quot;signal.meta.json&quot;</span>
+            <span class="o">/</span> <span class="s2">"signal.meta.json"</span>
         <span class="p">)</span>
 
     <span class="c1"># ----- Existence checks -----</span>
@@ -570,19 +570,19 @@ window.addEventListener("load", () => mermaid.run());
     <span class="k">def</span><span class="w"> </span><span class="nf">atomic_save_array</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">],</span> <span class="n">data</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">meta</span><span class="p">:</span> <span class="n">Dict</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Write `data` to `path` atomically, plus {stem}.meta.json sidecar.</span>
+<span class="w">        </span><span class="sd">"""Write `data` to `path` atomically, plus {stem}.meta.json sidecar.</span>
 
 <span class="sd">        Algorithm: write to a temp file in the same directory, flush, then</span>
 <span class="sd">        os.replace (POSIX-atomic on same filesystem, safe on NFSv3+).</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
         <span class="n">path</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
         <span class="c1"># Data file</span>
         <span class="n">fd</span><span class="p">,</span> <span class="n">tmp_path</span> <span class="o">=</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">mkstemp</span><span class="p">(</span>
             <span class="nb">dir</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">path</span><span class="o">.</span><span class="n">parent</span><span class="p">),</span>
-            <span class="n">prefix</span><span class="o">=</span><span class="n">path</span><span class="o">.</span><span class="n">name</span> <span class="o">+</span> <span class="s2">&quot;.tmp.&quot;</span><span class="p">,</span>
-            <span class="n">suffix</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;.</span><span class="si">{</span><span class="n">os</span><span class="o">.</span><span class="n">getpid</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+            <span class="n">prefix</span><span class="o">=</span><span class="n">path</span><span class="o">.</span><span class="n">name</span> <span class="o">+</span> <span class="s2">".tmp."</span><span class="p">,</span>
+            <span class="n">suffix</span><span class="o">=</span><span class="sa">f</span><span class="s2">".</span><span class="si">{</span><span class="n">os</span><span class="o">.</span><span class="n">getpid</span><span class="p">()</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
         <span class="p">)</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="n">os</span><span class="o">.</span><span class="n">close</span><span class="p">(</span><span class="n">fd</span><span class="p">)</span>
@@ -590,7 +590,7 @@ window.addEventListener("load", () => mermaid.run());
             <span class="c1"># np.save always appends .npy when the path lacks it, creating a second</span>
             <span class="c1"># file alongside the original (empty) mkstemp fd. We handle both cases.</span>
             <span class="n">np</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">tmp_path</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">allow_pickle</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-            <span class="n">npy_tmp</span> <span class="o">=</span> <span class="n">tmp_path</span> <span class="o">+</span> <span class="s2">&quot;.npy&quot;</span>
+            <span class="n">npy_tmp</span> <span class="o">=</span> <span class="n">tmp_path</span> <span class="o">+</span> <span class="s2">".npy"</span>
             <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">npy_tmp</span><span class="p">):</span>
                 <span class="c1"># np.save wrote to the .npy copy; remove the original empty stub</span>
                 <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">tmp_path</span><span class="p">):</span>
@@ -600,7 +600,7 @@ window.addEventListener("load", () => mermaid.run());
                 <span class="n">actual_tmp</span> <span class="o">=</span> <span class="n">tmp_path</span>
             <span class="n">os</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">actual_tmp</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span>
         <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
-            <span class="k">for</span> <span class="n">candidate</span> <span class="ow">in</span> <span class="p">(</span><span class="n">tmp_path</span><span class="p">,</span> <span class="n">tmp_path</span> <span class="o">+</span> <span class="s2">&quot;.npy&quot;</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">candidate</span> <span class="ow">in</span> <span class="p">(</span><span class="n">tmp_path</span><span class="p">,</span> <span class="n">tmp_path</span> <span class="o">+</span> <span class="s2">".npy"</span><span class="p">):</span>
                 <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">candidate</span><span class="p">):</span>
                     <span class="k">try</span><span class="p">:</span>
                         <span class="n">os</span><span class="o">.</span><span class="n">unlink</span><span class="p">(</span><span class="n">candidate</span><span class="p">)</span>
@@ -609,29 +609,29 @@ window.addEventListener("load", () => mermaid.run());
             <span class="k">raise</span>
 
         <span class="c1"># Sidecar metadata</span>
-        <span class="n">meta_path</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">parent</span> <span class="o">/</span> <span class="p">(</span><span class="n">path</span><span class="o">.</span><span class="n">stem</span> <span class="o">+</span> <span class="s2">&quot;.meta.json&quot;</span><span class="p">)</span>
+        <span class="n">meta_path</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">parent</span> <span class="o">/</span> <span class="p">(</span><span class="n">path</span><span class="o">.</span><span class="n">stem</span> <span class="o">+</span> <span class="s2">".meta.json"</span><span class="p">)</span>
         <span class="n">meta_full</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">meta</span><span class="p">)</span>
-        <span class="n">meta_full</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s2">&quot;created_utc&quot;</span><span class="p">,</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">(</span><span class="n">timezone</span><span class="o">.</span><span class="n">utc</span><span class="p">)</span><span class="o">.</span><span class="n">isoformat</span><span class="p">())</span>
-        <span class="n">meta_full</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s2">&quot;shape&quot;</span><span class="p">,</span> <span class="nb">list</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">))</span>
-        <span class="n">meta_full</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s2">&quot;dtype&quot;</span><span class="p">,</span> <span class="n">_dtype_name</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">dtype</span><span class="p">))</span>
-        <span class="n">meta_full</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s2">&quot;schema_version&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">SCHEMA_VERSION</span><span class="p">)</span>
-        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">meta_path</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="n">meta_full</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s2">"created_utc"</span><span class="p">,</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">(</span><span class="n">timezone</span><span class="o">.</span><span class="n">utc</span><span class="p">)</span><span class="o">.</span><span class="n">isoformat</span><span class="p">())</span>
+        <span class="n">meta_full</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s2">"shape"</span><span class="p">,</span> <span class="nb">list</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">))</span>
+        <span class="n">meta_full</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s2">"dtype"</span><span class="p">,</span> <span class="n">_dtype_name</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">dtype</span><span class="p">))</span>
+        <span class="n">meta_full</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s2">"schema_version"</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">SCHEMA_VERSION</span><span class="p">)</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">meta_path</span><span class="p">,</span> <span class="s2">"w"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
             <span class="n">json</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">meta_full</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="ChannelCache.save_json">
 <a class="viewcode-back" href="../../../api/_generated/physioex.data.ChannelCache.html#physioex.data.ChannelCache.save_json">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">save_json</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">],</span> <span class="n">obj</span><span class="p">:</span> <span class="n">Dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Atomic JSON write.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Atomic JSON write."""</span>
         <span class="n">path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
         <span class="n">path</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
         <span class="n">fd</span><span class="p">,</span> <span class="n">tmp_path</span> <span class="o">=</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">mkstemp</span><span class="p">(</span>
             <span class="nb">dir</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">path</span><span class="o">.</span><span class="n">parent</span><span class="p">),</span>
-            <span class="n">prefix</span><span class="o">=</span><span class="n">path</span><span class="o">.</span><span class="n">name</span> <span class="o">+</span> <span class="s2">&quot;.tmp.&quot;</span><span class="p">,</span>
-            <span class="n">suffix</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;.</span><span class="si">{</span><span class="n">os</span><span class="o">.</span><span class="n">getpid</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+            <span class="n">prefix</span><span class="o">=</span><span class="n">path</span><span class="o">.</span><span class="n">name</span> <span class="o">+</span> <span class="s2">".tmp."</span><span class="p">,</span>
+            <span class="n">suffix</span><span class="o">=</span><span class="sa">f</span><span class="s2">".</span><span class="si">{</span><span class="n">os</span><span class="o">.</span><span class="n">getpid</span><span class="p">()</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
         <span class="p">)</span>
         <span class="k">try</span><span class="p">:</span>
-            <span class="k">with</span> <span class="n">os</span><span class="o">.</span><span class="n">fdopen</span><span class="p">(</span><span class="n">fd</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="k">with</span> <span class="n">os</span><span class="o">.</span><span class="n">fdopen</span><span class="p">(</span><span class="n">fd</span><span class="p">,</span> <span class="s2">"w"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
                 <span class="n">json</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
             <span class="n">os</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">tmp_path</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span>
         <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
@@ -655,49 +655,49 @@ window.addEventListener("load", () => mermaid.run());
 <div class="viewcode-block" id="ChannelCache.load_memmap">
 <a class="viewcode-back" href="../../../api/_generated/physioex.data.ChannelCache.html#physioex.data.ChannelCache.load_memmap">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">load_memmap</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data_path</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">Dict</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Open a cached .npy as a read-only memmap. Returns (memmap, meta).</span>
+<span class="w">        </span><span class="sd">"""Open a cached .npy as a read-only memmap. Returns (memmap, meta).</span>
 
 <span class="sd">        For non-native numpy dtypes (e.g. ml_dtypes.bfloat16), np.load returns a</span>
 <span class="sd">        void type (``|V2``). We detect this via the sidecar metadata and reconstruct</span>
 <span class="sd">        the memmap with the correct dtype and shape, computing the .npy header</span>
 <span class="sd">        offset from the file.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">data_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">data_path</span><span class="p">)</span>
-        <span class="n">meta_path</span> <span class="o">=</span> <span class="n">data_path</span><span class="o">.</span><span class="n">parent</span> <span class="o">/</span> <span class="p">(</span><span class="n">data_path</span><span class="o">.</span><span class="n">stem</span> <span class="o">+</span> <span class="s2">&quot;.meta.json&quot;</span><span class="p">)</span>
+        <span class="n">meta_path</span> <span class="o">=</span> <span class="n">data_path</span><span class="o">.</span><span class="n">parent</span> <span class="o">/</span> <span class="p">(</span><span class="n">data_path</span><span class="o">.</span><span class="n">stem</span> <span class="o">+</span> <span class="s2">".meta.json"</span><span class="p">)</span>
         <span class="n">meta</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">load_json</span><span class="p">(</span><span class="n">meta_path</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">meta</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;Sidecar missing for </span><span class="si">{</span><span class="n">data_path</span><span class="si">}</span><span class="s2">: expected </span><span class="si">{</span><span class="n">meta_path</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">"Sidecar missing for </span><span class="si">{</span><span class="n">data_path</span><span class="si">}</span><span class="s2">: expected </span><span class="si">{</span><span class="n">meta_path</span><span class="si">}</span><span class="s2">"</span>
             <span class="p">)</span>
 
-        <span class="n">dtype_name</span> <span class="o">=</span> <span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;dtype&quot;</span><span class="p">,</span> <span class="s2">&quot;float32&quot;</span><span class="p">)</span>
+        <span class="n">dtype_name</span> <span class="o">=</span> <span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"dtype"</span><span class="p">,</span> <span class="s2">"float32"</span><span class="p">)</span>
         <span class="n">dtype</span> <span class="o">=</span> <span class="n">_resolve_dtype</span><span class="p">(</span><span class="n">dtype_name</span><span class="p">)</span>
-        <span class="n">shape</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">meta</span><span class="p">[</span><span class="s2">&quot;shape&quot;</span><span class="p">])</span>
+        <span class="n">shape</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">meta</span><span class="p">[</span><span class="s2">"shape"</span><span class="p">])</span>
 
         <span class="c1"># For non-native dtypes (like bfloat16), np.load mmap returns void/V2.</span>
         <span class="c1"># Use np.memmap directly with the correct dtype and the .npy header offset.</span>
-        <span class="k">if</span> <span class="n">dtype_name</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;bfloat16&quot;</span><span class="p">,):</span>
+        <span class="k">if</span> <span class="n">dtype_name</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"bfloat16"</span><span class="p">,):</span>
             <span class="c1"># Parse the .npy header to find data offset</span>
-            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">data_path</span><span class="p">,</span> <span class="s2">&quot;rb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">data_path</span><span class="p">,</span> <span class="s2">"rb"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
                 <span class="c1"># numpy .npy format: 6-byte magic + 2-byte version + 2-byte header_len (v1)</span>
                 <span class="c1"># or 6-byte magic + 2-byte version + 4-byte header_len (v2/v3)</span>
                 <span class="n">magic</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">6</span><span class="p">)</span>
                 <span class="n">version</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
                 <span class="n">major</span> <span class="o">=</span> <span class="n">version</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
                 <span class="k">if</span> <span class="n">major</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-                    <span class="n">header_len</span> <span class="o">=</span> <span class="nb">int</span><span class="o">.</span><span class="n">from_bytes</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">2</span><span class="p">),</span> <span class="s2">&quot;little&quot;</span><span class="p">)</span>
+                    <span class="n">header_len</span> <span class="o">=</span> <span class="nb">int</span><span class="o">.</span><span class="n">from_bytes</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">2</span><span class="p">),</span> <span class="s2">"little"</span><span class="p">)</span>
                 <span class="k">else</span><span class="p">:</span>
-                    <span class="n">header_len</span> <span class="o">=</span> <span class="nb">int</span><span class="o">.</span><span class="n">from_bytes</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">4</span><span class="p">),</span> <span class="s2">&quot;little&quot;</span><span class="p">)</span>
+                    <span class="n">header_len</span> <span class="o">=</span> <span class="nb">int</span><span class="o">.</span><span class="n">from_bytes</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">4</span><span class="p">),</span> <span class="s2">"little"</span><span class="p">)</span>
                 <span class="c1"># data offset = position after magic + version + header_len_field + header</span>
                 <span class="k">if</span> <span class="n">major</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
                     <span class="n">offset</span> <span class="o">=</span> <span class="mi">6</span> <span class="o">+</span> <span class="mi">2</span> <span class="o">+</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">header_len</span>
                 <span class="k">else</span><span class="p">:</span>
                     <span class="n">offset</span> <span class="o">=</span> <span class="mi">6</span> <span class="o">+</span> <span class="mi">2</span> <span class="o">+</span> <span class="mi">4</span> <span class="o">+</span> <span class="n">header_len</span>
-            <span class="n">mm</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">memmap</span><span class="p">(</span><span class="n">data_path</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;r&quot;</span><span class="p">,</span> <span class="n">offset</span><span class="o">=</span><span class="n">offset</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="n">shape</span><span class="p">)</span>
+            <span class="n">mm</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">memmap</span><span class="p">(</span><span class="n">data_path</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">"r"</span><span class="p">,</span> <span class="n">offset</span><span class="o">=</span><span class="n">offset</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="n">shape</span><span class="p">)</span>
             <span class="k">return</span> <span class="n">mm</span><span class="p">,</span> <span class="n">meta</span>
 
         <span class="c1"># For standard numpy dtypes, np.load handles it correctly</span>
-        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">data_path</span><span class="p">,</span> <span class="n">mmap_mode</span><span class="o">=</span><span class="s2">&quot;r&quot;</span><span class="p">),</span> <span class="n">meta</span></div>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">data_path</span><span class="p">,</span> <span class="n">mmap_mode</span><span class="o">=</span><span class="s2">"r"</span><span class="p">),</span> <span class="n">meta</span></div>
 
 
     <span class="c1"># ----- Cache invalidation -----</span>
@@ -710,13 +710,13 @@ window.addEventListener("load", () => mermaid.run());
         <span class="n">subject</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">pipeline_hash</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Remove cached data. Omit args to clear broader scopes.</span>
+<span class="w">        </span><span class="sd">"""Remove cached data. Omit args to clear broader scopes.</span>
 
 <span class="sd">        - clear() -&gt; removes entire cache_root / SCHEMA_VERSION</span>
-<span class="sd">        - clear(dataset) -&gt; removes that dataset&#39;s subtree</span>
-<span class="sd">        - clear(dataset, subject) -&gt; removes subject&#39;s subtree within dataset</span>
+<span class="sd">        - clear(dataset) -&gt; removes that dataset's subtree</span>
+<span class="sd">        - clear(dataset, subject) -&gt; removes subject's subtree within dataset</span>
 <span class="sd">        - clear(dataset, subject, pipeline_hash) -&gt; removes that pipeline hash across all channels</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="kn">import</span><span class="w"> </span><span class="nn">shutil</span>
 
         <span class="k">if</span> <span class="n">dataset</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
@@ -731,11 +731,11 @@ window.addEventListener("load", () => mermaid.run());
                 <span class="n">shutil</span><span class="o">.</span><span class="n">rmtree</span><span class="p">(</span><span class="n">ds_root</span><span class="p">)</span>
             <span class="k">return</span>
 
-        <span class="n">subj_sig</span> <span class="o">=</span> <span class="n">ds_root</span> <span class="o">/</span> <span class="s2">&quot;signals&quot;</span> <span class="o">/</span> <span class="n">_sanitize_name</span><span class="p">(</span><span class="n">subject</span><span class="p">)</span>
-        <span class="n">subj_hdr</span> <span class="o">=</span> <span class="n">ds_root</span> <span class="o">/</span> <span class="s2">&quot;headers&quot;</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">_sanitize_name</span><span class="p">(</span><span class="n">subject</span><span class="p">)</span><span class="si">}</span><span class="s2">.json&quot;</span>
-        <span class="n">subj_lbl_data</span> <span class="o">=</span> <span class="n">ds_root</span> <span class="o">/</span> <span class="s2">&quot;labels&quot;</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">_sanitize_name</span><span class="p">(</span><span class="n">subject</span><span class="p">)</span><span class="si">}</span><span class="s2">.npy&quot;</span>
-        <span class="n">subj_lbl_meta</span> <span class="o">=</span> <span class="n">ds_root</span> <span class="o">/</span> <span class="s2">&quot;labels&quot;</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">_sanitize_name</span><span class="p">(</span><span class="n">subject</span><span class="p">)</span><span class="si">}</span><span class="s2">.meta.json&quot;</span>
-        <span class="n">subj_meta</span> <span class="o">=</span> <span class="n">ds_root</span> <span class="o">/</span> <span class="s2">&quot;subjects&quot;</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">_sanitize_name</span><span class="p">(</span><span class="n">subject</span><span class="p">)</span><span class="si">}</span><span class="s2">.json&quot;</span>
+        <span class="n">subj_sig</span> <span class="o">=</span> <span class="n">ds_root</span> <span class="o">/</span> <span class="s2">"signals"</span> <span class="o">/</span> <span class="n">_sanitize_name</span><span class="p">(</span><span class="n">subject</span><span class="p">)</span>
+        <span class="n">subj_hdr</span> <span class="o">=</span> <span class="n">ds_root</span> <span class="o">/</span> <span class="s2">"headers"</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">_sanitize_name</span><span class="p">(</span><span class="n">subject</span><span class="p">)</span><span class="si">}</span><span class="s2">.json"</span>
+        <span class="n">subj_lbl_data</span> <span class="o">=</span> <span class="n">ds_root</span> <span class="o">/</span> <span class="s2">"labels"</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">_sanitize_name</span><span class="p">(</span><span class="n">subject</span><span class="p">)</span><span class="si">}</span><span class="s2">.npy"</span>
+        <span class="n">subj_lbl_meta</span> <span class="o">=</span> <span class="n">ds_root</span> <span class="o">/</span> <span class="s2">"labels"</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">_sanitize_name</span><span class="p">(</span><span class="n">subject</span><span class="p">)</span><span class="si">}</span><span class="s2">.meta.json"</span>
+        <span class="n">subj_meta</span> <span class="o">=</span> <span class="n">ds_root</span> <span class="o">/</span> <span class="s2">"subjects"</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">_sanitize_name</span><span class="p">(</span><span class="n">subject</span><span class="p">)</span><span class="si">}</span><span class="s2">.json"</span>
 
         <span class="k">if</span> <span class="n">pipeline_hash</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="p">[</span><span class="n">subj_sig</span><span class="p">]:</span>
@@ -757,14 +757,14 @@ window.addEventListener("load", () => mermaid.run());
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">recommended_dtype</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Returns &#39;bfloat16&#39; if CUDA+bfloat16 is supported at call time, else &#39;float32&#39;.&quot;&quot;&quot;</span>
-    <span class="k">return</span> <span class="s2">&quot;bfloat16&quot;</span> <span class="k">if</span> <span class="n">_BFLOAT16_SUPPORTED</span> <span class="ow">and</span> <span class="n">_bfloat16</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="s2">&quot;float32&quot;</span>
+<span class="w">    </span><span class="sd">"""Returns 'bfloat16' if CUDA+bfloat16 is supported at call time, else 'float32'."""</span>
+    <span class="k">return</span> <span class="s2">"bfloat16"</span> <span class="k">if</span> <span class="n">_BFLOAT16_SUPPORTED</span> <span class="ow">and</span> <span class="n">_bfloat16</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="s2">"float32"</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">cast_to_cache_dtype</span><span class="p">(</span>
     <span class="n">data</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">dtype_name</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Cast data to the specified cache dtype (defaults to `recommended_dtype()`).&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Cast data to the specified cache dtype (defaults to `recommended_dtype()`)."""</span>
     <span class="k">if</span> <span class="n">dtype_name</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">dtype_name</span> <span class="o">=</span> <span class="n">recommended_dtype</span><span class="p">()</span>
     <span class="n">dt</span> <span class="o">=</span> <span class="n">_resolve_dtype</span><span class="p">(</span><span class="n">dtype_name</span><span class="p">)</span>

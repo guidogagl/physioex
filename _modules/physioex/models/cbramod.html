@@ -400,7 +400,7 @@ window.addEventListener("load", () => mermaid.run());
                 <article class="bd-article">
                   
   <h1>Source code for physioex.models.cbramod</h1><div class="highlight"><pre>
-<span></span><span class="sd">&quot;&quot;&quot;CBraMod — Criss-Cross Brain Foundation Model (Jiang et al., ICLR 2025).</span>
+<span></span><span class="sd">"""CBraMod — Criss-Cross Brain Foundation Model (Jiang et al., ICLR 2025).</span>
 
 <span class="sd">Pure encoder: (B, L, C, T) -&gt; (B, L, D)</span>
 <span class="sd">Embeddings: mean over patches and channels -&gt; (B, 200).</span>
@@ -409,7 +409,7 @@ window.addEventListener("load", () => mermaid.run());
 <span class="sd">  1. Mean-center per channel</span>
 <span class="sd">  2. Clip ±100 µV, divide by 100 → ~[-1,1]</span>
 <span class="sd">  3. Strip all-zero channels</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
@@ -426,11 +426,11 @@ window.addEventListener("load", () => mermaid.run());
 <div class="viewcode-block" id="CBraModEncoder">
 <a class="viewcode-back" href="../../../api/_generated/physioex.models.CBraModEncoder.html#physioex.models.CBraModEncoder">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">CBraModEncoder</span><span class="p">(</span><span class="n">FoundationEncoder</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;CBraMod accepts any number of EEG channels, pools over them.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""CBraMod accepts any number of EEG channels, pools over them."""</span>
 
-    <span class="n">MODEL_NAME</span> <span class="o">=</span> <span class="s2">&quot;cbramod&quot;</span>
-    <span class="n">PIPELINE_PRESET</span> <span class="o">=</span> <span class="s2">&quot;cbramod&quot;</span>
-    <span class="n">CHANNEL_STRATEGY</span> <span class="o">=</span> <span class="s2">&quot;all&quot;</span>
+    <span class="n">MODEL_NAME</span> <span class="o">=</span> <span class="s2">"cbramod"</span>
+    <span class="n">PIPELINE_PRESET</span> <span class="o">=</span> <span class="s2">"cbramod"</span>
+    <span class="n">CHANNEL_STRATEGY</span> <span class="o">=</span> <span class="s2">"all"</span>
 
 <div class="viewcode-block" id="CBraModEncoder.__init__">
 <a class="viewcode-back" href="../../../api/_generated/physioex.models.CBraModEncoder.html#physioex.models.CBraModEncoder.__init__">[docs]</a>
@@ -446,7 +446,7 @@ window.addEventListener("load", () => mermaid.run());
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_channel_names</span> <span class="o">=</span> <span class="n">channel_names</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_channel_map</span> <span class="o">=</span> <span class="n">channel_map</span>
-        <span class="n">resolved</span> <span class="o">=</span> <span class="n">ensure_checkpoint</span><span class="p">(</span><span class="s2">&quot;cbramod&quot;</span><span class="p">,</span> <span class="n">checkpoint_path</span><span class="p">)</span>
+        <span class="n">resolved</span> <span class="o">=</span> <span class="n">ensure_checkpoint</span><span class="p">(</span><span class="s2">"cbramod"</span><span class="p">,</span> <span class="n">checkpoint_path</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_ckpt_path</span> <span class="o">=</span> <span class="n">resolved</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
             <span class="n">in_chan</span><span class="o">=</span><span class="n">in_chan</span><span class="p">,</span>
@@ -460,7 +460,7 @@ window.addEventListener("load", () => mermaid.run());
 
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ckpt_path</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">model</span> <span class="o">=</span> <span class="n">CBraMod</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span>
-                <span class="s2">&quot;braindecode/cbramod-pretrained&quot;</span><span class="p">,</span>
+                <span class="s2">"braindecode/cbramod-pretrained"</span><span class="p">,</span>
                 <span class="n">return_encoder_output</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
             <span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
@@ -477,11 +477,11 @@ window.addEventListener("load", () => mermaid.run());
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_load_pretrained</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">checkpoint_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">if</span> <span class="n">checkpoint_path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">state</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">checkpoint_path</span><span class="p">,</span> <span class="n">map_location</span><span class="o">=</span><span class="s2">&quot;cpu&quot;</span><span class="p">,</span> <span class="n">weights_only</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+            <span class="n">state</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">checkpoint_path</span><span class="p">,</span> <span class="n">map_location</span><span class="o">=</span><span class="s2">"cpu"</span><span class="p">,</span> <span class="n">weights_only</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">encoder</span><span class="o">.</span><span class="n">load_state_dict</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_preprocess</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;(B, C, T) -&gt; (B, C&#39;, T) with mean-center + clip/scale.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""(B, C, T) -&gt; (B, C', T) with mean-center + clip/scale."""</span>
         <span class="n">x</span> <span class="o">=</span> <span class="n">mean_center</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
         <span class="n">x</span> <span class="o">=</span> <span class="n">clip_and_scale</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">max_uv</span><span class="o">=</span><span class="mf">100.0</span><span class="p">)</span>
         <span class="c1"># Strip all-zero channels (e.g., missing channels after dataset selection)</span>
@@ -489,7 +489,7 @@ window.addEventListener("load", () => mermaid.run());
         <span class="k">return</span> <span class="n">x</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_encode</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;(B, C, T) -&gt; (B, 200) embeddings.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""(B, C, T) -&gt; (B, 200) embeddings."""</span>
         <span class="n">out</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">encoder</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>  <span class="c1"># (B, C, n_patch, 200)</span>
         <span class="k">return</span> <span class="n">out</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>  <span class="c1"># (B, 200)</span></div>
 

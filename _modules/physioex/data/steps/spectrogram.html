@@ -408,7 +408,7 @@ window.addEventListener("load", () => mermaid.run());
 <div class="viewcode-block" id="XSleepNetSpectrogram">
 <a class="viewcode-back" href="../../../../api/_generated/physioex.data.XSleepNetSpectrogram.html#physioex.data.XSleepNetSpectrogram">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">XSleepNetSpectrogram</span><span class="p">(</span><span class="n">PreprocessingStep</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;STFT spectrogram with power-dB scaling, matching Huy Phan&#39;s</span>
+<span class="w">    </span><span class="sd">"""STFT spectrogram with power-dB scaling, matching Huy Phan's</span>
 <span class="sd">    SeqSleepNet / XSleepNet / SleepTransformer preprocessing.</span>
 
 <span class="sd">    Pipeline::</span>
@@ -431,14 +431,14 @@ window.addEventListener("load", () => mermaid.run());
 <span class="sd">    nfft : int</span>
 <span class="sd">        FFT size (default 256).</span>
 <span class="sd">    window : str</span>
-<span class="sd">        Window function name (default ``&quot;hamming&quot;``).</span>
+<span class="sd">        Window function name (default ``"hamming"``).</span>
 <span class="sd">    log_scale : bool</span>
 <span class="sd">        If True (default), apply power-dB scaling: ``10 * log10(|X|^2 + eps)``.</span>
 <span class="sd">    clip_db : float or None</span>
 <span class="sd">        If not None, clip the dB spectrogram at this floor value.</span>
 <span class="sd">        Recommended ``-25`` to suppress low-power noise introduced by</span>
 <span class="sd">        filter stop-band leakage and zero-padding artifacts.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
 <div class="viewcode-block" id="XSleepNetSpectrogram.__init__">
 <a class="viewcode-back" href="../../../../api/_generated/physioex.data.XSleepNetSpectrogram.html#physioex.data.XSleepNetSpectrogram.__init__">[docs]</a>
@@ -447,7 +447,7 @@ window.addEventListener("load", () => mermaid.run());
         <span class="n">nperseg</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">200</span><span class="p">,</span>
         <span class="n">noverlap</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">100</span><span class="p">,</span>
         <span class="n">nfft</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">256</span><span class="p">,</span>
-        <span class="n">window</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;hamming&quot;</span><span class="p">,</span>
+        <span class="n">window</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"hamming"</span><span class="p">,</span>
         <span class="n">log_scale</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
         <span class="n">clip_db</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">):</span>
@@ -463,7 +463,7 @@ window.addEventListener("load", () => mermaid.run());
 <a class="viewcode-back" href="../../../../api/_generated/physioex.data.XSleepNetSpectrogram.html#physioex.data.XSleepNetSpectrogram.spec">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">spec</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_build_spec</span><span class="p">(</span>
-            <span class="n">clip_db</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">clip_db</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">clip_db</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="s2">&quot;None&quot;</span><span class="p">,</span>
+            <span class="n">clip_db</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">clip_db</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">clip_db</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="s2">"None"</span><span class="p">,</span>
             <span class="n">log_scale</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">log_scale</span><span class="p">,</span>
             <span class="n">nfft</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">nfft</span><span class="p">,</span>
             <span class="n">noverlap</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">noverlap</span><span class="p">,</span>
@@ -484,7 +484,7 @@ window.addEventListener("load", () => mermaid.run());
         <span class="n">eps</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">finfo</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span><span class="o">.</span><span class="n">eps</span>
 
         <span class="k">def</span><span class="w"> </span><span class="nf">_stft_one</span><span class="p">(</span><span class="n">epoch_1d</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
-<span class="w">            </span><span class="sd">&quot;&quot;&quot;STFT of a single 1-D signal segment.&quot;&quot;&quot;</span>
+<span class="w">            </span><span class="sd">"""STFT of a single 1-D signal segment."""</span>
             <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">Sxx</span> <span class="o">=</span> <span class="n">spectrogram</span><span class="p">(</span>
                 <span class="n">epoch_1d</span><span class="p">,</span>
                 <span class="n">fs</span><span class="o">=</span><span class="n">fs_in</span><span class="p">,</span>
@@ -513,7 +513,7 @@ window.addEventListener("load", () => mermaid.run());
                     <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
                 <span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
             <span class="k">else</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unsupported signal ndim=</span><span class="si">{</span><span class="n">x</span><span class="o">.</span><span class="n">ndim</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Unsupported signal ndim=</span><span class="si">{</span><span class="n">x</span><span class="o">.</span><span class="n">ndim</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="n">CompiledStep</span><span class="p">(</span><span class="n">apply</span><span class="o">=</span><span class="n">apply</span><span class="p">,</span> <span class="n">fs_out</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span></div>
 </div>

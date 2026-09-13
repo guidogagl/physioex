@@ -400,7 +400,7 @@ window.addEventListener("load", () => mermaid.run());
                 <article class="bd-article">
                   
   <h1>Source code for physioex.explain.foundational.specificity</h1><div class="highlight"><pre>
-<span></span><span class="sd">&quot;&quot;&quot;Pluggable specificity strategies for CSD.</span>
+<span></span><span class="sd">"""Pluggable specificity strategies for CSD.</span>
 
 <span class="sd">A specificity strategy determines which embedding dimensions are</span>
 <span class="sd">class-specific (and should be explained) vs generic (and should be</span>
@@ -416,7 +416,7 @@ window.addEventListener("load", () => mermaid.run());
 
 <span class="sd">Custom strategies: subclass ``SpecificityStrategy`` and implement</span>
 <span class="sd">``compute_mask()``.</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Optional</span>
@@ -428,12 +428,12 @@ window.addEventListener("load", () => mermaid.run());
 <div class="viewcode-block" id="SpecificityStrategy">
 <a class="viewcode-back" href="../../../../api/_generated/physioex.explain.foundational.html#physioex.explain.foundational.SpecificityStrategy">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">SpecificityStrategy</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Base class for specificity strategies.</span>
+<span class="w">    </span><span class="sd">"""Base class for specificity strategies.</span>
 
 <span class="sd">    Subclass and implement ``compute_mask()`` to define custom strategies.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
-    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;base&quot;</span>
+    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"base"</span>
 
 <div class="viewcode-block" id="SpecificityStrategy.compute_mask">
 <a class="viewcode-back" href="../../../../api/_generated/physioex.explain.foundational.html#physioex.explain.foundational.SpecificityStrategy.compute_mask">[docs]</a>
@@ -445,7 +445,7 @@ window.addEventListener("load", () => mermaid.run());
         <span class="n">x</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Tensor</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">target_class</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tensor</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Compute specificity mask.</span>
+<span class="w">        </span><span class="sd">"""Compute specificity mask.</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            W: (n_classes, D) linear probe weights.</span>
@@ -457,7 +457,7 @@ window.addEventListener("load", () => mermaid.run());
 <span class="sd">        Returns:</span>
 <span class="sd">            (D,) for static strategies or (B, D) for dynamic strategies.</span>
 <span class="sd">            Values in [0, 1].</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">raise</span> <span class="ne">NotImplementedError</span></div>
 </div>
 
@@ -466,7 +466,7 @@ window.addEventListener("load", () => mermaid.run());
 <div class="viewcode-block" id="CohenDSpecificity">
 <a class="viewcode-back" href="../../../../api/_generated/physioex.explain.foundational.html#physioex.explain.foundational.CohenDSpecificity">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">CohenDSpecificity</span><span class="p">(</span><span class="n">SpecificityStrategy</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Static specificity via Cohen&#39;s d effect size.</span>
+<span class="w">    </span><span class="sd">"""Static specificity via Cohen's d effect size.</span>
 
 <span class="sd">    For each dimension d, measures the standardized difference between</span>
 <span class="sd">    the class-conditional mean and the out-of-class mean::</span>
@@ -475,9 +475,9 @@ window.addEventListener("load", () => mermaid.run());
 <span class="sd">        mask_d(c) = sigmoid(d_cohen / tau)</span>
 
 <span class="sd">    Requires dataset-level embeddings and labels (computed once, reusable).</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
-    <span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;cohen_d&quot;</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="s2">"cohen_d"</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tau</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">tau</span> <span class="o">=</span> <span class="n">tau</span>
@@ -489,9 +489,9 @@ window.addEventListener("load", () => mermaid.run());
         <span class="bp">self</span><span class="p">,</span> <span class="n">W</span><span class="p">,</span> <span class="n">embeddings</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">labels</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">target_class</span><span class="o">=</span><span class="kc">None</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tensor</span><span class="p">:</span>
         <span class="k">if</span> <span class="n">embeddings</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">labels</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;CohenDSpecificity requires embeddings and labels&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"CohenDSpecificity requires embeddings and labels"</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">target_class</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;CohenDSpecificity requires target_class&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"CohenDSpecificity requires target_class"</span><span class="p">)</span>
 
         <span class="n">cache_key</span> <span class="o">=</span> <span class="n">target_class</span>
         <span class="k">if</span> <span class="n">cache_key</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cache</span><span class="p">:</span>
@@ -529,19 +529,19 @@ window.addEventListener("load", () => mermaid.run());
 <div class="viewcode-block" id="MarginSpecificity">
 <a class="viewcode-back" href="../../../../api/_generated/physioex.explain.foundational.html#physioex.explain.foundational.MarginSpecificity">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">MarginSpecificity</span><span class="p">(</span><span class="n">SpecificityStrategy</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Dynamic per-input specificity via class margin.</span>
+<span class="w">    </span><span class="sd">"""Dynamic per-input specificity via class margin.</span>
 
 <span class="sd">    For each dimension d and input x, measures how much the contribution</span>
 <span class="sd">    to the target class exceeds the best competing class::</span>
 
-<span class="sd">        margin_d(x, c) = W[c,d]·ĥ_d(x) - max_{c&#39;≠c} W[c&#39;,d]·ĥ_d(x)</span>
+<span class="sd">        margin_d(x, c) = W[c,d]·ĥ_d(x) - max_{c'≠c} W[c',d]·ĥ_d(x)</span>
 <span class="sd">        mask_d(x, c) = sigmoid(margin / tau).detach()</span>
 
 <span class="sd">    Captures input-specific discriminative dimensions (e.g., K-complex</span>
 <span class="sd">    present in this particular N2 epoch).</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
-    <span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;margin&quot;</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="s2">"margin"</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tau</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">tau</span> <span class="o">=</span> <span class="n">tau</span>
@@ -552,9 +552,9 @@ window.addEventListener("load", () => mermaid.run());
         <span class="bp">self</span><span class="p">,</span> <span class="n">W</span><span class="p">,</span> <span class="n">embeddings</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">labels</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">target_class</span><span class="o">=</span><span class="kc">None</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tensor</span><span class="p">:</span>
         <span class="k">if</span> <span class="n">x</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;MarginSpecificity requires x (current embeddings)&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"MarginSpecificity requires x (current embeddings)"</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">target_class</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;MarginSpecificity requires target_class&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"MarginSpecificity requires target_class"</span><span class="p">)</span>
 
         <span class="c1"># x: (B, D), W: (n_classes, D)</span>
         <span class="c1"># Per-class contributions: (B, n_classes, D)</span>
@@ -577,7 +577,7 @@ window.addEventListener("load", () => mermaid.run());
 <div class="viewcode-block" id="SoftmaxSpecificity">
 <a class="viewcode-back" href="../../../../api/_generated/physioex.explain.foundational.html#physioex.explain.foundational.SoftmaxSpecificity">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">SoftmaxSpecificity</span><span class="p">(</span><span class="n">SpecificityStrategy</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Dynamic per-input specificity via softmax normalization.</span>
+<span class="w">    </span><span class="sd">"""Dynamic per-input specificity via softmax normalization.</span>
 
 <span class="sd">    For each dimension d, computes the softmax over class contributions::</span>
 
@@ -585,9 +585,9 @@ window.addEventListener("load", () => mermaid.run());
 <span class="sd">        mask_d(x, c) = softmax(v_d / tau)[c].detach()</span>
 
 <span class="sd">    mask ≈ 1/C for generic dimensions, ≈ 1 for class-specific ones.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
-    <span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;softmax&quot;</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="s2">"softmax"</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tau</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">tau</span> <span class="o">=</span> <span class="n">tau</span>
@@ -598,9 +598,9 @@ window.addEventListener("load", () => mermaid.run());
         <span class="bp">self</span><span class="p">,</span> <span class="n">W</span><span class="p">,</span> <span class="n">embeddings</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">labels</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">target_class</span><span class="o">=</span><span class="kc">None</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tensor</span><span class="p">:</span>
         <span class="k">if</span> <span class="n">x</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;SoftmaxSpecificity requires x (current embeddings)&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"SoftmaxSpecificity requires x (current embeddings)"</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">target_class</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;SoftmaxSpecificity requires target_class&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"SoftmaxSpecificity requires target_class"</span><span class="p">)</span>
 
         <span class="c1"># Per-dimension class contributions: (B, n_classes, D)</span>
         <span class="n">contrib</span> <span class="o">=</span> <span class="n">W</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="o">*</span> <span class="n">x</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
@@ -615,13 +615,13 @@ window.addEventListener("load", () => mermaid.run());
 <div class="viewcode-block" id="TopKSpecificity">
 <a class="viewcode-back" href="../../../../api/_generated/physioex.explain.foundational.html#physioex.explain.foundational.TopKSpecificity">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">TopKSpecificity</span><span class="p">(</span><span class="n">SpecificityStrategy</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Hard selection of top-K dimensions by absolute contribution.</span>
+<span class="w">    </span><span class="sd">"""Hard selection of top-K dimensions by absolute contribution.</span>
 
 <span class="sd">    Selects the K dimensions with highest ``|W[c,d] · ĥ_d(x)|`` for the</span>
 <span class="sd">    target class. All other dimensions are zeroed out.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
-    <span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;topk&quot;</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="s2">"topk"</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">k</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">10</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">k</span> <span class="o">=</span> <span class="n">k</span>
@@ -632,9 +632,9 @@ window.addEventListener("load", () => mermaid.run());
         <span class="bp">self</span><span class="p">,</span> <span class="n">W</span><span class="p">,</span> <span class="n">embeddings</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">labels</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">target_class</span><span class="o">=</span><span class="kc">None</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tensor</span><span class="p">:</span>
         <span class="k">if</span> <span class="n">x</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;TopKSpecificity requires x (current embeddings)&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"TopKSpecificity requires x (current embeddings)"</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">target_class</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;TopKSpecificity requires target_class&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"TopKSpecificity requires target_class"</span><span class="p">)</span>
 
         <span class="n">contrib</span> <span class="o">=</span> <span class="n">W</span><span class="p">[</span><span class="n">target_class</span><span class="p">]</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="o">*</span> <span class="n">x</span>  <span class="c1"># (B, D)</span>
         <span class="n">_</span><span class="p">,</span> <span class="n">top_idx</span> <span class="o">=</span> <span class="n">contrib</span><span class="o">.</span><span class="n">abs</span><span class="p">()</span><span class="o">.</span><span class="n">topk</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">k</span><span class="p">,</span> <span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>  <span class="c1"># (B, k)</span>
@@ -649,13 +649,13 @@ window.addEventListener("load", () => mermaid.run());
 <div class="viewcode-block" id="NoFilter">
 <a class="viewcode-back" href="../../../../api/_generated/physioex.explain.foundational.html#physioex.explain.foundational.NoFilter">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">NoFilter</span><span class="p">(</span><span class="n">SpecificityStrategy</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;No filtering — all dimensions contribute equally.</span>
+<span class="w">    </span><span class="sd">"""No filtering — all dimensions contribute equally.</span>
 
 <span class="sd">    Baseline strategy: SpectralGradients on the raw class logit</span>
 <span class="sd">    without any specificity masking.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
-    <span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;none&quot;</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="s2">"none"</span>
 
 <div class="viewcode-block" id="NoFilter.compute_mask">
 <a class="viewcode-back" href="../../../../api/_generated/physioex.explain.foundational.html#physioex.explain.foundational.NoFilter.compute_mask">[docs]</a>

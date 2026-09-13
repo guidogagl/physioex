@@ -400,13 +400,13 @@ window.addEventListener("load", () => mermaid.run());
                 <article class="bd-article">
                   
   <h1>Source code for physioex.data.readers.edf</h1><div class="highlight"><pre>
-<span></span><span class="sd">&quot;&quot;&quot;EDF header probing and channel resolution.</span>
+<span></span><span class="sd">"""EDF header probing and channel resolution.</span>
 
 <span class="sd">Built on pyedflib. Reuses channel-matching logic from</span>
 <span class="sd">physioex/preprocess/utils/sleepdata.py (case-insensitive with tuple support)</span>
-<span class="sd">and extends it with a &quot;claimed set&quot; tracker so repeated modality requests</span>
-<span class="sd">(e.g. [&quot;EEG&quot;, &quot;EEG&quot;]) resolve to distinct physical channels.</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">and extends it with a "claimed set" tracker so repeated modality requests</span>
+<span class="sd">(e.g. ["EEG", "EEG"]) resolve to distinct physical channels.</span>
+<span class="sd">"""</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span><span class="p">,</span> <span class="n">asdict</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
@@ -420,39 +420,39 @@ window.addEventListener("load", () => mermaid.run());
 <span class="c1"># Each entry is either a single channel name (string) or a tuple (A, B) for</span>
 <span class="c1"># differential pair (signal[A] - signal[B]).</span>
 <span class="n">DEFAULT_EEG_PREFERENCES</span> <span class="o">=</span> <span class="p">[</span>
-    <span class="p">(</span><span class="s2">&quot;C4&quot;</span><span class="p">,</span> <span class="s2">&quot;M1&quot;</span><span class="p">),</span>
-    <span class="p">(</span><span class="s2">&quot;C3&quot;</span><span class="p">,</span> <span class="s2">&quot;M2&quot;</span><span class="p">),</span>
-    <span class="p">(</span><span class="s2">&quot;C4&quot;</span><span class="p">,</span> <span class="s2">&quot;A1&quot;</span><span class="p">),</span>
-    <span class="p">(</span><span class="s2">&quot;C3&quot;</span><span class="p">,</span> <span class="s2">&quot;A2&quot;</span><span class="p">),</span>
-    <span class="s2">&quot;C4-M1&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;C3-M2&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;C4-A1&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;C3-A2&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;EEG(sec)&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;EEG&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;EEG1&quot;</span><span class="p">,</span>
+    <span class="p">(</span><span class="s2">"C4"</span><span class="p">,</span> <span class="s2">"M1"</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">"C3"</span><span class="p">,</span> <span class="s2">"M2"</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">"C4"</span><span class="p">,</span> <span class="s2">"A1"</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">"C3"</span><span class="p">,</span> <span class="s2">"A2"</span><span class="p">),</span>
+    <span class="s2">"C4-M1"</span><span class="p">,</span>
+    <span class="s2">"C3-M2"</span><span class="p">,</span>
+    <span class="s2">"C4-A1"</span><span class="p">,</span>
+    <span class="s2">"C3-A2"</span><span class="p">,</span>
+    <span class="s2">"EEG(sec)"</span><span class="p">,</span>
+    <span class="s2">"EEG"</span><span class="p">,</span>
+    <span class="s2">"EEG1"</span><span class="p">,</span>
 <span class="p">]</span>
 <span class="n">DEFAULT_EOG_PREFERENCES</span> <span class="o">=</span> <span class="p">[</span>
-    <span class="p">(</span><span class="s2">&quot;EOG(L)&quot;</span><span class="p">,</span> <span class="s2">&quot;EOG(R)&quot;</span><span class="p">),</span>
-    <span class="p">(</span><span class="s2">&quot;E1&quot;</span><span class="p">,</span> <span class="s2">&quot;M2&quot;</span><span class="p">),</span>
-    <span class="p">(</span><span class="s2">&quot;E2&quot;</span><span class="p">,</span> <span class="s2">&quot;M1&quot;</span><span class="p">),</span>
-    <span class="p">(</span><span class="s2">&quot;LOC&quot;</span><span class="p">,</span> <span class="s2">&quot;ROC&quot;</span><span class="p">),</span>
-    <span class="s2">&quot;EOG&quot;</span><span class="p">,</span>
+    <span class="p">(</span><span class="s2">"EOG(L)"</span><span class="p">,</span> <span class="s2">"EOG(R)"</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">"E1"</span><span class="p">,</span> <span class="s2">"M2"</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">"E2"</span><span class="p">,</span> <span class="s2">"M1"</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">"LOC"</span><span class="p">,</span> <span class="s2">"ROC"</span><span class="p">),</span>
+    <span class="s2">"EOG"</span><span class="p">,</span>
 <span class="p">]</span>
 <span class="n">DEFAULT_EMG_PREFERENCES</span> <span class="o">=</span> <span class="p">[</span>
-    <span class="p">(</span><span class="s2">&quot;LCHIN&quot;</span><span class="p">,</span> <span class="s2">&quot;CCHIN&quot;</span><span class="p">),</span>
-    <span class="p">(</span><span class="s2">&quot;CHIN1&quot;</span><span class="p">,</span> <span class="s2">&quot;CHIN2&quot;</span><span class="p">),</span>
-    <span class="s2">&quot;EMG&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;EMG Chin&quot;</span><span class="p">,</span>
+    <span class="p">(</span><span class="s2">"LCHIN"</span><span class="p">,</span> <span class="s2">"CCHIN"</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">"CHIN1"</span><span class="p">,</span> <span class="s2">"CHIN2"</span><span class="p">),</span>
+    <span class="s2">"EMG"</span><span class="p">,</span>
+    <span class="s2">"EMG Chin"</span><span class="p">,</span>
 <span class="p">]</span>
-<span class="n">DEFAULT_ECG_PREFERENCES</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;ECG&quot;</span><span class="p">,</span> <span class="s2">&quot;ECG1&quot;</span><span class="p">,</span> <span class="s2">&quot;ECG2&quot;</span><span class="p">,</span> <span class="s2">&quot;EKG&quot;</span><span class="p">]</span>
+<span class="n">DEFAULT_ECG_PREFERENCES</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"ECG"</span><span class="p">,</span> <span class="s2">"ECG1"</span><span class="p">,</span> <span class="s2">"ECG2"</span><span class="p">,</span> <span class="s2">"EKG"</span><span class="p">]</span>
 
 
 <span class="n">DEFAULT_PREFERENCES</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]]]</span> <span class="o">=</span> <span class="p">{</span>
-    <span class="s2">&quot;EEG&quot;</span><span class="p">:</span> <span class="n">DEFAULT_EEG_PREFERENCES</span><span class="p">,</span>
-    <span class="s2">&quot;EOG&quot;</span><span class="p">:</span> <span class="n">DEFAULT_EOG_PREFERENCES</span><span class="p">,</span>
-    <span class="s2">&quot;EMG&quot;</span><span class="p">:</span> <span class="n">DEFAULT_EMG_PREFERENCES</span><span class="p">,</span>
-    <span class="s2">&quot;ECG&quot;</span><span class="p">:</span> <span class="n">DEFAULT_ECG_PREFERENCES</span><span class="p">,</span>
+    <span class="s2">"EEG"</span><span class="p">:</span> <span class="n">DEFAULT_EEG_PREFERENCES</span><span class="p">,</span>
+    <span class="s2">"EOG"</span><span class="p">:</span> <span class="n">DEFAULT_EOG_PREFERENCES</span><span class="p">,</span>
+    <span class="s2">"EMG"</span><span class="p">:</span> <span class="n">DEFAULT_EMG_PREFERENCES</span><span class="p">,</span>
+    <span class="s2">"ECG"</span><span class="p">:</span> <span class="n">DEFAULT_ECG_PREFERENCES</span><span class="p">,</span>
 <span class="p">}</span>
 
 
@@ -460,7 +460,7 @@ window.addEventListener("load", () => mermaid.run());
 
 
 <span class="k">class</span><span class="w"> </span><span class="nc">ChannelNotAvailableError</span><span class="p">(</span><span class="ne">ValueError</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Raised when a channel request cannot be satisfied by an EDF.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Raised when a channel request cannot be satisfied by an EDF."""</span>
 
 
 <div class="viewcode-block" id="EDFHeader">
@@ -479,15 +479,15 @@ window.addEventListener("load", () => mermaid.run());
         <span class="k">return</span> <span class="n">asdict</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
 
     <span class="nd">@classmethod</span>
-    <span class="k">def</span><span class="w"> </span><span class="nf">from_dict</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">d</span><span class="p">:</span> <span class="n">Dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;EDFHeader&quot;</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">from_dict</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">d</span><span class="p">:</span> <span class="n">Dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">"EDFHeader"</span><span class="p">:</span>
         <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span>
-            <span class="n">available_channels</span><span class="o">=</span><span class="nb">list</span><span class="p">(</span><span class="n">d</span><span class="p">[</span><span class="s2">&quot;available_channels&quot;</span><span class="p">]),</span>
-            <span class="n">channel_fs</span><span class="o">=</span><span class="p">{</span><span class="nb">str</span><span class="p">(</span><span class="n">k</span><span class="p">):</span> <span class="nb">float</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">d</span><span class="p">[</span><span class="s2">&quot;channel_fs&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">()},</span>
-            <span class="n">channel_units</span><span class="o">=</span><span class="p">{</span><span class="nb">str</span><span class="p">(</span><span class="n">k</span><span class="p">):</span> <span class="nb">str</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">d</span><span class="p">[</span><span class="s2">&quot;channel_units&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">()},</span>
-            <span class="n">patient_meta</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">d</span><span class="p">[</span><span class="s2">&quot;patient_meta&quot;</span><span class="p">]),</span>
-            <span class="n">duration_sec</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">d</span><span class="p">[</span><span class="s2">&quot;duration_sec&quot;</span><span class="p">]),</span>
-            <span class="n">source_mtime</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">d</span><span class="p">[</span><span class="s2">&quot;source_mtime&quot;</span><span class="p">]),</span>
-            <span class="n">start_sec</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">d</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;start_sec&quot;</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)),</span>
+            <span class="n">available_channels</span><span class="o">=</span><span class="nb">list</span><span class="p">(</span><span class="n">d</span><span class="p">[</span><span class="s2">"available_channels"</span><span class="p">]),</span>
+            <span class="n">channel_fs</span><span class="o">=</span><span class="p">{</span><span class="nb">str</span><span class="p">(</span><span class="n">k</span><span class="p">):</span> <span class="nb">float</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">d</span><span class="p">[</span><span class="s2">"channel_fs"</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">()},</span>
+            <span class="n">channel_units</span><span class="o">=</span><span class="p">{</span><span class="nb">str</span><span class="p">(</span><span class="n">k</span><span class="p">):</span> <span class="nb">str</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">d</span><span class="p">[</span><span class="s2">"channel_units"</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">()},</span>
+            <span class="n">patient_meta</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">d</span><span class="p">[</span><span class="s2">"patient_meta"</span><span class="p">]),</span>
+            <span class="n">duration_sec</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">d</span><span class="p">[</span><span class="s2">"duration_sec"</span><span class="p">]),</span>
+            <span class="n">source_mtime</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">d</span><span class="p">[</span><span class="s2">"source_mtime"</span><span class="p">]),</span>
+            <span class="n">start_sec</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">d</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"start_sec"</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)),</span>
         <span class="p">)</span></div>
 
 
@@ -512,7 +512,7 @@ window.addEventListener("load", () => mermaid.run());
 <div class="viewcode-block" id="probe_edf_header">
 <a class="viewcode-back" href="../../../../api/_generated/physioex.data.probe_edf_header.html#physioex.data.probe_edf_header">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">probe_edf_header</span><span class="p">(</span><span class="n">edf_path</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">EDFHeader</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Read the EDF structural header only (no signal data).&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Read the EDF structural header only (no signal data)."""</span>
     <span class="n">edf_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">edf_path</span><span class="p">)</span>
     <span class="n">mtime</span> <span class="o">=</span> <span class="n">edf_path</span><span class="o">.</span><span class="n">stat</span><span class="p">()</span><span class="o">.</span><span class="n">st_mtime</span>
 
@@ -540,21 +540,21 @@ window.addEventListener("load", () => mermaid.run());
                 <span class="k">return</span> <span class="kc">None</span>
 
         <span class="n">patient</span> <span class="o">=</span> <span class="p">{</span>
-            <span class="s2">&quot;patient_code&quot;</span><span class="p">:</span> <span class="n">_safe</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">getPatientCode</span><span class="p">),</span>
-            <span class="s2">&quot;sex&quot;</span><span class="p">:</span> <span class="n">_safe</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">getSex</span><span class="p">)</span> <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="s2">&quot;getSex&quot;</span><span class="p">)</span> <span class="k">else</span> <span class="n">_safe</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">getGender</span><span class="p">),</span>
-            <span class="s2">&quot;birthdate&quot;</span><span class="p">:</span> <span class="n">_safe</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">getBirthdate</span><span class="p">),</span>
-            <span class="s2">&quot;patient_name&quot;</span><span class="p">:</span> <span class="n">_safe</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">getPatientName</span><span class="p">),</span>
-            <span class="s2">&quot;patient_additional&quot;</span><span class="p">:</span> <span class="n">_safe</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">getPatientAdditional</span><span class="p">),</span>
+            <span class="s2">"patient_code"</span><span class="p">:</span> <span class="n">_safe</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">getPatientCode</span><span class="p">),</span>
+            <span class="s2">"sex"</span><span class="p">:</span> <span class="n">_safe</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">getSex</span><span class="p">)</span> <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="s2">"getSex"</span><span class="p">)</span> <span class="k">else</span> <span class="n">_safe</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">getGender</span><span class="p">),</span>
+            <span class="s2">"birthdate"</span><span class="p">:</span> <span class="n">_safe</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">getBirthdate</span><span class="p">),</span>
+            <span class="s2">"patient_name"</span><span class="p">:</span> <span class="n">_safe</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">getPatientName</span><span class="p">),</span>
+            <span class="s2">"patient_additional"</span><span class="p">:</span> <span class="n">_safe</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">getPatientAdditional</span><span class="p">),</span>
         <span class="p">}</span>
         <span class="c1"># birthdate is a datetime-like or string -- normalize to ISO string if possible</span>
-        <span class="n">bd</span> <span class="o">=</span> <span class="n">patient</span><span class="p">[</span><span class="s2">&quot;birthdate&quot;</span><span class="p">]</span>
+        <span class="n">bd</span> <span class="o">=</span> <span class="n">patient</span><span class="p">[</span><span class="s2">"birthdate"</span><span class="p">]</span>
         <span class="k">if</span> <span class="n">bd</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">bd</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
             <span class="k">try</span><span class="p">:</span>
-                <span class="n">patient</span><span class="p">[</span><span class="s2">&quot;birthdate&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
-                    <span class="n">bd</span><span class="o">.</span><span class="n">isoformat</span><span class="p">()</span> <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">bd</span><span class="p">,</span> <span class="s2">&quot;isoformat&quot;</span><span class="p">)</span> <span class="k">else</span> <span class="nb">str</span><span class="p">(</span><span class="n">bd</span><span class="p">)</span>
+                <span class="n">patient</span><span class="p">[</span><span class="s2">"birthdate"</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="n">bd</span><span class="o">.</span><span class="n">isoformat</span><span class="p">()</span> <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">bd</span><span class="p">,</span> <span class="s2">"isoformat"</span><span class="p">)</span> <span class="k">else</span> <span class="nb">str</span><span class="p">(</span><span class="n">bd</span><span class="p">)</span>
                 <span class="p">)</span>
             <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
-                <span class="n">patient</span><span class="p">[</span><span class="s2">&quot;birthdate&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">bd</span><span class="p">)</span>
+                <span class="n">patient</span><span class="p">[</span><span class="s2">"birthdate"</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">bd</span><span class="p">)</span>
 
     <span class="k">return</span> <span class="n">EDFHeader</span><span class="p">(</span>
         <span class="n">available_channels</span><span class="o">=</span><span class="n">labels</span><span class="p">,</span>
@@ -572,9 +572,9 @@ window.addEventListener("load", () => mermaid.run());
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_iter_matches</span><span class="p">(</span><span class="n">candidate</span><span class="p">,</span> <span class="n">available_upper</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Given a preference entry (string or tuple) and a mapping</span>
+<span class="w">    </span><span class="sd">"""Given a preference entry (string or tuple) and a mapping</span>
 <span class="sd">    UPPERCASE_NAME -&gt; original_index, return the resolved form as a tuple</span>
-<span class="sd">    (physical_or_tuple, index_or_tuple), or None if not satisfied.&quot;&quot;&quot;</span>
+<span class="sd">    (physical_or_tuple, index_or_tuple), or None if not satisfied."""</span>
     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">candidate</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">):</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">candidate</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
             <span class="k">return</span> <span class="kc">None</span>
@@ -595,7 +595,7 @@ window.addEventListener("load", () => mermaid.run());
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_build_upper_index</span><span class="p">(</span><span class="n">available</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Map upper(label) -&gt; first index in available list.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Map upper(label) -&gt; first index in available list."""</span>
     <span class="n">out</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
     <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">lab</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">available</span><span class="p">):</span>
         <span class="n">key</span> <span class="o">=</span> <span class="n">lab</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
@@ -605,7 +605,7 @@ window.addEventListener("load", () => mermaid.run());
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_make_claimed_key</span><span class="p">(</span><span class="n">physical</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span> <span class="nb">str</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Produce a hashable key representing a physical channel (single or differential pair).&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Produce a hashable key representing a physical channel (single or differential pair)."""</span>
     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">physical</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">):</span>
         <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="k">else</span> <span class="n">p</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">physical</span><span class="p">)</span>
     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">physical</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
@@ -622,14 +622,14 @@ window.addEventListener("load", () => mermaid.run());
     <span class="n">preferences</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">List</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">allow_missing</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Optional</span><span class="p">[</span><span class="n">ResolvedChannel</span><span class="p">]]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Resolve user channel requests against the EDF&#39;s available channels.</span>
+<span class="w">    </span><span class="sd">"""Resolve user channel requests against the EDF's available channels.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        requests: list of requests. Each may be one of:</span>
 
-<span class="sd">            * a modality string (&quot;EEG&quot;, &quot;EOG&quot;, &quot;EMG&quot;, &quot;ECG&quot;) — takes the next unclaimed preference match;</span>
-<span class="sd">            * a specific channel name (&quot;C4-M2&quot;) — case-insensitive exact match;</span>
-<span class="sd">            * a dict ``{&quot;modality&quot;: ..., &quot;preference&quot;: ...}`` or ``{&quot;name&quot;: ...}``.</span>
+<span class="sd">            * a modality string ("EEG", "EOG", "EMG", "ECG") — takes the next unclaimed preference match;</span>
+<span class="sd">            * a specific channel name ("C4-M2") — case-insensitive exact match;</span>
+<span class="sd">            * a dict ``{"modality": ..., "preference": ...}`` or ``{"name": ...}``.</span>
 
 <span class="sd">        available: list of physical channel labels from the EDF header</span>
 <span class="sd">        fs_map: mapping physical_label -&gt; sample rate (for fs_in propagation)</span>
@@ -646,7 +646,7 @@ window.addEventListener("load", () => mermaid.run());
 <span class="sd">    Raises:</span>
 <span class="sd">        ChannelNotAvailableError if any request cannot be satisfied AND</span>
 <span class="sd">        ``allow_missing`` is ``False``.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">if</span> <span class="n">preferences</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">preferences</span> <span class="o">=</span> <span class="n">DEFAULT_PREFERENCES</span>
 
@@ -662,14 +662,14 @@ window.addEventListener("load", () => mermaid.run());
         <span class="n">original_req</span> <span class="o">=</span> <span class="n">req</span>
 
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">req</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
-            <span class="k">if</span> <span class="s2">&quot;name&quot;</span> <span class="ow">in</span> <span class="n">req</span><span class="p">:</span>
-                <span class="n">specific</span> <span class="o">=</span> <span class="n">req</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]</span>
-            <span class="k">elif</span> <span class="s2">&quot;modality&quot;</span> <span class="ow">in</span> <span class="n">req</span><span class="p">:</span>
-                <span class="n">modality</span> <span class="o">=</span> <span class="n">req</span><span class="p">[</span><span class="s2">&quot;modality&quot;</span><span class="p">]</span>
-                <span class="n">custom_pref</span> <span class="o">=</span> <span class="n">req</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;preference&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="s2">"name"</span> <span class="ow">in</span> <span class="n">req</span><span class="p">:</span>
+                <span class="n">specific</span> <span class="o">=</span> <span class="n">req</span><span class="p">[</span><span class="s2">"name"</span><span class="p">]</span>
+            <span class="k">elif</span> <span class="s2">"modality"</span> <span class="ow">in</span> <span class="n">req</span><span class="p">:</span>
+                <span class="n">modality</span> <span class="o">=</span> <span class="n">req</span><span class="p">[</span><span class="s2">"modality"</span><span class="p">]</span>
+                <span class="n">custom_pref</span> <span class="o">=</span> <span class="n">req</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"preference"</span><span class="p">)</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                    <span class="sa">f</span><span class="s2">&quot;Request dict must have &#39;name&#39; or &#39;modality&#39;: </span><span class="si">{</span><span class="n">req</span><span class="si">!r}</span><span class="s2">&quot;</span>
+                    <span class="sa">f</span><span class="s2">"Request dict must have 'name' or 'modality': </span><span class="si">{</span><span class="n">req</span><span class="si">!r}</span><span class="s2">"</span>
                 <span class="p">)</span>
         <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">req</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
             <span class="k">if</span> <span class="n">req</span> <span class="ow">in</span> <span class="n">KNOWN_MODALITIES</span><span class="p">:</span>
@@ -677,7 +677,7 @@ window.addEventListener("load", () => mermaid.run());
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">specific</span> <span class="o">=</span> <span class="n">req</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Request must be str or dict, got </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">req</span><span class="p">)</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">req</span><span class="si">!r}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Request must be str or dict, got </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">req</span><span class="p">)</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">req</span><span class="si">!r}</span><span class="s2">"</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="n">modality</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="c1"># Walk preference list, skip already-claimed physical channels</span>
@@ -702,8 +702,8 @@ window.addEventListener("load", () => mermaid.run());
                     <span class="n">resolved</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
                     <span class="k">continue</span>
                 <span class="k">raise</span> <span class="n">ChannelNotAvailableError</span><span class="p">(</span>
-                    <span class="sa">f</span><span class="s2">&quot;No available channel for modality </span><span class="si">{</span><span class="n">modality</span><span class="si">!r}</span><span class="s2"> &quot;</span>
-                    <span class="sa">f</span><span class="s2">&quot;(preferences=</span><span class="si">{</span><span class="n">pref_list</span><span class="si">!r}</span><span class="s2">, available=</span><span class="si">{</span><span class="n">available</span><span class="si">!r}</span><span class="s2">, claimed=</span><span class="si">{</span><span class="n">claimed</span><span class="si">!r}</span><span class="s2">)&quot;</span>
+                    <span class="sa">f</span><span class="s2">"No available channel for modality </span><span class="si">{</span><span class="n">modality</span><span class="si">!r}</span><span class="s2"> "</span>
+                    <span class="sa">f</span><span class="s2">"(preferences=</span><span class="si">{</span><span class="n">pref_list</span><span class="si">!r}</span><span class="s2">, available=</span><span class="si">{</span><span class="n">available</span><span class="si">!r}</span><span class="s2">, claimed=</span><span class="si">{</span><span class="n">claimed</span><span class="si">!r}</span><span class="s2">)"</span>
                 <span class="p">)</span>
             <span class="n">physical</span><span class="p">,</span> <span class="n">indices</span> <span class="o">=</span> <span class="n">hit</span>
             <span class="n">claimed</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">_make_claimed_key</span><span class="p">(</span><span class="n">physical</span><span class="p">))</span>
@@ -735,7 +735,7 @@ window.addEventListener("load", () => mermaid.run());
                     <span class="n">resolved</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
                     <span class="k">continue</span>
                 <span class="k">raise</span> <span class="n">ChannelNotAvailableError</span><span class="p">(</span>
-                    <span class="sa">f</span><span class="s2">&quot;Specific channel </span><span class="si">{</span><span class="n">specific</span><span class="si">!r}</span><span class="s2"> not in available=</span><span class="si">{</span><span class="n">available</span><span class="si">!r}</span><span class="s2">&quot;</span>
+                    <span class="sa">f</span><span class="s2">"Specific channel </span><span class="si">{</span><span class="n">specific</span><span class="si">!r}</span><span class="s2"> not in available=</span><span class="si">{</span><span class="n">available</span><span class="si">!r}</span><span class="s2">"</span>
                 <span class="p">)</span>
             <span class="n">physical</span><span class="p">,</span> <span class="n">indices</span> <span class="o">=</span> <span class="n">m</span>
             <span class="n">key</span> <span class="o">=</span> <span class="n">_make_claimed_key</span><span class="p">(</span><span class="n">physical</span><span class="p">)</span>
@@ -744,7 +744,7 @@ window.addEventListener("load", () => mermaid.run());
                     <span class="n">resolved</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
                     <span class="k">continue</span>
                 <span class="k">raise</span> <span class="n">ChannelNotAvailableError</span><span class="p">(</span>
-                    <span class="sa">f</span><span class="s2">&quot;Specific channel </span><span class="si">{</span><span class="n">physical</span><span class="si">!r}</span><span class="s2"> already claimed by earlier request&quot;</span>
+                    <span class="sa">f</span><span class="s2">"Specific channel </span><span class="si">{</span><span class="n">physical</span><span class="si">!r}</span><span class="s2"> already claimed by earlier request"</span>
                 <span class="p">)</span>
             <span class="n">claimed</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
             <span class="n">is_diff</span> <span class="o">=</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">physical</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)</span>
@@ -767,7 +767,7 @@ window.addEventListener("load", () => mermaid.run());
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_classify_modality</span><span class="p">(</span><span class="n">physical</span><span class="p">,</span> <span class="n">preferences</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">List</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Heuristic: scan preference lists to classify a specific physical channel.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Heuristic: scan preference lists to classify a specific physical channel."""</span>
     <span class="n">target</span> <span class="o">=</span> <span class="n">_make_claimed_key</span><span class="p">(</span><span class="n">physical</span><span class="p">)</span>
     <span class="k">for</span> <span class="n">modality</span><span class="p">,</span> <span class="n">pref_list</span> <span class="ow">in</span> <span class="n">preferences</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
         <span class="k">for</span> <span class="n">cand</span> <span class="ow">in</span> <span class="n">pref_list</span><span class="p">:</span>
@@ -780,15 +780,15 @@ window.addEventListener("load", () => mermaid.run());
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_unit_scale_to_uv</span><span class="p">(</span><span class="n">unit</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the multiplier to convert a physical dimension to microvolts.</span>
+<span class="w">    </span><span class="sd">"""Return the multiplier to convert a physical dimension to microvolts.</span>
 
 <span class="sd">    Recognized units (case-insensitive): mV -&gt; 1000, V -&gt; 1e6, uV/µV -&gt; 1.</span>
 <span class="sd">    Unknown or empty units return 1.0 (no scaling).</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">u</span> <span class="o">=</span> <span class="n">unit</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
-    <span class="k">if</span> <span class="n">u</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;mv&quot;</span><span class="p">,):</span>
+    <span class="k">if</span> <span class="n">u</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"mv"</span><span class="p">,):</span>
         <span class="k">return</span> <span class="mf">1000.0</span>
-    <span class="k">if</span> <span class="n">u</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;v&quot;</span><span class="p">,):</span>
+    <span class="k">if</span> <span class="n">u</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"v"</span><span class="p">,):</span>
         <span class="k">return</span> <span class="mf">1e6</span>
     <span class="c1"># uV, µV, empty, or unrecognized -&gt; no scaling</span>
     <span class="k">return</span> <span class="mf">1.0</span>
@@ -797,23 +797,23 @@ window.addEventListener("load", () => mermaid.run());
 <span class="k">def</span><span class="w"> </span><span class="nf">read_channel</span><span class="p">(</span>
     <span class="n">edf_reader</span><span class="p">:</span> <span class="n">pyedflib</span><span class="o">.</span><span class="n">EdfReader</span><span class="p">,</span> <span class="n">resolved</span><span class="p">:</span> <span class="n">ResolvedChannel</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="nb">float</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Read a single resolved channel from an opened EdfReader.</span>
+<span class="w">    </span><span class="sd">"""Read a single resolved channel from an opened EdfReader.</span>
 
 <span class="sd">    Returns (signal, fs). For differential pairs, returns signal[A] - signal[B].</span>
 <span class="sd">    Signals are automatically converted to microvolts (µV) based on the EDF</span>
 <span class="sd">    physical dimension field (e.g. mV -&gt; ×1000).</span>
 
 <span class="sd">    The caller is responsible for opening/closing the EdfReader.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">indices</span> <span class="o">=</span> <span class="n">resolved</span><span class="o">.</span><span class="n">_indices</span>
     <span class="n">fs</span> <span class="o">=</span> <span class="n">resolved</span><span class="o">.</span><span class="n">fs_in</span>
 
     <span class="k">if</span> <span class="ow">not</span> <span class="n">indices</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;ResolvedChannel has no indices: </span><span class="si">{</span><span class="n">resolved</span><span class="si">!r}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"ResolvedChannel has no indices: </span><span class="si">{</span><span class="n">resolved</span><span class="si">!r}</span><span class="s2">"</span><span class="p">)</span>
 
     <span class="k">if</span> <span class="n">resolved</span><span class="o">.</span><span class="n">is_differential</span><span class="p">:</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">indices</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Differential channel requires 2 indices, got </span><span class="si">{</span><span class="n">indices</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Differential channel requires 2 indices, got </span><span class="si">{</span><span class="n">indices</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
         <span class="n">sa</span> <span class="o">=</span> <span class="n">edf_reader</span><span class="o">.</span><span class="n">readSignal</span><span class="p">(</span><span class="n">indices</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
         <span class="n">sb</span> <span class="o">=</span> <span class="n">edf_reader</span><span class="o">.</span><span class="n">readSignal</span><span class="p">(</span><span class="n">indices</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
         <span class="c1"># Scale both channels to µV before subtraction</span>
@@ -837,20 +837,20 @@ window.addEventListener("load", () => mermaid.run());
 <span class="k">def</span><span class="w"> </span><span class="nf">read_channels_from_edf</span><span class="p">(</span>
     <span class="n">edf_path</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">],</span> <span class="n">resolved_list</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">ResolvedChannel</span><span class="p">]</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Convenience: open EDF once, read all resolved channels.</span>
+<span class="w">    </span><span class="sd">"""Convenience: open EDF once, read all resolved channels.</span>
 
 <span class="sd">    Returns dict keyed by encoded physical channel name (as stored in the cache dir name).</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="kn">from</span><span class="w"> </span><span class="nn">physioex.data.cache</span><span class="w"> </span><span class="kn">import</span> <span class="n">_encode_physical</span>
     <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
         <span class="c1"># TODO: cache module not yet available; inline a local duplicate</span>
         <span class="k">def</span><span class="w"> </span><span class="nf">_encode_physical</span><span class="p">(</span><span class="n">physical</span><span class="p">):</span>
             <span class="k">def</span><span class="w"> </span><span class="nf">_sanitize</span><span class="p">(</span><span class="n">s</span><span class="p">):</span>
-                <span class="k">return</span> <span class="n">s</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">,</span> <span class="s2">&quot;_&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\\</span><span class="s2">&quot;</span><span class="p">,</span> <span class="s2">&quot;_&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot; &quot;</span><span class="p">,</span> <span class="s2">&quot;_&quot;</span><span class="p">)</span>
+                <span class="k">return</span> <span class="n">s</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">"/"</span><span class="p">,</span> <span class="s2">"_"</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">"</span><span class="se">\\</span><span class="s2">"</span><span class="p">,</span> <span class="s2">"_"</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">" "</span><span class="p">,</span> <span class="s2">"_"</span><span class="p">)</span>
 
             <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">physical</span><span class="p">,</span> <span class="p">(</span><span class="nb">tuple</span><span class="p">,</span> <span class="nb">list</span><span class="p">)):</span>
-                <span class="k">return</span> <span class="s2">&quot;__&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">_sanitize</span><span class="p">(</span><span class="n">p</span><span class="p">)</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">physical</span><span class="p">)</span>
+                <span class="k">return</span> <span class="s2">"__"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">_sanitize</span><span class="p">(</span><span class="n">p</span><span class="p">)</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">physical</span><span class="p">)</span>
             <span class="k">return</span> <span class="n">_sanitize</span><span class="p">(</span><span class="n">physical</span><span class="p">)</span>
 
     <span class="n">out</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>

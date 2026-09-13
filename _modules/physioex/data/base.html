@@ -400,7 +400,7 @@ window.addEventListener("load", () => mermaid.run());
                 <article class="bd-article">
                   
   <h1>Source code for physioex.data.base</h1><div class="highlight"><pre>
-<span></span><span class="sd">&quot;&quot;&quot;BasePhysioDataset: abstract lazy-loading PyTorch Dataset with on-disk caching.&quot;&quot;&quot;</span>
+<span></span><span class="sd">"""BasePhysioDataset: abstract lazy-loading PyTorch Dataset with on-disk caching."""</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
@@ -443,7 +443,7 @@ window.addEventListener("load", () => mermaid.run());
 <span class="p">)</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">physioex.data.modality</span><span class="w"> </span><span class="kn">import</span> <span class="n">infer_channel_modality</span><span class="p">,</span> <span class="n">ModalityType</span><span class="p">,</span> <span class="n">MODALITY_TYPES</span>
 
-<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">&quot;physioex.data&quot;</span><span class="p">)</span>
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">"physioex.data"</span><span class="p">)</span>
 
 
 <span class="c1"># AASM 5-class sleep staging: W=0, N1=1, N2=2, N3=3, REM=4. -1 marks</span>
@@ -453,17 +453,17 @@ window.addEventListener("load", () => mermaid.run());
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">get_data_root</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the base data directory from PHYSIOEX_DATA env var.</span>
+<span class="w">    </span><span class="sd">"""Return the base data directory from PHYSIOEX_DATA env var.</span>
 
 <span class="sd">    Raises:</span>
 <span class="sd">        ValueError: If PHYSIOEX_DATA is not set.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">env_root</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;PHYSIOEX_DATA&quot;</span><span class="p">)</span>
+<span class="sd">    """</span>
+    <span class="n">env_root</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"PHYSIOEX_DATA"</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">env_root</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-            <span class="s2">&quot;PHYSIOEX_DATA environment variable is not set. &quot;</span>
-            <span class="s2">&quot;Set it to the root directory containing all datasets, &quot;</span>
-            <span class="s2">&quot;or pass the &#39;root&#39; parameter explicitly.&quot;</span>
+            <span class="s2">"PHYSIOEX_DATA environment variable is not set. "</span>
+            <span class="s2">"Set it to the root directory containing all datasets, "</span>
+            <span class="s2">"or pass the 'root' parameter explicitly."</span>
         <span class="p">)</span>
     <span class="k">return</span> <span class="n">Path</span><span class="p">(</span><span class="n">env_root</span><span class="p">)</span>
 
@@ -472,11 +472,11 @@ window.addEventListener("load", () => mermaid.run());
 <a class="viewcode-back" href="../../../api/_generated/physioex.data.SubjectSpec.html#physioex.data.SubjectSpec">[docs]</a>
 <span class="nd">@dataclass</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">SubjectSpec</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Metadata describing how to locate a single subject&#39;s raw data.</span>
+<span class="w">    </span><span class="sd">"""Metadata describing how to locate a single subject's raw data.</span>
 
 <span class="sd">    Returned by ``BasePhysioDataset._list_subjects()``.  Lightweight -- must</span>
 <span class="sd">    not itself load signal data.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
     <span class="n">subject_id</span><span class="p">:</span> <span class="nb">str</span>
     <span class="n">edf_path</span><span class="p">:</span> <span class="n">Path</span>
@@ -488,7 +488,7 @@ window.addEventListener("load", () => mermaid.run());
 <div class="viewcode-block" id="BasePhysioDataset">
 <a class="viewcode-back" href="../../../pages/data.html#physioex.data.BasePhysioDataset">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">BasePhysioDataset</span><span class="p">(</span><span class="n">Dataset</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Abstract base class for lazy-loading EDF-based sleep datasets.</span>
+<span class="w">    </span><span class="sd">"""Abstract base class for lazy-loading EDF-based sleep datasets.</span>
 
 <span class="sd">    Subclasses must implement:</span>
 <span class="sd">      - ``_list_subjects()`` -&gt; list[SubjectSpec]</span>
@@ -501,10 +501,10 @@ window.addEventListener("load", () => mermaid.run());
 <span class="sd">    Optional overrides:</span>
 <span class="sd">      - ``_read_edf_header(spec)`` to inject external metadata</span>
 <span class="sd">      - ``_read_subject_channel(spec, resolved)`` for non-EDF formats</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
     <span class="c1"># Subclasses must set this</span>
-    <span class="n">DATASET_NAME</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;base&quot;</span>
+    <span class="n">DATASET_NAME</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"base"</span>
 
     <span class="c1"># Default preferences (can be overridden per-subclass)</span>
     <span class="n">CHANNEL_PREFERENCES</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">List</span><span class="p">]</span> <span class="o">=</span> <span class="n">DEFAULT_PREFERENCES</span>
@@ -520,7 +520,7 @@ window.addEventListener("load", () => mermaid.run());
         <span class="n">channels</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Dict</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">pipelines</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span>
             <span class="n">PreprocessingPipeline</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Union</span><span class="p">[</span><span class="n">PreprocessingPipeline</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span>
-        <span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;raw&quot;</span><span class="p">,</span>
+        <span class="p">]</span> <span class="o">=</span> <span class="s2">"raw"</span><span class="p">,</span>
         <span class="n">sequence_length</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">21</span><span class="p">,</span>
         <span class="n">subset</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">cache_dir</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -536,11 +536,11 @@ window.addEventListener("load", () => mermaid.run());
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
         <span class="k">if</span> <span class="n">root</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">.__init__() missing required argument: &#39;root&#39;. &quot;</span>
-                <span class="s2">&quot;Set the PHYSIOEX_DATA environment variable or pass &#39;root&#39; explicitly.&quot;</span>
+                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">.__init__() missing required argument: 'root'. "</span>
+                <span class="s2">"Set the PHYSIOEX_DATA environment variable or pass 'root' explicitly."</span>
             <span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">root</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">root</span><span class="p">)</span>
-        <span class="c1"># channels=None means &quot;load ALL channels found across the dataset&quot;.</span>
+        <span class="c1"># channels=None means "load ALL channels found across the dataset".</span>
         <span class="c1"># Resolved after header probing in _init_headers_and_resolution.</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_channels_request</span> <span class="o">=</span> <span class="n">channels</span>  <span class="c1"># raw user input (may be None)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">channels</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">channels</span><span class="p">)</span> <span class="k">if</span> <span class="n">channels</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="p">[]</span>
@@ -591,8 +591,8 @@ window.addEventListener("load", () => mermaid.run());
 
         <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_subjects</span><span class="p">:</span>
             <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;[</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">DATASET_NAME</span><span class="si">}</span><span class="s2">] No subjects found under root=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">root</span><span class="si">!r}</span><span class="s2"> &quot;</span>
-                <span class="sa">f</span><span class="s2">&quot;(subset=</span><span class="si">{</span><span class="n">subset</span><span class="si">!r}</span><span class="s2">)&quot;</span>
+                <span class="sa">f</span><span class="s2">"[</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">DATASET_NAME</span><span class="si">}</span><span class="s2">] No subjects found under root=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">root</span><span class="si">!r}</span><span class="s2"> "</span>
+                <span class="sa">f</span><span class="s2">"(subset=</span><span class="si">{</span><span class="n">subset</span><span class="si">!r}</span><span class="s2">)"</span>
             <span class="p">)</span>
 
         <span class="c1"># Probe all headers (uses disk cache) and pre-resolve channels per</span>
@@ -615,24 +615,24 @@ window.addEventListener("load", () => mermaid.run());
 
     <span class="nd">@abstractmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_list_subjects</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">SubjectSpec</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the subject manifest.  Lightweight: must NOT load signal data.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Return the subject manifest.  Lightweight: must NOT load signal data."""</span>
         <span class="k">raise</span> <span class="ne">NotImplementedError</span>
 
     <span class="nd">@abstractmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_read_subject_labels</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">spec</span><span class="p">:</span> <span class="n">SubjectSpec</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return per-epoch label array (int, -1 for unscored).&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Return per-epoch label array (int, -1 for unscored)."""</span>
         <span class="k">raise</span> <span class="ne">NotImplementedError</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_read_edf_header</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">spec</span><span class="p">:</span> <span class="n">SubjectSpec</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">EDFHeader</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Default EDF header probe.  Subclasses may override to add external</span>
-<span class="sd">        metadata.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Default EDF header probe.  Subclasses may override to add external</span>
+<span class="sd">        metadata."""</span>
         <span class="k">return</span> <span class="n">probe_edf_header</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">edf_path</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_read_subject_channel</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">spec</span><span class="p">:</span> <span class="n">SubjectSpec</span><span class="p">,</span> <span class="n">resolved</span><span class="p">:</span> <span class="n">ResolvedChannel</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="nb">float</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Default: open EDF via pyedflib and read the channel.  Override for</span>
-<span class="sd">        non-EDF formats.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Default: open EDF via pyedflib and read the channel.  Override for</span>
+<span class="sd">        non-EDF formats."""</span>
         <span class="kn">import</span><span class="w"> </span><span class="nn">pyedflib</span>
 
         <span class="k">with</span> <span class="n">pyedflib</span><span class="o">.</span><span class="n">EdfReader</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">edf_path</span><span class="p">))</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
@@ -641,8 +641,8 @@ window.addEventListener("load", () => mermaid.run());
     <span class="k">def</span><span class="w"> </span><span class="nf">_filter_subset</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">subjects</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">SubjectSpec</span><span class="p">],</span> <span class="n">subset</span><span class="p">:</span> <span class="nb">str</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">SubjectSpec</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Default: return subjects unchanged.  Dataset subclasses can override</span>
-<span class="sd">        for subsetting.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Default: return subjects unchanged.  Dataset subclasses can override</span>
+<span class="sd">        for subsetting."""</span>
         <span class="k">return</span> <span class="n">subjects</span>
 
     <span class="c1"># ------------------------------------------------------------------</span>
@@ -654,7 +654,7 @@ window.addEventListener("load", () => mermaid.run());
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__getitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">idx</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
         <span class="k">if</span> <span class="n">idx</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">idx</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_length</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">IndexError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Index </span><span class="si">{</span><span class="n">idx</span><span class="si">}</span><span class="s2"> out of range [0, </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_length</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">IndexError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Index </span><span class="si">{</span><span class="n">idx</span><span class="si">}</span><span class="s2"> out of range [0, </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_length</span><span class="si">}</span><span class="s2">)"</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">sequence_length</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_sequence_item</span><span class="p">(</span><span class="n">idx</span><span class="p">)</span>
@@ -666,14 +666,14 @@ window.addEventListener("load", () => mermaid.run());
     <span class="k">def</span><span class="w"> </span><span class="nf">split</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">fold</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">]],</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return train/valid/test indices compatible with</span>
+<span class="w">        </span><span class="sd">"""Return train/valid/test indices compatible with</span>
 <span class="sd">        ``physioex/data/dataset.py:PhysioExDataset.split``.</span>
 
 <span class="sd">        Training: flat integer indices into the sequence-mode ``__getitem__``.</span>
 <span class="sd">        Valid/Test: list of ``(dataset_idx, subject_id)`` tuples matching the</span>
 <span class="sd">        legacy API.  The convention is: one dataset here -&gt; ``dataset_idx=0``</span>
 <span class="sd">        for all subjects.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">train_ids</span><span class="p">,</span> <span class="n">valid_ids</span><span class="p">,</span> <span class="n">test_ids</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_splits</span><span class="p">(</span><span class="n">fold</span><span class="o">=</span><span class="n">fold</span><span class="p">)</span>
         <span class="n">train_flat</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_subject_ids_to_flat_indices</span><span class="p">(</span><span class="n">train_ids</span><span class="p">)</span>
         <span class="n">valid_subjects</span> <span class="o">=</span> <span class="p">[(</span><span class="mi">0</span><span class="p">,</span> <span class="n">sid</span><span class="p">)</span> <span class="k">for</span> <span class="n">sid</span> <span class="ow">in</span> <span class="n">valid_ids</span><span class="p">]</span>
@@ -684,11 +684,11 @@ window.addEventListener("load", () => mermaid.run());
 <div class="viewcode-block" id="BasePhysioDataset.get_splits">
 <a class="viewcode-back" href="../../../pages/data.html#physioex.data.BasePhysioDataset.get_splits">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">get_splits</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fold</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return ``(train, valid, test)`` subject_id lists.</span>
+<span class="w">        </span><span class="sd">"""Return ``(train, valid, test)`` subject_id lists.</span>
 
 <span class="sd">        Default: random 70/15/15 split with seed ``42 + fold``.</span>
 <span class="sd">        Subclasses can override to provide custom benchmark folds.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">rng</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">Random</span><span class="p">(</span><span class="mi">42</span> <span class="o">+</span> <span class="nb">int</span><span class="p">(</span><span class="n">fold</span><span class="p">))</span>
         <span class="n">ids</span> <span class="o">=</span> <span class="p">[</span><span class="n">s</span><span class="o">.</span><span class="n">subject_id</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_subjects</span><span class="p">]</span>
         <span class="n">rng</span><span class="o">.</span><span class="n">shuffle</span><span class="p">(</span><span class="n">ids</span><span class="p">)</span>
@@ -704,8 +704,8 @@ window.addEventListener("load", () => mermaid.run());
 <div class="viewcode-block" id="BasePhysioDataset.probe">
 <a class="viewcode-back" href="../../../pages/data.html#physioex.data.BasePhysioDataset.probe">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">probe</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">subject</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return discovered channels + metadata for a subject (int index,</span>
-<span class="sd">        string id, or ``None`` = first).&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Return discovered channels + metadata for a subject (int index,</span>
+<span class="sd">        string id, or ``None`` = first)."""</span>
         <span class="k">if</span> <span class="n">subject</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">spec</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_subjects</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
         <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">subject</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
@@ -713,31 +713,31 @@ window.addEventListener("load", () => mermaid.run());
         <span class="k">else</span><span class="p">:</span>
             <span class="n">matches</span> <span class="o">=</span> <span class="p">[</span><span class="n">s</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_subjects</span> <span class="k">if</span> <span class="n">s</span><span class="o">.</span><span class="n">subject_id</span> <span class="o">==</span> <span class="n">subject</span><span class="p">]</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="n">matches</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Subject </span><span class="si">{</span><span class="n">subject</span><span class="si">!r}</span><span class="s2"> not found&quot;</span><span class="p">)</span>
+                <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Subject </span><span class="si">{</span><span class="n">subject</span><span class="si">!r}</span><span class="s2"> not found"</span><span class="p">)</span>
             <span class="n">spec</span> <span class="o">=</span> <span class="n">matches</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
         <span class="n">header</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_headers</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">subject_id</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">header</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">header</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load_or_probe_header</span><span class="p">(</span><span class="n">spec</span><span class="p">)</span>
         <span class="k">return</span> <span class="p">{</span>
-            <span class="s2">&quot;subject_id&quot;</span><span class="p">:</span> <span class="n">spec</span><span class="o">.</span><span class="n">subject_id</span><span class="p">,</span>
-            <span class="s2">&quot;available_channels&quot;</span><span class="p">:</span> <span class="nb">list</span><span class="p">(</span><span class="n">header</span><span class="o">.</span><span class="n">available_channels</span><span class="p">),</span>
-            <span class="s2">&quot;channel_fs&quot;</span><span class="p">:</span> <span class="nb">dict</span><span class="p">(</span><span class="n">header</span><span class="o">.</span><span class="n">channel_fs</span><span class="p">),</span>
-            <span class="s2">&quot;channel_units&quot;</span><span class="p">:</span> <span class="nb">dict</span><span class="p">(</span><span class="n">header</span><span class="o">.</span><span class="n">channel_units</span><span class="p">),</span>
-            <span class="s2">&quot;patient_meta&quot;</span><span class="p">:</span> <span class="nb">dict</span><span class="p">(</span><span class="n">header</span><span class="o">.</span><span class="n">patient_meta</span><span class="p">),</span>
-            <span class="s2">&quot;duration_sec&quot;</span><span class="p">:</span> <span class="n">header</span><span class="o">.</span><span class="n">duration_sec</span><span class="p">,</span>
+            <span class="s2">"subject_id"</span><span class="p">:</span> <span class="n">spec</span><span class="o">.</span><span class="n">subject_id</span><span class="p">,</span>
+            <span class="s2">"available_channels"</span><span class="p">:</span> <span class="nb">list</span><span class="p">(</span><span class="n">header</span><span class="o">.</span><span class="n">available_channels</span><span class="p">),</span>
+            <span class="s2">"channel_fs"</span><span class="p">:</span> <span class="nb">dict</span><span class="p">(</span><span class="n">header</span><span class="o">.</span><span class="n">channel_fs</span><span class="p">),</span>
+            <span class="s2">"channel_units"</span><span class="p">:</span> <span class="nb">dict</span><span class="p">(</span><span class="n">header</span><span class="o">.</span><span class="n">channel_units</span><span class="p">),</span>
+            <span class="s2">"patient_meta"</span><span class="p">:</span> <span class="nb">dict</span><span class="p">(</span><span class="n">header</span><span class="o">.</span><span class="n">patient_meta</span><span class="p">),</span>
+            <span class="s2">"duration_sec"</span><span class="p">:</span> <span class="n">header</span><span class="o">.</span><span class="n">duration_sec</span><span class="p">,</span>
         <span class="p">}</span></div>
 
 
 <div class="viewcode-block" id="BasePhysioDataset.available_channels">
 <a class="viewcode-back" href="../../../pages/data.html#physioex.data.BasePhysioDataset.available_channels">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">available_channels</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return all unique channel names found across the dataset with their</span>
+<span class="w">        </span><span class="sd">"""Return all unique channel names found across the dataset with their</span>
 <span class="sd">        occurrence count. Useful for discovering what channels to request.</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            dict mapping ``physical_channel_name`` -&gt; number of subjects</span>
 <span class="sd">            that have it.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="kn">from</span><span class="w"> </span><span class="nn">collections</span><span class="w"> </span><span class="kn">import</span> <span class="n">Counter</span>
 
         <span class="n">counts</span><span class="p">:</span> <span class="n">Counter</span> <span class="o">=</span> <span class="n">Counter</span><span class="p">()</span>
@@ -751,7 +751,7 @@ window.addEventListener("load", () => mermaid.run());
 <div class="viewcode-block" id="BasePhysioDataset.get_n_subjects">
 <a class="viewcode-back" href="../../../pages/data.html#physioex.data.BasePhysioDataset.get_n_subjects">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">get_n_subjects</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the number of subjects in this dataset.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Return the number of subjects in this dataset."""</span>
         <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_subjects</span><span class="p">)</span></div>
 
 
@@ -761,13 +761,13 @@ window.addEventListener("load", () => mermaid.run());
 
     <span class="nd">@staticmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_sanitize_labels</span><span class="p">(</span><span class="n">labels</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Coerce a per-epoch label array to AASM 5-class + ``-1``.</span>
+<span class="w">        </span><span class="sd">"""Coerce a per-epoch label array to AASM 5-class + ``-1``.</span>
 
 <span class="sd">        Any value not in ``AASM_VALID_LABELS`` (i.e. outside ``{-1, 0..4}``)</span>
 <span class="sd">        is replaced with ``-1``. This is the contract consumers rely on:</span>
 <span class="sd">        every epoch in the dataset either has a valid AASM stage or is</span>
 <span class="sd">        marked as unscored (``-1``) -- never a foreign value.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">labels</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">labels</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int16</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">labels</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">labels</span>
@@ -776,14 +776,14 @@ window.addEventListener("load", () => mermaid.run());
             <span class="k">return</span> <span class="n">labels</span>
         <span class="n">n_invalid</span> <span class="o">=</span> <span class="nb">int</span><span class="p">((</span><span class="o">~</span><span class="n">valid_mask</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">())</span>
         <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;_sanitize_labels: </span><span class="si">{</span><span class="n">n_invalid</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">labels</span><span class="o">.</span><span class="n">size</span><span class="si">}</span><span class="s2"> labels out of &quot;</span>
-            <span class="sa">f</span><span class="s2">&quot;AASM 5-class range; coercing to -1&quot;</span>
+            <span class="sa">f</span><span class="s2">"_sanitize_labels: </span><span class="si">{</span><span class="n">n_invalid</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">labels</span><span class="o">.</span><span class="n">size</span><span class="si">}</span><span class="s2"> labels out of "</span>
+            <span class="sa">f</span><span class="s2">"AASM 5-class range; coercing to -1"</span>
         <span class="p">)</span>
         <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">valid_mask</span><span class="p">,</span> <span class="n">labels</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int16</span><span class="p">)</span>
 
     <span class="nd">@staticmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_safe_slice</span><span class="p">(</span><span class="n">arr</span><span class="p">,</span> <span class="n">start</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">end</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">fill_value</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Slice ``arr[start:end]``; pad with ``fill_value`` if the source is</span>
+<span class="w">        </span><span class="sd">"""Slice ``arr[start:end]``; pad with ``fill_value`` if the source is</span>
 <span class="sd">        shorter than the requested range.</span>
 
 <span class="sd">        Guarantees the returned array has exactly ``end - start`` entries on</span>
@@ -791,10 +791,10 @@ window.addEventListener("load", () => mermaid.run());
 <span class="sd">        an EDF is truncated or a label array is shorter than expected.</span>
 
 <span class="sd">        NOTE: Avoids np.asarray() to preserve memmap lazy loading from cache.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">length</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">end</span> <span class="o">-</span> <span class="n">start</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">length</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;_safe_slice requires end &gt; start, got </span><span class="si">{</span><span class="n">start</span><span class="si">}</span><span class="s2">..</span><span class="si">{</span><span class="n">end</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"_safe_slice requires end &gt; start, got </span><span class="si">{</span><span class="n">start</span><span class="si">}</span><span class="s2">..</span><span class="si">{</span><span class="n">end</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
         <span class="c1"># arr is already np.ndarray or memmap from cache - no conversion needed</span>
         <span class="c1"># Clamp start and end to valid array bounds</span>
         <span class="n">actual_start</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">min</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">arr</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
@@ -818,7 +818,7 @@ window.addEventListener("load", () => mermaid.run());
         <span class="n">keep_minutes</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">30.0</span><span class="p">,</span>
         <span class="n">epoch_sec</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">30.0</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Mark excess pre-/post-sleep wake epochs as ``-1``.</span>
+<span class="w">        </span><span class="sd">"""Mark excess pre-/post-sleep wake epochs as ``-1``.</span>
 
 <span class="sd">        Keeps up to *keep_minutes* of contiguous wake before the first</span>
 <span class="sd">        non-wake epoch and after the last non-wake epoch.  Everything</span>
@@ -835,7 +835,7 @@ window.addEventListener("load", () => mermaid.run());
 <span class="sd">            epoch_sec: duration of a single epoch in seconds (default 30).</span>
 <span class="sd">        Returns:</span>
 <span class="sd">            A new array (copy) with excess wake positions set to ``-1``.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">labels</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">labels</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int16</span><span class="p">)</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
         <span class="n">n</span> <span class="o">=</span> <span class="n">labels</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
         <span class="k">if</span> <span class="n">n</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
@@ -864,11 +864,11 @@ window.addEventListener("load", () => mermaid.run());
         <span class="k">return</span> <span class="n">labels</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_get_labels</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">spec</span><span class="p">:</span> <span class="n">SubjectSpec</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return labels for a subject with all runtime transforms applied.</span>
+<span class="w">        </span><span class="sd">"""Return labels for a subject with all runtime transforms applied.</span>
 
 <span class="sd">        Order: disk-load (sanitized) -&gt; ``_trim_excess_wake`` if enabled.</span>
 <span class="sd">        Result is cached in memory for the lifetime of the dataset instance.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">if</span> <span class="n">spec</span><span class="o">.</span><span class="n">subject_id</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_labels_cache</span><span class="p">:</span>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_labels_cache</span><span class="p">[</span><span class="n">spec</span><span class="o">.</span><span class="n">subject_id</span><span class="p">]</span>
         <span class="n">labels</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load_or_compute_labels</span><span class="p">(</span><span class="n">spec</span><span class="p">)</span>
@@ -882,11 +882,11 @@ window.addEventListener("load", () => mermaid.run());
     <span class="c1"># ------------------------------------------------------------------</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_read_subject_events</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">spec</span><span class="p">:</span> <span class="n">SubjectSpec</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">SleepEvent</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return temporal events for a subject. Override in subclasses that have event data.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Return temporal events for a subject. Override in subclasses that have event data."""</span>
         <span class="k">return</span> <span class="p">[]</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_load_or_compute_events</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">spec</span><span class="p">:</span> <span class="n">SubjectSpec</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">SleepEvent</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Load events from cache or parse from source.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Load events from cache or parse from source."""</span>
         <span class="k">if</span> <span class="n">spec</span><span class="o">.</span><span class="n">subject_id</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_events_cache</span><span class="p">:</span>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_events_cache</span><span class="p">[</span><span class="n">spec</span><span class="o">.</span><span class="n">subject_id</span><span class="p">]</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">cache_enabled</span><span class="p">:</span>
@@ -911,7 +911,7 @@ window.addEventListener("load", () => mermaid.run());
                 <span class="p">)</span>
             <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
                 <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
-                    <span class="s2">&quot;Could not cache events for </span><span class="si">%s</span><span class="s2">: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">spec</span><span class="o">.</span><span class="n">subject_id</span><span class="p">,</span> <span class="n">exc</span>
+                    <span class="s2">"Could not cache events for </span><span class="si">%s</span><span class="s2">: </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span> <span class="n">spec</span><span class="o">.</span><span class="n">subject_id</span><span class="p">,</span> <span class="n">exc</span>
                 <span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_events_cache</span><span class="p">[</span><span class="n">spec</span><span class="o">.</span><span class="n">subject_id</span><span class="p">]</span> <span class="o">=</span> <span class="n">events</span>
         <span class="k">return</span> <span class="n">events</span>
@@ -923,20 +923,20 @@ window.addEventListener("load", () => mermaid.run());
 <div class="viewcode-block" id="BasePhysioDataset.get_subjects">
 <a class="viewcode-back" href="../../../pages/data.html#physioex.data.BasePhysioDataset.get_subjects">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">get_subjects</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return list of all subject IDs.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Return list of all subject IDs."""</span>
         <span class="k">return</span> <span class="p">[</span><span class="n">s</span><span class="o">.</span><span class="n">subject_id</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_subjects</span><span class="p">]</span></div>
 
 
 <div class="viewcode-block" id="BasePhysioDataset.get_subject_metadata">
 <a class="viewcode-back" href="../../../pages/data.html#physioex.data.BasePhysioDataset.get_subject_metadata">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">get_subject_metadata</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">subject_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return subject-level metadata without loading signals.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Return subject-level metadata without loading signals."""</span>
         <span class="n">matches</span> <span class="o">=</span> <span class="p">[</span><span class="n">s</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_subjects</span> <span class="k">if</span> <span class="n">s</span><span class="o">.</span><span class="n">subject_id</span> <span class="o">==</span> <span class="n">subject_id</span><span class="p">]</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">matches</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Subject </span><span class="si">{</span><span class="n">subject_id</span><span class="si">!r}</span><span class="s2"> not found&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Subject </span><span class="si">{</span><span class="n">subject_id</span><span class="si">!r}</span><span class="s2"> not found"</span><span class="p">)</span>
         <span class="n">spec</span> <span class="o">=</span> <span class="n">matches</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
         <span class="n">header</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_headers</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">subject_id</span><span class="p">)</span>
-        <span class="n">meta</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="n">spec</span><span class="o">.</span><span class="n">subject_id</span><span class="p">,</span> <span class="s2">&quot;dataset&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">DATASET_NAME</span><span class="p">}</span>
+        <span class="n">meta</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"id"</span><span class="p">:</span> <span class="n">spec</span><span class="o">.</span><span class="n">subject_id</span><span class="p">,</span> <span class="s2">"dataset"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">DATASET_NAME</span><span class="p">}</span>
         <span class="k">if</span> <span class="n">header</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">meta</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">header</span><span class="o">.</span><span class="n">patient_meta</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">v</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">})</span>
         <span class="n">meta</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">external_meta</span><span class="p">)</span>
@@ -946,7 +946,7 @@ window.addEventListener("load", () => mermaid.run());
 <div class="viewcode-block" id="BasePhysioDataset.get_all_subject_metadata">
 <a class="viewcode-back" href="../../../pages/data.html#physioex.data.BasePhysioDataset.get_all_subject_metadata">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">get_all_subject_metadata</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return metadata for all subjects keyed by subject_id.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Return metadata for all subjects keyed by subject_id."""</span>
         <span class="k">return</span> <span class="p">{</span>
             <span class="n">s</span><span class="o">.</span><span class="n">subject_id</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_subject_metadata</span><span class="p">(</span><span class="n">s</span><span class="o">.</span><span class="n">subject_id</span><span class="p">)</span>
             <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_subjects</span>
@@ -956,10 +956,10 @@ window.addEventListener("load", () => mermaid.run());
 <div class="viewcode-block" id="BasePhysioDataset.get_subject_events">
 <a class="viewcode-back" href="../../../pages/data.html#physioex.data.BasePhysioDataset.get_subject_events">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">get_subject_events</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">subject_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">SleepEvent</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return all temporal events for a subject without loading signals.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Return all temporal events for a subject without loading signals."""</span>
         <span class="n">matches</span> <span class="o">=</span> <span class="p">[</span><span class="n">s</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_subjects</span> <span class="k">if</span> <span class="n">s</span><span class="o">.</span><span class="n">subject_id</span> <span class="o">==</span> <span class="n">subject_id</span><span class="p">]</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">matches</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Subject </span><span class="si">{</span><span class="n">subject_id</span><span class="si">!r}</span><span class="s2"> not found&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Subject </span><span class="si">{</span><span class="n">subject_id</span><span class="si">!r}</span><span class="s2"> not found"</span><span class="p">)</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load_or_compute_events</span><span class="p">(</span><span class="n">matches</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span></div>
 
 
@@ -968,23 +968,23 @@ window.addEventListener("load", () => mermaid.run());
     <span class="c1"># ------------------------------------------------------------------</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_normalize_pipelines</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">p</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">PreprocessingPipeline</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Normalize the user&#39;s ``pipelines`` arg into a</span>
+<span class="w">        </span><span class="sd">"""Normalize the user's ``pipelines`` arg into a</span>
 <span class="sd">        ``dict[request_key -&gt; PreprocessingPipeline]``.</span>
 
 <span class="sd">        Accepts:</span>
-<span class="sd">          - ``PreprocessingPipeline`` -- stored under ``&#39;__default__&#39;``</span>
+<span class="sd">          - ``PreprocessingPipeline`` -- stored under ``'__default__'``</span>
 <span class="sd">          - ``str`` preset name -- resolved via ``get_preset``; if the preset</span>
-<span class="sd">            returns a dict (bundle preset like ``&quot;time_domain&quot;``), that dict</span>
-<span class="sd">            is used directly, otherwise stored under ``&#39;__default__&#39;``</span>
+<span class="sd">            returns a dict (bundle preset like ``"time_domain"``), that dict</span>
+<span class="sd">            is used directly, otherwise stored under ``'__default__'``</span>
 <span class="sd">          - ``dict`` -- each value resolved to a ``PreprocessingPipeline``</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="c1"># Resolve string presets first -- may expand to a dict bundle</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
             <span class="n">p</span> <span class="o">=</span> <span class="n">get_preset</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
             <span class="k">return</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_to_pipeline</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">p</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
-        <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;__default__&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_to_pipeline</span><span class="p">(</span><span class="n">p</span><span class="p">)}</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s2">"__default__"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_to_pipeline</span><span class="p">(</span><span class="n">p</span><span class="p">)}</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_to_pipeline</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">p</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">PreprocessingPipeline</span><span class="p">:</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">PreprocessingPipeline</span><span class="p">):</span>
@@ -994,23 +994,23 @@ window.addEventListener("load", () => mermaid.run());
             <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">resolved</span><span class="p">,</span> <span class="n">PreprocessingPipeline</span><span class="p">):</span>
                 <span class="k">return</span> <span class="n">resolved</span>
             <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;preset </span><span class="si">{</span><span class="n">p</span><span class="si">!r}</span><span class="s2"> returned a </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">resolved</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">; &quot;</span>
-                <span class="sa">f</span><span class="s2">&quot;dict presets cannot be nested inside a dict entry&quot;</span>
+                <span class="sa">f</span><span class="s2">"preset </span><span class="si">{</span><span class="n">p</span><span class="si">!r}</span><span class="s2"> returned a </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">resolved</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">; "</span>
+                <span class="sa">f</span><span class="s2">"dict presets cannot be nested inside a dict entry"</span>
             <span class="p">)</span>
         <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;pipelines entry must be a PreprocessingPipeline or preset name; &quot;</span>
-            <span class="sa">f</span><span class="s2">&quot;got </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">p</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="sa">f</span><span class="s2">"pipelines entry must be a PreprocessingPipeline or preset name; "</span>
+            <span class="sa">f</span><span class="s2">"got </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">p</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span>
         <span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_pipeline_for_channel</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">resolved</span><span class="p">:</span> <span class="n">ResolvedChannel</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">PreprocessingPipeline</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Pick the right pipeline for a resolved channel.</span>
+<span class="w">        </span><span class="sd">"""Pick the right pipeline for a resolved channel.</span>
 
 <span class="sd">        Priority: physical name &gt; modality name &gt; ``__default__``.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">physical_key</span> <span class="o">=</span> <span class="n">_encode_physical</span><span class="p">(</span><span class="n">resolved</span><span class="o">.</span><span class="n">physical</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">physical_key</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pipelines_spec</span><span class="p">:</span>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pipelines_spec</span><span class="p">[</span><span class="n">physical_key</span><span class="p">]</span>
-        <span class="c1"># Also try without encoding (for user-friendly names like &quot;C4-M2&quot;)</span>
+        <span class="c1"># Also try without encoding (for user-friendly names like "C4-M2")</span>
         <span class="k">if</span> <span class="p">(</span>
             <span class="nb">isinstance</span><span class="p">(</span><span class="n">resolved</span><span class="o">.</span><span class="n">physical</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span>
             <span class="ow">and</span> <span class="n">resolved</span><span class="o">.</span><span class="n">physical</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pipelines_spec</span>
@@ -1018,8 +1018,8 @@ window.addEventListener("load", () => mermaid.run());
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pipelines_spec</span><span class="p">[</span><span class="n">resolved</span><span class="o">.</span><span class="n">physical</span><span class="p">]</span>
         <span class="k">if</span> <span class="n">resolved</span><span class="o">.</span><span class="n">modality</span> <span class="ow">and</span> <span class="n">resolved</span><span class="o">.</span><span class="n">modality</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pipelines_spec</span><span class="p">:</span>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pipelines_spec</span><span class="p">[</span><span class="n">resolved</span><span class="o">.</span><span class="n">modality</span><span class="p">]</span>
-        <span class="k">if</span> <span class="s2">&quot;__default__&quot;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pipelines_spec</span><span class="p">:</span>
-            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pipelines_spec</span><span class="p">[</span><span class="s2">&quot;__default__&quot;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="s2">"__default__"</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pipelines_spec</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pipelines_spec</span><span class="p">[</span><span class="s2">"__default__"</span><span class="p">]</span>
         <span class="c1"># Fall back to identity if no explicit default was provided</span>
         <span class="k">return</span> <span class="n">PreprocessingPipeline</span><span class="p">([</span><span class="n">Identity</span><span class="p">()])</span>
 
@@ -1028,9 +1028,9 @@ window.addEventListener("load", () => mermaid.run());
     <span class="c1"># ------------------------------------------------------------------</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_load_or_probe_header</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">spec</span><span class="p">:</span> <span class="n">SubjectSpec</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">EDFHeader</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the EDF header for a subject, using on-disk cache when</span>
+<span class="w">        </span><span class="sd">"""Return the EDF header for a subject, using on-disk cache when</span>
 <span class="sd">        valid.  When ``self.cache_enabled`` is False, the header is always</span>
-<span class="sd">        probed from the source file and no disk I/O is performed.&quot;&quot;&quot;</span>
+<span class="sd">        probed from the source file and no disk I/O is performed."""</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">cache_enabled</span><span class="p">:</span>
             <span class="n">hpath</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cache</span><span class="o">.</span><span class="n">header_path</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">DATASET_NAME</span><span class="p">,</span> <span class="n">spec</span><span class="o">.</span><span class="n">subject_id</span><span class="p">)</span>
             <span class="n">src_mtime</span> <span class="o">=</span> <span class="kc">None</span>
@@ -1045,7 +1045,7 @@ window.addEventListener("load", () => mermaid.run());
                     <span class="k">try</span><span class="p">:</span>
                         <span class="k">if</span> <span class="p">(</span>
                             <span class="n">src_mtime</span> <span class="ow">is</span> <span class="kc">None</span>
-                            <span class="ow">or</span> <span class="nb">abs</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">cached</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;source_mtime&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span> <span class="o">-</span> <span class="n">src_mtime</span><span class="p">)</span>
+                            <span class="ow">or</span> <span class="nb">abs</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">cached</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"source_mtime"</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span> <span class="o">-</span> <span class="n">src_mtime</span><span class="p">)</span>
                             <span class="o">&lt;</span> <span class="mf">1e-3</span>
                         <span class="p">):</span>
                             <span class="k">return</span> <span class="n">EDFHeader</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span><span class="n">cached</span><span class="p">)</span>
@@ -1058,11 +1058,11 @@ window.addEventListener("load", () => mermaid.run());
             <span class="k">try</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">cache</span><span class="o">.</span><span class="n">save_json</span><span class="p">(</span><span class="n">hpath</span><span class="p">,</span> <span class="n">header</span><span class="o">.</span><span class="n">to_dict</span><span class="p">())</span>
             <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
-                <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Could not cache header for </span><span class="si">{</span><span class="n">spec</span><span class="o">.</span><span class="n">subject_id</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Could not cache header for </span><span class="si">{</span><span class="n">spec</span><span class="o">.</span><span class="n">subject_id</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">header</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_init_headers_and_resolution</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Probe all subjects and resolve channels.</span>
+<span class="w">        </span><span class="sd">"""Probe all subjects and resolve channels.</span>
 
 <span class="sd">        If ``channels`` was ``None`` at construction time, ALL unique</span>
 <span class="sd">        physical channel names across every subject are collected and</span>
@@ -1074,7 +1074,7 @@ window.addEventListener("load", () => mermaid.run());
 <span class="sd">        Subjects are **never dropped** due to missing channels.</span>
 <span class="sd">        Only genuinely corrupt EDFs (header unreadable) are skipped</span>
 <span class="sd">        when ``skip_corrupt=True``.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="c1"># Phase 1: probe all headers</span>
         <span class="n">kept</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">spec</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_subjects</span><span class="p">:</span>
@@ -1083,8 +1083,8 @@ window.addEventListener("load", () => mermaid.run());
             <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
                 <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">skip_corrupt</span><span class="p">:</span>
                     <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
-                        <span class="sa">f</span><span class="s2">&quot;[</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">DATASET_NAME</span><span class="si">}</span><span class="s2">] Skipping corrupt subject &quot;</span>
-                        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">spec</span><span class="o">.</span><span class="n">subject_id</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">&quot;</span>
+                        <span class="sa">f</span><span class="s2">"[</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">DATASET_NAME</span><span class="si">}</span><span class="s2">] Skipping corrupt subject "</span>
+                        <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">spec</span><span class="o">.</span><span class="n">subject_id</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">"</span>
                     <span class="p">)</span>
                     <span class="k">continue</span>
                 <span class="k">raise</span>
@@ -1092,7 +1092,7 @@ window.addEventListener("load", () => mermaid.run());
             <span class="n">kept</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">spec</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_subjects</span> <span class="o">=</span> <span class="n">kept</span>
 
-        <span class="c1"># Phase 1b: if channels=None (&quot;all&quot;), collect the union of every</span>
+        <span class="c1"># Phase 1b: if channels=None ("all"), collect the union of every</span>
         <span class="c1"># physical channel across the dataset and use those as requests.</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_channels_request</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="kn">from</span><span class="w"> </span><span class="nn">collections</span><span class="w"> </span><span class="kn">import</span> <span class="n">Counter</span>
@@ -1104,9 +1104,9 @@ window.addEventListener("load", () => mermaid.run());
             <span class="c1"># Order by frequency (most common first) for determinism</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">channels</span> <span class="o">=</span> <span class="p">[</span><span class="n">ch</span> <span class="k">for</span> <span class="n">ch</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">counts</span><span class="o">.</span><span class="n">most_common</span><span class="p">()]</span>
             <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;[</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">DATASET_NAME</span><span class="si">}</span><span class="s2">] channels=None -&gt; auto-discovered &quot;</span>
-                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="p">)</span><span class="si">}</span><span class="s2"> channels across </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_subjects</span><span class="p">)</span><span class="si">}</span><span class="s2"> &quot;</span>
-                <span class="sa">f</span><span class="s2">&quot;subjects&quot;</span>
+                <span class="sa">f</span><span class="s2">"[</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">DATASET_NAME</span><span class="si">}</span><span class="s2">] channels=None -&gt; auto-discovered "</span>
+                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="p">)</span><span class="si">}</span><span class="s2"> channels across </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_subjects</span><span class="p">)</span><span class="si">}</span><span class="s2"> "</span>
+                <span class="sa">f</span><span class="s2">"subjects"</span>
             <span class="p">)</span>
 
         <span class="c1"># Phase 2: resolve channels per subject</span>
@@ -1125,8 +1125,8 @@ window.addEventListener("load", () => mermaid.run());
             <span class="n">missing</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">rc</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">resolved</span><span class="p">)</span> <span class="k">if</span> <span class="n">rc</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">]</span>
             <span class="k">if</span> <span class="n">missing</span><span class="p">:</span>
                 <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
-                    <span class="sa">f</span><span class="s2">&quot;[</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">DATASET_NAME</span><span class="si">}</span><span class="s2">] </span><span class="si">{</span><span class="n">spec</span><span class="o">.</span><span class="n">subject_id</span><span class="si">}</span><span class="s2">: channels &quot;</span>
-                    <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">missing</span><span class="si">}</span><span class="s2"> not available (will be zero-filled)&quot;</span>
+                    <span class="sa">f</span><span class="s2">"[</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">DATASET_NAME</span><span class="si">}</span><span class="s2">] </span><span class="si">{</span><span class="n">spec</span><span class="o">.</span><span class="n">subject_id</span><span class="si">}</span><span class="s2">: channels "</span>
+                    <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">missing</span><span class="si">}</span><span class="s2"> not available (will be zero-filled)"</span>
                 <span class="p">)</span>
 
             <span class="bp">self</span><span class="o">.</span><span class="n">_resolved</span><span class="p">[</span><span class="n">spec</span><span class="o">.</span><span class="n">subject_id</span><span class="p">]</span> <span class="o">=</span> <span class="n">resolved</span>
@@ -1136,11 +1136,11 @@ window.addEventListener("load", () => mermaid.run());
     <span class="c1"># ------------------------------------------------------------------</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_load_or_compute_labels</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">spec</span><span class="p">:</span> <span class="n">SubjectSpec</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Load labels from cache if present, otherwise parse and cache.</span>
+<span class="w">        </span><span class="sd">"""Load labels from cache if present, otherwise parse and cache.</span>
 
 <span class="sd">        When ``self.cache_enabled`` is False, always computes labels from the</span>
 <span class="sd">        source and returns them in-memory without any disk read or write.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">cache_enabled</span><span class="p">:</span>
             <span class="n">lp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cache</span><span class="o">.</span><span class="n">labels_path</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">DATASET_NAME</span><span class="p">,</span> <span class="n">spec</span><span class="o">.</span><span class="n">subject_id</span><span class="p">)</span>
             <span class="n">lmeta</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cache</span><span class="o">.</span><span class="n">labels_meta_path</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">DATASET_NAME</span><span class="p">,</span> <span class="n">spec</span><span class="o">.</span><span class="n">subject_id</span><span class="p">)</span>
@@ -1151,8 +1151,8 @@ window.addEventListener("load", () => mermaid.run());
                     <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">memmap</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
                 <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
                     <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
-                        <span class="sa">f</span><span class="s2">&quot;Corrupt label cache for </span><span class="si">{</span><span class="n">spec</span><span class="o">.</span><span class="n">subject_id</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">; &quot;</span>
-                        <span class="sa">f</span><span class="s2">&quot;rebuilding&quot;</span>
+                        <span class="sa">f</span><span class="s2">"Corrupt label cache for </span><span class="si">{</span><span class="n">spec</span><span class="o">.</span><span class="n">subject_id</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">; "</span>
+                        <span class="sa">f</span><span class="s2">"rebuilding"</span>
                     <span class="p">)</span>
 
         <span class="n">labels</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_read_subject_labels</span><span class="p">(</span><span class="n">spec</span><span class="p">)</span>
@@ -1160,26 +1160,26 @@ window.addEventListener("load", () => mermaid.run());
 
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">cache_enabled</span><span class="p">:</span>
             <span class="n">meta</span> <span class="o">=</span> <span class="p">{</span>
-                <span class="s2">&quot;dataset&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">DATASET_NAME</span><span class="p">,</span>
-                <span class="s2">&quot;subject_id&quot;</span><span class="p">:</span> <span class="n">spec</span><span class="o">.</span><span class="n">subject_id</span><span class="p">,</span>
-                <span class="s2">&quot;n_epochs&quot;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">labels</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span>
-                <span class="s2">&quot;sanitized_to&quot;</span><span class="p">:</span> <span class="s2">&quot;AASM_5_class&quot;</span><span class="p">,</span>
+                <span class="s2">"dataset"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">DATASET_NAME</span><span class="p">,</span>
+                <span class="s2">"subject_id"</span><span class="p">:</span> <span class="n">spec</span><span class="o">.</span><span class="n">subject_id</span><span class="p">,</span>
+                <span class="s2">"n_epochs"</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">labels</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span>
+                <span class="s2">"sanitized_to"</span><span class="p">:</span> <span class="s2">"AASM_5_class"</span><span class="p">,</span>
             <span class="p">}</span>
             <span class="k">try</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">cache</span><span class="o">.</span><span class="n">atomic_save_array</span><span class="p">(</span><span class="n">lp</span><span class="p">,</span> <span class="n">labels</span><span class="p">,</span> <span class="n">meta</span><span class="p">)</span>
             <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
-                <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Could not cache labels for </span><span class="si">{</span><span class="n">spec</span><span class="o">.</span><span class="n">subject_id</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Could not cache labels for </span><span class="si">{</span><span class="n">spec</span><span class="o">.</span><span class="n">subject_id</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="n">labels</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_load_or_compute_channel</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">spec</span><span class="p">:</span> <span class="n">SubjectSpec</span><span class="p">,</span> <span class="n">resolved</span><span class="p">:</span> <span class="n">ResolvedChannel</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Load a cached preprocessed channel, or compute + cache it.</span>
+<span class="w">        </span><span class="sd">"""Load a cached preprocessed channel, or compute + cache it.</span>
 
 <span class="sd">        When ``self.cache_enabled`` is False, always computes the signal from</span>
 <span class="sd">        the source and returns it in-memory (float32) without any disk I/O.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">pipeline</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pipeline_for_channel</span><span class="p">(</span><span class="n">resolved</span><span class="p">)</span>
         <span class="n">pipeline_hash</span> <span class="o">=</span> <span class="n">pipeline</span><span class="o">.</span><span class="n">hash</span><span class="p">()</span>
 
@@ -1195,7 +1195,7 @@ window.addEventListener("load", () => mermaid.run());
             <span class="k">if</span> <span class="n">signal_path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
                 <span class="k">try</span><span class="p">:</span>
                     <span class="c1"># Check LRU cache first</span>
-                    <span class="n">cache_key</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">spec</span><span class="o">.</span><span class="n">subject_id</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">resolved</span><span class="o">.</span><span class="n">physical</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">pipeline_hash</span><span class="si">}</span><span class="s2">&quot;</span>
+                    <span class="n">cache_key</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">spec</span><span class="o">.</span><span class="n">subject_id</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">resolved</span><span class="o">.</span><span class="n">physical</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">pipeline_hash</span><span class="si">}</span><span class="s2">"</span>
                     <span class="k">if</span> <span class="n">cache_key</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_memmap_cache</span><span class="p">:</span>
                         <span class="c1"># Move to end (most recently used)</span>
                         <span class="bp">self</span><span class="o">.</span><span class="n">_memmap_cache</span><span class="o">.</span><span class="n">move_to_end</span><span class="p">(</span><span class="n">cache_key</span><span class="p">)</span>
@@ -1215,10 +1215,10 @@ window.addEventListener("load", () => mermaid.run());
                     <span class="k">return</span> <span class="n">memmap</span>
                 <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
                     <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
-                        <span class="sa">f</span><span class="s2">&quot;Corrupt signal cache </span><span class="si">{</span><span class="n">signal_path</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">; recomputing&quot;</span>
+                        <span class="sa">f</span><span class="s2">"Corrupt signal cache </span><span class="si">{</span><span class="n">signal_path</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">; recomputing"</span>
                     <span class="p">)</span>
 
-        <span class="c1"># Compile pipeline for this subject&#39;s channel fs</span>
+        <span class="c1"># Compile pipeline for this subject's channel fs</span>
         <span class="n">fs_in</span> <span class="o">=</span> <span class="n">resolved</span><span class="o">.</span><span class="n">fs_in</span>
         <span class="n">compile_key</span> <span class="o">=</span> <span class="p">(</span><span class="n">pipeline_hash</span><span class="p">,</span> <span class="n">fs_in</span><span class="p">,</span> <span class="n">spec</span><span class="o">.</span><span class="n">subject_id</span><span class="p">)</span>
         <span class="n">compiled</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_compiled_pipelines</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">compile_key</span><span class="p">)</span>
@@ -1237,20 +1237,20 @@ window.addEventListener("load", () => mermaid.run());
             <span class="n">dtype_name</span> <span class="o">=</span> <span class="n">recommended_dtype</span><span class="p">()</span>
             <span class="n">casted</span> <span class="o">=</span> <span class="n">cast_to_cache_dtype</span><span class="p">(</span><span class="n">processed</span><span class="p">,</span> <span class="n">dtype_name</span><span class="p">)</span>
             <span class="n">meta</span> <span class="o">=</span> <span class="p">{</span>
-                <span class="s2">&quot;dataset&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">DATASET_NAME</span><span class="p">,</span>
-                <span class="s2">&quot;subject_id&quot;</span><span class="p">:</span> <span class="n">spec</span><span class="o">.</span><span class="n">subject_id</span><span class="p">,</span>
-                <span class="s2">&quot;channel_request&quot;</span><span class="p">:</span> <span class="nb">repr</span><span class="p">(</span><span class="n">resolved</span><span class="o">.</span><span class="n">request</span><span class="p">),</span>
-                <span class="s2">&quot;channel_physical&quot;</span><span class="p">:</span> <span class="nb">repr</span><span class="p">(</span><span class="n">resolved</span><span class="o">.</span><span class="n">physical</span><span class="p">),</span>
-                <span class="s2">&quot;modality&quot;</span><span class="p">:</span> <span class="n">resolved</span><span class="o">.</span><span class="n">modality</span><span class="p">,</span>
-                <span class="s2">&quot;pipeline_hash&quot;</span><span class="p">:</span> <span class="n">pipeline_hash</span><span class="p">,</span>
-                <span class="s2">&quot;pipeline_spec&quot;</span><span class="p">:</span> <span class="n">pipeline</span><span class="o">.</span><span class="n">spec</span><span class="p">(),</span>
-                <span class="s2">&quot;fs_in&quot;</span><span class="p">:</span> <span class="n">fs_in</span><span class="p">,</span>
-                <span class="s2">&quot;fs_out&quot;</span><span class="p">:</span> <span class="n">compiled</span><span class="o">.</span><span class="n">fs_out</span><span class="p">,</span>
+                <span class="s2">"dataset"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">DATASET_NAME</span><span class="p">,</span>
+                <span class="s2">"subject_id"</span><span class="p">:</span> <span class="n">spec</span><span class="o">.</span><span class="n">subject_id</span><span class="p">,</span>
+                <span class="s2">"channel_request"</span><span class="p">:</span> <span class="nb">repr</span><span class="p">(</span><span class="n">resolved</span><span class="o">.</span><span class="n">request</span><span class="p">),</span>
+                <span class="s2">"channel_physical"</span><span class="p">:</span> <span class="nb">repr</span><span class="p">(</span><span class="n">resolved</span><span class="o">.</span><span class="n">physical</span><span class="p">),</span>
+                <span class="s2">"modality"</span><span class="p">:</span> <span class="n">resolved</span><span class="o">.</span><span class="n">modality</span><span class="p">,</span>
+                <span class="s2">"pipeline_hash"</span><span class="p">:</span> <span class="n">pipeline_hash</span><span class="p">,</span>
+                <span class="s2">"pipeline_spec"</span><span class="p">:</span> <span class="n">pipeline</span><span class="o">.</span><span class="n">spec</span><span class="p">(),</span>
+                <span class="s2">"fs_in"</span><span class="p">:</span> <span class="n">fs_in</span><span class="p">,</span>
+                <span class="s2">"fs_out"</span><span class="p">:</span> <span class="n">compiled</span><span class="o">.</span><span class="n">fs_out</span><span class="p">,</span>
             <span class="p">}</span>
             <span class="k">try</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">cache</span><span class="o">.</span><span class="n">atomic_save_array</span><span class="p">(</span><span class="n">signal_path</span><span class="p">,</span> <span class="n">casted</span><span class="p">,</span> <span class="n">meta</span><span class="p">)</span>
             <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
-                <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Could not cache signal </span><span class="si">{</span><span class="n">signal_path</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Could not cache signal </span><span class="si">{</span><span class="n">signal_path</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 
             <span class="c1"># Reopen via memmap for consistency</span>
             <span class="k">try</span><span class="p">:</span>
@@ -1266,17 +1266,17 @@ window.addEventListener("load", () => mermaid.run());
 <div class="viewcode-block" id="BasePhysioDataset.close">
 <a class="viewcode-back" href="../../../pages/data.html#physioex.data.BasePhysioDataset.close">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">close</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Explicitly close all open memmap file handles.</span>
+<span class="w">        </span><span class="sd">"""Explicitly close all open memmap file handles.</span>
 
 <span class="sd">        This clears the LRU memmap cache and closes all file descriptors.</span>
-<span class="sd">        Normally not needed as Python&#39;s garbage collector will handle this,</span>
+<span class="sd">        Normally not needed as Python's garbage collector will handle this,</span>
 <span class="sd">        but useful for explicit cleanup or when reusing the same dataset object.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_memmap_cache</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span></div>
 
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__del__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Cleanup when dataset is destroyed.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Cleanup when dataset is destroyed."""</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
         <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
@@ -1285,7 +1285,7 @@ window.addEventListener("load", () => mermaid.run());
 <div class="viewcode-block" id="BasePhysioDataset.memmap_cache_stats">
 <a class="viewcode-back" href="../../../pages/data.html#physioex.data.BasePhysioDataset.memmap_cache_stats">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">memmap_cache_stats</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return LRU memmap cache statistics.</span>
+<span class="w">        </span><span class="sd">"""Return LRU memmap cache statistics.</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            Dict with:</span>
@@ -1294,19 +1294,19 @@ window.addEventListener("load", () => mermaid.run());
 <span class="sd">                - hits: number of cache hits</span>
 <span class="sd">                - misses: number of cache misses</span>
 <span class="sd">                - hit_rate: hit rate as percentage</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">hits</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_memmap_cache_hits</span>
         <span class="n">misses</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_memmap_cache_misses</span>
         <span class="n">total</span> <span class="o">=</span> <span class="n">hits</span> <span class="o">+</span> <span class="n">misses</span>
         <span class="n">hit_rate</span> <span class="o">=</span> <span class="p">(</span><span class="n">hits</span> <span class="o">/</span> <span class="n">total</span> <span class="o">*</span> <span class="mi">100</span><span class="p">)</span> <span class="k">if</span> <span class="n">total</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="mf">0.0</span>
 
         <span class="k">return</span> <span class="p">{</span>
-            <span class="s2">&quot;size&quot;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_memmap_cache</span><span class="p">),</span>
-            <span class="s2">&quot;max_size&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_memmap_cache_size</span><span class="p">,</span>
-            <span class="s2">&quot;hits&quot;</span><span class="p">:</span> <span class="n">hits</span><span class="p">,</span>
-            <span class="s2">&quot;misses&quot;</span><span class="p">:</span> <span class="n">misses</span><span class="p">,</span>
-            <span class="s2">&quot;total_requests&quot;</span><span class="p">:</span> <span class="n">total</span><span class="p">,</span>
-            <span class="s2">&quot;hit_rate&quot;</span><span class="p">:</span> <span class="n">hit_rate</span><span class="p">,</span>
+            <span class="s2">"size"</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_memmap_cache</span><span class="p">),</span>
+            <span class="s2">"max_size"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_memmap_cache_size</span><span class="p">,</span>
+            <span class="s2">"hits"</span><span class="p">:</span> <span class="n">hits</span><span class="p">,</span>
+            <span class="s2">"misses"</span><span class="p">:</span> <span class="n">misses</span><span class="p">,</span>
+            <span class="s2">"total_requests"</span><span class="p">:</span> <span class="n">total</span><span class="p">,</span>
+            <span class="s2">"hit_rate"</span><span class="p">:</span> <span class="n">hit_rate</span><span class="p">,</span>
         <span class="p">}</span></div>
 
 
@@ -1317,7 +1317,7 @@ window.addEventListener("load", () => mermaid.run());
         <span class="n">compiled</span><span class="p">:</span> <span class="n">CompiledPipeline</span><span class="p">,</span>
         <span class="n">resolved</span><span class="p">:</span> <span class="n">ResolvedChannel</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Epoch-segment the raw signal, then run the compiled pipeline per</span>
+<span class="w">        </span><span class="sd">"""Epoch-segment the raw signal, then run the compiled pipeline per</span>
 <span class="sd">        epoch.</span>
 
 <span class="sd">        Strategy per compiled step:</span>
@@ -1327,7 +1327,7 @@ window.addEventListener("load", () => mermaid.run());
 
 <span class="sd">        After all steps, if the signal is still 1D it is reshaped to</span>
 <span class="sd">        ``(n_epochs, samples_per_epoch)``.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">raw</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
         <span class="n">fs</span> <span class="o">=</span> <span class="n">fs_in</span>
         <span class="n">epoched</span> <span class="o">=</span> <span class="kc">False</span>
@@ -1360,7 +1360,7 @@ window.addEventListener("load", () => mermaid.run());
     <span class="c1"># ------------------------------------------------------------------</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_build_index</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Populate ``n_epochs`` per subject and compute ``self._length``.</span>
+<span class="w">        </span><span class="sd">"""Populate ``n_epochs`` per subject and compute ``self._length``.</span>
 
 <span class="sd">        The authoritative epoch count is ``n_epochs = max(labels_len,</span>
 <span class="sd">        signal_epochs_from_header)``: we index every physical epoch of</span>
@@ -1368,7 +1368,7 @@ window.addEventListener("load", () => mermaid.run());
 <span class="sd">        by ``_safe_slice`` -- missing label positions return ``-1`` and</span>
 <span class="sd">        missing signal positions return zeros, so nothing is ever</span>
 <span class="sd">        dropped.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="c1"># Load labels for all subjects (cached after first call; runtime</span>
         <span class="c1"># transforms like trim_excess_wake applied via _get_labels).</span>
         <span class="k">for</span> <span class="n">spec</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_subjects</span><span class="p">:</span>
@@ -1377,8 +1377,8 @@ window.addEventListener("load", () => mermaid.run());
             <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
                 <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">skip_corrupt</span><span class="p">:</span>
                     <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
-                        <span class="sa">f</span><span class="s2">&quot;[</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">DATASET_NAME</span><span class="si">}</span><span class="s2">] Cannot read labels for &quot;</span>
-                        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">spec</span><span class="o">.</span><span class="n">subject_id</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">; skipping&quot;</span>
+                        <span class="sa">f</span><span class="s2">"[</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">DATASET_NAME</span><span class="si">}</span><span class="s2">] Cannot read labels for "</span>
+                        <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">spec</span><span class="o">.</span><span class="n">subject_id</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">; skipping"</span>
                     <span class="p">)</span>
                     <span class="k">continue</span>
                 <span class="k">raise</span>
@@ -1400,9 +1400,9 @@ window.addEventListener("load", () => mermaid.run());
                 <span class="ow">and</span> <span class="n">n_from_labels</span> <span class="o">&gt;</span> <span class="mi">0</span>
             <span class="p">):</span>
                 <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
-                    <span class="sa">f</span><span class="s2">&quot;[</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">DATASET_NAME</span><span class="si">}</span><span class="s2">] </span><span class="si">{</span><span class="n">spec</span><span class="o">.</span><span class="n">subject_id</span><span class="si">}</span><span class="s2">: &quot;</span>
-                    <span class="sa">f</span><span class="s2">&quot;labels_len=</span><span class="si">{</span><span class="n">n_from_labels</span><span class="si">}</span><span class="s2"> vs signal_epochs=</span><span class="si">{</span><span class="n">n_from_header</span><span class="si">}</span><span class="s2">; &quot;</span>
-                    <span class="sa">f</span><span class="s2">&quot;using n_epochs=</span><span class="si">{</span><span class="n">n_epochs</span><span class="si">}</span><span class="s2"> (gaps padded with -1 / zeros)&quot;</span>
+                    <span class="sa">f</span><span class="s2">"[</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">DATASET_NAME</span><span class="si">}</span><span class="s2">] </span><span class="si">{</span><span class="n">spec</span><span class="o">.</span><span class="n">subject_id</span><span class="si">}</span><span class="s2">: "</span>
+                    <span class="sa">f</span><span class="s2">"labels_len=</span><span class="si">{</span><span class="n">n_from_labels</span><span class="si">}</span><span class="s2"> vs signal_epochs=</span><span class="si">{</span><span class="n">n_from_header</span><span class="si">}</span><span class="s2">; "</span>
+                    <span class="sa">f</span><span class="s2">"using n_epochs=</span><span class="si">{</span><span class="n">n_epochs</span><span class="si">}</span><span class="s2"> (gaps padded with -1 / zeros)"</span>
                 <span class="p">)</span>
 
             <span class="bp">self</span><span class="o">.</span><span class="n">_n_epochs</span><span class="p">[</span><span class="n">spec</span><span class="o">.</span><span class="n">subject_id</span><span class="p">]</span> <span class="o">=</span> <span class="n">n_epochs</span>
@@ -1415,9 +1415,9 @@ window.addEventListener("load", () => mermaid.run());
                 <span class="k">continue</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">sequence_length</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">n</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">sequence_length</span><span class="p">:</span>
                 <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
-                    <span class="sa">f</span><span class="s2">&quot;[</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">DATASET_NAME</span><span class="si">}</span><span class="s2">] Subject </span><span class="si">{</span><span class="n">spec</span><span class="o">.</span><span class="n">subject_id</span><span class="si">}</span><span class="s2"> has &quot;</span>
-                    <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">n</span><span class="si">}</span><span class="s2"> epochs &lt; sequence_length=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">sequence_length</span><span class="si">}</span><span class="s2">; &quot;</span>
-                    <span class="sa">f</span><span class="s2">&quot;skipping&quot;</span>
+                    <span class="sa">f</span><span class="s2">"[</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">DATASET_NAME</span><span class="si">}</span><span class="s2">] Subject </span><span class="si">{</span><span class="n">spec</span><span class="o">.</span><span class="n">subject_id</span><span class="si">}</span><span class="s2"> has "</span>
+                    <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">n</span><span class="si">}</span><span class="s2"> epochs &lt; sequence_length=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">sequence_length</span><span class="si">}</span><span class="s2">; "</span>
+                    <span class="sa">f</span><span class="s2">"skipping"</span>
                 <span class="p">)</span>
                 <span class="k">continue</span>
             <span class="n">kept</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">spec</span><span class="p">)</span>
@@ -1437,16 +1437,16 @@ window.addEventListener("load", () => mermaid.run());
         <span class="bp">self</span><span class="o">.</span><span class="n">_length</span> <span class="o">=</span> <span class="n">running</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_find_subject_for_flat_idx</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">idx</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">SubjectSpec</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Map a flat index into ``(subject, local_offset_within_subject)``.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Map a flat index into ``(subject, local_offset_within_subject)``."""</span>
         <span class="k">for</span> <span class="n">sid</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">end</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_subject_ranges</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">start</span> <span class="o">&lt;=</span> <span class="n">idx</span> <span class="o">&lt;</span> <span class="n">end</span><span class="p">:</span>
                 <span class="n">spec</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">s</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_subjects</span> <span class="k">if</span> <span class="n">s</span><span class="o">.</span><span class="n">subject_id</span> <span class="o">==</span> <span class="n">sid</span><span class="p">)</span>
                 <span class="k">return</span> <span class="n">spec</span><span class="p">,</span> <span class="n">idx</span> <span class="o">-</span> <span class="n">start</span>
-        <span class="k">raise</span> <span class="ne">IndexError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Flat index </span><span class="si">{</span><span class="n">idx</span><span class="si">}</span><span class="s2"> not in any subject range&quot;</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">IndexError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Flat index </span><span class="si">{</span><span class="n">idx</span><span class="si">}</span><span class="s2"> not in any subject range"</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_subject_ids_to_flat_indices</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ids</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Convert a list of ``subject_id`` values to all the flat training</span>
-<span class="sd">        indices that belong to them.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Convert a list of ``subject_id`` values to all the flat training</span>
+<span class="sd">        indices that belong to them."""</span>
         <span class="n">id_set</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">ids</span><span class="p">)</span>
         <span class="n">out</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">sid</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">end</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_subject_ranges</span><span class="p">:</span>
@@ -1515,7 +1515,7 @@ window.addEventListener("load", () => mermaid.run());
         <span class="n">_ref_shape</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span>
 
         <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">rc</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">resolved_list</span><span class="p">):</span>
-            <span class="n">req</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">if</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="p">)</span> <span class="k">else</span> <span class="sa">f</span><span class="s2">&quot;ch</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="n">req</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">if</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="p">)</span> <span class="k">else</span> <span class="sa">f</span><span class="s2">"ch</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">"</span>
             <span class="n">req_str</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">req</span><span class="p">)</span>  <span class="c1"># Original request as string</span>
 
             <span class="k">if</span> <span class="n">rc</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
@@ -1527,20 +1527,20 @@ window.addEventListener("load", () => mermaid.run());
                 <span class="n">idx</span> <span class="o">=</span> <span class="n">modality_counters</span><span class="p">[</span><span class="n">modality</span><span class="p">]</span>
                 <span class="n">modality_counters</span><span class="p">[</span><span class="n">modality</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
 
-                <span class="n">key</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">modality</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">idx</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="n">key</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">modality</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">idx</span><span class="si">}</span><span class="s2">"</span>
                 <span class="n">channel_order</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
                 <span class="n">channel_info</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
-                    <span class="s2">&quot;original_name&quot;</span><span class="p">:</span> <span class="n">req</span><span class="p">,</span>
-                    <span class="s2">&quot;modality&quot;</span><span class="p">:</span> <span class="n">modality</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
-                    <span class="s2">&quot;index&quot;</span><span class="p">:</span> <span class="n">idx</span><span class="p">,</span>
-                    <span class="s2">&quot;request&quot;</span><span class="p">:</span> <span class="n">req</span><span class="p">,</span>
-                    <span class="s2">&quot;physical&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
-                    <span class="s2">&quot;fs_in&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
-                    <span class="s2">&quot;fs_out&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
-                    <span class="s2">&quot;is_differential&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
-                    <span class="s2">&quot;unit&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
-                    <span class="s2">&quot;pipeline_hash&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
-                    <span class="s2">&quot;available&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+                    <span class="s2">"original_name"</span><span class="p">:</span> <span class="n">req</span><span class="p">,</span>
+                    <span class="s2">"modality"</span><span class="p">:</span> <span class="n">modality</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                    <span class="s2">"index"</span><span class="p">:</span> <span class="n">idx</span><span class="p">,</span>
+                    <span class="s2">"request"</span><span class="p">:</span> <span class="n">req</span><span class="p">,</span>
+                    <span class="s2">"physical"</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+                    <span class="s2">"fs_in"</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+                    <span class="s2">"fs_out"</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+                    <span class="s2">"is_differential"</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+                    <span class="s2">"unit"</span><span class="p">:</span> <span class="s2">""</span><span class="p">,</span>
+                    <span class="s2">"pipeline_hash"</span><span class="p">:</span> <span class="s2">""</span><span class="p">,</span>
+                    <span class="s2">"available"</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
                 <span class="p">}</span>
                 <span class="k">continue</span>
 
@@ -1552,7 +1552,7 @@ window.addEventListener("load", () => mermaid.run());
             <span class="n">idx</span> <span class="o">=</span> <span class="n">modality_counters</span><span class="p">[</span><span class="n">modality</span><span class="p">]</span>
             <span class="n">modality_counters</span><span class="p">[</span><span class="n">modality</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
 
-            <span class="n">key</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">modality</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">idx</span><span class="si">}</span><span class="s2">&quot;</span>  <span class="c1"># &quot;EEG_0&quot;, &quot;EEG_1&quot;, &quot;EOG_0&quot;, etc.</span>
+            <span class="n">key</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">modality</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">idx</span><span class="si">}</span><span class="s2">"</span>  <span class="c1"># "EEG_0", "EEG_1", "EOG_0", etc.</span>
             <span class="n">channel_order</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
 
             <span class="n">signal_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load_or_compute_channel</span><span class="p">(</span><span class="n">spec</span><span class="p">,</span> <span class="n">rc</span><span class="p">)</span>
@@ -1578,7 +1578,7 @@ window.addEventListener("load", () => mermaid.run());
                         <span class="bp">self</span><span class="o">.</span><span class="n">DATASET_NAME</span><span class="p">,</span> <span class="n">spec</span><span class="o">.</span><span class="n">subject_id</span><span class="p">,</span> <span class="n">rc</span><span class="o">.</span><span class="n">physical</span><span class="p">,</span> <span class="n">pipeline</span><span class="o">.</span><span class="n">hash</span><span class="p">()</span>
                     <span class="p">))</span>
                     <span class="k">if</span> <span class="n">meta</span><span class="p">:</span>
-                        <span class="n">fs_out</span> <span class="o">=</span> <span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;fs_out&quot;</span><span class="p">)</span>
+                        <span class="n">fs_out</span> <span class="o">=</span> <span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"fs_out"</span><span class="p">)</span>
 
             <span class="c1"># Only compile if not found in cache metadata</span>
             <span class="k">if</span> <span class="n">fs_out</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
@@ -1589,34 +1589,34 @@ window.addEventListener("load", () => mermaid.run());
                     <span class="bp">self</span><span class="o">.</span><span class="n">_compiled_pipelines</span><span class="p">[</span><span class="n">compile_key</span><span class="p">]</span> <span class="o">=</span> <span class="n">compiled</span>
                 <span class="n">fs_out</span> <span class="o">=</span> <span class="n">compiled</span><span class="o">.</span><span class="n">fs_out</span>
             <span class="n">channel_info</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
-                <span class="s2">&quot;original_name&quot;</span><span class="p">:</span> <span class="n">req_str</span><span class="p">,</span>  <span class="c1"># Keep original for debugging</span>
-                <span class="s2">&quot;modality&quot;</span><span class="p">:</span> <span class="n">modality</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>  <span class="c1"># Use inferred modality</span>
-                <span class="s2">&quot;index&quot;</span><span class="p">:</span> <span class="n">idx</span><span class="p">,</span>  <span class="c1"># Index within this modality</span>
-                <span class="s2">&quot;request&quot;</span><span class="p">:</span> <span class="p">(</span>
+                <span class="s2">"original_name"</span><span class="p">:</span> <span class="n">req_str</span><span class="p">,</span>  <span class="c1"># Keep original for debugging</span>
+                <span class="s2">"modality"</span><span class="p">:</span> <span class="n">modality</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>  <span class="c1"># Use inferred modality</span>
+                <span class="s2">"index"</span><span class="p">:</span> <span class="n">idx</span><span class="p">,</span>  <span class="c1"># Index within this modality</span>
+                <span class="s2">"request"</span><span class="p">:</span> <span class="p">(</span>
                     <span class="n">rc</span><span class="o">.</span><span class="n">request</span>
                     <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">rc</span><span class="o">.</span><span class="n">request</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)</span>
                     <span class="k">else</span> <span class="nb">list</span><span class="p">(</span><span class="n">rc</span><span class="o">.</span><span class="n">request</span><span class="p">)</span>
                 <span class="p">),</span>
-                <span class="s2">&quot;physical&quot;</span><span class="p">:</span> <span class="p">(</span>
+                <span class="s2">"physical"</span><span class="p">:</span> <span class="p">(</span>
                     <span class="n">rc</span><span class="o">.</span><span class="n">physical</span>
                     <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">rc</span><span class="o">.</span><span class="n">physical</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)</span>
                     <span class="k">else</span> <span class="nb">list</span><span class="p">(</span><span class="n">rc</span><span class="o">.</span><span class="n">physical</span><span class="p">)</span>
                 <span class="p">),</span>
-                <span class="s2">&quot;fs_in&quot;</span><span class="p">:</span> <span class="n">rc</span><span class="o">.</span><span class="n">fs_in</span><span class="p">,</span>
-                <span class="s2">&quot;fs_out&quot;</span><span class="p">:</span> <span class="n">fs_out</span><span class="p">,</span>  <span class="c1"># From cache metadata or compilation</span>
-                <span class="s2">&quot;is_differential&quot;</span><span class="p">:</span> <span class="n">rc</span><span class="o">.</span><span class="n">is_differential</span><span class="p">,</span>
-                <span class="s2">&quot;unit&quot;</span><span class="p">:</span> <span class="n">header</span><span class="o">.</span><span class="n">channel_units</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
-                    <span class="n">header</span><span class="o">.</span><span class="n">available_channels</span><span class="p">[</span><span class="n">rc</span><span class="o">.</span><span class="n">_indices</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span> <span class="k">if</span> <span class="n">rc</span><span class="o">.</span><span class="n">_indices</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
-                    <span class="s2">&quot;&quot;</span><span class="p">,</span>
+                <span class="s2">"fs_in"</span><span class="p">:</span> <span class="n">rc</span><span class="o">.</span><span class="n">fs_in</span><span class="p">,</span>
+                <span class="s2">"fs_out"</span><span class="p">:</span> <span class="n">fs_out</span><span class="p">,</span>  <span class="c1"># From cache metadata or compilation</span>
+                <span class="s2">"is_differential"</span><span class="p">:</span> <span class="n">rc</span><span class="o">.</span><span class="n">is_differential</span><span class="p">,</span>
+                <span class="s2">"unit"</span><span class="p">:</span> <span class="n">header</span><span class="o">.</span><span class="n">channel_units</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+                    <span class="n">header</span><span class="o">.</span><span class="n">available_channels</span><span class="p">[</span><span class="n">rc</span><span class="o">.</span><span class="n">_indices</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span> <span class="k">if</span> <span class="n">rc</span><span class="o">.</span><span class="n">_indices</span> <span class="k">else</span> <span class="s2">""</span><span class="p">,</span>
+                    <span class="s2">""</span><span class="p">,</span>
                 <span class="p">),</span>
-                <span class="s2">&quot;pipeline_hash&quot;</span><span class="p">:</span> <span class="n">pipeline</span><span class="o">.</span><span class="n">hash</span><span class="p">(),</span>
-                <span class="s2">&quot;available&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+                <span class="s2">"pipeline_hash"</span><span class="p">:</span> <span class="n">pipeline</span><span class="o">.</span><span class="n">hash</span><span class="p">(),</span>
+                <span class="s2">"available"</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
             <span class="p">}</span>
 
         <span class="c1"># ── Sort channels by (modality_type, index) for consistent ordering ──</span>
         <span class="k">def</span><span class="w"> </span><span class="nf">_sort_key</span><span class="p">(</span><span class="n">ch</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">:</span>
-<span class="w">            </span><span class="sd">&quot;&quot;&quot;Sort key: (modality_type_index, channel_index).&quot;&quot;&quot;</span>
-            <span class="n">parts</span> <span class="o">=</span> <span class="n">ch</span><span class="o">.</span><span class="n">rsplit</span><span class="p">(</span><span class="s2">&quot;_&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+<span class="w">            </span><span class="sd">"""Sort key: (modality_type_index, channel_index)."""</span>
+            <span class="n">parts</span> <span class="o">=</span> <span class="n">ch</span><span class="o">.</span><span class="n">rsplit</span><span class="p">(</span><span class="s2">"_"</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
             <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
                 <span class="n">modality_name</span> <span class="o">=</span> <span class="n">parts</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
                 <span class="n">modality_idx</span> <span class="o">=</span> <span class="n">MODALITY_TYPES</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">modality_name</span><span class="p">,</span> <span class="mi">14</span><span class="p">)</span>  <span class="c1"># OTHER=14</span>
@@ -1676,9 +1676,9 @@ window.addEventListener("load", () => mermaid.run());
             <span class="n">labels_tensor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">from_numpy</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">labels_np</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">))</span>
 
         <span class="n">subject_meta</span> <span class="o">=</span> <span class="p">{</span>
-            <span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="n">spec</span><span class="o">.</span><span class="n">subject_id</span><span class="p">,</span>
-            <span class="s2">&quot;dataset&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">DATASET_NAME</span><span class="p">,</span>
-            <span class="s2">&quot;dataset_idx&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+            <span class="s2">"id"</span><span class="p">:</span> <span class="n">spec</span><span class="o">.</span><span class="n">subject_id</span><span class="p">,</span>
+            <span class="s2">"dataset"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">DATASET_NAME</span><span class="p">,</span>
+            <span class="s2">"dataset_idx"</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
             <span class="o">**</span><span class="n">spec</span><span class="o">.</span><span class="n">external_meta</span><span class="p">,</span>
             <span class="o">**</span><span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">header</span><span class="o">.</span><span class="n">patient_meta</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">v</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">},</span>
         <span class="p">}</span>
@@ -1697,16 +1697,16 @@ window.addEventListener("load", () => mermaid.run());
             <span class="n">events_slice</span> <span class="o">=</span> <span class="p">[[]</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">max_len</span><span class="p">)]</span>
 
         <span class="k">return</span> <span class="p">{</span>
-            <span class="s2">&quot;signals&quot;</span><span class="p">:</span> <span class="n">signals</span><span class="p">,</span>
-            <span class="s2">&quot;channel_order&quot;</span><span class="p">:</span> <span class="n">channel_order</span><span class="p">,</span>
-            <span class="s2">&quot;channel_info&quot;</span><span class="p">:</span> <span class="n">channel_info</span><span class="p">,</span>
-            <span class="s2">&quot;labels&quot;</span><span class="p">:</span> <span class="n">labels_tensor</span><span class="p">,</span>
-            <span class="s2">&quot;subject&quot;</span><span class="p">:</span> <span class="n">subject_meta</span><span class="p">,</span>
-            <span class="s2">&quot;epoch_indices&quot;</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span>
+            <span class="s2">"signals"</span><span class="p">:</span> <span class="n">signals</span><span class="p">,</span>
+            <span class="s2">"channel_order"</span><span class="p">:</span> <span class="n">channel_order</span><span class="p">,</span>
+            <span class="s2">"channel_info"</span><span class="p">:</span> <span class="n">channel_info</span><span class="p">,</span>
+            <span class="s2">"labels"</span><span class="p">:</span> <span class="n">labels_tensor</span><span class="p">,</span>
+            <span class="s2">"subject"</span><span class="p">:</span> <span class="n">subject_meta</span><span class="p">,</span>
+            <span class="s2">"epoch_indices"</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span>
                 <span class="n">epoch_start</span><span class="p">,</span> <span class="n">epoch_start</span> <span class="o">+</span> <span class="n">max_len</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">long</span>
             <span class="p">),</span>
-            <span class="s2">&quot;recording_length&quot;</span><span class="p">:</span> <span class="n">max_len</span><span class="p">,</span>
-            <span class="s2">&quot;events&quot;</span><span class="p">:</span> <span class="n">events_slice</span><span class="p">,</span>
+            <span class="s2">"recording_length"</span><span class="p">:</span> <span class="n">max_len</span><span class="p">,</span>
+            <span class="s2">"events"</span><span class="p">:</span> <span class="n">events_slice</span><span class="p">,</span>
         <span class="p">}</span></div>
 
 </pre></div>

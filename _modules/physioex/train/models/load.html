@@ -408,8 +408,8 @@ window.addEventListener("load", () => mermaid.run());
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_get_registry</span><span class="p">():</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Load the model registry from check_table.csv.&quot;&quot;&quot;</span>
-    <span class="n">registry_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="vm">__file__</span><span class="p">),</span> <span class="s2">&quot;check_table.csv&quot;</span><span class="p">)</span>
+<span class="w">    </span><span class="sd">"""Load the model registry from check_table.csv."""</span>
+    <span class="n">registry_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="vm">__file__</span><span class="p">),</span> <span class="s2">"check_table.csv"</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">registry_path</span><span class="p">)</span>
 
 
@@ -420,28 +420,28 @@ window.addEventListener("load", () => mermaid.run());
     <span class="n">model_kwargs</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span>
     <span class="n">ckpt_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">model_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="n">device</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;cpu&quot;</span><span class="p">,</span>
+    <span class="n">device</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"cpu"</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Load a model with dual-format checkpoint support.</span>
+<span class="w">    </span><span class="sd">"""Load a model with dual-format checkpoint support.</span>
 
 <span class="sd">    Supports three checkpoint formats:</span>
-<span class="sd">    - Lightning .ckpt (has &quot;state_dict&quot; key with &quot;nn.&quot; prefixed keys)</span>
-<span class="sd">    - New .pt format (has &quot;model_state_dict&quot; key)</span>
+<span class="sd">    - Lightning .ckpt (has "state_dict" key with "nn." prefixed keys)</span>
+<span class="sd">    - New .pt format (has "model_state_dict" key)</span>
 <span class="sd">    - Raw state_dict (plain dict of parameter tensors)</span>
 
 <span class="sd">    Args:</span>
-<span class="sd">        model_class: A torch.nn.Module subclass, or a string &quot;module:Class&quot;.</span>
+<span class="sd">        model_class: A torch.nn.Module subclass, or a string "module:Class".</span>
 <span class="sd">        model_kwargs: Constructor kwargs for the model class.</span>
 <span class="sd">        ckpt_path: Path to checkpoint file. If None, uses registry lookup.</span>
-<span class="sd">        model_name: Name for registry lookup (e.g. &quot;seqsleepnet&quot;).</span>
+<span class="sd">        model_name: Name for registry lookup (e.g. "seqsleepnet").</span>
 <span class="sd">        device: Device to load the model onto.</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">        The loaded model in eval mode on the specified device.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="c1"># --- 1. Resolve model class ---</span>
-    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">model_class</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">and</span> <span class="s2">&quot;:&quot;</span> <span class="ow">in</span> <span class="n">model_class</span><span class="p">:</span>
-        <span class="n">module_path</span><span class="p">,</span> <span class="n">class_name</span> <span class="o">=</span> <span class="n">model_class</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;:&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">model_class</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">and</span> <span class="s2">":"</span> <span class="ow">in</span> <span class="n">model_class</span><span class="p">:</span>
+        <span class="n">module_path</span><span class="p">,</span> <span class="n">class_name</span> <span class="o">=</span> <span class="n">model_class</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">":"</span><span class="p">)</span>
         <span class="n">model_class</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">importlib</span><span class="o">.</span><span class="n">import_module</span><span class="p">(</span><span class="n">module_path</span><span class="p">),</span> <span class="n">class_name</span><span class="p">)</span>
 
     <span class="c1"># --- 2. Resolve checkpoint path ---</span>
@@ -451,33 +451,33 @@ window.addEventListener("load", () => mermaid.run());
         <span class="n">table</span> <span class="o">=</span> <span class="n">_get_registry</span><span class="p">()</span>
 
         <span class="c1"># Determine in_channels from model_kwargs</span>
-        <span class="n">in_channels</span> <span class="o">=</span> <span class="n">model_kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;in_channels&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="n">in_channels</span> <span class="o">=</span> <span class="n">model_kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"in_channels"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">in_channels</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">selected_channels</span> <span class="o">=</span> <span class="n">model_kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;selected_channels&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+            <span class="n">selected_channels</span> <span class="o">=</span> <span class="n">model_kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"selected_channels"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">selected_channels</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="n">in_channels</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">selected_channels</span><span class="p">)</span>
 
-        <span class="n">seq_len</span> <span class="o">=</span> <span class="n">model_kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;sequence_length&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="n">seq_len</span> <span class="o">=</span> <span class="n">model_kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"sequence_length"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
 
         <span class="c1"># Build filter</span>
-        <span class="n">mask</span> <span class="o">=</span> <span class="n">table</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">model_name</span>
+        <span class="n">mask</span> <span class="o">=</span> <span class="n">table</span><span class="p">[</span><span class="s2">"name"</span><span class="p">]</span> <span class="o">==</span> <span class="n">model_name</span>
         <span class="k">if</span> <span class="n">seq_len</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">mask</span> <span class="o">=</span> <span class="n">mask</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">table</span><span class="p">[</span><span class="s2">&quot;sequence_length&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">seq_len</span><span class="p">)</span>
+            <span class="n">mask</span> <span class="o">=</span> <span class="n">mask</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">table</span><span class="p">[</span><span class="s2">"sequence_length"</span><span class="p">]</span> <span class="o">==</span> <span class="n">seq_len</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">in_channels</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">mask</span> <span class="o">=</span> <span class="n">mask</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">table</span><span class="p">[</span><span class="s2">&quot;in_channels&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">in_channels</span><span class="p">)</span>
+            <span class="n">mask</span> <span class="o">=</span> <span class="n">mask</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">table</span><span class="p">[</span><span class="s2">"in_channels"</span><span class="p">]</span> <span class="o">==</span> <span class="n">in_channels</span><span class="p">)</span>
 
         <span class="n">filtered</span> <span class="o">=</span> <span class="n">table</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">filtered</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;No registry entry found for model_name=&#39;</span><span class="si">{</span><span class="n">model_name</span><span class="si">}</span><span class="s2">&#39; &quot;</span>
-                <span class="sa">f</span><span class="s2">&quot;with sequence_length=</span><span class="si">{</span><span class="n">seq_len</span><span class="si">}</span><span class="s2">, in_channels=</span><span class="si">{</span><span class="n">in_channels</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">"No registry entry found for model_name='</span><span class="si">{</span><span class="n">model_name</span><span class="si">}</span><span class="s2">' "</span>
+                <span class="sa">f</span><span class="s2">"with sequence_length=</span><span class="si">{</span><span class="n">seq_len</span><span class="si">}</span><span class="s2">, in_channels=</span><span class="si">{</span><span class="n">in_channels</span><span class="si">}</span><span class="s2">"</span>
             <span class="p">)</span>
 
         <span class="n">row</span> <span class="o">=</span> <span class="n">filtered</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-        <span class="n">ckpt_filename</span> <span class="o">=</span> <span class="n">row</span><span class="p">[</span><span class="s2">&quot;checkpoint&quot;</span><span class="p">]</span>
+        <span class="n">ckpt_filename</span> <span class="o">=</span> <span class="n">row</span><span class="p">[</span><span class="s2">"checkpoint"</span><span class="p">]</span>
 
         <span class="c1"># Resolve to absolute path relative to the checkpoints dir</span>
-        <span class="n">checkpoints_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="vm">__file__</span><span class="p">),</span> <span class="s2">&quot;checkpoints&quot;</span><span class="p">)</span>
+        <span class="n">checkpoints_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="vm">__file__</span><span class="p">),</span> <span class="s2">"checkpoints"</span><span class="p">)</span>
         <span class="n">ckpt_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">checkpoints_dir</span><span class="p">,</span> <span class="n">ckpt_filename</span><span class="p">)</span>
 
         <span class="c1"># Auto-download from HuggingFace Hub if file is missing</span>
@@ -486,40 +486,40 @@ window.addEventListener("load", () => mermaid.run());
 
             <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">checkpoints_dir</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
             <span class="n">ckpt_path</span> <span class="o">=</span> <span class="n">hf_hub_download</span><span class="p">(</span>
-                <span class="n">repo_id</span><span class="o">=</span><span class="s2">&quot;4rooms/physioex&quot;</span><span class="p">,</span>
+                <span class="n">repo_id</span><span class="o">=</span><span class="s2">"4rooms/physioex"</span><span class="p">,</span>
                 <span class="n">filename</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">ckpt_path</span><span class="p">),</span>
                 <span class="n">local_dir</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">ckpt_path</span><span class="p">),</span>
             <span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Either ckpt_path or model_name must be provided&quot;</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"Either ckpt_path or model_name must be provided"</span><span class="p">)</span>
 
     <span class="c1"># --- 3. Load checkpoint (dual format) ---</span>
     <span class="n">ckpt</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">ckpt_path</span><span class="p">,</span> <span class="n">map_location</span><span class="o">=</span><span class="n">device</span><span class="p">,</span> <span class="n">weights_only</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 
-    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">ckpt</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="ow">and</span> <span class="s2">&quot;state_dict&quot;</span> <span class="ow">in</span> <span class="n">ckpt</span><span class="p">:</span>
-        <span class="c1"># Lightning format -- strip &quot;nn.&quot; prefix from keys that have it</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">ckpt</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="ow">and</span> <span class="s2">"state_dict"</span> <span class="ow">in</span> <span class="n">ckpt</span><span class="p">:</span>
+        <span class="c1"># Lightning format -- strip "nn." prefix from keys that have it</span>
         <span class="n">state_dict</span> <span class="o">=</span> <span class="p">{}</span>
-        <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">ckpt</span><span class="p">[</span><span class="s2">&quot;state_dict&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-            <span class="n">new_k</span> <span class="o">=</span> <span class="n">k</span><span class="p">[</span><span class="mi">3</span><span class="p">:]</span> <span class="k">if</span> <span class="n">k</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;nn.&quot;</span><span class="p">)</span> <span class="k">else</span> <span class="n">k</span>
+        <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">ckpt</span><span class="p">[</span><span class="s2">"state_dict"</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">new_k</span> <span class="o">=</span> <span class="n">k</span><span class="p">[</span><span class="mi">3</span><span class="p">:]</span> <span class="k">if</span> <span class="n">k</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"nn."</span><span class="p">)</span> <span class="k">else</span> <span class="n">k</span>
             <span class="n">state_dict</span><span class="p">[</span><span class="n">new_k</span><span class="p">]</span> <span class="o">=</span> <span class="n">v</span>
-    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">ckpt</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="ow">and</span> <span class="s2">&quot;model_state_dict&quot;</span> <span class="ow">in</span> <span class="n">ckpt</span><span class="p">:</span>
-        <span class="n">state_dict</span> <span class="o">=</span> <span class="n">ckpt</span><span class="p">[</span><span class="s2">&quot;model_state_dict&quot;</span><span class="p">]</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">ckpt</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="ow">and</span> <span class="s2">"model_state_dict"</span> <span class="ow">in</span> <span class="n">ckpt</span><span class="p">:</span>
+        <span class="n">state_dict</span> <span class="o">=</span> <span class="n">ckpt</span><span class="p">[</span><span class="s2">"model_state_dict"</span><span class="p">]</span>
     <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">ckpt</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
         <span class="n">state_dict</span> <span class="o">=</span> <span class="n">ckpt</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unexpected checkpoint format at </span><span class="si">{</span><span class="n">ckpt_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Unexpected checkpoint format at </span><span class="si">{</span><span class="n">ckpt_path</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 
     <span class="c1"># --- 4. Instantiate and load ---</span>
     <span class="n">model</span> <span class="o">=</span> <span class="n">model_class</span><span class="p">(</span><span class="o">**</span><span class="n">model_kwargs</span><span class="p">)</span>
     <span class="n">missing</span><span class="p">,</span> <span class="n">unexpected</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">load_state_dict</span><span class="p">(</span><span class="n">state_dict</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">missing</span> <span class="ow">or</span> <span class="n">unexpected</span><span class="p">:</span>
         <span class="nb">print</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;[Warning - load_model]: missing keys: &quot;</span>
-            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">missing</span><span class="p">[:</span><span class="mi">5</span><span class="p">]</span><span class="si">}{</span><span class="s1">&#39;...&#39;</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="nb">len</span><span class="p">(</span><span class="n">missing</span><span class="p">)</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">5</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="s1">&#39;&#39;</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="sa">f</span><span class="s2">"[Warning - load_model]: missing keys: "</span>
+            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">missing</span><span class="p">[:</span><span class="mi">5</span><span class="p">]</span><span class="si">}{</span><span class="s1">'...'</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="nb">len</span><span class="p">(</span><span class="n">missing</span><span class="p">)</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">5</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="s1">''</span><span class="si">}</span><span class="s2">"</span>
         <span class="p">)</span>
         <span class="nb">print</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;[Warning - load_model]: unexpected keys: &quot;</span>
-            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">unexpected</span><span class="p">[:</span><span class="mi">5</span><span class="p">]</span><span class="si">}{</span><span class="s1">&#39;...&#39;</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="nb">len</span><span class="p">(</span><span class="n">unexpected</span><span class="p">)</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">5</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="s1">&#39;&#39;</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="sa">f</span><span class="s2">"[Warning - load_model]: unexpected keys: "</span>
+            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">unexpected</span><span class="p">[:</span><span class="mi">5</span><span class="p">]</span><span class="si">}{</span><span class="s1">'...'</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="nb">len</span><span class="p">(</span><span class="n">unexpected</span><span class="p">)</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">5</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="s1">''</span><span class="si">}</span><span class="s2">"</span>
         <span class="p">)</span>
 
     <span class="k">return</span> <span class="n">model</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span><span class="o">.</span><span class="n">eval</span><span class="p">()</span></div>

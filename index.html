@@ -383,6 +383,11 @@
 <p>Beyond training classic architectures from scratch, PhysioEx wraps a family of
 <strong>pretrained foundation encoders</strong> behind a uniform interface, so you can extract
 embeddings, run linear probes, and apply the explainability tools on top of them.</p>
+<p>The explainability toolkit (<code class="docutils literal notranslate"><span class="pre">physioex.explain</span></code>) offers gradient-based attribution
+(Saliency, Input×Gradient, Integrated / Expected Gradients and their DFT/STFT
+variants), concept and prototype methods, and — since 2.0.1 — <strong>Layer-wise
+Relevance Propagation</strong> for CNN, recurrent and attention/transformer models
+(<code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">&quot;physioex[explain]&quot;</span></code>), with built-in conservation diagnostics.</p>
 <section id="supported-deep-learning-architectures">
 <h2>Supported deep learning architectures<a class="headerlink" href="#supported-deep-learning-architectures" title="Link to this heading">#</a></h2>
 <p>PhysioEx ships two families of models under <code class="docutils literal notranslate"><span class="pre">physioex.models</span></code>.</p>
@@ -473,9 +478,9 @@ $<span class="w"> </span><span class="nb">cd</span><span class="w"> </span>physi
 </div>
 <p>Note: the github version of the library is kept updated weekly, the PiPy version may be outdated depending on the last commit of the github version. We recommend to use the github version if possible.</p>
 <p><strong>Optional extras</strong> (heavyweight, feature-specific deps installed lazily):</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;physioex[foundation]&quot;</span><span class="w">   </span><span class="c1"># transformers, for the REVE encoder</span>
-$<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;physioex[datasets]&quot;</span><span class="w">     </span><span class="c1"># mne, for the HOMEPAP EDF fallback reader</span>
-$<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;physioex[tracking]&quot;</span><span class="w">     </span><span class="c1"># tensorboard / wandb logging</span>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"physioex[foundation]"</span><span class="w">   </span><span class="c1"># transformers, for the REVE encoder</span>
+$<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"physioex[datasets]"</span><span class="w">     </span><span class="c1"># mne, for the HOMEPAP EDF fallback reader</span>
+$<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"physioex[tracking]"</span><span class="w">     </span><span class="c1"># tensorboard / wandb logging</span>
 </pre></div>
 </div>
 </section>
@@ -485,17 +490,17 @@ $<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </sp
 <p>Set <code class="docutils literal notranslate"><span class="pre">PHYSIOEX_DATA</span></code> to the directory holding your datasets, then use the raw-EDF
 data layer, the model zoo, and the training loop:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
-<span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;PHYSIOEX_DATA&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;/path/to/datasets&quot;</span>
+<span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">"PHYSIOEX_DATA"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"/path/to/datasets"</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">physioex.data.datasets</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_dataset</span><span class="p">,</span> <span class="n">available_datasets</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">physioex.models.tinysleepnet</span><span class="w"> </span><span class="kn">import</span> <span class="n">TinySleepNet</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">physioex.train.trainer</span><span class="w"> </span><span class="kn">import</span> <span class="n">Trainer</span>
 
-<span class="nb">print</span><span class="p">(</span><span class="n">available_datasets</span><span class="p">())</span>  <span class="c1"># -&gt; [&#39;hmc&#39;, &#39;sleepedf&#39;, &#39;dcsm&#39;, &#39;mass&#39;, ...]</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">available_datasets</span><span class="p">())</span>  <span class="c1"># -&gt; ['hmc', 'sleepedf', 'dcsm', 'mass', ...]</span>
 
-<span class="n">dataset</span> <span class="o">=</span> <span class="n">get_dataset</span><span class="p">(</span><span class="s2">&quot;hmc&quot;</span><span class="p">)(</span>
-    <span class="n">channels</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;EEG&quot;</span><span class="p">,</span> <span class="s2">&quot;EOG&quot;</span><span class="p">,</span> <span class="s2">&quot;EMG&quot;</span><span class="p">],</span>
-    <span class="n">pipelines</span><span class="o">=</span><span class="s2">&quot;time_domain&quot;</span><span class="p">,</span>   <span class="c1"># preset preprocessing pipeline</span>
+<span class="n">dataset</span> <span class="o">=</span> <span class="n">get_dataset</span><span class="p">(</span><span class="s2">"hmc"</span><span class="p">)(</span>
+    <span class="n">channels</span><span class="o">=</span><span class="p">[</span><span class="s2">"EEG"</span><span class="p">,</span> <span class="s2">"EOG"</span><span class="p">,</span> <span class="s2">"EMG"</span><span class="p">],</span>
+    <span class="n">pipelines</span><span class="o">=</span><span class="s2">"time_domain"</span><span class="p">,</span>   <span class="c1"># preset preprocessing pipeline</span>
     <span class="n">sequence_length</span><span class="o">=</span><span class="mi">21</span><span class="p">,</span>
 <span class="p">)</span>
 
@@ -507,9 +512,9 @@ data layer, the model zoo, and the training loop:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">physioex.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">load_from_pretrained</span><span class="p">,</span> <span class="n">extract_embeddings</span><span class="p">,</span> <span class="n">linear_probe</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">physioex.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">CBraModEncoder</span>
 
-<span class="n">model</span> <span class="o">=</span> <span class="n">load_from_pretrained</span><span class="p">(</span><span class="s2">&quot;protosleepnet&quot;</span><span class="p">)</span>           <span class="c1"># from the HF model zoo</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">load_from_pretrained</span><span class="p">(</span><span class="s2">"protosleepnet"</span><span class="p">)</span>           <span class="c1"># from the HF model zoo</span>
 <span class="n">encoder</span> <span class="o">=</span> <span class="n">CBraModEncoder</span><span class="p">()</span>
-<span class="n">ds</span> <span class="o">=</span> <span class="n">encoder</span><span class="o">.</span><span class="n">get_dataset</span><span class="p">(</span><span class="s2">&quot;hmc&quot;</span><span class="p">)</span>                          <span class="c1"># matched preprocessing</span>
+<span class="n">ds</span> <span class="o">=</span> <span class="n">encoder</span><span class="o">.</span><span class="n">get_dataset</span><span class="p">(</span><span class="s2">"hmc"</span><span class="p">)</span>                          <span class="c1"># matched preprocessing</span>
 <span class="n">emb</span> <span class="o">=</span> <span class="n">extract_embeddings</span><span class="p">(</span><span class="n">encoder</span><span class="p">,</span> <span class="n">ds</span><span class="p">)</span>
 <span class="n">scores</span> <span class="o">=</span> <span class="n">linear_probe</span><span class="p">(</span><span class="n">emb</span><span class="p">)</span>
 </pre></div>

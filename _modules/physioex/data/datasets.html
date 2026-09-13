@@ -400,11 +400,11 @@ window.addEventListener("load", () => mermaid.run());
                 <article class="bd-article">
                   
   <h1>Source code for physioex.data.datasets</h1><div class="highlight"><pre>
-<span></span><span class="sd">&quot;&quot;&quot;Dataset registry.</span>
+<span></span><span class="sd">"""Dataset registry.</span>
 
 <span class="sd">As more datasets are implemented, they get added here. Users can instantiate by</span>
 <span class="sd">string name via ``get_dataset(name)``.</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">physioex.data.datasets.hmc</span><span class="w"> </span><span class="kn">import</span> <span class="n">HMCDataset</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">physioex.data.datasets.sleepedf</span><span class="w"> </span><span class="kn">import</span> <span class="n">SleepEDFDataset</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">physioex.data.datasets.dcsm</span><span class="w"> </span><span class="kn">import</span> <span class="n">DCSMDataset</span>
@@ -419,18 +419,18 @@ window.addEventListener("load", () => mermaid.run());
 <span class="kn">from</span><span class="w"> </span><span class="nn">physioex.data.datasets.stages</span><span class="w"> </span><span class="kn">import</span> <span class="n">STAGESDataset</span>
 
 <span class="n">REGISTRY</span> <span class="o">=</span> <span class="p">{</span>
-    <span class="s2">&quot;hmc&quot;</span><span class="p">:</span> <span class="n">HMCDataset</span><span class="p">,</span>
-    <span class="s2">&quot;sleepedf&quot;</span><span class="p">:</span> <span class="n">SleepEDFDataset</span><span class="p">,</span>
-    <span class="s2">&quot;dcsm&quot;</span><span class="p">:</span> <span class="n">DCSMDataset</span><span class="p">,</span>
-    <span class="s2">&quot;mesa&quot;</span><span class="p">:</span> <span class="n">MESADataset</span><span class="p">,</span>
-    <span class="s2">&quot;mros&quot;</span><span class="p">:</span> <span class="n">MrOSDataset</span><span class="p">,</span>
-    <span class="s2">&quot;hpap&quot;</span><span class="p">:</span> <span class="n">HPAPDataset</span><span class="p">,</span>
-    <span class="s2">&quot;wsc&quot;</span><span class="p">:</span> <span class="n">WSCDataset</span><span class="p">,</span>
-    <span class="s2">&quot;mass&quot;</span><span class="p">:</span> <span class="n">MASSDataset</span><span class="p">,</span>
-    <span class="s2">&quot;alzheimers&quot;</span><span class="p">:</span> <span class="n">AlzheimersDataset</span><span class="p">,</span>
-    <span class="s2">&quot;parkinsons&quot;</span><span class="p">:</span> <span class="n">ParkinsonsDataset</span><span class="p">,</span>
-    <span class="s2">&quot;shhs&quot;</span><span class="p">:</span> <span class="n">SHHSDataset</span><span class="p">,</span>
-    <span class="s2">&quot;stages&quot;</span><span class="p">:</span> <span class="n">STAGESDataset</span><span class="p">,</span>
+    <span class="s2">"hmc"</span><span class="p">:</span> <span class="n">HMCDataset</span><span class="p">,</span>
+    <span class="s2">"sleepedf"</span><span class="p">:</span> <span class="n">SleepEDFDataset</span><span class="p">,</span>
+    <span class="s2">"dcsm"</span><span class="p">:</span> <span class="n">DCSMDataset</span><span class="p">,</span>
+    <span class="s2">"mesa"</span><span class="p">:</span> <span class="n">MESADataset</span><span class="p">,</span>
+    <span class="s2">"mros"</span><span class="p">:</span> <span class="n">MrOSDataset</span><span class="p">,</span>
+    <span class="s2">"hpap"</span><span class="p">:</span> <span class="n">HPAPDataset</span><span class="p">,</span>
+    <span class="s2">"wsc"</span><span class="p">:</span> <span class="n">WSCDataset</span><span class="p">,</span>
+    <span class="s2">"mass"</span><span class="p">:</span> <span class="n">MASSDataset</span><span class="p">,</span>
+    <span class="s2">"alzheimers"</span><span class="p">:</span> <span class="n">AlzheimersDataset</span><span class="p">,</span>
+    <span class="s2">"parkinsons"</span><span class="p">:</span> <span class="n">ParkinsonsDataset</span><span class="p">,</span>
+    <span class="s2">"shhs"</span><span class="p">:</span> <span class="n">SHHSDataset</span><span class="p">,</span>
+    <span class="s2">"stages"</span><span class="p">:</span> <span class="n">STAGESDataset</span><span class="p">,</span>
 <span class="p">}</span>
 
 
@@ -438,7 +438,7 @@ window.addEventListener("load", () => mermaid.run());
 <a class="viewcode-back" href="../../../api/_generated/physioex.data.datasets.get_dataset.html#physioex.data.datasets.get_dataset">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">get_dataset</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
     <span class="k">if</span> <span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">REGISTRY</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unknown dataset </span><span class="si">{</span><span class="n">name</span><span class="si">!r}</span><span class="s2">. Available: </span><span class="si">{</span><span class="nb">sorted</span><span class="p">(</span><span class="n">REGISTRY</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Unknown dataset </span><span class="si">{</span><span class="n">name</span><span class="si">!r}</span><span class="s2">. Available: </span><span class="si">{</span><span class="nb">sorted</span><span class="p">(</span><span class="n">REGISTRY</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">REGISTRY</span><span class="p">[</span><span class="n">name</span><span class="p">]</span></div>
 
 
@@ -451,21 +451,21 @@ window.addEventListener("load", () => mermaid.run());
 
 
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
-    <span class="s2">&quot;HMCDataset&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;SleepEDFDataset&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;DCSMDataset&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;MESADataset&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;MrOSDataset&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;HPAPDataset&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;WSCDataset&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;MASSDataset&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;AlzheimersDataset&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;ParkinsonsDataset&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;SHHSDataset&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;STAGESDataset&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;REGISTRY&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;get_dataset&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;available_datasets&quot;</span><span class="p">,</span>
+    <span class="s2">"HMCDataset"</span><span class="p">,</span>
+    <span class="s2">"SleepEDFDataset"</span><span class="p">,</span>
+    <span class="s2">"DCSMDataset"</span><span class="p">,</span>
+    <span class="s2">"MESADataset"</span><span class="p">,</span>
+    <span class="s2">"MrOSDataset"</span><span class="p">,</span>
+    <span class="s2">"HPAPDataset"</span><span class="p">,</span>
+    <span class="s2">"WSCDataset"</span><span class="p">,</span>
+    <span class="s2">"MASSDataset"</span><span class="p">,</span>
+    <span class="s2">"AlzheimersDataset"</span><span class="p">,</span>
+    <span class="s2">"ParkinsonsDataset"</span><span class="p">,</span>
+    <span class="s2">"SHHSDataset"</span><span class="p">,</span>
+    <span class="s2">"STAGESDataset"</span><span class="p">,</span>
+    <span class="s2">"REGISTRY"</span><span class="p">,</span>
+    <span class="s2">"get_dataset"</span><span class="p">,</span>
+    <span class="s2">"available_datasets"</span><span class="p">,</span>
 <span class="p">]</span>
 </pre></div>
 

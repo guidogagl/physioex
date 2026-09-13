@@ -439,10 +439,10 @@ see the <a class="reference internal" href="architecture/library/data.html"><spa
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">physioex.data.datasets</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_dataset</span><span class="p">,</span> <span class="n">available_datasets</span>
 
 <span class="n">available_datasets</span><span class="p">()</span>
-<span class="c1"># [&#39;alzheimers&#39;, &#39;dcsm&#39;, &#39;hmc&#39;, &#39;hpap&#39;, &#39;mass&#39;, &#39;mesa&#39;, &#39;mros&#39;,</span>
-<span class="c1">#  &#39;parkinsons&#39;, &#39;shhs&#39;, &#39;sleepedf&#39;, &#39;stages&#39;, &#39;wsc&#39;]</span>
+<span class="c1"># ['alzheimers', 'dcsm', 'hmc', 'hpap', 'mass', 'mesa', 'mros',</span>
+<span class="c1">#  'parkinsons', 'shhs', 'sleepedf', 'stages', 'wsc']</span>
 
-<span class="n">HMCDataset</span> <span class="o">=</span> <span class="n">get_dataset</span><span class="p">(</span><span class="s2">&quot;hmc&quot;</span><span class="p">)</span>   <span class="c1"># the class, not an instance</span>
+<span class="n">HMCDataset</span> <span class="o">=</span> <span class="n">get_dataset</span><span class="p">(</span><span class="s2">"hmc"</span><span class="p">)</span>   <span class="c1"># the class, not an instance</span>
 </pre></div>
 </div>
 </section>
@@ -454,10 +454,10 @@ environment variable when omitted), the <code class="docutils literal notranslat
 <code class="docutils literal notranslate"><span class="pre">pipelines</span></code> preset, and the <code class="docutils literal notranslate"><span class="pre">sequence_length</span></code>:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">physioex.data.datasets</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_dataset</span>
 
-<span class="n">data</span> <span class="o">=</span> <span class="n">get_dataset</span><span class="p">(</span><span class="s2">&quot;hmc&quot;</span><span class="p">)(</span>
+<span class="n">data</span> <span class="o">=</span> <span class="n">get_dataset</span><span class="p">(</span><span class="s2">"hmc"</span><span class="p">)(</span>
     <span class="n">root</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>                     <span class="c1"># None -&gt; uses $PHYSIOEX_DATA</span>
-    <span class="n">channels</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;EEG&quot;</span><span class="p">,</span> <span class="s2">&quot;EOG&quot;</span><span class="p">,</span> <span class="s2">&quot;EMG&quot;</span><span class="p">],</span>
-    <span class="n">pipelines</span><span class="o">=</span><span class="s2">&quot;time_domain&quot;</span><span class="p">,</span>       <span class="c1"># a preset name (see the Preprocessing page)</span>
+    <span class="n">channels</span><span class="o">=</span><span class="p">[</span><span class="s2">"EEG"</span><span class="p">,</span> <span class="s2">"EOG"</span><span class="p">,</span> <span class="s2">"EMG"</span><span class="p">],</span>
+    <span class="n">pipelines</span><span class="o">=</span><span class="s2">"time_domain"</span><span class="p">,</span>       <span class="c1"># a preset name (see the Preprocessing page)</span>
     <span class="n">sequence_length</span><span class="o">=</span><span class="mi">21</span><span class="p">,</span>
 <span class="p">)</span>
 
@@ -502,8 +502,8 @@ environment variable when omitted), the <code class="docutils literal notranslat
 </table>
 </div>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">item</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-<span class="n">item</span><span class="p">[</span><span class="s2">&quot;signals&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span>   <span class="c1"># (sequence_length, n_channels, ...)</span>
-<span class="n">item</span><span class="p">[</span><span class="s2">&quot;labels&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span>    <span class="c1"># (sequence_length,)</span>
+<span class="n">item</span><span class="p">[</span><span class="s2">"signals"</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span>   <span class="c1"># (sequence_length, n_channels, ...)</span>
+<span class="n">item</span><span class="p">[</span><span class="s2">"labels"</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span>    <span class="c1"># (sequence_length,)</span>
 </pre></div>
 </div>
 <p>The trailing dimensions of <code class="docutils literal notranslate"><span class="pre">signals</span></code> depend on the preprocessing preset:
@@ -524,8 +524,8 @@ same <code class="docutils literal notranslate"><span class="pre">sequence_lengt
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">physioex.data.datasets</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_dataset</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">physioex.data</span><span class="w"> </span><span class="kn">import</span> <span class="n">MultiDataset</span>
 
-<span class="n">hmc</span> <span class="o">=</span> <span class="n">get_dataset</span><span class="p">(</span><span class="s2">&quot;hmc&quot;</span><span class="p">)(</span><span class="n">channels</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;EEG&quot;</span><span class="p">],</span> <span class="n">pipelines</span><span class="o">=</span><span class="s2">&quot;raw&quot;</span><span class="p">,</span> <span class="n">sequence_length</span><span class="o">=</span><span class="mi">21</span><span class="p">)</span>
-<span class="n">dcsm</span> <span class="o">=</span> <span class="n">get_dataset</span><span class="p">(</span><span class="s2">&quot;dcsm&quot;</span><span class="p">)(</span><span class="n">channels</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;EEG&quot;</span><span class="p">],</span> <span class="n">pipelines</span><span class="o">=</span><span class="s2">&quot;raw&quot;</span><span class="p">,</span> <span class="n">sequence_length</span><span class="o">=</span><span class="mi">21</span><span class="p">)</span>
+<span class="n">hmc</span> <span class="o">=</span> <span class="n">get_dataset</span><span class="p">(</span><span class="s2">"hmc"</span><span class="p">)(</span><span class="n">channels</span><span class="o">=</span><span class="p">[</span><span class="s2">"EEG"</span><span class="p">],</span> <span class="n">pipelines</span><span class="o">=</span><span class="s2">"raw"</span><span class="p">,</span> <span class="n">sequence_length</span><span class="o">=</span><span class="mi">21</span><span class="p">)</span>
+<span class="n">dcsm</span> <span class="o">=</span> <span class="n">get_dataset</span><span class="p">(</span><span class="s2">"dcsm"</span><span class="p">)(</span><span class="n">channels</span><span class="o">=</span><span class="p">[</span><span class="s2">"EEG"</span><span class="p">],</span> <span class="n">pipelines</span><span class="o">=</span><span class="s2">"raw"</span><span class="p">,</span> <span class="n">sequence_length</span><span class="o">=</span><span class="mi">21</span><span class="p">)</span>
 
 <span class="n">merged</span> <span class="o">=</span> <span class="n">MultiDataset</span><span class="p">([</span><span class="n">hmc</span><span class="p">,</span> <span class="n">dcsm</span><span class="p">])</span>
 </pre></div>
@@ -539,7 +539,7 @@ same <code class="docutils literal notranslate"><span class="pre">sequence_lengt
 
 <span class="n">loader</span> <span class="o">=</span> <span class="n">DataLoader</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">batch_size</span><span class="o">=</span><span class="mi">32</span><span class="p">,</span> <span class="n">shuffle</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">collate_fn</span><span class="o">=</span><span class="n">dict_collate_fn</span><span class="p">)</span>
 <span class="n">batch</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="nb">iter</span><span class="p">(</span><span class="n">loader</span><span class="p">))</span>
-<span class="n">batch</span><span class="p">[</span><span class="s2">&quot;signals&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span>   <span class="c1"># (32, sequence_length, n_channels, ...)</span>
+<span class="n">batch</span><span class="p">[</span><span class="s2">"signals"</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span>   <span class="c1"># (32, sequence_length, n_channels, ...)</span>
 </pre></div>
 </div>
 <div class="tip admonition">
@@ -556,7 +556,7 @@ See the <a class="reference internal" href="train/train.html"><span class="std s
 <dl class="py class">
 <dt class="sig sig-object py">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">physioex.data.</span></span><span class="sig-name descname"><span class="pre">BasePhysioDataset</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">root</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">channels</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pipelines</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'raw'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sequence_length</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">21</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">subset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cache_dir</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cache_enabled</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">epoch_length_sec</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label_transform</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">skip_corrupt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">skip_subjects_without_channels</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stage_map</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">trim_excess_wake</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">memmap_cache_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1000</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/physioex/data/base.html#BasePhysioDataset"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
-<dd><p>Bases: <a class="reference external" href="https://docs.pytorch.org/docs/stable/data.html#torch.utils.data.Dataset" title="(in PyTorch v2.13)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Dataset</span></code></a></p>
+<dd><p>Bases: <a class="reference external" href="https://docs.pytorch.org/docs/stable/data.html#torch.utils.data.Dataset" title="(in PyTorch v2.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Dataset</span></code></a></p>
 <p>Abstract base class for lazy-loading EDF-based sleep datasets.</p>
 <dl class="simple">
 <dt>Subclasses must implement:</dt><dd><ul class="simple">
@@ -762,7 +762,7 @@ for all subjects.</p>
 <dl class="py class">
 <dt class="sig sig-object py">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">physioex.data.</span></span><span class="sig-name descname"><span class="pre">MultiDataset</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">datasets</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">memmap_cache_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1000</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/physioex/data/multi.html#MultiDataset"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
-<dd><p>Bases: <a class="reference external" href="https://docs.pytorch.org/docs/stable/data.html#torch.utils.data.Dataset" title="(in PyTorch v2.13)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Dataset</span></code></a></p>
+<dd><p>Bases: <a class="reference external" href="https://docs.pytorch.org/docs/stable/data.html#torch.utils.data.Dataset" title="(in PyTorch v2.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Dataset</span></code></a></p>
 <p>Wraps multiple BasePhysioDataset instances into a single unified dataset.</p>
 <p>Provides ConcatDataset-like flat indexing across all datasets, with:
 - Unified __getitem__ returning the same dict format as BasePhysioDataset

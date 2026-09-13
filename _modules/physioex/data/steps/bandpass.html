@@ -405,13 +405,13 @@ window.addEventListener("load", () => mermaid.run());
 <span class="kn">from</span><span class="w"> </span><span class="nn">scipy.signal</span><span class="w"> </span><span class="kn">import</span> <span class="n">butter</span><span class="p">,</span> <span class="n">sosfiltfilt</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">physioex.data.pipeline</span><span class="w"> </span><span class="kn">import</span> <span class="n">PreprocessingStep</span><span class="p">,</span> <span class="n">CompiledStep</span>
 
-<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">&quot;physioex.data.steps&quot;</span><span class="p">)</span>
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">"physioex.data.steps"</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="BandpassFilter">
 <a class="viewcode-back" href="../../../../api/_generated/physioex.data.BandpassFilter.html#physioex.data.BandpassFilter">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">BandpassFilter</span><span class="p">(</span><span class="n">PreprocessingStep</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;IIR Butterworth bandpass filter (zero-phase via sosfiltfilt).</span>
+<span class="w">    </span><span class="sd">"""IIR Butterworth bandpass filter (zero-phase via sosfiltfilt).</span>
 
 <span class="sd">    Uses second-order sections (SOS) representation for numerical stability.</span>
 <span class="sd">    The ba-form (transfer function) is numerically unstable for long signals</span>
@@ -420,7 +420,7 @@ window.addEventListener("load", () => mermaid.run());
 
 <span class="sd">    If the input sampling rate is too low for the filter band (high &gt;= Nyquist),</span>
 <span class="sd">    the filter is **skipped** with a warning.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
 <div class="viewcode-block" id="BandpassFilter.__init__">
 <a class="viewcode-back" href="../../../../api/_generated/physioex.data.BandpassFilter.html#physioex.data.BandpassFilter.__init__">[docs]</a>
@@ -429,11 +429,11 @@ window.addEventListener("load", () => mermaid.run());
         <span class="n">low</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.3</span><span class="p">,</span>
         <span class="n">high</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">40.0</span><span class="p">,</span>
         <span class="n">order</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5</span><span class="p">,</span>
-        <span class="n">ftype</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;butter&quot;</span><span class="p">,</span>
+        <span class="n">ftype</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"butter"</span><span class="p">,</span>
     <span class="p">):</span>
-        <span class="k">if</span> <span class="n">ftype</span> <span class="o">!=</span> <span class="s2">&quot;butter&quot;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">ftype</span> <span class="o">!=</span> <span class="s2">"butter"</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;Only ftype=&#39;butter&#39; is supported; got </span><span class="si">{</span><span class="n">ftype</span><span class="si">!r}</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">"Only ftype='butter' is supported; got </span><span class="si">{</span><span class="n">ftype</span><span class="si">!r}</span><span class="s2">"</span>
             <span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">low</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">low</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">high</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">high</span><span class="p">)</span>
@@ -455,9 +455,9 @@ window.addEventListener("load", () => mermaid.run());
         <span class="n">nyq</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">fs_in</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="mi">0</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">low</span> <span class="o">&lt;</span> <span class="n">nyq</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">low</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">high</span> <span class="o">&lt;</span> <span class="n">nyq</span><span class="p">):</span>
             <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;BandpassFilter(low=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">low</span><span class="si">}</span><span class="s2">, high=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">high</span><span class="si">}</span><span class="s2">) skipped: &quot;</span>
-                <span class="sa">f</span><span class="s2">&quot;band out of range for fs=</span><span class="si">{</span><span class="n">fs_in</span><span class="si">}</span><span class="s2"> (Nyquist=</span><span class="si">{</span><span class="n">nyq</span><span class="si">}</span><span class="s2">). &quot;</span>
-                <span class="sa">f</span><span class="s2">&quot;Signal passed through.&quot;</span>
+                <span class="sa">f</span><span class="s2">"BandpassFilter(low=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">low</span><span class="si">}</span><span class="s2">, high=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">high</span><span class="si">}</span><span class="s2">) skipped: "</span>
+                <span class="sa">f</span><span class="s2">"band out of range for fs=</span><span class="si">{</span><span class="n">fs_in</span><span class="si">}</span><span class="s2"> (Nyquist=</span><span class="si">{</span><span class="n">nyq</span><span class="si">}</span><span class="s2">). "</span>
+                <span class="sa">f</span><span class="s2">"Signal passed through."</span>
             <span class="p">)</span>
             <span class="k">return</span> <span class="n">CompiledStep</span><span class="p">(</span>
                 <span class="n">apply</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">),</span>
@@ -467,7 +467,7 @@ window.addEventListener("load", () => mermaid.run());
         <span class="c1"># ba-form filtfilt produces NaN on long signals (&gt;1M samples) at</span>
         <span class="c1"># high fs with low normalized cutoffs (e.g., 0.3/250 = 0.0012).</span>
         <span class="n">sos</span> <span class="o">=</span> <span class="n">butter</span><span class="p">(</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">order</span><span class="p">,</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">low</span> <span class="o">/</span> <span class="n">nyq</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">high</span> <span class="o">/</span> <span class="n">nyq</span><span class="p">],</span> <span class="n">btype</span><span class="o">=</span><span class="s2">&quot;band&quot;</span><span class="p">,</span> <span class="n">output</span><span class="o">=</span><span class="s2">&quot;sos&quot;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">order</span><span class="p">,</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">low</span> <span class="o">/</span> <span class="n">nyq</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">high</span> <span class="o">/</span> <span class="n">nyq</span><span class="p">],</span> <span class="n">btype</span><span class="o">=</span><span class="s2">"band"</span><span class="p">,</span> <span class="n">output</span><span class="o">=</span><span class="s2">"sos"</span>
         <span class="p">)</span>
 
         <span class="k">def</span><span class="w"> </span><span class="nf">apply</span><span class="p">(</span><span class="n">signal</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>

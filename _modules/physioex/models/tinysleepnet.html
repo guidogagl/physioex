@@ -420,10 +420,10 @@ window.addEventListener("load", () => mermaid.run());
     <span class="p">):</span>
         <span class="nb">super</span><span class="p">(</span><span class="n">FeatureExtractor</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">padding_edf</span> <span class="o">=</span> <span class="p">{</span>
-            <span class="s2">&quot;conv1&quot;</span><span class="p">:</span> <span class="n">conv1</span><span class="p">,</span>
-            <span class="s2">&quot;max_pool1&quot;</span><span class="p">:</span> <span class="n">max_pool1</span><span class="p">,</span>
-            <span class="s2">&quot;conv2&quot;</span><span class="p">:</span> <span class="n">conv2</span><span class="p">,</span>
-            <span class="s2">&quot;max_pool2&quot;</span><span class="p">:</span> <span class="n">max_pool2</span><span class="p">,</span>
+            <span class="s2">"conv1"</span><span class="p">:</span> <span class="n">conv1</span><span class="p">,</span>
+            <span class="s2">"max_pool1"</span><span class="p">:</span> <span class="n">max_pool1</span><span class="p">,</span>
+            <span class="s2">"conv2"</span><span class="p">:</span> <span class="n">conv2</span><span class="p">,</span>
+            <span class="s2">"max_pool2"</span><span class="p">:</span> <span class="n">max_pool2</span><span class="p">,</span>
         <span class="p">}</span>
 
         <span class="n">first_filter_size</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">sf</span> <span class="o">/</span> <span class="mf">2.0</span><span class="p">)</span>
@@ -435,15 +435,15 @@ window.addEventListener("load", () => mermaid.run());
                 <span class="mi">128</span><span class="p">,</span>
                 <span class="n">first_filter_size</span><span class="p">,</span>
                 <span class="n">first_filter_stride</span><span class="p">,</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">padding_edf</span><span class="p">[</span><span class="s2">&quot;conv1&quot;</span><span class="p">],</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">padding_edf</span><span class="p">[</span><span class="s2">"conv1"</span><span class="p">],</span>
             <span class="p">),</span>
-            <span class="n">nn</span><span class="o">.</span><span class="n">ConstantPad1d</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">padding_edf</span><span class="p">[</span><span class="s2">&quot;max_pool1&quot;</span><span class="p">],</span> <span class="mi">0</span><span class="p">),</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">ConstantPad1d</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">padding_edf</span><span class="p">[</span><span class="s2">"max_pool1"</span><span class="p">],</span> <span class="mi">0</span><span class="p">),</span>
             <span class="n">nn</span><span class="o">.</span><span class="n">MaxPool1d</span><span class="p">(</span><span class="n">kernel_size</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span> <span class="n">stride</span><span class="o">=</span><span class="mi">8</span><span class="p">),</span>
             <span class="n">nn</span><span class="o">.</span><span class="n">Dropout</span><span class="p">(</span><span class="n">p</span><span class="o">=</span><span class="mf">0.5</span><span class="p">),</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_conv_block</span><span class="p">(</span><span class="mi">128</span><span class="p">,</span> <span class="mi">128</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">padding_edf</span><span class="p">[</span><span class="s2">&quot;conv2&quot;</span><span class="p">]),</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_conv_block</span><span class="p">(</span><span class="mi">128</span><span class="p">,</span> <span class="mi">128</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">padding_edf</span><span class="p">[</span><span class="s2">&quot;conv2&quot;</span><span class="p">]),</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_conv_block</span><span class="p">(</span><span class="mi">128</span><span class="p">,</span> <span class="mi">128</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">padding_edf</span><span class="p">[</span><span class="s2">&quot;conv2&quot;</span><span class="p">]),</span>
-            <span class="n">nn</span><span class="o">.</span><span class="n">ConstantPad1d</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">padding_edf</span><span class="p">[</span><span class="s2">&quot;max_pool2&quot;</span><span class="p">],</span> <span class="mi">0</span><span class="p">),</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_conv_block</span><span class="p">(</span><span class="mi">128</span><span class="p">,</span> <span class="mi">128</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">padding_edf</span><span class="p">[</span><span class="s2">"conv2"</span><span class="p">]),</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_conv_block</span><span class="p">(</span><span class="mi">128</span><span class="p">,</span> <span class="mi">128</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">padding_edf</span><span class="p">[</span><span class="s2">"conv2"</span><span class="p">]),</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_conv_block</span><span class="p">(</span><span class="mi">128</span><span class="p">,</span> <span class="mi">128</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">padding_edf</span><span class="p">[</span><span class="s2">"conv2"</span><span class="p">]),</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">ConstantPad1d</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">padding_edf</span><span class="p">[</span><span class="s2">"max_pool2"</span><span class="p">],</span> <span class="mi">0</span><span class="p">),</span>
             <span class="n">nn</span><span class="o">.</span><span class="n">MaxPool1d</span><span class="p">(</span><span class="n">kernel_size</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">stride</span><span class="o">=</span><span class="mi">4</span><span class="p">),</span>
             <span class="n">nn</span><span class="o">.</span><span class="n">Flatten</span><span class="p">(),</span>
             <span class="n">nn</span><span class="o">.</span><span class="n">Dropout</span><span class="p">(</span><span class="n">p</span><span class="o">=</span><span class="mf">0.5</span><span class="p">),</span>
@@ -531,14 +531,14 @@ window.addEventListener("load", () => mermaid.run());
 <div class="viewcode-block" id="TinySleepNet.encode">
 <a class="viewcode-back" href="../../../api/_generated/physioex.models.tinysleepnet.TinySleepNet.html#physioex.models.tinysleepnet.TinySleepNet.encode">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">encode</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Encode input signals to contextualized per-epoch embeddings.</span>
+<span class="w">        </span><span class="sd">"""Encode input signals to contextualized per-epoch embeddings.</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            x: (B, L, C, T) raw waveform input.</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            (B, L, n_rnn_units) contextualized epoch embeddings.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">batch_size</span><span class="p">,</span> <span class="n">seqlen</span><span class="p">,</span> <span class="n">inchan</span><span class="p">,</span> <span class="n">insamp</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">size</span><span class="p">()</span>
 
         <span class="n">x</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">inchan</span><span class="p">,</span> <span class="n">insamp</span><span class="p">)</span>
@@ -565,19 +565,19 @@ window.addEventListener("load", () => mermaid.run());
 
 
 
-<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">"__main__"</span><span class="p">:</span>
 
-    <span class="n">dataset</span> <span class="o">=</span> <span class="n">PhysioExDataset</span><span class="p">(</span><span class="n">datasets</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;sleepedf&quot;</span><span class="p">])</span>
+    <span class="n">dataset</span> <span class="o">=</span> <span class="n">PhysioExDataset</span><span class="p">(</span><span class="n">datasets</span><span class="o">=</span><span class="p">[</span><span class="s2">"sleepedf"</span><span class="p">])</span>
 
     <span class="n">model</span> <span class="o">=</span> <span class="n">TinySleepNet</span><span class="p">(</span>
         <span class="n">in_chan</span><span class="o">=</span><span class="n">dataset</span><span class="o">.</span><span class="n">get_num_channels</span><span class="p">(),</span>
     <span class="p">)</span>
 
-    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;TinySleepNet summary:&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">"TinySleepNet summary:"</span><span class="p">)</span>
 
     <span class="n">summary</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="p">(</span><span class="mi">32</span><span class="p">,</span> <span class="mi">21</span><span class="p">,</span> <span class="n">dataset</span><span class="o">.</span><span class="n">get_num_channels</span><span class="p">(),</span> <span class="mi">3000</span><span class="p">))</span>
 
-    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Training TinySleepNet...&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">"</span><span class="se">\n</span><span class="s2">Training TinySleepNet..."</span><span class="p">)</span>
 
     <span class="n">model</span> <span class="o">=</span> <span class="n">Trainer</span><span class="o">.</span><span class="n">train</span><span class="p">(</span>
         <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
@@ -586,7 +586,7 @@ window.addEventListener("load", () => mermaid.run());
         <span class="n">lr</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">,</span>
     <span class="p">)</span>
 
-    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Evaluating TinySleepNet...&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">"</span><span class="se">\n</span><span class="s2">Evaluating TinySleepNet..."</span><span class="p">)</span>
 
     <span class="n">results</span> <span class="o">=</span> <span class="n">Trainer</span><span class="o">.</span><span class="n">evaluate</span><span class="p">(</span>
         <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>

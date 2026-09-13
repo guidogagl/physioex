@@ -400,7 +400,7 @@ window.addEventListener("load", () => mermaid.run());
                 <article class="bd-article">
                   
   <h1>Source code for physioex.data.collate</h1><div class="highlight"><pre>
-<span></span><span class="sd">&quot;&quot;&quot;DataLoader collate function and channel-stacking helper for dict-returning datasets.&quot;&quot;&quot;</span>
+<span></span><span class="sd">"""DataLoader collate function and channel-stacking helper for dict-returning datasets."""</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Any</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
 
@@ -408,7 +408,7 @@ window.addEventListener("load", () => mermaid.run());
 <div class="viewcode-block" id="dict_collate_fn">
 <a class="viewcode-back" href="../../../pages/data.html#physioex.data.dict_collate_fn">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">dict_collate_fn</span><span class="p">(</span><span class="n">batch</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Collate a list of dict-returning dataset items.</span>
+<span class="w">    </span><span class="sd">"""Collate a list of dict-returning dataset items.</span>
 
 <span class="sd">    Stacks tensor fields across the batch dimension. Preserves dict/list metadata</span>
 <span class="sd">    as lists-of-dicts (not dicts-of-lists) so individual sample metadata stays</span>
@@ -423,26 +423,26 @@ window.addEventListener("load", () => mermaid.run());
 <span class="sd">    Optional fields: ``epoch_indices``, ``channel_info``, ``subject``, ``recording_length``.</span>
 
 <span class="sd">    Note:</span>
-<span class="sd">        Channel names are expected to be in MODALITY_INDEX format (e.g., &quot;EEG_0&quot;, &quot;EOG_1&quot;).</span>
+<span class="sd">        Channel names are expected to be in MODALITY_INDEX format (e.g., "EEG_0", "EOG_1").</span>
 <span class="sd">        The collate sorts channels by (modality, index) for deterministic ordering.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">batch</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Empty batch&quot;</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"Empty batch"</span><span class="p">)</span>
 
     <span class="n">out</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
 
     <span class="c1"># signals: collect ALL unique channel keys across the entire batch</span>
     <span class="n">all_channels</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
     <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">batch</span><span class="p">:</span>
-        <span class="n">all_channels</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">b</span><span class="p">[</span><span class="s2">&quot;signals&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+        <span class="n">all_channels</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">b</span><span class="p">[</span><span class="s2">"signals"</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
 
     <span class="c1"># Sort channels by (modality_type, index) for deterministic ordering</span>
-    <span class="c1"># Keys are in format &quot;MODALITY_INDEX&quot; (e.g., &quot;EEG_0&quot;, &quot;EOG_1&quot;)</span>
+    <span class="c1"># Keys are in format "MODALITY_INDEX" (e.g., "EEG_0", "EOG_1")</span>
     <span class="c1"># Sort by modality type index (EEG=0, EOG=1, EMG=2, ...), then by numeric index</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">physioex.data.modality</span><span class="w"> </span><span class="kn">import</span> <span class="n">MODALITY_TYPES</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">sort_key</span><span class="p">(</span><span class="n">ch</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">:</span>
-        <span class="n">parts</span> <span class="o">=</span> <span class="n">ch</span><span class="o">.</span><span class="n">rsplit</span><span class="p">(</span><span class="s2">&quot;_&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>  <span class="c1"># Split only on last underscore</span>
+        <span class="n">parts</span> <span class="o">=</span> <span class="n">ch</span><span class="o">.</span><span class="n">rsplit</span><span class="p">(</span><span class="s2">"_"</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>  <span class="c1"># Split only on last underscore</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
             <span class="n">modality_name</span> <span class="o">=</span> <span class="n">parts</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
             <span class="c1"># Get modality type index, default to OTHER (13) if not found</span>
@@ -454,40 +454,40 @@ window.addEventListener("load", () => mermaid.run());
         <span class="k">return</span> <span class="p">(</span><span class="mi">13</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>  <span class="c1"># OTHER for malformed names</span>
 
     <span class="n">ref_order</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">all_channels</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="n">sort_key</span><span class="p">)</span>
-    <span class="n">out</span><span class="p">[</span><span class="s2">&quot;channel_order&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">ref_order</span>
+    <span class="n">out</span><span class="p">[</span><span class="s2">"channel_order"</span><span class="p">]</span> <span class="o">=</span> <span class="n">ref_order</span>
 
     <span class="c1"># zero-fill missing keys in each batch element</span>
     <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">batch</span><span class="p">:</span>
         <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">ref_order</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">k</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">b</span><span class="p">[</span><span class="s2">&quot;signals&quot;</span><span class="p">]:</span>
+            <span class="k">if</span> <span class="n">k</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">b</span><span class="p">[</span><span class="s2">"signals"</span><span class="p">]:</span>
                 <span class="c1"># determine the shape of the missing signal (use the shape of an existing signal)</span>
-                <span class="n">example_signal</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="nb">iter</span><span class="p">(</span><span class="n">b</span><span class="p">[</span><span class="s2">&quot;signals&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">()))</span>
-                <span class="n">b</span><span class="p">[</span><span class="s2">&quot;signals&quot;</span><span class="p">][</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">example_signal</span><span class="p">)</span>
+                <span class="n">example_signal</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="nb">iter</span><span class="p">(</span><span class="n">b</span><span class="p">[</span><span class="s2">"signals"</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">()))</span>
+                <span class="n">b</span><span class="p">[</span><span class="s2">"signals"</span><span class="p">][</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">example_signal</span><span class="p">)</span>
     
     <span class="c1"># Stack signals according to the sorted channel_order</span>
-    <span class="n">out</span><span class="p">[</span><span class="s2">&quot;signals&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
-        <span class="n">k</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span><span class="n">b</span><span class="p">[</span><span class="s2">&quot;signals&quot;</span><span class="p">][</span><span class="n">k</span><span class="p">]</span> <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">batch</span><span class="p">])</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">ref_order</span>
+    <span class="n">out</span><span class="p">[</span><span class="s2">"signals"</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="n">k</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span><span class="n">b</span><span class="p">[</span><span class="s2">"signals"</span><span class="p">][</span><span class="n">k</span><span class="p">]</span> <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">batch</span><span class="p">])</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">ref_order</span>
     <span class="p">}</span>
     
     <span class="c1"># labels</span>
-    <span class="n">out</span><span class="p">[</span><span class="s2">&quot;labels&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span><span class="n">b</span><span class="p">[</span><span class="s2">&quot;labels&quot;</span><span class="p">]</span> <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">batch</span><span class="p">])</span>
+    <span class="n">out</span><span class="p">[</span><span class="s2">"labels"</span><span class="p">]</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span><span class="n">b</span><span class="p">[</span><span class="s2">"labels"</span><span class="p">]</span> <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">batch</span><span class="p">])</span>
 
     <span class="c1"># optional stacked fields</span>
-    <span class="k">if</span> <span class="s2">&quot;epoch_indices&quot;</span> <span class="ow">in</span> <span class="n">batch</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
-        <span class="n">out</span><span class="p">[</span><span class="s2">&quot;epoch_indices&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span><span class="n">b</span><span class="p">[</span><span class="s2">&quot;epoch_indices&quot;</span><span class="p">]</span> <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">batch</span><span class="p">])</span>
+    <span class="k">if</span> <span class="s2">"epoch_indices"</span> <span class="ow">in</span> <span class="n">batch</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+        <span class="n">out</span><span class="p">[</span><span class="s2">"epoch_indices"</span><span class="p">]</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span><span class="n">b</span><span class="p">[</span><span class="s2">"epoch_indices"</span><span class="p">]</span> <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">batch</span><span class="p">])</span>
 
     <span class="c1"># metadata kept as list-of-dicts</span>
-    <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;channel_info&quot;</span><span class="p">,</span> <span class="s2">&quot;subject&quot;</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"channel_info"</span><span class="p">,</span> <span class="s2">"subject"</span><span class="p">):</span>
         <span class="k">if</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">batch</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
             <span class="n">out</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">b</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">batch</span><span class="p">]</span>
 
-    <span class="k">if</span> <span class="s2">&quot;recording_length&quot;</span> <span class="ow">in</span> <span class="n">batch</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
-        <span class="n">out</span><span class="p">[</span><span class="s2">&quot;recording_length&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span>
-            <span class="p">[</span><span class="n">b</span><span class="p">[</span><span class="s2">&quot;recording_length&quot;</span><span class="p">]</span> <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">batch</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">long</span>
+    <span class="k">if</span> <span class="s2">"recording_length"</span> <span class="ow">in</span> <span class="n">batch</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+        <span class="n">out</span><span class="p">[</span><span class="s2">"recording_length"</span><span class="p">]</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span>
+            <span class="p">[</span><span class="n">b</span><span class="p">[</span><span class="s2">"recording_length"</span><span class="p">]</span> <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">batch</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">long</span>
         <span class="p">)</span>
 
-    <span class="k">if</span> <span class="s2">&quot;events&quot;</span> <span class="ow">in</span> <span class="n">batch</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
-        <span class="n">out</span><span class="p">[</span><span class="s2">&quot;events&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">b</span><span class="p">[</span><span class="s2">&quot;events&quot;</span><span class="p">]</span> <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">batch</span><span class="p">]</span>
+    <span class="k">if</span> <span class="s2">"events"</span> <span class="ow">in</span> <span class="n">batch</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+        <span class="n">out</span><span class="p">[</span><span class="s2">"events"</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">b</span><span class="p">[</span><span class="s2">"events"</span><span class="p">]</span> <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">batch</span><span class="p">]</span>
 
     <span class="k">return</span> <span class="n">out</span></div>
 
@@ -496,21 +496,21 @@ window.addEventListener("load", () => mermaid.run());
 <div class="viewcode-block" id="stack_channels">
 <a class="viewcode-back" href="../../../api/_generated/physioex.data.stack_channels.html#physioex.data.stack_channels">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">stack_channels</span><span class="p">(</span><span class="n">batch</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Convert a collated dict batch to a (B, L, C, ...) tensor for model input.</span>
+<span class="w">    </span><span class="sd">"""Convert a collated dict batch to a (B, L, C, ...) tensor for model input.</span>
 
 <span class="sd">    Uses the user-specified channel_order to stack signals consistently.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">order</span> <span class="o">=</span> <span class="n">batch</span><span class="p">[</span><span class="s2">&quot;channel_order&quot;</span><span class="p">]</span>
+<span class="sd">    """</span>
+    <span class="n">order</span> <span class="o">=</span> <span class="n">batch</span><span class="p">[</span><span class="s2">"channel_order"</span><span class="p">]</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">order</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;channel_order is empty&quot;</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"channel_order is empty"</span><span class="p">)</span>
     
     <span class="k">try</span><span class="p">:</span>
         <span class="c1"># signals[name] after collate has shape (B, L, ...); stack adds a new dim 2 -&gt; (B, L, C, ...)</span>
-        <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span><span class="n">batch</span><span class="p">[</span><span class="s2">&quot;signals&quot;</span><span class="p">][</span><span class="n">name</span><span class="p">]</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">order</span><span class="p">],</span> <span class="n">dim</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span><span class="n">batch</span><span class="p">[</span><span class="s2">"signals"</span><span class="p">][</span><span class="n">name</span><span class="p">]</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">order</span><span class="p">],</span> <span class="n">dim</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
     <span class="k">except</span> <span class="ne">KeyError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-        <span class="nb">print</span><span class="p">(</span> <span class="s2">&quot;Error stacking channels: missing channel in signals:&quot;</span><span class="p">,</span> <span class="n">e</span> <span class="p">)</span>
-        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Available channels in signals:&quot;</span><span class="p">,</span> <span class="nb">list</span><span class="p">(</span><span class="n">batch</span><span class="p">[</span><span class="s2">&quot;signals&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">()))</span>
-        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Requested channel order:&quot;</span><span class="p">,</span> <span class="n">order</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span> <span class="s2">"Error stacking channels: missing channel in signals:"</span><span class="p">,</span> <span class="n">e</span> <span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">"Available channels in signals:"</span><span class="p">,</span> <span class="nb">list</span><span class="p">(</span><span class="n">batch</span><span class="p">[</span><span class="s2">"signals"</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">()))</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">"Requested channel order:"</span><span class="p">,</span> <span class="n">order</span><span class="p">)</span>
         <span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span></div>
 
 
@@ -518,8 +518,8 @@ window.addEventListener("load", () => mermaid.run());
 <div class="viewcode-block" id="is_dict_batch">
 <a class="viewcode-back" href="../../../api/_generated/physioex.data.is_dict_batch.html#physioex.data.is_dict_batch">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">is_dict_batch</span><span class="p">(</span><span class="n">batch</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return True if `batch` looks like a dict-style PhysioEx batch.&quot;&quot;&quot;</span>
-    <span class="k">return</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">batch</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="ow">and</span> <span class="s2">&quot;signals&quot;</span> <span class="ow">in</span> <span class="n">batch</span> <span class="ow">and</span> <span class="s2">&quot;channel_order&quot;</span> <span class="ow">in</span> <span class="n">batch</span></div>
+<span class="w">    </span><span class="sd">"""Return True if `batch` looks like a dict-style PhysioEx batch."""</span>
+    <span class="k">return</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">batch</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="ow">and</span> <span class="s2">"signals"</span> <span class="ow">in</span> <span class="n">batch</span> <span class="ow">and</span> <span class="s2">"channel_order"</span> <span class="ow">in</span> <span class="n">batch</span></div>
 
 </pre></div>
 

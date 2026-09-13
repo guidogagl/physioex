@@ -441,12 +441,12 @@ yourself for full control.</p></li>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">physioex.data</span><span class="w"> </span><span class="kn">import</span> <span class="n">available_presets</span><span class="p">,</span> <span class="n">get_preset</span>
 
 <span class="n">available_presets</span><span class="p">()</span>
-<span class="c1"># includes: &#39;raw&#39;, &#39;seqsleepnet&#39;, &#39;identity&#39;, &#39;time_domain&#39;, &#39;time_frequency&#39;,</span>
-<span class="c1">#           per-modality (&#39;eeg&#39;, &#39;eog&#39;, &#39;emg&#39;, &#39;ecg&#39;), &#39;coresleep&#39;,</span>
-<span class="c1">#           and foundation-model presets (&#39;biot&#39;, &#39;bendr&#39;, &#39;cbramod&#39;,</span>
-<span class="c1">#           &#39;labram&#39;, &#39;sleepfm&#39;, &#39;tfc&#39;, &#39;reve&#39;, &#39;sjepa&#39;, &#39;neurolm&#39;)</span>
+<span class="c1"># includes: 'raw', 'seqsleepnet', 'identity', 'time_domain', 'time_frequency',</span>
+<span class="c1">#           per-modality ('eeg', 'eog', 'emg', 'ecg'), 'coresleep',</span>
+<span class="c1">#           and foundation-model presets ('biot', 'bendr', 'cbramod',</span>
+<span class="c1">#           'labram', 'sleepfm', 'tfc', 'reve', 'sjepa', 'neurolm')</span>
 
-<span class="n">pipe</span> <span class="o">=</span> <span class="n">get_preset</span><span class="p">(</span><span class="s2">&quot;seqsleepnet&quot;</span><span class="p">)</span>   <span class="c1"># a PreprocessingPipeline</span>
+<span class="n">pipe</span> <span class="o">=</span> <span class="n">get_preset</span><span class="p">(</span><span class="s2">"seqsleepnet"</span><span class="p">)</span>   <span class="c1"># a PreprocessingPipeline</span>
 </pre></div>
 </div>
 <p>A preset resolves to either a single <code class="docutils literal notranslate"><span class="pre">PreprocessingPipeline</span></code> applied to every
@@ -457,14 +457,14 @@ usually pass the preset name straight to the dataset:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">physioex.data.datasets</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_dataset</span>
 
 <span class="c1"># uniform: minimal bandpass + resample on every channel</span>
-<span class="n">raw_ds</span> <span class="o">=</span> <span class="n">get_dataset</span><span class="p">(</span><span class="s2">&quot;hmc&quot;</span><span class="p">)(</span><span class="n">channels</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;EEG&quot;</span><span class="p">],</span> <span class="n">pipelines</span><span class="o">=</span><span class="s2">&quot;raw&quot;</span><span class="p">,</span> <span class="n">sequence_length</span><span class="o">=</span><span class="mi">21</span><span class="p">)</span>
+<span class="n">raw_ds</span> <span class="o">=</span> <span class="n">get_dataset</span><span class="p">(</span><span class="s2">"hmc"</span><span class="p">)(</span><span class="n">channels</span><span class="o">=</span><span class="p">[</span><span class="s2">"EEG"</span><span class="p">],</span> <span class="n">pipelines</span><span class="o">=</span><span class="s2">"raw"</span><span class="p">,</span> <span class="n">sequence_length</span><span class="o">=</span><span class="mi">21</span><span class="p">)</span>
 
 <span class="c1"># per-modality time-domain filtering (default in the CLIs)</span>
-<span class="n">td_ds</span> <span class="o">=</span> <span class="n">get_dataset</span><span class="p">(</span><span class="s2">&quot;hmc&quot;</span><span class="p">)(</span><span class="n">channels</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;EEG&quot;</span><span class="p">,</span> <span class="s2">&quot;EOG&quot;</span><span class="p">,</span> <span class="s2">&quot;EMG&quot;</span><span class="p">],</span>
-                           <span class="n">pipelines</span><span class="o">=</span><span class="s2">&quot;time_domain&quot;</span><span class="p">,</span> <span class="n">sequence_length</span><span class="o">=</span><span class="mi">21</span><span class="p">)</span>
+<span class="n">td_ds</span> <span class="o">=</span> <span class="n">get_dataset</span><span class="p">(</span><span class="s2">"hmc"</span><span class="p">)(</span><span class="n">channels</span><span class="o">=</span><span class="p">[</span><span class="s2">"EEG"</span><span class="p">,</span> <span class="s2">"EOG"</span><span class="p">,</span> <span class="s2">"EMG"</span><span class="p">],</span>
+                           <span class="n">pipelines</span><span class="o">=</span><span class="s2">"time_domain"</span><span class="p">,</span> <span class="n">sequence_length</span><span class="o">=</span><span class="mi">21</span><span class="p">)</span>
 
 <span class="c1"># time-frequency: time_domain + XSleepNet spectrogram -&gt; (L, C, T, F) samples</span>
-<span class="n">tf_ds</span> <span class="o">=</span> <span class="n">get_dataset</span><span class="p">(</span><span class="s2">&quot;hmc&quot;</span><span class="p">)(</span><span class="n">channels</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;EEG&quot;</span><span class="p">],</span> <span class="n">pipelines</span><span class="o">=</span><span class="s2">&quot;time_frequency&quot;</span><span class="p">,</span>
+<span class="n">tf_ds</span> <span class="o">=</span> <span class="n">get_dataset</span><span class="p">(</span><span class="s2">"hmc"</span><span class="p">)(</span><span class="n">channels</span><span class="o">=</span><span class="p">[</span><span class="s2">"EEG"</span><span class="p">],</span> <span class="n">pipelines</span><span class="o">=</span><span class="s2">"time_frequency"</span><span class="p">,</span>
                            <span class="n">sequence_length</span><span class="o">=</span><span class="mi">21</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -482,7 +482,7 @@ available steps are re-exported from <code class="docutils literal notranslate">
 <span class="n">pipe</span> <span class="o">=</span> <span class="n">PreprocessingPipeline</span><span class="p">([</span>
     <span class="n">BandpassFilter</span><span class="p">(</span><span class="n">low</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span> <span class="n">high</span><span class="o">=</span><span class="mf">40.0</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="mi">5</span><span class="p">),</span>
     <span class="n">Resample</span><span class="p">(</span><span class="n">target_fs</span><span class="o">=</span><span class="mf">100.0</span><span class="p">),</span>
-    <span class="n">XSleepNetSpectrogram</span><span class="p">(</span><span class="n">nperseg</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span> <span class="n">noverlap</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">nfft</span><span class="o">=</span><span class="mi">256</span><span class="p">,</span> <span class="n">window</span><span class="o">=</span><span class="s2">&quot;hamming&quot;</span><span class="p">),</span>
+    <span class="n">XSleepNetSpectrogram</span><span class="p">(</span><span class="n">nperseg</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span> <span class="n">noverlap</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">nfft</span><span class="o">=</span><span class="mi">256</span><span class="p">,</span> <span class="n">window</span><span class="o">=</span><span class="s2">"hamming"</span><span class="p">),</span>
 <span class="p">])</span>
 </pre></div>
 </div>

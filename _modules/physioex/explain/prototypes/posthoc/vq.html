@@ -400,10 +400,10 @@ window.addEventListener("load", () => mermaid.run());
                 <article class="bd-article">
                   
   <h1>Source code for physioex.explain.prototypes.posthoc.vq</h1><div class="highlight"><pre>
-<span></span><span class="sd">&quot;&quot;&quot;Post-hoc codebook learning via Vector Quantization.</span>
+<span></span><span class="sd">"""Post-hoc codebook learning via Vector Quantization.</span>
 
-<span class="sd">Inspired by Rymarczyk et al., &quot;ProtoQuant&quot;, 2025 (arXiv:2602.06592) and</span>
-<span class="sd">Ge et al., &quot;Vector Quantized Latent Concepts&quot;, 2025 (arXiv:2602.02726).</span>
+<span class="sd">Inspired by Rymarczyk et al., "ProtoQuant", 2025 (arXiv:2602.06592) and</span>
+<span class="sd">Ge et al., "Vector Quantized Latent Concepts", 2025 (arXiv:2602.02726).</span>
 
 <span class="sd">Given pre-extracted epoch embeddings Z from a frozen encoder h(x), learns</span>
 <span class="sd">a discrete codebook via two stages:</span>
@@ -417,7 +417,7 @@ window.addEventListener("load", () => mermaid.run());
 <span class="sd">At inference, each epoch embedding is quantized (replaced by its nearest</span>
 <span class="sd">codebook entry) before being passed to the frozen sequence encoder and</span>
 <span class="sd">classifier.</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Optional</span>
@@ -438,7 +438,7 @@ window.addEventListener("load", () => mermaid.run());
     <span class="n">batch_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">4096</span><span class="p">,</span>
     <span class="n">max_iter</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">300</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Learn initial codebook via K-Means clustering.</span>
+<span class="w">    </span><span class="sd">"""Learn initial codebook via K-Means clustering.</span>
 
 <span class="sd">    This is Stage 1 (initialization). Use :func:`train_codebook` for</span>
 <span class="sd">    supervised refinement (Stage 2).</span>
@@ -452,7 +452,7 @@ window.addEventListener("load", () => mermaid.run());
 
 <span class="sd">    Returns:</span>
 <span class="sd">        codebook: (n_prototypes, d_model) cluster centroids.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">kmeans</span> <span class="o">=</span> <span class="n">MiniBatchKMeans</span><span class="p">(</span>
         <span class="n">n_clusters</span><span class="o">=</span><span class="n">n_prototypes</span><span class="p">,</span>
         <span class="n">random_state</span><span class="o">=</span><span class="n">random_state</span><span class="p">,</span>
@@ -471,7 +471,7 @@ window.addEventListener("load", () => mermaid.run());
     <span class="n">Z</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
     <span class="n">codebook</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Quantize each embedding to its nearest codebook entry (numpy).</span>
+<span class="w">    </span><span class="sd">"""Quantize each embedding to its nearest codebook entry (numpy).</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        Z: (N, d_model) epoch embeddings.</span>
@@ -481,7 +481,7 @@ window.addEventListener("load", () => mermaid.run());
 <span class="sd">        Tuple of:</span>
 <span class="sd">            Z_quantized: (N, d_model) quantized embeddings</span>
 <span class="sd">            assignments: (N,) index of assigned codebook entry</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">Z_sq</span> <span class="o">=</span> <span class="p">(</span><span class="n">Z</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">keepdims</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
     <span class="n">C_sq</span> <span class="o">=</span> <span class="p">(</span><span class="n">codebook</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">keepdims</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>
     <span class="n">dist</span> <span class="o">=</span> <span class="n">Z_sq</span> <span class="o">+</span> <span class="n">C_sq</span> <span class="o">-</span> <span class="mi">2</span> <span class="o">*</span> <span class="p">(</span><span class="n">Z</span> <span class="o">@</span> <span class="n">codebook</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
@@ -494,7 +494,7 @@ window.addEventListener("load", () => mermaid.run());
 <div class="viewcode-block" id="VQBottleneck">
 <a class="viewcode-back" href="../../../../../api/_generated/physioex.explain.prototypes.posthoc.html#physioex.explain.prototypes.posthoc.VQBottleneck">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">VQBottleneck</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Differentiable vector quantization with straight-through estimator.</span>
+<span class="w">    </span><span class="sd">"""Differentiable vector quantization with straight-through estimator.</span>
 
 <span class="sd">    Forward: ``z_q = codebook[argmin_k ||z - c_k||^2]``.</span>
 <span class="sd">    Backward: gradients pass through as if ``z_q = z`` (STE), but the codebook</span>
@@ -503,7 +503,7 @@ window.addEventListener("load", () => mermaid.run());
 <span class="sd">    Args:</span>
 <span class="sd">        codebook_init: (M, d_model) initial codebook (e.g. from K-Means).</span>
 <span class="sd">        commitment_weight: Weight β for commitment loss ||z - sg[c_q]||².</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">codebook_init</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">commitment_weight</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.25</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
@@ -515,7 +515,7 @@ window.addEventListener("load", () => mermaid.run());
 <div class="viewcode-block" id="VQBottleneck.forward">
 <a class="viewcode-back" href="../../../../../api/_generated/physioex.explain.prototypes.posthoc.html#physioex.explain.prototypes.posthoc.VQBottleneck.forward">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">z</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Quantize with STE.</span>
+<span class="w">        </span><span class="sd">"""Quantize with STE.</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            z: (N, d_model) embeddings.</span>
@@ -523,7 +523,7 @@ window.addEventListener("load", () => mermaid.run());
 <span class="sd">        Returns:</span>
 <span class="sd">            z_q: (N, d_model) quantized embeddings (STE gradients to z)</span>
 <span class="sd">            vq_loss: scalar, codebook_loss + β * commitment_loss</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="c1"># Distances (L2)</span>
         <span class="n">dist</span> <span class="o">=</span> <span class="p">(</span>
             <span class="p">(</span><span class="n">z</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">keepdim</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
@@ -547,11 +547,11 @@ window.addEventListener("load", () => mermaid.run());
 
 
 <span class="k">class</span><span class="w"> </span><span class="nc">_WindowIndex</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Maps a flat window index to (subject_idx, start_epoch).</span>
+<span class="w">    </span><span class="sd">"""Maps a flat window index to (subject_idx, start_epoch).</span>
 
 <span class="sd">    Avoids materializing all windows in memory. Each subject with N epochs</span>
 <span class="sd">    contributes max(0, N - L + 1) windows.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">subjects</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]],</span> <span class="n">L</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">subjects</span> <span class="o">=</span> <span class="n">subjects</span>
@@ -566,10 +566,10 @@ window.addEventListener("load", () => mermaid.run());
         <span class="bp">self</span><span class="o">.</span><span class="n">n_windows</span> <span class="o">=</span> <span class="n">total</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">get_batch</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">indices</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">device</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Fetch a batch of windows by flat indices.</span>
+<span class="w">        </span><span class="sd">"""Fetch a batch of windows by flat indices.</span>
 
 <span class="sd">        Returns (B, L, d_model) and (B, L) tensors.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">L</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">L</span>
         <span class="n">z_list</span><span class="p">,</span> <span class="n">y_list</span> <span class="o">=</span> <span class="p">[],</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">idx</span> <span class="ow">in</span> <span class="n">indices</span><span class="p">:</span>
@@ -604,11 +604,11 @@ window.addEventListener("load", () => mermaid.run());
     <span class="n">batch_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">32</span><span class="p">,</span>
     <span class="n">lr</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1e-4</span><span class="p">,</span>
     <span class="n">commitment_weight</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.25</span><span class="p">,</span>
-    <span class="n">device</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;cpu&quot;</span><span class="p">,</span>
+    <span class="n">device</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"cpu"</span><span class="p">,</span>
     <span class="n">sequence_length</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">21</span><span class="p">,</span>
     <span class="n">save_path</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Supervised codebook refinement (Stage 2).</span>
+<span class="w">    </span><span class="sd">"""Supervised codebook refinement (Stage 2).</span>
 
 <span class="sd">    Optimizes the codebook so that quantized embeddings, when passed</span>
 <span class="sd">    through the frozen downstream model, preserve classification accuracy.</span>
@@ -634,24 +634,24 @@ window.addEventListener("load", () => mermaid.run());
 
 <span class="sd">    Returns:</span>
 <span class="sd">        codebook: (M, d_model) best codebook as numpy array.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">dev</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
     <span class="n">L</span> <span class="o">=</span> <span class="n">sequence_length</span>
 
     <span class="n">train_idx</span> <span class="o">=</span> <span class="n">_WindowIndex</span><span class="p">(</span><span class="n">train_subjects</span><span class="p">,</span> <span class="n">L</span><span class="p">)</span>
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  Train: </span><span class="si">{</span><span class="n">train_idx</span><span class="o">.</span><span class="n">n_windows</span><span class="si">}</span><span class="s2"> windows from </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">train_subjects</span><span class="p">)</span><span class="si">}</span><span class="s2"> subjects&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  Train: </span><span class="si">{</span><span class="n">train_idx</span><span class="o">.</span><span class="n">n_windows</span><span class="si">}</span><span class="s2"> windows from </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">train_subjects</span><span class="p">)</span><span class="si">}</span><span class="s2"> subjects"</span><span class="p">)</span>
 
     <span class="n">has_val</span> <span class="o">=</span> <span class="n">val_subjects</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">val_subjects</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span>
     <span class="n">val_idx</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="k">if</span> <span class="n">has_val</span><span class="p">:</span>
         <span class="n">val_idx</span> <span class="o">=</span> <span class="n">_WindowIndex</span><span class="p">(</span><span class="n">val_subjects</span><span class="p">,</span> <span class="n">L</span><span class="p">)</span>
-        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  Valid: </span><span class="si">{</span><span class="n">val_idx</span><span class="o">.</span><span class="n">n_windows</span><span class="si">}</span><span class="s2"> windows from </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">val_subjects</span><span class="p">)</span><span class="si">}</span><span class="s2"> subjects&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  Valid: </span><span class="si">{</span><span class="n">val_idx</span><span class="o">.</span><span class="n">n_windows</span><span class="si">}</span><span class="s2"> windows from </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">val_subjects</span><span class="p">)</span><span class="si">}</span><span class="s2"> subjects"</span><span class="p">)</span>
 
     <span class="n">vq</span> <span class="o">=</span> <span class="n">VQBottleneck</span><span class="p">(</span><span class="n">codebook_init</span><span class="p">,</span> <span class="n">commitment_weight</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">dev</span><span class="p">)</span>
     <span class="n">optimizer</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">optim</span><span class="o">.</span><span class="n">Adam</span><span class="p">(</span><span class="n">vq</span><span class="o">.</span><span class="n">parameters</span><span class="p">(),</span> <span class="n">lr</span><span class="o">=</span><span class="n">lr</span><span class="p">)</span>
     <span class="n">loss_fn</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">CrossEntropyLoss</span><span class="p">(</span><span class="n">ignore_index</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
 
-    <span class="n">best_val_loss</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="s2">&quot;inf&quot;</span><span class="p">)</span>
+    <span class="n">best_val_loss</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="s2">"inf"</span><span class="p">)</span>
     <span class="n">best_codebook</span> <span class="o">=</span> <span class="n">codebook_init</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
     <span class="n">epochs_no_improve</span> <span class="o">=</span> <span class="mi">0</span>
 
@@ -695,7 +695,7 @@ window.addEventListener("load", () => mermaid.run());
         <span class="n">avg_vq</span> <span class="o">=</span> <span class="n">total_vq</span> <span class="o">/</span> <span class="nb">max</span><span class="p">(</span><span class="n">n_batches</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
 
         <span class="c1"># --- Validation ---</span>
-        <span class="n">val_str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+        <span class="n">val_str</span> <span class="o">=</span> <span class="s2">""</span>
         <span class="k">if</span> <span class="n">has_val</span><span class="p">:</span>
             <span class="n">vq</span><span class="o">.</span><span class="n">eval</span><span class="p">()</span>
             <span class="n">val_ce_total</span> <span class="o">=</span> <span class="mf">0.0</span>
@@ -722,7 +722,7 @@ window.addEventListener("load", () => mermaid.run());
 
             <span class="n">val_loss</span> <span class="o">=</span> <span class="n">val_ce_total</span> <span class="o">/</span> <span class="nb">max</span><span class="p">(</span><span class="n">val_n</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
             <span class="n">val_acc</span> <span class="o">=</span> <span class="n">val_correct</span> <span class="o">/</span> <span class="nb">max</span><span class="p">(</span><span class="n">val_total</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
-            <span class="n">val_str</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;, val_CE=</span><span class="si">{</span><span class="n">val_loss</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">, val_acc=</span><span class="si">{</span><span class="n">val_acc</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="n">val_str</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">", val_CE=</span><span class="si">{</span><span class="n">val_loss</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">, val_acc=</span><span class="si">{</span><span class="n">val_acc</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">"</span>
 
             <span class="k">if</span> <span class="n">val_loss</span> <span class="o">&lt;</span> <span class="n">best_val_loss</span><span class="p">:</span>
                 <span class="n">best_val_loss</span> <span class="o">=</span> <span class="n">val_loss</span>
@@ -734,12 +734,12 @@ window.addEventListener("load", () => mermaid.run());
                 <span class="n">epochs_no_improve</span> <span class="o">+=</span> <span class="mi">1</span>
 
         <span class="nb">print</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;  Epoch </span><span class="si">{</span><span class="n">epoch</span><span class="o">+</span><span class="mi">1</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">n_epochs</span><span class="si">}</span><span class="s2">: &quot;</span>
-            <span class="sa">f</span><span class="s2">&quot;loss=</span><span class="si">{</span><span class="n">avg_loss</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2"> (CE=</span><span class="si">{</span><span class="n">avg_ce</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">, VQ=</span><span class="si">{</span><span class="n">avg_vq</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">)</span><span class="si">{</span><span class="n">val_str</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="sa">f</span><span class="s2">"  Epoch </span><span class="si">{</span><span class="n">epoch</span><span class="o">+</span><span class="mi">1</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">n_epochs</span><span class="si">}</span><span class="s2">: "</span>
+            <span class="sa">f</span><span class="s2">"loss=</span><span class="si">{</span><span class="n">avg_loss</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2"> (CE=</span><span class="si">{</span><span class="n">avg_ce</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">, VQ=</span><span class="si">{</span><span class="n">avg_vq</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">)</span><span class="si">{</span><span class="n">val_str</span><span class="si">}</span><span class="s2">"</span>
         <span class="p">)</span>
 
         <span class="k">if</span> <span class="n">has_val</span> <span class="ow">and</span> <span class="n">epochs_no_improve</span> <span class="o">&gt;=</span> <span class="n">patience</span><span class="p">:</span>
-            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  Early stopping at epoch </span><span class="si">{</span><span class="n">epoch</span><span class="o">+</span><span class="mi">1</span><span class="si">}</span><span class="s2"> (patience=</span><span class="si">{</span><span class="n">patience</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  Early stopping at epoch </span><span class="si">{</span><span class="n">epoch</span><span class="o">+</span><span class="mi">1</span><span class="si">}</span><span class="s2"> (patience=</span><span class="si">{</span><span class="n">patience</span><span class="si">}</span><span class="s2">)"</span><span class="p">)</span>
             <span class="k">break</span>
 
     <span class="k">if</span> <span class="ow">not</span> <span class="n">has_val</span><span class="p">:</span>

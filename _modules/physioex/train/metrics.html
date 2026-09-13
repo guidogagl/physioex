@@ -410,24 +410,24 @@ window.addEventListener("load", () => mermaid.run());
     <span class="n">outputs</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
     <span class="n">targets</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
     <span class="n">ignore_index</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
-    <span class="n">average</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;micro&quot;</span><span class="p">,</span>
+    <span class="n">average</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"micro"</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Compute accuracy score.</span>
+<span class="w">    </span><span class="sd">"""Compute accuracy score.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        outputs: Model outputs (logits), shape (..., n_classes).</span>
 <span class="sd">        targets: Ground-truth labels.</span>
 <span class="sd">        ignore_index: Label value to ignore (default -1).</span>
-<span class="sd">        average: Averaging method. ``&quot;micro&quot;`` computes global accuracy (correct / total).</span>
-<span class="sd">            ``&quot;weighted&quot;`` is equivalent to ``&quot;micro&quot;`` for accuracy and is accepted for</span>
+<span class="sd">        average: Averaging method. ``"micro"`` computes global accuracy (correct / total).</span>
+<span class="sd">            ``"weighted"`` is equivalent to ``"micro"`` for accuracy and is accepted for</span>
 <span class="sd">            API consistency with the other metric functions.</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">        Accuracy as a float in [0, 1].</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">if</span> <span class="n">average</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;micro&quot;</span><span class="p">,</span> <span class="s2">&quot;weighted&quot;</span><span class="p">):</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="n">average</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"micro"</span><span class="p">,</span> <span class="s2">"weighted"</span><span class="p">):</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;accuracy_score &#39;average&#39; must be &#39;micro&#39; or &#39;weighted&#39;, got &#39;</span><span class="si">{</span><span class="n">average</span><span class="si">}</span><span class="s2">&#39;&quot;</span>
+            <span class="sa">f</span><span class="s2">"accuracy_score 'average' must be 'micro' or 'weighted', got '</span><span class="si">{</span><span class="n">average</span><span class="si">}</span><span class="s2">'"</span>
         <span class="p">)</span>
 
     <span class="n">preds</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">outputs</span><span class="p">,</span> <span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
@@ -449,7 +449,7 @@ window.addEventListener("load", () => mermaid.run());
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_per_class_f1</span><span class="p">(</span><span class="n">preds</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">targets</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">n_classes</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return per-class F1 scores and supports.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Return per-class F1 scores and supports."""</span>
     <span class="n">f1s</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="n">supports</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="k">for</span> <span class="bp">cls</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_classes</span><span class="p">):</span>
@@ -475,24 +475,24 @@ window.addEventListener("load", () => mermaid.run());
     <span class="n">outputs</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
     <span class="n">targets</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
     <span class="n">ignore_index</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
-    <span class="n">average</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;macro&quot;</span><span class="p">,</span>
+    <span class="n">average</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"macro"</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Compute F1 score.</span>
+<span class="w">    </span><span class="sd">"""Compute F1 score.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        outputs: Model outputs (logits), shape (..., n_classes).</span>
 <span class="sd">        targets: Ground-truth labels.</span>
 <span class="sd">        ignore_index: Label value to ignore (default -1).</span>
-<span class="sd">        average: ``&quot;macro&quot;`` returns unweighted mean of per-class F1 across classes</span>
-<span class="sd">            with non-zero support. ``&quot;weighted&quot;`` weights each class F1 by its</span>
+<span class="sd">        average: ``"macro"`` returns unweighted mean of per-class F1 across classes</span>
+<span class="sd">            with non-zero support. ``"weighted"`` weights each class F1 by its</span>
 <span class="sd">            support (number of true instances).</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">        F1 score as a float in [0, 1].</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">if</span> <span class="n">average</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;macro&quot;</span><span class="p">,</span> <span class="s2">&quot;weighted&quot;</span><span class="p">):</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="n">average</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"macro"</span><span class="p">,</span> <span class="s2">"weighted"</span><span class="p">):</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;f1_score &#39;average&#39; must be &#39;macro&#39; or &#39;weighted&#39;, got &#39;</span><span class="si">{</span><span class="n">average</span><span class="si">}</span><span class="s2">&#39;&quot;</span>
+            <span class="sa">f</span><span class="s2">"f1_score 'average' must be 'macro' or 'weighted', got '</span><span class="si">{</span><span class="n">average</span><span class="si">}</span><span class="s2">'"</span>
         <span class="p">)</span>
 
     <span class="n">n_classes</span> <span class="o">=</span> <span class="n">outputs</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
@@ -505,7 +505,7 @@ window.addEventListener("load", () => mermaid.run());
 
     <span class="n">f1s</span><span class="p">,</span> <span class="n">supports</span> <span class="o">=</span> <span class="n">_per_class_f1</span><span class="p">(</span><span class="n">preds</span><span class="p">,</span> <span class="n">targets</span><span class="p">,</span> <span class="n">n_classes</span><span class="p">)</span>
 
-    <span class="k">if</span> <span class="n">average</span> <span class="o">==</span> <span class="s2">&quot;weighted&quot;</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">average</span> <span class="o">==</span> <span class="s2">"weighted"</span><span class="p">:</span>
         <span class="n">total_support</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">supports</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">total_support</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
             <span class="k">return</span> <span class="mf">0.0</span>
@@ -518,7 +518,7 @@ window.addEventListener("load", () => mermaid.run());
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_per_class_precision</span><span class="p">(</span><span class="n">preds</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">targets</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">n_classes</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return per-class precision scores and supports.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Return per-class precision scores and supports."""</span>
     <span class="n">precisions</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="n">supports</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="k">for</span> <span class="bp">cls</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_classes</span><span class="p">):</span>
@@ -541,24 +541,24 @@ window.addEventListener("load", () => mermaid.run());
     <span class="n">outputs</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
     <span class="n">targets</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
     <span class="n">ignore_index</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
-    <span class="n">average</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;macro&quot;</span><span class="p">,</span>
+    <span class="n">average</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"macro"</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Compute precision score.</span>
+<span class="w">    </span><span class="sd">"""Compute precision score.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        outputs: Model outputs (logits), shape (..., n_classes).</span>
 <span class="sd">        targets: Ground-truth labels.</span>
 <span class="sd">        ignore_index: Label value to ignore (default -1).</span>
-<span class="sd">        average: ``&quot;macro&quot;`` returns unweighted mean of per-class precision across</span>
-<span class="sd">            classes with non-zero support. ``&quot;weighted&quot;`` weights each class precision</span>
+<span class="sd">        average: ``"macro"`` returns unweighted mean of per-class precision across</span>
+<span class="sd">            classes with non-zero support. ``"weighted"`` weights each class precision</span>
 <span class="sd">            by its support.</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">        Precision as a float in [0, 1].</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">if</span> <span class="n">average</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;macro&quot;</span><span class="p">,</span> <span class="s2">&quot;weighted&quot;</span><span class="p">):</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="n">average</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"macro"</span><span class="p">,</span> <span class="s2">"weighted"</span><span class="p">):</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;precision_score &#39;average&#39; must be &#39;macro&#39; or &#39;weighted&#39;, got &#39;</span><span class="si">{</span><span class="n">average</span><span class="si">}</span><span class="s2">&#39;&quot;</span>
+            <span class="sa">f</span><span class="s2">"precision_score 'average' must be 'macro' or 'weighted', got '</span><span class="si">{</span><span class="n">average</span><span class="si">}</span><span class="s2">'"</span>
         <span class="p">)</span>
 
     <span class="n">n_classes</span> <span class="o">=</span> <span class="n">outputs</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
@@ -571,7 +571,7 @@ window.addEventListener("load", () => mermaid.run());
 
     <span class="n">precisions</span><span class="p">,</span> <span class="n">supports</span> <span class="o">=</span> <span class="n">_per_class_precision</span><span class="p">(</span><span class="n">preds</span><span class="p">,</span> <span class="n">targets</span><span class="p">,</span> <span class="n">n_classes</span><span class="p">)</span>
 
-    <span class="k">if</span> <span class="n">average</span> <span class="o">==</span> <span class="s2">&quot;weighted&quot;</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">average</span> <span class="o">==</span> <span class="s2">"weighted"</span><span class="p">:</span>
         <span class="n">total_support</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">supports</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">total_support</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
             <span class="k">return</span> <span class="mf">0.0</span>
@@ -584,7 +584,7 @@ window.addEventListener("load", () => mermaid.run());
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_per_class_recall</span><span class="p">(</span><span class="n">preds</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">targets</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">n_classes</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return per-class recall scores and supports.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Return per-class recall scores and supports."""</span>
     <span class="n">recalls</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="n">supports</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="k">for</span> <span class="bp">cls</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_classes</span><span class="p">):</span>
@@ -607,24 +607,24 @@ window.addEventListener("load", () => mermaid.run());
     <span class="n">outputs</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
     <span class="n">targets</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
     <span class="n">ignore_index</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
-    <span class="n">average</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;macro&quot;</span><span class="p">,</span>
+    <span class="n">average</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"macro"</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Compute recall score.</span>
+<span class="w">    </span><span class="sd">"""Compute recall score.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        outputs: Model outputs (logits), shape (..., n_classes).</span>
 <span class="sd">        targets: Ground-truth labels.</span>
 <span class="sd">        ignore_index: Label value to ignore (default -1).</span>
-<span class="sd">        average: ``&quot;macro&quot;`` returns unweighted mean of per-class recall across classes</span>
-<span class="sd">            with non-zero support. ``&quot;weighted&quot;`` weights each class recall by its</span>
+<span class="sd">        average: ``"macro"`` returns unweighted mean of per-class recall across classes</span>
+<span class="sd">            with non-zero support. ``"weighted"`` weights each class recall by its</span>
 <span class="sd">            support.</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">        Recall as a float in [0, 1].</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">if</span> <span class="n">average</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;macro&quot;</span><span class="p">,</span> <span class="s2">&quot;weighted&quot;</span><span class="p">):</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="n">average</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"macro"</span><span class="p">,</span> <span class="s2">"weighted"</span><span class="p">):</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;recall_score &#39;average&#39; must be &#39;macro&#39; or &#39;weighted&#39;, got &#39;</span><span class="si">{</span><span class="n">average</span><span class="si">}</span><span class="s2">&#39;&quot;</span>
+            <span class="sa">f</span><span class="s2">"recall_score 'average' must be 'macro' or 'weighted', got '</span><span class="si">{</span><span class="n">average</span><span class="si">}</span><span class="s2">'"</span>
         <span class="p">)</span>
 
     <span class="n">n_classes</span> <span class="o">=</span> <span class="n">outputs</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
@@ -637,7 +637,7 @@ window.addEventListener("load", () => mermaid.run());
 
     <span class="n">recalls</span><span class="p">,</span> <span class="n">supports</span> <span class="o">=</span> <span class="n">_per_class_recall</span><span class="p">(</span><span class="n">preds</span><span class="p">,</span> <span class="n">targets</span><span class="p">,</span> <span class="n">n_classes</span><span class="p">)</span>
 
-    <span class="k">if</span> <span class="n">average</span> <span class="o">==</span> <span class="s2">&quot;weighted&quot;</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">average</span> <span class="o">==</span> <span class="s2">"weighted"</span><span class="p">:</span>
         <span class="n">total_support</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">supports</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">total_support</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
             <span class="k">return</span> <span class="mf">0.0</span>
@@ -712,9 +712,9 @@ window.addEventListener("load", () => mermaid.run());
     <span class="k">assert</span> <span class="n">normalize</span> <span class="ow">in</span> <span class="p">[</span>
         <span class="kc">False</span><span class="p">,</span>
         <span class="kc">True</span><span class="p">,</span>
-        <span class="s2">&quot;preds&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;targets&quot;</span><span class="p">,</span>
-    <span class="p">],</span> <span class="s2">&quot;normalize must be one of: False, True, &#39;preds&#39;, &#39;targets&#39;&quot;</span>
+        <span class="s2">"preds"</span><span class="p">,</span>
+        <span class="s2">"targets"</span><span class="p">,</span>
+    <span class="p">],</span> <span class="s2">"normalize must be one of: False, True, 'preds', 'targets'"</span>
 
     <span class="n">n_classes</span> <span class="o">=</span> <span class="n">outputs</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
     <span class="n">preds</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">outputs</span><span class="p">,</span> <span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
@@ -730,11 +730,11 @@ window.addEventListener("load", () => mermaid.run());
     <span class="k">for</span> <span class="n">t</span><span class="p">,</span> <span class="n">p</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">targets</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">),</span> <span class="n">preds</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)):</span>
         <span class="n">conf_matrix</span><span class="p">[</span><span class="n">t</span><span class="o">.</span><span class="n">long</span><span class="p">(),</span> <span class="n">p</span><span class="o">.</span><span class="n">long</span><span class="p">()]</span> <span class="o">+=</span> <span class="mi">1</span>
 
-    <span class="k">if</span> <span class="n">normalize</span> <span class="o">==</span> <span class="s2">&quot;preds&quot;</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">normalize</span> <span class="o">==</span> <span class="s2">"preds"</span><span class="p">:</span>
         <span class="n">conf_matrix</span> <span class="o">=</span> <span class="n">conf_matrix</span><span class="o">.</span><span class="n">float</span><span class="p">()</span> <span class="o">/</span> <span class="p">(</span>
             <span class="n">conf_matrix</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">keepdim</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="o">+</span> <span class="mf">1e-8</span>
         <span class="p">)</span>
-    <span class="k">elif</span> <span class="n">normalize</span> <span class="o">==</span> <span class="s2">&quot;targets&quot;</span><span class="p">:</span>
+    <span class="k">elif</span> <span class="n">normalize</span> <span class="o">==</span> <span class="s2">"targets"</span><span class="p">:</span>
         <span class="n">conf_matrix</span> <span class="o">=</span> <span class="n">conf_matrix</span><span class="o">.</span><span class="n">float</span><span class="p">()</span> <span class="o">/</span> <span class="p">(</span>
             <span class="n">conf_matrix</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">keepdim</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="o">+</span> <span class="mf">1e-8</span>
         <span class="p">)</span>
@@ -745,13 +745,13 @@ window.addEventListener("load", () => mermaid.run());
 
 
 <span class="n">CLASSIFICATION_METRICS</span> <span class="o">=</span> <span class="p">{</span>
-    <span class="s2">&quot;accuracy&quot;</span><span class="p">:</span> <span class="n">accuracy_score</span><span class="p">,</span>
-    <span class="s2">&quot;f1_score&quot;</span><span class="p">:</span> <span class="n">f1_score</span><span class="p">,</span>
-    <span class="s2">&quot;precision&quot;</span><span class="p">:</span> <span class="n">precision_score</span><span class="p">,</span>
-    <span class="s2">&quot;recall&quot;</span><span class="p">:</span> <span class="n">recall_score</span><span class="p">,</span>
-    <span class="s2">&quot;cohen_kappa&quot;</span><span class="p">:</span> <span class="n">cohen_kappa_score</span><span class="p">,</span>
-    <span class="s2">&quot;confusion_matrix&quot;</span><span class="p">:</span> <span class="n">confusion_matrix</span><span class="p">,</span>
-    <span class="s2">&quot;support&quot;</span><span class="p">:</span> <span class="n">support_score</span><span class="p">,</span>
+    <span class="s2">"accuracy"</span><span class="p">:</span> <span class="n">accuracy_score</span><span class="p">,</span>
+    <span class="s2">"f1_score"</span><span class="p">:</span> <span class="n">f1_score</span><span class="p">,</span>
+    <span class="s2">"precision"</span><span class="p">:</span> <span class="n">precision_score</span><span class="p">,</span>
+    <span class="s2">"recall"</span><span class="p">:</span> <span class="n">recall_score</span><span class="p">,</span>
+    <span class="s2">"cohen_kappa"</span><span class="p">:</span> <span class="n">cohen_kappa_score</span><span class="p">,</span>
+    <span class="s2">"confusion_matrix"</span><span class="p">:</span> <span class="n">confusion_matrix</span><span class="p">,</span>
+    <span class="s2">"support"</span><span class="p">:</span> <span class="n">support_score</span><span class="p">,</span>
 <span class="p">}</span>
 
 
@@ -762,7 +762,7 @@ window.addEventListener("load", () => mermaid.run());
     <span class="n">targets</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
     <span class="n">ignore_index</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Mean squared error for regression tasks.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Mean squared error for regression tasks."""</span>
     <span class="n">outputs</span> <span class="o">=</span> <span class="n">outputs</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="k">if</span> <span class="n">outputs</span><span class="o">.</span><span class="n">dim</span><span class="p">()</span> <span class="o">&gt;</span> <span class="n">targets</span><span class="o">.</span><span class="n">dim</span><span class="p">()</span> <span class="k">else</span> <span class="n">outputs</span>
     <span class="k">if</span> <span class="n">ignore_index</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">mask</span> <span class="o">=</span> <span class="n">targets</span> <span class="o">!=</span> <span class="n">ignore_index</span>
@@ -781,7 +781,7 @@ window.addEventListener("load", () => mermaid.run());
     <span class="n">targets</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
     <span class="n">ignore_index</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Mean absolute error for regression tasks.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Mean absolute error for regression tasks."""</span>
     <span class="n">outputs</span> <span class="o">=</span> <span class="n">outputs</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="k">if</span> <span class="n">outputs</span><span class="o">.</span><span class="n">dim</span><span class="p">()</span> <span class="o">&gt;</span> <span class="n">targets</span><span class="o">.</span><span class="n">dim</span><span class="p">()</span> <span class="k">else</span> <span class="n">outputs</span>
     <span class="k">if</span> <span class="n">ignore_index</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">mask</span> <span class="o">=</span> <span class="n">targets</span> <span class="o">!=</span> <span class="n">ignore_index</span>
@@ -800,7 +800,7 @@ window.addEventListener("load", () => mermaid.run());
     <span class="n">targets</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
     <span class="n">ignore_index</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Coefficient of determination (R^2) for regression tasks.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Coefficient of determination (R^2) for regression tasks."""</span>
     <span class="n">outputs</span> <span class="o">=</span> <span class="n">outputs</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="k">if</span> <span class="n">outputs</span><span class="o">.</span><span class="n">dim</span><span class="p">()</span> <span class="o">&gt;</span> <span class="n">targets</span><span class="o">.</span><span class="n">dim</span><span class="p">()</span> <span class="k">else</span> <span class="n">outputs</span>
     <span class="k">if</span> <span class="n">ignore_index</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">mask</span> <span class="o">=</span> <span class="n">targets</span> <span class="o">!=</span> <span class="n">ignore_index</span>
@@ -818,9 +818,9 @@ window.addEventListener("load", () => mermaid.run());
 
 
 <span class="n">REGRESSION_METRICS</span> <span class="o">=</span> <span class="p">{</span>
-    <span class="s2">&quot;mse&quot;</span><span class="p">:</span> <span class="n">mse_score</span><span class="p">,</span>
-    <span class="s2">&quot;mae&quot;</span><span class="p">:</span> <span class="n">mae_score</span><span class="p">,</span>
-    <span class="s2">&quot;r2&quot;</span><span class="p">:</span> <span class="n">r2_score</span><span class="p">,</span>
+    <span class="s2">"mse"</span><span class="p">:</span> <span class="n">mse_score</span><span class="p">,</span>
+    <span class="s2">"mae"</span><span class="p">:</span> <span class="n">mae_score</span><span class="p">,</span>
+    <span class="s2">"r2"</span><span class="p">:</span> <span class="n">r2_score</span><span class="p">,</span>
 <span class="p">}</span>
 </pre></div>
 

@@ -425,16 +425,16 @@ window.addEventListener("load", () => mermaid.run());
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">ddp_setup</span><span class="p">(</span><span class="n">rank</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">world_size</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">device_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Args:</span>
 <span class="sd">         rank: Unique identifier of each process</span>
 <span class="sd">        world_size: Total number of processes</span>
 <span class="sd">        device_id: CUDA device index assigned to this rank</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;MASTER_ADDR&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;localhost&quot;</span>
-    <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;MASTER_PORT&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;12355&quot;</span>
+<span class="sd">    """</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">"MASTER_ADDR"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"localhost"</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">"MASTER_PORT"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"12355"</span>
     <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">set_device</span><span class="p">(</span><span class="n">device_id</span><span class="p">)</span>
-    <span class="n">init_process_group</span><span class="p">(</span><span class="n">backend</span><span class="o">=</span><span class="s2">&quot;nccl&quot;</span><span class="p">,</span> <span class="n">rank</span><span class="o">=</span><span class="n">rank</span><span class="p">,</span> <span class="n">world_size</span><span class="o">=</span><span class="n">world_size</span><span class="p">)</span>
+    <span class="n">init_process_group</span><span class="p">(</span><span class="n">backend</span><span class="o">=</span><span class="s2">"nccl"</span><span class="p">,</span> <span class="n">rank</span><span class="o">=</span><span class="n">rank</span><span class="p">,</span> <span class="n">world_size</span><span class="o">=</span><span class="n">world_size</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="Trainer">
@@ -447,13 +447,13 @@ window.addEventListener("load", () => mermaid.run());
         <span class="n">epoch</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">optimizer</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">optim</span><span class="o">.</span><span class="n">Optimizer</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">):</span>
-        <span class="n">module</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">module</span> <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="s2">&quot;module&quot;</span><span class="p">)</span> <span class="k">else</span> <span class="n">model</span>
+        <span class="n">module</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">module</span> <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="s2">"module"</span><span class="p">)</span> <span class="k">else</span> <span class="n">model</span>
         <span class="n">checkpoint</span> <span class="o">=</span> <span class="p">{</span>
-            <span class="s2">&quot;model_state_dict&quot;</span><span class="p">:</span> <span class="n">module</span><span class="o">.</span><span class="n">state_dict</span><span class="p">(),</span>
-            <span class="s2">&quot;optimizer_state_dict&quot;</span><span class="p">:</span> <span class="n">optimizer</span><span class="o">.</span><span class="n">state_dict</span><span class="p">()</span>
+            <span class="s2">"model_state_dict"</span><span class="p">:</span> <span class="n">module</span><span class="o">.</span><span class="n">state_dict</span><span class="p">(),</span>
+            <span class="s2">"optimizer_state_dict"</span><span class="p">:</span> <span class="n">optimizer</span><span class="o">.</span><span class="n">state_dict</span><span class="p">()</span>
             <span class="k">if</span> <span class="n">optimizer</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
             <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
-            <span class="s2">&quot;epoch&quot;</span><span class="p">:</span> <span class="n">epoch</span><span class="p">,</span>
+            <span class="s2">"epoch"</span><span class="p">:</span> <span class="n">epoch</span><span class="p">,</span>
         <span class="p">}</span>
         <span class="n">torch</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">checkpoint</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span>
 
@@ -528,9 +528,9 @@ window.addEventListener("load", () => mermaid.run());
             <span class="n">sampler</span><span class="o">=</span><span class="n">DistributedSampler</span><span class="p">(</span><span class="n">train_dataset</span><span class="p">),</span>
         <span class="p">)</span>
         <span class="k">if</span> <span class="n">collate_fn</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">train_loader_kwargs</span><span class="p">[</span><span class="s2">&quot;collate_fn&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">collate_fn</span>
+            <span class="n">train_loader_kwargs</span><span class="p">[</span><span class="s2">"collate_fn"</span><span class="p">]</span> <span class="o">=</span> <span class="n">collate_fn</span>
         <span class="k">if</span> <span class="n">num_workers</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="n">train_loader_kwargs</span><span class="p">[</span><span class="s2">&quot;prefetch_factor&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">prefetch_factor</span>
+            <span class="n">train_loader_kwargs</span><span class="p">[</span><span class="s2">"prefetch_factor"</span><span class="p">]</span> <span class="o">=</span> <span class="n">prefetch_factor</span>
 
         <span class="n">train_loader</span> <span class="o">=</span> <span class="n">DataLoader</span><span class="p">(</span><span class="o">**</span><span class="n">train_loader_kwargs</span><span class="p">)</span>
 
@@ -545,13 +545,13 @@ window.addEventListener("load", () => mermaid.run());
             <span class="n">persistent_workers</span><span class="o">=</span><span class="n">persistent_workers</span><span class="p">,</span>
         <span class="p">)</span>
         <span class="k">if</span> <span class="n">collate_fn</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">valid_loader_kwargs</span><span class="p">[</span><span class="s2">&quot;collate_fn&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">collate_fn</span>
+            <span class="n">valid_loader_kwargs</span><span class="p">[</span><span class="s2">"collate_fn"</span><span class="p">]</span> <span class="o">=</span> <span class="n">collate_fn</span>
         <span class="k">if</span> <span class="n">num_workers</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="n">valid_loader_kwargs</span><span class="p">[</span><span class="s2">&quot;prefetch_factor&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">prefetch_factor</span>
+            <span class="n">valid_loader_kwargs</span><span class="p">[</span><span class="s2">"prefetch_factor"</span><span class="p">]</span> <span class="o">=</span> <span class="n">prefetch_factor</span>
 
         <span class="n">valid_loader</span> <span class="o">=</span> <span class="n">DataLoader</span><span class="p">(</span><span class="o">**</span><span class="n">valid_loader_kwargs</span><span class="p">)</span>
 
-        <span class="n">valid_loader_kwargs</span><span class="p">[</span><span class="s2">&quot;dataset&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">test_dataset</span>
+        <span class="n">valid_loader_kwargs</span><span class="p">[</span><span class="s2">"dataset"</span><span class="p">]</span> <span class="o">=</span> <span class="n">test_dataset</span>
         <span class="n">test_loader</span> <span class="o">=</span> <span class="n">DataLoader</span><span class="p">(</span><span class="o">**</span><span class="n">valid_loader_kwargs</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="n">train_loader</span><span class="p">,</span> <span class="n">valid_loader</span><span class="p">,</span> <span class="n">test_loader</span>
@@ -559,12 +559,12 @@ window.addEventListener("load", () => mermaid.run());
     <span class="nd">@staticmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">train</span><span class="p">(</span>
         <span class="n">model</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">,</span>
-        <span class="n">dataset</span><span class="p">:</span> <span class="n">typing</span><span class="o">.</span><span class="n">Union</span><span class="p">[</span><span class="s2">&quot;typing.Any&quot;</span><span class="p">,</span> <span class="n">typing</span><span class="o">.</span><span class="n">Tuple</span><span class="p">[</span><span class="n">DataLoader</span><span class="p">,</span> <span class="n">DataLoader</span><span class="p">]],</span>
+        <span class="n">dataset</span><span class="p">:</span> <span class="n">typing</span><span class="o">.</span><span class="n">Union</span><span class="p">[</span><span class="s2">"typing.Any"</span><span class="p">,</span> <span class="n">typing</span><span class="o">.</span><span class="n">Tuple</span><span class="p">[</span><span class="n">DataLoader</span><span class="p">,</span> <span class="n">DataLoader</span><span class="p">]],</span>
         <span class="n">checkpoint_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">max_epochs</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">10</span><span class="p">,</span>
         <span class="n">loss</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">CrossEntropyLoss</span><span class="p">(</span><span class="n">ignore_index</span><span class="o">=-</span><span class="mi">1</span><span class="p">),</span>
         <span class="n">optimizer</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">optim</span><span class="o">.</span><span class="n">Optimizer</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>  <span class="c1"># Adam by default with lr = 1e-3 weight_decay = 1e-5</span>
-        <span class="n">scheduler</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">optim</span><span class="o">.</span><span class="n">lr_scheduler</span><span class="o">.</span><span class="n">_LRScheduler</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>  <span class="c1"># ReduceLROnPlateau by default mode = &quot;min&quot;, factor = 0.1, patience = 10</span>
+        <span class="n">scheduler</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">optim</span><span class="o">.</span><span class="n">lr_scheduler</span><span class="o">.</span><span class="n">_LRScheduler</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>  <span class="c1"># ReduceLROnPlateau by default mode = "min", factor = 0.1, patience = 10</span>
         <span class="n">valid_interval_ratio</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.1</span><span class="p">,</span>
         <span class="n">train_batch_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">32</span><span class="p">,</span>
         <span class="n">eval_batch_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
@@ -573,9 +573,9 @@ window.addEventListener("load", () => mermaid.run());
         <span class="n">prefetch_factor</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span>
         <span class="n">persistent_workers</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
         <span class="n">fold</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
-        <span class="n">gpu_ids</span><span class="p">:</span> <span class="n">typing</span><span class="o">.</span><span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">typing</span><span class="o">.</span><span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="s2">&quot;all&quot;</span><span class="p">,</span>
+        <span class="n">gpu_ids</span><span class="p">:</span> <span class="n">typing</span><span class="o">.</span><span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">typing</span><span class="o">.</span><span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="s2">"all"</span><span class="p">,</span>
         <span class="n">log_device</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
-        <span class="n">logger</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;tensorboard&quot;</span><span class="p">,</span>
+        <span class="n">logger</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"tensorboard"</span><span class="p">,</span>
         <span class="n">log_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">run_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">tags</span><span class="p">:</span> <span class="n">typing</span><span class="o">.</span><span class="n">Optional</span><span class="p">[</span><span class="n">typing</span><span class="o">.</span><span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -588,88 +588,88 @@ window.addEventListener("load", () => mermaid.run());
         <span class="c1"># load parameters from config file if exists</span>
         <span class="n">config_params</span> <span class="o">=</span> <span class="n">_get_parameters_from_config</span><span class="p">()</span>
         <span class="n">checkpoint_path</span> <span class="o">=</span> <span class="p">(</span>
-            <span class="n">config_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;checkpoint_path&quot;</span><span class="p">,</span> <span class="n">checkpoint_path</span><span class="p">)</span>
-            <span class="k">if</span> <span class="n">config_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;checkpoint_path&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+            <span class="n">config_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"checkpoint_path"</span><span class="p">,</span> <span class="n">checkpoint_path</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">config_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"checkpoint_path"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
             <span class="k">else</span> <span class="n">checkpoint_path</span>
         <span class="p">)</span>
         <span class="n">train_batch_size</span> <span class="o">=</span> <span class="p">(</span>
-            <span class="n">config_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;train_batch_size&quot;</span><span class="p">,</span> <span class="n">train_batch_size</span><span class="p">)</span>
-            <span class="k">if</span> <span class="n">config_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;train_batch_size&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+            <span class="n">config_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"train_batch_size"</span><span class="p">,</span> <span class="n">train_batch_size</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">config_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"train_batch_size"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
             <span class="k">else</span> <span class="n">train_batch_size</span>
         <span class="p">)</span>
         <span class="n">eval_batch_size</span> <span class="o">=</span> <span class="p">(</span>
-            <span class="n">config_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;eval_batch_size&quot;</span><span class="p">,</span> <span class="n">eval_batch_size</span><span class="p">)</span>
-            <span class="k">if</span> <span class="n">config_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;eval_batch_size&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+            <span class="n">config_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"eval_batch_size"</span><span class="p">,</span> <span class="n">eval_batch_size</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">config_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"eval_batch_size"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
             <span class="k">else</span> <span class="n">eval_batch_size</span>
         <span class="p">)</span>
         <span class="n">num_workers</span> <span class="o">=</span> <span class="p">(</span>
-            <span class="n">config_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;num_workers&quot;</span><span class="p">,</span> <span class="n">num_workers</span><span class="p">)</span>
-            <span class="k">if</span> <span class="n">config_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;num_workers&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+            <span class="n">config_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"num_workers"</span><span class="p">,</span> <span class="n">num_workers</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">config_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"num_workers"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
             <span class="k">else</span> <span class="n">num_workers</span>
         <span class="p">)</span>
         <span class="n">pin_memory</span> <span class="o">=</span> <span class="p">(</span>
-            <span class="n">config_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;pin_memory&quot;</span><span class="p">,</span> <span class="n">pin_memory</span><span class="p">)</span>
-            <span class="k">if</span> <span class="n">config_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;pin_memory&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+            <span class="n">config_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"pin_memory"</span><span class="p">,</span> <span class="n">pin_memory</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">config_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"pin_memory"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
             <span class="k">else</span> <span class="n">pin_memory</span>
         <span class="p">)</span>
         <span class="n">prefetch_factor</span> <span class="o">=</span> <span class="p">(</span>
-            <span class="n">config_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;prefetch_factor&quot;</span><span class="p">,</span> <span class="n">prefetch_factor</span><span class="p">)</span>
-            <span class="k">if</span> <span class="n">config_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;prefetch_factor&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+            <span class="n">config_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"prefetch_factor"</span><span class="p">,</span> <span class="n">prefetch_factor</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">config_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"prefetch_factor"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
             <span class="k">else</span> <span class="n">prefetch_factor</span>
         <span class="p">)</span>
         <span class="n">persistent_workers</span> <span class="o">=</span> <span class="p">(</span>
-            <span class="n">config_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;persistent_workers&quot;</span><span class="p">,</span> <span class="n">persistent_workers</span><span class="p">)</span>
-            <span class="k">if</span> <span class="n">config_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;persistent_workers&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+            <span class="n">config_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"persistent_workers"</span><span class="p">,</span> <span class="n">persistent_workers</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">config_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"persistent_workers"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
             <span class="k">else</span> <span class="n">persistent_workers</span>
         <span class="p">)</span>
         <span class="n">fold</span> <span class="o">=</span> <span class="p">(</span>
-            <span class="n">config_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;fold&quot;</span><span class="p">,</span> <span class="n">fold</span><span class="p">)</span>
-            <span class="k">if</span> <span class="n">config_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;fold&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+            <span class="n">config_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"fold"</span><span class="p">,</span> <span class="n">fold</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">config_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"fold"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
             <span class="k">else</span> <span class="n">fold</span>
         <span class="p">)</span>
         <span class="n">gpu_ids</span> <span class="o">=</span> <span class="p">(</span>
-            <span class="n">config_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;gpu_ids&quot;</span><span class="p">,</span> <span class="n">gpu_ids</span><span class="p">)</span>
-            <span class="k">if</span> <span class="n">config_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;gpu_ids&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+            <span class="n">config_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"gpu_ids"</span><span class="p">,</span> <span class="n">gpu_ids</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">config_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"gpu_ids"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
             <span class="k">else</span> <span class="n">gpu_ids</span>
         <span class="p">)</span>
         <span class="n">log_device</span> <span class="o">=</span> <span class="p">(</span>
-            <span class="n">config_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;log_device&quot;</span><span class="p">,</span> <span class="n">log_device</span><span class="p">)</span>
-            <span class="k">if</span> <span class="n">config_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;log_device&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+            <span class="n">config_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"log_device"</span><span class="p">,</span> <span class="n">log_device</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">config_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"log_device"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
             <span class="k">else</span> <span class="n">log_device</span>
         <span class="p">)</span>
         <span class="n">logger</span> <span class="o">=</span> <span class="p">(</span>
-            <span class="n">config_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;logger&quot;</span><span class="p">,</span> <span class="n">logger</span><span class="p">)</span>
-            <span class="k">if</span> <span class="n">config_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;logger&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+            <span class="n">config_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"logger"</span><span class="p">,</span> <span class="n">logger</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">config_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"logger"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
             <span class="k">else</span> <span class="n">logger</span>
         <span class="p">)</span>
         <span class="n">log_dir</span> <span class="o">=</span> <span class="p">(</span>
-            <span class="n">config_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;log_dir&quot;</span><span class="p">,</span> <span class="n">log_dir</span><span class="p">)</span>
-            <span class="k">if</span> <span class="n">config_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;log_dir&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+            <span class="n">config_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"log_dir"</span><span class="p">,</span> <span class="n">log_dir</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">config_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"log_dir"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
             <span class="k">else</span> <span class="n">log_dir</span>
         <span class="p">)</span>
         <span class="n">run_name</span> <span class="o">=</span> <span class="p">(</span>
-            <span class="n">config_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;run_name&quot;</span><span class="p">,</span> <span class="n">run_name</span><span class="p">)</span>
-            <span class="k">if</span> <span class="n">config_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;run_name&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+            <span class="n">config_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"run_name"</span><span class="p">,</span> <span class="n">run_name</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">config_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"run_name"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
             <span class="k">else</span> <span class="n">run_name</span>
         <span class="p">)</span>
         <span class="n">tags</span> <span class="o">=</span> <span class="p">(</span>
-            <span class="n">config_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;tags&quot;</span><span class="p">,</span> <span class="n">tags</span><span class="p">)</span>
-            <span class="k">if</span> <span class="n">config_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;tags&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+            <span class="n">config_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"tags"</span><span class="p">,</span> <span class="n">tags</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">config_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"tags"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
             <span class="k">else</span> <span class="n">tags</span>
         <span class="p">)</span>
         <span class="n">log_graph</span> <span class="o">=</span> <span class="p">(</span>
-            <span class="n">config_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;log_graph&quot;</span><span class="p">,</span> <span class="n">log_graph</span><span class="p">)</span>
-            <span class="k">if</span> <span class="n">config_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;log_graph&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+            <span class="n">config_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"log_graph"</span><span class="p">,</span> <span class="n">log_graph</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">config_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"log_graph"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
             <span class="k">else</span> <span class="n">log_graph</span>
         <span class="p">)</span>
         <span class="n">log_hist_every</span> <span class="o">=</span> <span class="p">(</span>
-            <span class="n">config_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;log_hist_every&quot;</span><span class="p">,</span> <span class="n">log_hist_every</span><span class="p">)</span>
-            <span class="k">if</span> <span class="n">config_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;log_hist_every&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+            <span class="n">config_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"log_hist_every"</span><span class="p">,</span> <span class="n">log_hist_every</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">config_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"log_hist_every"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
             <span class="k">else</span> <span class="n">log_hist_every</span>
         <span class="p">)</span>
         <span class="n">log_confusion_matrix</span> <span class="o">=</span> <span class="p">(</span>
-            <span class="n">config_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;log_confusion_matrix&quot;</span><span class="p">,</span> <span class="n">log_confusion_matrix</span><span class="p">)</span>
-            <span class="k">if</span> <span class="n">config_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;log_confusion_matrix&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+            <span class="n">config_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"log_confusion_matrix"</span><span class="p">,</span> <span class="n">log_confusion_matrix</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">config_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"log_confusion_matrix"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
             <span class="k">else</span> <span class="n">log_confusion_matrix</span>
         <span class="p">)</span>
 
@@ -677,21 +677,21 @@ window.addEventListener("load", () => mermaid.run());
             <span class="n">checkpoint_id</span> <span class="o">=</span> <span class="mi">0</span>
             <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
                 <span class="n">checkpoint_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
-                    <span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">(),</span> <span class="s2">&quot;checkpoints&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;train_</span><span class="si">{</span><span class="n">checkpoint_id</span><span class="si">}</span><span class="s2">&quot;</span>
+                    <span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">(),</span> <span class="s2">"checkpoints"</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"train_</span><span class="si">{</span><span class="n">checkpoint_id</span><span class="si">}</span><span class="s2">"</span>
                 <span class="p">)</span>
                 <span class="c1"># check if directory exists</span>
                 <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">checkpoint_path</span><span class="p">):</span>
-                    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[Info] Creating checkpoint directory at </span><span class="si">{</span><span class="n">checkpoint_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"[Info] Creating checkpoint directory at </span><span class="si">{</span><span class="n">checkpoint_path</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
                     <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">checkpoint_path</span><span class="p">)</span>
                     <span class="k">break</span>
 
                 <span class="n">checkpoint_id</span> <span class="o">+=</span> <span class="mi">1</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">checkpoint_path</span><span class="p">):</span>
-                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[Info] Creating checkpoint directory at </span><span class="si">{</span><span class="n">checkpoint_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"[Info] Creating checkpoint directory at </span><span class="si">{</span><span class="n">checkpoint_path</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
                 <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">checkpoint_path</span><span class="p">)</span>
 
-        <span class="k">if</span> <span class="n">gpu_ids</span> <span class="o">==</span> <span class="s2">&quot;all&quot;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">gpu_ids</span> <span class="o">==</span> <span class="s2">"all"</span><span class="p">:</span>
             <span class="n">gpu_ids</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">device_count</span><span class="p">()))</span>
         <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">gpu_ids</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
             <span class="n">gpu_ids</span> <span class="o">=</span> <span class="p">[</span><span class="n">gpu_ids</span><span class="p">]</span>
@@ -699,20 +699,20 @@ window.addEventListener("load", () => mermaid.run());
             <span class="n">gpu_ids</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">gpu_ids</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">gpu_ids</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;No GPU devices available for distributed training.&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"No GPU devices available for distributed training."</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">is_available</span><span class="p">():</span>
-            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;CUDA is required for multi-device training.&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">"CUDA is required for multi-device training."</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="n">optimizer</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">optimizer</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">optim</span><span class="o">.</span><span class="n">Adam</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">parameters</span><span class="p">(),</span> <span class="n">lr</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">,</span> <span class="n">weight_decay</span><span class="o">=</span><span class="mf">1e-5</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="n">scheduler</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">scheduler</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">optim</span><span class="o">.</span><span class="n">lr_scheduler</span><span class="o">.</span><span class="n">ReduceLROnPlateau</span><span class="p">(</span>
-                <span class="n">optimizer</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;min&quot;</span><span class="p">,</span> <span class="n">factor</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">patience</span><span class="o">=</span><span class="mi">10</span>
+                <span class="n">optimizer</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">"min"</span><span class="p">,</span> <span class="n">factor</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">patience</span><span class="o">=</span><span class="mi">10</span>
             <span class="p">)</span>
 
         <span class="k">if</span> <span class="n">log_dir</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">log_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">checkpoint_path</span><span class="p">,</span> <span class="s2">&quot;tb&quot;</span><span class="p">)</span>
+            <span class="n">log_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">checkpoint_path</span><span class="p">,</span> <span class="s2">"tb"</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">run_name</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">run_name</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">normpath</span><span class="p">(</span><span class="n">checkpoint_path</span><span class="p">))</span>
 
@@ -751,7 +751,7 @@ window.addEventListener("load", () => mermaid.run());
         <span class="p">)</span>
 
         <span class="c1"># load best model before returning</span>
-        <span class="n">checkpoint_files</span> <span class="o">=</span> <span class="p">[</span><span class="n">f</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">checkpoint_path</span><span class="p">)</span> <span class="k">if</span> <span class="n">f</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;.pt&quot;</span><span class="p">)]</span>
+        <span class="n">checkpoint_files</span> <span class="o">=</span> <span class="p">[</span><span class="n">f</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">checkpoint_path</span><span class="p">)</span> <span class="k">if</span> <span class="n">f</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">".pt"</span><span class="p">)]</span>
         <span class="k">if</span> <span class="n">checkpoint_files</span><span class="p">:</span>
             <span class="n">checkpoint_files</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span>
                 <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">f</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">getmtime</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">checkpoint_path</span><span class="p">,</span> <span class="n">f</span><span class="p">)),</span>
@@ -761,7 +761,7 @@ window.addEventListener("load", () => mermaid.run());
             <span class="n">model</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">Trainer</span><span class="o">.</span><span class="n">load_checkpoint</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">model_path</span><span class="p">,</span> <span class="n">optimizer</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="nb">print</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;[Warning - Trainer]: No checkpoints found in </span><span class="si">{</span><span class="n">checkpoint_path</span><span class="si">}</span><span class="s2">. Returning model without loading state.&quot;</span>
+                <span class="sa">f</span><span class="s2">"[Warning - Trainer]: No checkpoints found in </span><span class="si">{</span><span class="n">checkpoint_path</span><span class="si">}</span><span class="s2">. Returning model without loading state."</span>
             <span class="p">)</span>
 
         <span class="k">return</span> <span class="n">model</span>
@@ -827,7 +827,7 @@ window.addEventListener("load", () => mermaid.run());
                 <span class="k">if</span> <span class="n">logger</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
                     <span class="n">train_global_step</span> <span class="o">=</span> <span class="n">epoch</span> <span class="o">*</span> <span class="n">steps_per_epoch</span> <span class="o">+</span> <span class="n">step</span>
                     <span class="n">logger</span><span class="o">.</span><span class="n">log</span><span class="p">(</span>
-                        <span class="n">stage</span><span class="o">=</span><span class="s2">&quot;train&quot;</span><span class="p">,</span>
+                        <span class="n">stage</span><span class="o">=</span><span class="s2">"train"</span><span class="p">,</span>
                         <span class="n">epoch</span><span class="o">=</span><span class="n">epoch</span><span class="p">,</span>
                         <span class="n">step</span><span class="o">=</span><span class="n">train_global_step</span><span class="p">,</span>
                         <span class="n">loss</span><span class="o">=</span><span class="n">step_loss</span><span class="p">,</span>
@@ -836,7 +836,7 @@ window.addEventListener("load", () => mermaid.run());
                     <span class="p">)</span>
                     <span class="n">logger</span><span class="o">.</span><span class="n">log_learning_rate</span><span class="p">(</span>
                         <span class="n">step</span><span class="o">=</span><span class="n">train_global_step</span><span class="p">,</span>
-                        <span class="n">value</span><span class="o">=</span><span class="n">optimizer</span><span class="o">.</span><span class="n">param_groups</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s2">&quot;lr&quot;</span><span class="p">],</span>
+                        <span class="n">value</span><span class="o">=</span><span class="n">optimizer</span><span class="o">.</span><span class="n">param_groups</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s2">"lr"</span><span class="p">],</span>
                     <span class="p">)</span>
                     <span class="k">if</span> <span class="n">update_norm</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
                         <span class="n">logger</span><span class="o">.</span><span class="n">log_update_norm</span><span class="p">(</span>
@@ -845,16 +845,16 @@ window.addEventListener("load", () => mermaid.run());
                         <span class="p">)</span>
 
                     <span class="k">if</span> <span class="n">log_hist_every</span> <span class="ow">and</span> <span class="n">train_global_step</span> <span class="o">%</span> <span class="n">log_hist_every</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-                        <span class="n">base</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">module</span> <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="s2">&quot;module&quot;</span><span class="p">)</span> <span class="k">else</span> <span class="n">model</span>
+                        <span class="n">base</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">module</span> <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="s2">"module"</span><span class="p">)</span> <span class="k">else</span> <span class="n">model</span>
                         <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">param</span> <span class="ow">in</span> <span class="n">base</span><span class="o">.</span><span class="n">named_parameters</span><span class="p">():</span>
                             <span class="k">if</span> <span class="ow">not</span> <span class="n">param</span><span class="o">.</span><span class="n">requires_grad</span><span class="p">:</span>
                                 <span class="k">continue</span>
                             <span class="n">logger</span><span class="o">.</span><span class="n">log_histogram</span><span class="p">(</span>
-                                <span class="sa">f</span><span class="s2">&quot;weights/</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">param</span><span class="o">.</span><span class="n">detach</span><span class="p">(),</span> <span class="n">train_global_step</span>
+                                <span class="sa">f</span><span class="s2">"weights/</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="n">param</span><span class="o">.</span><span class="n">detach</span><span class="p">(),</span> <span class="n">train_global_step</span>
                             <span class="p">)</span>
                             <span class="k">if</span> <span class="n">param</span><span class="o">.</span><span class="n">grad</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
                                 <span class="n">logger</span><span class="o">.</span><span class="n">log_histogram</span><span class="p">(</span>
-                                    <span class="sa">f</span><span class="s2">&quot;grads/</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">param</span><span class="o">.</span><span class="n">grad</span><span class="o">.</span><span class="n">detach</span><span class="p">(),</span> <span class="n">train_global_step</span>
+                                    <span class="sa">f</span><span class="s2">"grads/</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="n">param</span><span class="o">.</span><span class="n">grad</span><span class="o">.</span><span class="n">detach</span><span class="p">(),</span> <span class="n">train_global_step</span>
                                 <span class="p">)</span>
 
             <span class="n">should_run_eval</span> <span class="o">=</span> <span class="p">(</span><span class="n">step</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">%</span> <span class="n">valid_interval</span> <span class="o">==</span> <span class="mi">0</span>
@@ -925,12 +925,12 @@ window.addEventListener("load", () => mermaid.run());
                         <span class="n">scheduler</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">val_loss</span><span class="p">)</span>
                     <span class="k">else</span><span class="p">:</span>
                         <span class="n">scheduler</span><span class="o">.</span><span class="n">step</span><span class="p">()</span>
-                    <span class="n">progress</span><span class="o">.</span><span class="n">set_lr</span><span class="p">(</span><span class="n">scheduler</span><span class="o">.</span><span class="n">get_last_lr</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">scheduler</span><span class="p">,</span> <span class="s1">&#39;get_last_lr&#39;</span><span class="p">)</span> <span class="k">else</span> <span class="n">optimizer</span><span class="o">.</span><span class="n">param_groups</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s1">&#39;lr&#39;</span><span class="p">])</span>
+                    <span class="n">progress</span><span class="o">.</span><span class="n">set_lr</span><span class="p">(</span><span class="n">scheduler</span><span class="o">.</span><span class="n">get_last_lr</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">scheduler</span><span class="p">,</span> <span class="s1">'get_last_lr'</span><span class="p">)</span> <span class="k">else</span> <span class="n">optimizer</span><span class="o">.</span><span class="n">param_groups</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s1">'lr'</span><span class="p">])</span>
 
                     <span class="k">if</span> <span class="n">logger</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
                         <span class="n">validation_global_step</span> <span class="o">=</span> <span class="n">epoch</span> <span class="o">*</span> <span class="n">steps_per_epoch</span> <span class="o">+</span> <span class="n">step</span>
                         <span class="n">logger</span><span class="o">.</span><span class="n">log</span><span class="p">(</span>
-                            <span class="n">stage</span><span class="o">=</span><span class="s2">&quot;validation&quot;</span><span class="p">,</span>
+                            <span class="n">stage</span><span class="o">=</span><span class="s2">"validation"</span><span class="p">,</span>
                             <span class="n">epoch</span><span class="o">=</span><span class="n">epoch</span><span class="p">,</span>
                             <span class="n">step</span><span class="o">=</span><span class="n">validation_global_step</span><span class="p">,</span>
                             <span class="n">loss</span><span class="o">=</span><span class="n">val_loss</span><span class="p">,</span>
@@ -943,7 +943,7 @@ window.addEventListener("load", () => mermaid.run());
                         <span class="p">)</span>
 
                         <span class="k">if</span> <span class="n">collect_val</span> <span class="ow">and</span> <span class="n">val_preds</span><span class="p">:</span>
-                            <span class="n">ignore_index</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">loss</span><span class="p">,</span> <span class="s2">&quot;ignore_index&quot;</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+                            <span class="n">ignore_index</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">loss</span><span class="p">,</span> <span class="s2">"ignore_index"</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
                             <span class="n">preds_cat</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">(</span><span class="n">val_preds</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
                             <span class="n">targets_cat</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">(</span><span class="n">val_targets</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
                             <span class="n">n_classes</span> <span class="o">=</span> <span class="n">preds_cat</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
@@ -956,14 +956,14 @@ window.addEventListener("load", () => mermaid.run());
                             <span class="k">for</span> <span class="n">metric</span><span class="p">,</span> <span class="n">fn</span> <span class="ow">in</span> <span class="n">_stats</span><span class="o">.</span><span class="n">PER_CLASS_METRICS</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
                                 <span class="n">values</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">fn</span><span class="p">(</span><span class="n">argmax</span><span class="p">,</span> <span class="n">valid_t</span><span class="p">,</span> <span class="n">n_classes</span><span class="p">)</span>
                                 <span class="k">for</span> <span class="n">cname</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">class_names</span><span class="p">,</span> <span class="n">values</span><span class="p">):</span>
-                                    <span class="n">per_class</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;validation/</span><span class="si">{</span><span class="n">metric</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">cname</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+                                    <span class="n">per_class</span><span class="p">[</span><span class="sa">f</span><span class="s2">"validation/</span><span class="si">{</span><span class="n">metric</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">cname</span><span class="si">}</span><span class="s2">"</span><span class="p">]</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
                             <span class="n">logger</span><span class="o">.</span><span class="n">log_scalars</span><span class="p">(</span><span class="n">per_class</span><span class="p">,</span> <span class="n">validation_global_step</span><span class="p">)</span>
 
                             <span class="n">fig</span> <span class="o">=</span> <span class="n">_stats</span><span class="o">.</span><span class="n">confusion_matrix_figure</span><span class="p">(</span>
                                 <span class="n">preds_cat</span><span class="p">,</span> <span class="n">targets_cat</span><span class="p">,</span> <span class="n">ignore_index</span><span class="o">=</span><span class="n">ignore_index</span>
                             <span class="p">)</span>
                             <span class="n">logger</span><span class="o">.</span><span class="n">log_figure</span><span class="p">(</span>
-                                <span class="s2">&quot;validation/confusion_matrix&quot;</span><span class="p">,</span>
+                                <span class="s2">"validation/confusion_matrix"</span><span class="p">,</span>
                                 <span class="n">fig</span><span class="p">,</span>
                                 <span class="n">validation_global_step</span><span class="p">,</span>
                             <span class="p">)</span>
@@ -980,7 +980,7 @@ window.addEventListener("load", () => mermaid.run());
 
                         <span class="n">checkpoint_file</span> <span class="o">=</span> <span class="p">(</span>
                             <span class="n">checkpoint_path</span>
-                            <span class="o">+</span> <span class="sa">f</span><span class="s2">&quot;/epoch=</span><span class="si">{</span><span class="n">epoch</span><span class="si">}</span><span class="s2">-step=</span><span class="si">{</span><span class="n">step</span><span class="si">}</span><span class="s2">-val_acc=</span><span class="si">{</span><span class="n">best_val_acc</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">%.pt&quot;</span>
+                            <span class="o">+</span> <span class="sa">f</span><span class="s2">"/epoch=</span><span class="si">{</span><span class="n">epoch</span><span class="si">}</span><span class="s2">-step=</span><span class="si">{</span><span class="n">step</span><span class="si">}</span><span class="s2">-val_acc=</span><span class="si">{</span><span class="n">best_val_acc</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">%.pt"</span>
                         <span class="p">)</span>
                         <span class="bp">cls</span><span class="o">.</span><span class="n">save_checkpoint</span><span class="p">(</span>
                             <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
@@ -990,7 +990,7 @@ window.addEventListener("load", () => mermaid.run());
                         <span class="p">)</span>
 
                         <span class="k">for</span> <span class="n">file</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">checkpoint_path</span><span class="p">):</span>
-                            <span class="k">if</span> <span class="n">file</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;epoch=&quot;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">file</span> <span class="o">!=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span>
+                            <span class="k">if</span> <span class="n">file</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"epoch="</span><span class="p">)</span> <span class="ow">and</span> <span class="n">file</span> <span class="o">!=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span>
                                 <span class="n">checkpoint_file</span>
                             <span class="p">):</span>
                                 <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">checkpoint_path</span><span class="p">,</span> <span class="n">file</span><span class="p">))</span>
@@ -1017,7 +1017,7 @@ window.addEventListener("load", () => mermaid.run());
         <span class="n">rank</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
         <span class="n">world_size</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
         <span class="n">model</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">,</span>
-        <span class="n">dataset</span><span class="p">:</span> <span class="n">typing</span><span class="o">.</span><span class="n">Union</span><span class="p">[</span><span class="s2">&quot;typing.Any&quot;</span><span class="p">,</span> <span class="n">typing</span><span class="o">.</span><span class="n">Tuple</span><span class="p">[</span><span class="n">DataLoader</span><span class="p">,</span> <span class="n">DataLoader</span><span class="p">]],</span>
+        <span class="n">dataset</span><span class="p">:</span> <span class="n">typing</span><span class="o">.</span><span class="n">Union</span><span class="p">[</span><span class="s2">"typing.Any"</span><span class="p">,</span> <span class="n">typing</span><span class="o">.</span><span class="n">Tuple</span><span class="p">[</span><span class="n">DataLoader</span><span class="p">,</span> <span class="n">DataLoader</span><span class="p">]],</span>
         <span class="n">checkpoint_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
         <span class="n">max_epochs</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
         <span class="n">loss</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">,</span>
@@ -1034,7 +1034,7 @@ window.addEventListener("load", () => mermaid.run());
         <span class="n">log_device</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
         <span class="n">gpu_ids</span><span class="p">:</span> <span class="n">typing</span><span class="o">.</span><span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
         <span class="n">accumulate_grad_batches</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
-        <span class="n">logger_kind</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;tensorboard&quot;</span><span class="p">,</span>
+        <span class="n">logger_kind</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"tensorboard"</span><span class="p">,</span>
         <span class="n">log_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">run_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">tags</span><span class="p">:</span> <span class="n">typing</span><span class="o">.</span><span class="n">Optional</span><span class="p">[</span><span class="n">typing</span><span class="o">.</span><span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -1045,16 +1045,16 @@ window.addEventListener("load", () => mermaid.run());
 
         <span class="n">device_id</span> <span class="o">=</span> <span class="n">gpu_ids</span><span class="p">[</span><span class="n">rank</span><span class="p">]</span>
         <span class="n">device</span> <span class="o">=</span> <span class="p">(</span>
-            <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;cuda:</span><span class="si">{</span><span class="n">device_id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="sa">f</span><span class="s2">"cuda:</span><span class="si">{</span><span class="n">device_id</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">is_available</span><span class="p">()</span>
-            <span class="k">else</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="s2">&quot;cpu&quot;</span><span class="p">)</span>
+            <span class="k">else</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="s2">"cpu"</span><span class="p">)</span>
         <span class="p">)</span>
 
         <span class="n">ddp_setup</span><span class="p">(</span><span class="n">rank</span><span class="p">,</span> <span class="n">world_size</span><span class="p">,</span> <span class="n">device_id</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">):</span>
             <span class="n">train_loader</span><span class="p">,</span> <span class="n">valid_loader</span> <span class="o">=</span> <span class="n">dataset</span>
-        <span class="k">elif</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span> <span class="s2">&quot;split&quot;</span><span class="p">):</span>
+        <span class="k">elif</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span> <span class="s2">"split"</span><span class="p">):</span>
             <span class="n">train_loader</span><span class="p">,</span> <span class="n">valid_loader</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">Trainer</span><span class="o">.</span><span class="n">build_dataloaders</span><span class="p">(</span>
                 <span class="n">dataset</span><span class="o">=</span><span class="n">dataset</span><span class="p">,</span>
                 <span class="n">train_batch_size</span><span class="o">=</span><span class="n">train_batch_size</span><span class="p">,</span>
@@ -1067,8 +1067,8 @@ window.addEventListener("load", () => mermaid.run());
             <span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="s2">&quot;Invalid dataset type. Must be a PhysioEx dataset (BasePhysioDataset / &quot;</span>
-                <span class="s2">&quot;MultiDataset / legacy PhysioExDataset) or a tuple of DataLoaders.&quot;</span>
+                <span class="s2">"Invalid dataset type. Must be a PhysioEx dataset (BasePhysioDataset / "</span>
+                <span class="s2">"MultiDataset / legacy PhysioExDataset) or a tuple of DataLoaders."</span>
             <span class="p">)</span>
 
         <span class="n">valid_interval</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">train_loader</span><span class="p">)</span> <span class="o">*</span> <span class="n">valid_interval_ratio</span><span class="p">))</span>
@@ -1077,7 +1077,7 @@ window.addEventListener("load", () => mermaid.run());
             <span class="n">progress</span> <span class="o">=</span> <span class="n">PhysioExTrainProgressBar</span><span class="p">(</span>
                 <span class="n">num_epochs</span><span class="o">=</span><span class="n">max_epochs</span><span class="p">,</span>
                 <span class="n">steps_per_epoch</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">train_loader</span><span class="p">),</span>
-                <span class="n">device</span><span class="o">=</span><span class="s2">&quot;all&quot;</span><span class="p">,</span>
+                <span class="n">device</span><span class="o">=</span><span class="s2">"all"</span><span class="p">,</span>
             <span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">progress</span> <span class="o">=</span> <span class="kc">None</span>
@@ -1085,20 +1085,20 @@ window.addEventListener("load", () => mermaid.run());
         <span class="c1"># build_logger returns a NoOpLogger for rank != 0, so only rank 0 writes.</span>
         <span class="n">logger</span> <span class="o">=</span> <span class="n">build_logger</span><span class="p">(</span>
             <span class="n">logger_kind</span><span class="p">,</span>
-            <span class="n">log_dir</span><span class="o">=</span><span class="n">log_dir</span> <span class="k">if</span> <span class="n">log_dir</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">checkpoint_path</span><span class="p">,</span> <span class="s2">&quot;tb&quot;</span><span class="p">),</span>
+            <span class="n">log_dir</span><span class="o">=</span><span class="n">log_dir</span> <span class="k">if</span> <span class="n">log_dir</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">checkpoint_path</span><span class="p">,</span> <span class="s2">"tb"</span><span class="p">),</span>
             <span class="n">run_name</span><span class="o">=</span><span class="n">run_name</span><span class="p">,</span>
             <span class="n">hparams</span><span class="o">=</span><span class="p">{</span>
-                <span class="s2">&quot;model&quot;</span><span class="p">:</span> <span class="nb">type</span><span class="p">(</span><span class="n">model</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="p">,</span>
-                <span class="s2">&quot;max_epochs&quot;</span><span class="p">:</span> <span class="n">max_epochs</span><span class="p">,</span>
-                <span class="s2">&quot;train_batch_size&quot;</span><span class="p">:</span> <span class="n">train_batch_size</span><span class="p">,</span>
-                <span class="s2">&quot;world_size&quot;</span><span class="p">:</span> <span class="n">world_size</span><span class="p">,</span>
+                <span class="s2">"model"</span><span class="p">:</span> <span class="nb">type</span><span class="p">(</span><span class="n">model</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="p">,</span>
+                <span class="s2">"max_epochs"</span><span class="p">:</span> <span class="n">max_epochs</span><span class="p">,</span>
+                <span class="s2">"train_batch_size"</span><span class="p">:</span> <span class="n">train_batch_size</span><span class="p">,</span>
+                <span class="s2">"world_size"</span><span class="p">:</span> <span class="n">world_size</span><span class="p">,</span>
             <span class="p">},</span>
             <span class="n">tags</span><span class="o">=</span><span class="n">tags</span><span class="p">,</span>
             <span class="n">rank</span><span class="o">=</span><span class="n">rank</span><span class="p">,</span>
         <span class="p">)</span>
 
         <span class="n">model</span> <span class="o">=</span> <span class="n">DDP</span><span class="p">(</span>
-            <span class="n">model</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">),</span> <span class="n">device_ids</span><span class="o">=</span><span class="p">[</span><span class="n">device_id</span><span class="p">]</span> <span class="k">if</span> <span class="n">device</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s2">&quot;cuda&quot;</span> <span class="k">else</span> <span class="kc">None</span>
+            <span class="n">model</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">),</span> <span class="n">device_ids</span><span class="o">=</span><span class="p">[</span><span class="n">device_id</span><span class="p">]</span> <span class="k">if</span> <span class="n">device</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s2">"cuda"</span> <span class="k">else</span> <span class="kc">None</span>
         <span class="p">)</span>
 
         <span class="k">if</span> <span class="n">rank</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">log_graph</span><span class="p">:</span>
@@ -1107,7 +1107,7 @@ window.addEventListener("load", () => mermaid.run());
                 <span class="n">sample_input</span> <span class="o">=</span> <span class="n">SingleDeviceTrainer</span><span class="o">.</span><span class="n">_extract_inputs</span><span class="p">(</span><span class="n">sample_batch</span><span class="p">,</span> <span class="n">device</span><span class="p">)</span>
                 <span class="n">logger</span><span class="o">.</span><span class="n">log_graph</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">sample_input</span><span class="p">)</span>
             <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
-                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[Warning] Could not log model graph: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"[Warning] Could not log model graph: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 
         <span class="k">for</span> <span class="n">epoch</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">max_epochs</span><span class="p">):</span>
             <span class="k">if</span> <span class="n">rank</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
@@ -1149,40 +1149,40 @@ window.addEventListener("load", () => mermaid.run());
 
     <span class="n">config</span> <span class="o">=</span> <span class="p">{}</span>
     <span class="k">try</span><span class="p">:</span>
-        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s2">&quot;PHYSIOEX_CONFIG.yaml&quot;</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s2">"PHYSIOEX_CONFIG.yaml"</span><span class="p">,</span> <span class="s2">"r"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
             <span class="n">yaml_content</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">safe_load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{}</span>
-            <span class="n">config</span> <span class="o">=</span> <span class="n">yaml_content</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;Trainer&quot;</span><span class="p">,</span> <span class="p">{})</span>
+            <span class="n">config</span> <span class="o">=</span> <span class="n">yaml_content</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"Trainer"</span><span class="p">,</span> <span class="p">{})</span>
             <span class="nb">print</span><span class="p">(</span>
-                <span class="s2">&quot;[Info - Trainer]: Loaded configuration from PHYSIOEX_CONFIG.yaml file.&quot;</span>
+                <span class="s2">"[Info - Trainer]: Loaded configuration from PHYSIOEX_CONFIG.yaml file."</span>
             <span class="p">)</span>
     <span class="k">except</span> <span class="ne">FileNotFoundError</span><span class="p">:</span>
         <span class="nb">print</span><span class="p">(</span>
-            <span class="s2">&quot;[Warning - Trainer]: PHYSIOEX_CONFIG.yaml file not found. Using default parameters or those provided in the function call.&quot;</span>
+            <span class="s2">"[Warning - Trainer]: PHYSIOEX_CONFIG.yaml file not found. Using default parameters or those provided in the function call."</span>
         <span class="p">)</span>
     <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
         <span class="nb">print</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;[Warning - Trainer]: Failed to load PHYSIOEX_CONFIG.yaml due to </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">. Using default parameters.&quot;</span>
+            <span class="sa">f</span><span class="s2">"[Warning - Trainer]: Failed to load PHYSIOEX_CONFIG.yaml due to </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">. Using default parameters."</span>
         <span class="p">)</span>
     <span class="k">return</span> <span class="p">{</span>
-        <span class="s2">&quot;checkpoint_path&quot;</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;checkpoint_path&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
-        <span class="s2">&quot;max_epochs&quot;</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;max_epochs&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
-        <span class="s2">&quot;valid_interval_ratio&quot;</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;valid_interval_ratio&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
-        <span class="s2">&quot;train_batch_size&quot;</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;train_batch_size&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
-        <span class="s2">&quot;eval_batch_size&quot;</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;eval_batch_size&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
-        <span class="s2">&quot;num_workers&quot;</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;num_workers&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
-        <span class="s2">&quot;pin_memory&quot;</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;pin_memory&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
-        <span class="s2">&quot;prefetch_factor&quot;</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;prefetch_factor&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
-        <span class="s2">&quot;persistent_workers&quot;</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;persistent_workers&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
-        <span class="s2">&quot;fold&quot;</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;fold&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
-        <span class="s2">&quot;log_device&quot;</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;log_device&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
-        <span class="s2">&quot;gpu_ids&quot;</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;gpu_ids&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
-        <span class="s2">&quot;logger&quot;</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;logger&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
-        <span class="s2">&quot;log_dir&quot;</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;log_dir&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
-        <span class="s2">&quot;run_name&quot;</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;run_name&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
-        <span class="s2">&quot;tags&quot;</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;tags&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
-        <span class="s2">&quot;log_graph&quot;</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;log_graph&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
-        <span class="s2">&quot;log_hist_every&quot;</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;log_hist_every&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
-        <span class="s2">&quot;log_confusion_matrix&quot;</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;log_confusion_matrix&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
+        <span class="s2">"checkpoint_path"</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"checkpoint_path"</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
+        <span class="s2">"max_epochs"</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"max_epochs"</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
+        <span class="s2">"valid_interval_ratio"</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"valid_interval_ratio"</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
+        <span class="s2">"train_batch_size"</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"train_batch_size"</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
+        <span class="s2">"eval_batch_size"</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"eval_batch_size"</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
+        <span class="s2">"num_workers"</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"num_workers"</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
+        <span class="s2">"pin_memory"</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"pin_memory"</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
+        <span class="s2">"prefetch_factor"</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"prefetch_factor"</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
+        <span class="s2">"persistent_workers"</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"persistent_workers"</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
+        <span class="s2">"fold"</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"fold"</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
+        <span class="s2">"log_device"</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"log_device"</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
+        <span class="s2">"gpu_ids"</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"gpu_ids"</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
+        <span class="s2">"logger"</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"logger"</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
+        <span class="s2">"log_dir"</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"log_dir"</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
+        <span class="s2">"run_name"</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"run_name"</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
+        <span class="s2">"tags"</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"tags"</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
+        <span class="s2">"log_graph"</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"log_graph"</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
+        <span class="s2">"log_hist_every"</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"log_hist_every"</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
+        <span class="s2">"log_confusion_matrix"</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"log_confusion_matrix"</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
     <span class="p">}</span>
 
 
@@ -1203,11 +1203,11 @@ window.addEventListener("load", () => mermaid.run());
         <span class="k">return</span> <span class="n">x</span>
 
 
-<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">"__main__"</span><span class="p">:</span>
     <span class="c1"># Smoke demo on the new raw-EDF layer (requires PHYSIOEX_DATA to point at HMC).</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">physioex.data.datasets</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_dataset</span>
 
-    <span class="n">dataset</span> <span class="o">=</span> <span class="n">get_dataset</span><span class="p">(</span><span class="s2">&quot;hmc&quot;</span><span class="p">)(</span><span class="n">channels</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;EEG&quot;</span><span class="p">],</span> <span class="n">pipelines</span><span class="o">=</span><span class="s2">&quot;raw&quot;</span><span class="p">,</span> <span class="n">sequence_length</span><span class="o">=</span><span class="mi">21</span><span class="p">)</span>
+    <span class="n">dataset</span> <span class="o">=</span> <span class="n">get_dataset</span><span class="p">(</span><span class="s2">"hmc"</span><span class="p">)(</span><span class="n">channels</span><span class="o">=</span><span class="p">[</span><span class="s2">"EEG"</span><span class="p">],</span> <span class="n">pipelines</span><span class="o">=</span><span class="s2">"raw"</span><span class="p">,</span> <span class="n">sequence_length</span><span class="o">=</span><span class="mi">21</span><span class="p">)</span>
 
     <span class="n">Trainer</span><span class="o">.</span><span class="n">train</span><span class="p">(</span>
         <span class="n">model</span><span class="o">=</span><span class="n">DummyModel</span><span class="p">(),</span>

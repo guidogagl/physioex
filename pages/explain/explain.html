@@ -419,7 +419,9 @@
   <section class="tex2jax_ignore mathjax_ignore" id="explain-module">
 <h1>Explain Module<a class="headerlink" href="#explain-module" title="Link to this heading">#</a></h1>
 <p>PhysioEx ships an explainability (XAI) toolkit for sleep-staging and
-foundation models, organized in three families under <code class="docutils literal notranslate"><span class="pre">physioex.explain</span></code>. For
+foundation models, organized under <code class="docutils literal notranslate"><span class="pre">physioex.explain</span></code>: three core families
+(post-hoc gradients, foundational/concept, prototypes) plus an optional
+<strong>Layer-wise Relevance Propagation</strong> family (<code class="docutils literal notranslate"><span class="pre">explain</span></code> extra). For
 the full class diagram see the
 <a class="reference internal" href="../architecture/library/explain.html"><span class="std std-doc">explain-layer architecture</span></a> page.</p>
 <section id="post-hoc-attribution-physioex-explain-posthoc">
@@ -470,8 +472,113 @@ returns a <code class="docutils literal notranslate"><span class="pre">CSDResult
 <code class="docutils literal notranslate"><span class="pre">train_codebook</span></code>).</p></li>
 <li><p><strong>Reconstruction</strong> of learned concepts (<code class="docutils literal notranslate"><span class="pre">reconstruct.py</span></code>).</p></li>
 </ul>
+</section>
+<section id="layer-wise-relevance-propagation-physioex-explain-lrp">
+<h2>Layer-wise Relevance Propagation — <code class="docutils literal notranslate"><span class="pre">physioex.explain.lrp</span></code><a class="headerlink" href="#layer-wise-relevance-propagation-physioex-explain-lrp" title="Link to this heading">#</a></h2>
+<p>Conservation-based attribution (Bach et al. 2015): relevance is redistributed
+backward through the network, conserving the total (<code class="docutils literal notranslate"><span class="pre">Σ</span> <span class="pre">R</span> <span class="pre">≈</span> <span class="pre">f(x)</span></code>). This family
+is <strong>optional</strong> — install the extra:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"physioex[explain]"</span>
+</pre></div>
+</div>
+<p>Two entry points, both seeding the target neuron with its <strong>logit value</strong> so
+that <code class="docutils literal notranslate"><span class="pre">Σ</span> <span class="pre">R</span> <span class="pre">≈</span> <span class="pre">f_c(x)</span></code> and returning relevance shaped like the input:</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Model family</p></th>
+<th class="head"><p>Entry point</p></th>
+<th class="head"><p>Rules</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Feed-forward / CNN (Tsinalis, Chambon2018)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">LRP</span></code> (Zennit)</p></td>
+<td><p>ε dense · γ conv · <strong>w²</strong> first layer (unbounded EEG, <em>not</em> the pixel z-box) · BatchNorm canonized · αβ/flat/z-box configurable via <code class="docutils literal notranslate"><span class="pre">physioex_composite</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>Recurrent (TinySleepNet, SeqSleepNet, L-SeqSleepNet, ProtoSleepNet-seq)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">ModelLRP</span></code></p></td>
+<td><p><strong>Arras signal-take</strong> LSTM/GRU (<code class="docutils literal notranslate"><span class="pre">LRPLSTM</span></code>/<code class="docutils literal notranslate"><span class="pre">LRPGRU</span></code>, cell-level, forward identical to the fused module) · ε on the learnable filterbank / linears · CP-LRP on the attention poolings</p></td>
+</tr>
+<tr class="row-even"><td><p>Attention / transformer (SleepTransformer, CoReSleep, ProtoSleepNet-tf)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">ModelLRP</span></code></p></td>
+<td><p><strong>CP-LRP</strong> attention (value path; Ali et al. 2022) · identity rule on LayerNorm/GELU · proportional rule on residuals · ε on projections/FFN</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">physioex.explain.lrp</span><span class="w"> </span><span class="kn">import</span> <span class="n">LRP</span><span class="p">,</span> <span class="n">ModelLRP</span>
+
+<span class="n">relevance</span> <span class="o">=</span> <span class="n">LRP</span><span class="p">(</span><span class="n">cnn_model</span><span class="p">,</span> <span class="n">out_index</span><span class="o">=</span><span class="mi">2</span><span class="p">)(</span><span class="n">x</span><span class="p">)</span>                       <span class="c1"># Zennit path</span>
+<span class="n">relevance</span><span class="p">,</span> <span class="n">report</span> <span class="o">=</span> <span class="n">ModelLRP</span><span class="p">(</span><span class="n">seq_model</span><span class="p">,</span> <span class="n">in_index</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">out_index</span><span class="o">=</span><span class="mi">2</span><span class="p">)(</span><span class="n">x</span><span class="p">,</span> <span class="n">return_report</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">report</span><span class="p">)</span>   <span class="c1"># Σ R / f per sample — 1.0 = exact conservation</span>
+<span class="n">relevance</span> <span class="o">=</span> <span class="n">ModelLRP</span><span class="p">(</span><span class="n">coresleep</span><span class="p">,</span> <span class="n">output_key</span><span class="o">=</span><span class="s2">"combined"</span><span class="p">)(</span><span class="n">x</span><span class="p">)</span>      <span class="c1"># dict outputs</span>
+</pre></div>
+</div>
+<p><strong>How <code class="docutils literal notranslate"><span class="pre">ModelLRP</span></code> works.</strong> The trained model is deep-copied and rewritten
+(<code class="docutils literal notranslate"><span class="pre">prepare_model_for_lrp</span></code>): fused <code class="docutils literal notranslate"><span class="pre">nn.LSTM</span></code>/<code class="docutils literal notranslate"><span class="pre">nn.GRU</span></code> become <code class="docutils literal notranslate"><span class="pre">LRPLSTM</span></code>/<code class="docutils literal notranslate"><span class="pre">LRPGRU</span></code>
+(subclasses, so <code class="docutils literal notranslate"><span class="pre">isinstance</span></code> checks and the <code class="docutils literal notranslate"><span class="pre">(output,</span> <span class="pre">states)</span></code> interface keep
+working), <code class="docutils literal notranslate"><span class="pre">nn.TransformerEncoder</span></code>/<code class="docutils literal notranslate"><span class="pre">MultiheadAttention</span></code> become their CP-LRP
+versions, PhysioEx’s softmax poolings (<code class="docutils literal notranslate"><span class="pre">AttentionPooling</span></code>, <code class="docutils literal notranslate"><span class="pre">AttentionLayer</span></code>,
+<code class="docutils literal notranslate"><span class="pre">ChannelMixer</span></code>) and the <code class="docutils literal notranslate"><span class="pre">LearnableFilterbank</span></code> get dedicated adapters, remaining
+<code class="docutils literal notranslate"><span class="pre">Linear</span></code>/<code class="docutils literal notranslate"><span class="pre">Conv</span></code> leaves get ε-LRP, BatchNorm is folded into the preceding layer,
+and norms/activations use the identity rule. Plain <code class="docutils literal notranslate"><span class="pre">+</span></code> residuals written in a
+model’s own <code class="docutils literal notranslate"><span class="pre">forward</span></code> are redirected at runtime to the proportional rule
+(<code class="docutils literal notranslate"><span class="pre">patch_residuals=True</span></code>) — a plain add would give both branches the full
+relevance and over-count. Register your own blocks with
+<code class="docutils literal notranslate"><span class="pre">register_lrp_adapter(cls,</span> <span class="pre">factory)</span></code>; <code class="docutils literal notranslate"><span class="pre">audit_lrp_coverage(model)</span></code> (also
+<code class="docutils literal notranslate"><span class="pre">ModelLRP(...).uncovered</span></code>, and <code class="docutils literal notranslate"><span class="pre">strict=True</span></code>) lists parametric leaves left on
+plain autograd, which would propagate <em>gradient</em> instead of relevance.</p>
+<p><strong>Reading the numbers.</strong> Conservation is exact (up to ε) for bias-free
+networks; <strong>biases absorb relevance</strong> (LRP-ε convention), so on real models
+<code class="docutils literal notranslate"><span class="pre">Σ</span> <span class="pre">R</span> <span class="pre">/</span> <span class="pre">f</span></code> is below 1 — <code class="docutils literal notranslate"><span class="pre">ConservationReport.absorbed</span></code> shows how much. CP-LRP
+treats the attention matrix as constant: features acting only through <em>where
+to attend</em> (query/key path) receive zero relevance by design; full AttnLRP
+(Achtibat et al. 2024) is non-conserving and not implemented. All stabilisers
+are signed (<code class="docutils literal notranslate"><span class="pre">z</span> <span class="pre">+</span> <span class="pre">ε·sign</span> <span class="pre">z</span></code>), as in Arras et al. Not supported (raise): attention
+masks, <code class="docutils literal notranslate"><span class="pre">batch_first=False</span></code> transformers, explicit RNN initial states, <code class="docutils literal notranslate"><span class="pre">proj_size</span></code>;
+ProtoSleepNet’s VQ path (<code class="docutils literal notranslate"><span class="pre">quantize=True</span></code>) runs under <code class="docutils literal notranslate"><span class="pre">no_grad</span></code>, so no relevance can
+flow through it — <code class="docutils literal notranslate"><span class="pre">ModelLRP</span></code> explains the default <code class="docutils literal notranslate"><span class="pre">quantize=False</span></code> forward.</p>
+<p><strong>Choosing ε.</strong> The stabiliser must be scaled to the activations: on the
+pretrained SeqSleepNet (dB-scale spectrograms, 4-layer BiLSTM/BiGRU) ε = 1e-6
+inflates total relevance 2–3× through near-zero state sums, ε = 1e-2 conserves
+(<code class="docutils literal notranslate"><span class="pre">ΣR/f</span> <span class="pre">≈</span> <span class="pre">0.96</span></code>) and ε = 1e-1 over-absorbs. Sweep ε and read the
+<code class="docutils literal notranslate"><span class="pre">ConservationReport</span></code>; <code class="docutils literal notranslate"><span class="pre">examples/explain/lrp_seqsleepnet_n3.py</span></code> does this on a
+real model and compares the LRP rule assignments with Saliency, Input×Gradient
+and Integrated Gradients.</p>
+<p><strong>Related methods — LRP vs path-based attribution.</strong> LRP is <em>not</em> path-based:
+by Deep Taylor Decomposition (Montavon et al. 2017) every rule is a first-order
+Taylor expansion of each neuron at a closed-form <em>root point</em> (ε/LRP-0 → root at
+0, hence LRP-0 = Gradient×Input; z⁺ → along the positive contributions; z^B →
+on the input box), applied layer by layer in one backward pass — the baseline
+is implicit in the rule. Integrated Gradients (Sundararajan et al. 2017)
+instead integrates the gradient along the straight path from an explicit
+baseline x′ to x; both satisfy completeness (Σ R = f(x) − f(x′)) by different
+routes. The propagation-family counterpart of a <em>baseline</em> method is
+<strong>DeepLIFT</strong> (Shrikumar et al. 2017): finite-difference multipliers
+Δy/Δx w.r.t. a reference, i.e. Integrated Gradients applied layer-wise in a
+single backward pass; Ancona et al. (2018) prove ε-LRP ≡ DeepLIFT-Rescale with a
+zero baseline (ReLU nets without bias, ε → 0) and cast both as
+modified-gradient × input, and <strong>DeepSHAP</strong> (Lundberg &amp; Lee 2017) adds an
+expectation over baselines — the analogue of <code class="docutils literal notranslate"><span class="pre">ExpectedGradients</span></code>. Averaging LRP
+relevance along the x′→x path (“integrated LRP”, e.g. Zennit’s
+<code class="docutils literal notranslate"><span class="pre">IntegratedGradients</span></code> attributor combined with a composite) is a supported
+construct: it reduces exactly to IG for LRP-0 but carries no completeness
+guarantee for ε/γ/CP rules and should be read as an ensemble. On LSTMs, Arras
+et al. (2019) found gate-rule LRP the best-performing method, with DeepLIFT
+close and IG/gradients behind.</p>
+<ul class="simple">
+<li><p><strong>Composites</strong> (<code class="docutils literal notranslate"><span class="pre">lrp/composites.py</span></code>): <code class="docutils literal notranslate"><span class="pre">physioex_composite</span></code> (ε/γ/w²),
+<code class="docutils literal notranslate"><span class="pre">epsilon_composite</span></code> (pure-ε reference). <strong>Canonizers</strong> (<code class="docutils literal notranslate"><span class="pre">lrp/canonizers.py</span></code>):
+<code class="docutils literal notranslate"><span class="pre">default_canonizers</span></code> (BatchNorm merge).</p></li>
+<li><p><strong>Blocks</strong>: <code class="docutils literal notranslate"><span class="pre">lrp/recurrent.py</span></code>, <code class="docutils literal notranslate"><span class="pre">lrp/transformer.py</span></code>, <code class="docutils literal notranslate"><span class="pre">lrp/pooling.py</span></code>;
+shared primitives in <code class="docutils literal notranslate"><span class="pre">lrp/_functional.py</span></code>; diagnostics in <code class="docutils literal notranslate"><span class="pre">lrp/diagnostics.py</span></code>.</p></li>
+<li><p><strong>Backends</strong>: <a class="reference external" href="https://github.com/chr5tphr/zennit">Zennit</a> for the composites
+and BatchNorm canonization; the recurrent, attention and pooling rules are
+implemented in PhysioEx (<code class="docutils literal notranslate"><span class="pre">_functional.py</span></code>, <code class="docutils literal notranslate"><span class="pre">_rules.py</span></code>) following Arras et al.,
+Ali et al. (CP-LRP) and the LXT conventions — no LXT dependency.</p></li>
+</ul>
 <p>See the <a class="reference internal" href="../../api/index.html"><span class="std std-doc">API Reference</span></a> for verified signatures across all
-three families.</p>
+families.</p>
 </section>
 </section>
 
@@ -525,6 +632,7 @@ three families.</p>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#post-hoc-attribution-physioex-explain-posthoc">Post-hoc attribution — <code class="docutils literal notranslate"><span class="pre">physioex.explain.posthoc</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#foundational-explainability-physioex-explain-foundational">Foundational explainability — <code class="docutils literal notranslate"><span class="pre">physioex.explain.foundational</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#prototypes-physioex-explain-prototypes">Prototypes — <code class="docutils literal notranslate"><span class="pre">physioex.explain.prototypes</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#layer-wise-relevance-propagation-physioex-explain-lrp">Layer-wise Relevance Propagation — <code class="docutils literal notranslate"><span class="pre">physioex.explain.lrp</span></code></a></li>
 </ul>
   </nav></div>
 

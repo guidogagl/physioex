@@ -400,7 +400,7 @@ window.addEventListener("load", () => mermaid.run());
                 <article class="bd-article">
                   
   <h1>Source code for physioex.explain.foundational.csd</h1><div class="highlight"><pre>
-<span></span><span class="sd">&quot;&quot;&quot;Conceptual Spectral Decomposition (CSD).</span>
+<span></span><span class="sd">"""Conceptual Spectral Decomposition (CSD).</span>
 
 <span class="sd">Explains foundation model embeddings by:</span>
 <span class="sd">1. Using a pluggable specificity strategy to identify which embedding</span>
@@ -414,7 +414,7 @@ window.addEventListener("load", () => mermaid.run());
 <span class="sd">which spectral patterns in the input signal drive that concept.</span>
 
 <span class="sd">The secondary output is a **class-level aggregation**: the weighted sum</span>
-<span class="sd">of all concept maps, answering &quot;why class c?&quot; in time-frequency.</span>
+<span class="sd">of all concept maps, answering "why class c?" in time-frequency.</span>
 
 <span class="sd">Usage::</span>
 
@@ -423,7 +423,7 @@ window.addEventListener("load", () => mermaid.run());
 <span class="sd">    from physioex.models.embed import load_probe</span>
 
 <span class="sd">    # Load encoder + trained probe</span>
-<span class="sd">    model, probe_weights = load_probe(&quot;cbramod&quot;, &quot;hmc&quot;, probe_path=&quot;...&quot;)</span>
+<span class="sd">    model, probe_weights = load_probe("cbramod", "hmc", probe_path="...")</span>
 
 <span class="sd">    csd = ConceptualSpectralDecomposition(</span>
 <span class="sd">        model=model, probe_weights=probe_weights,</span>
@@ -435,12 +435,12 @@ window.addEventListener("load", () => mermaid.run());
 
 <span class="sd">    # Per-concept maps (primary result)</span>
 <span class="sd">    for d, concept in result.concepts.items():</span>
-<span class="sd">        print(f&quot;dim {d}: W={concept.weight:.3f}, top freq={concept.top_band_hz:.1f} Hz&quot;)</span>
+<span class="sd">        print(f"dim {d}: W={concept.weight:.3f}, top freq={concept.top_band_hz:.1f} Hz")</span>
 <span class="sd">        # concept.attribution: (B, n_bands, T)</span>
 
 <span class="sd">    # Aggregated class map (secondary)</span>
 <span class="sd">    # result.class_attribution: (B, n_bands, T) = Σ_d W[c,d] · map_d</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
@@ -459,12 +459,12 @@ window.addEventListener("load", () => mermaid.run());
     <span class="n">MarginSpecificity</span><span class="p">,</span>
 <span class="p">)</span>
 
-<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">&quot;physioex.explain.csd&quot;</span><span class="p">)</span>
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">"physioex.explain.csd"</span><span class="p">)</span>
 
 
 <span class="nd">@dataclass</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">ConceptAttribution</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Attribution map for a single embedding dimension (concept).&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Attribution map for a single embedding dimension (concept)."""</span>
 
     <span class="n">dim</span><span class="p">:</span> <span class="nb">int</span>  <span class="c1"># embedding dimension index</span>
     <span class="n">attribution</span><span class="p">:</span> <span class="n">Tensor</span>  <span class="c1"># (B, n_bands, C, T) raw SG map OR (B, n_bands) if skip_ig=True</span>
@@ -475,19 +475,19 @@ window.addEventListener("load", () => mermaid.run());
 
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">weighted_attribution</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tensor</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;(B, n_bands, C, T) attribution weighted by probe weight.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""(B, n_bands, C, T) attribution weighted by probe weight."""</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">attribution</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">weight</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">channel_aggregated</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tensor</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;(B, n_bands, T) attribution summed over channels.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""(B, n_bands, T) attribution summed over channels."""</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">skip_ig</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">AttributeError</span><span class="p">(</span><span class="s2">&quot;channel_aggregated not available in skip_ig mode (no temporal resolution)&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">AttributeError</span><span class="p">(</span><span class="s2">"channel_aggregated not available in skip_ig mode (no temporal resolution)"</span><span class="p">)</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">attribution</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">band_energy</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tensor</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;(n_bands,) total attribution energy per band (mean over B, sum over C and T).&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""(n_bands,) total attribution energy per band (mean over B, sum over C and T)."""</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">skip_ig</span><span class="p">:</span>
             <span class="c1"># In skip_ig mode, attribution is (B, n_bands) - mean over B directly</span>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">attribution</span><span class="o">.</span><span class="n">abs</span><span class="p">()</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
@@ -495,9 +495,9 @@ window.addEventListener("load", () => mermaid.run());
 
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">channel_energy</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tensor</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;(C,) total attribution energy per channel (mean over B, sum over bands and T).&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""(C,) total attribution energy per channel (mean over B, sum over bands and T)."""</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">skip_ig</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">AttributeError</span><span class="p">(</span><span class="s2">&quot;channel_energy not available in skip_ig mode (no channel resolution)&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">AttributeError</span><span class="p">(</span><span class="s2">"channel_energy not available in skip_ig mode (no channel resolution)"</span><span class="p">)</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">attribution</span><span class="o">.</span><span class="n">abs</span><span class="p">()</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))</span>
 
     <span class="nd">@property</span>
@@ -509,7 +509,7 @@ window.addEventListener("load", () => mermaid.run());
 <a class="viewcode-back" href="../../../../api/_generated/physioex.explain.foundational.html#physioex.explain.foundational.CSDResult">[docs]</a>
 <span class="nd">@dataclass</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">CSDResult</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Result of a CSD explanation.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Result of a CSD explanation."""</span>
 
     <span class="c1"># Per-concept maps (PRIMARY result)</span>
     <span class="n">concepts</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">ConceptAttribution</span><span class="p">]</span>  <span class="c1"># {dim: ConceptAttribution}</span>
@@ -531,7 +531,7 @@ window.addEventListener("load", () => mermaid.run());
 <div class="viewcode-block" id="CSDResult.top_band_hz">
 <a class="viewcode-back" href="../../../../api/_generated/physioex.explain.foundational.html#physioex.explain.foundational.CSDResult.top_band_hz">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">top_band_hz</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dim</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the center frequency of the top band for a concept.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Return the center frequency of the top band for a concept."""</span>
         <span class="n">idx</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">concepts</span><span class="p">[</span><span class="n">dim</span><span class="p">]</span><span class="o">.</span><span class="n">top_band_idx</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">band_frequencies</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span><span class="o">.</span><span class="n">item</span><span class="p">()</span></div>
 </div>
@@ -541,7 +541,7 @@ window.addEventListener("load", () => mermaid.run());
 <div class="viewcode-block" id="ConceptualSpectralDecomposition">
 <a class="viewcode-back" href="../../../../api/_generated/physioex.explain.foundational.html#physioex.explain.foundational.ConceptualSpectralDecomposition">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">ConceptualSpectralDecomposition</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;CSD: per-concept time-frequency explanation of foundation model embeddings.</span>
+<span class="w">    </span><span class="sd">"""CSD: per-concept time-frequency explanation of foundation model embeddings.</span>
 
 <span class="sd">    For each class-specific embedding dimension (selected by the specificity</span>
 <span class="sd">    strategy), runs SpectralGradients to produce an independent (n_bands, T)</span>
@@ -549,14 +549,14 @@ window.addEventListener("load", () => mermaid.run());
 
 <span class="sd">    Args:</span>
 <span class="sd">        model: FoundationEncoder (pure encoder without head).</span>
-<span class="sd">        probe_weights: Dictionary containing &#39;ln&#39; (LayerNorm) and &#39;W&#39; (Linear weights)</span>
+<span class="sd">        probe_weights: Dictionary containing 'ln' (LayerNorm) and 'W' (Linear weights)</span>
 <span class="sd">            from the trained linear probe.</span>
 <span class="sd">        fs: Sampling rate of the preprocessed signal (Hz).</span>
 <span class="sd">        freq_step: SpectralGradients band width (Hz). Default 4.0.</span>
 <span class="sd">        bands: Custom frequency bands. If None, uniform bands of width freq_step.</span>
 <span class="sd">        steps: Integration steps per local IG. Default 10. Ignored if skip_ig=True.</span>
-<span class="sd">        path: SG ablation direction (&#39;marginal&#39;, &#39;cumulative_add&#39;, &#39;cumulative_remove&#39;,</span>
-<span class="sd">            &#39;both_cumulative&#39;, &#39;shapley&#39;). Default &#39;marginal&#39;.</span>
+<span class="sd">        path: SG ablation direction ('marginal', 'cumulative_add', 'cumulative_remove',</span>
+<span class="sd">            'both_cumulative', 'shapley'). Default 'marginal'.</span>
 <span class="sd">        specificity: Strategy for selecting class-specific dimensions.</span>
 <span class="sd">            Default: MarginSpecificity(tau=0.5).</span>
 <span class="sd">        mask_threshold: Dimensions with mask &gt; threshold get their own map.</span>
@@ -565,7 +565,7 @@ window.addEventListener("load", () => mermaid.run());
 <span class="sd">            Returns (B, n_bands) instead of (B, n_bands, C, T). Default False.</span>
 <span class="sd">        n_perms: Number of permutations for Shapley path. Default 20.</span>
 <span class="sd">        device: Torch device. Default: auto.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
@@ -575,7 +575,7 @@ window.addEventListener("load", () => mermaid.run());
         <span class="n">freq_step</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">4.0</span><span class="p">,</span>
         <span class="n">bands</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">FrequencyBand</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">steps</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">10</span><span class="p">,</span>
-        <span class="n">path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;marginal&quot;</span><span class="p">,</span>
+        <span class="n">path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"marginal"</span><span class="p">,</span>
         <span class="n">specificity</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">SpecificityStrategy</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">mask_threshold</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.5</span><span class="p">,</span>
         <span class="n">skip_ig</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
@@ -594,21 +594,21 @@ window.addEventListener("load", () => mermaid.run());
         <span class="bp">self</span><span class="o">.</span><span class="n">skip_ig</span> <span class="o">=</span> <span class="n">skip_ig</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">n_perms</span> <span class="o">=</span> <span class="n">n_perms</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">device</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span>
-            <span class="n">device</span> <span class="ow">or</span> <span class="p">(</span><span class="s2">&quot;cuda:0&quot;</span> <span class="k">if</span> <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">is_available</span><span class="p">()</span> <span class="k">else</span> <span class="s2">&quot;cpu&quot;</span><span class="p">)</span>
+            <span class="n">device</span> <span class="ow">or</span> <span class="p">(</span><span class="s2">"cuda:0"</span> <span class="k">if</span> <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">is_available</span><span class="p">()</span> <span class="k">else</span> <span class="s2">"cpu"</span><span class="p">)</span>
         <span class="p">)</span>
 
         <span class="c1"># Extract probe weights from dict</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_ln</span> <span class="o">=</span> <span class="n">probe_weights</span><span class="p">[</span><span class="s2">&quot;ln&quot;</span><span class="p">]</span>  <span class="c1"># LayerNorm</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_W</span> <span class="o">=</span> <span class="n">probe_weights</span><span class="p">[</span><span class="s2">&quot;W&quot;</span><span class="p">]</span>  <span class="c1"># Linear weight: (n_classes, D)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_ln</span> <span class="o">=</span> <span class="n">probe_weights</span><span class="p">[</span><span class="s2">"ln"</span><span class="p">]</span>  <span class="c1"># LayerNorm</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_W</span> <span class="o">=</span> <span class="n">probe_weights</span><span class="p">[</span><span class="s2">"W"</span><span class="p">]</span>  <span class="c1"># Linear weight: (n_classes, D)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_n_classes</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_W</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_D</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_W</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_prepare_signal</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tensor</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Preprocess signal, keeping multi-channel structure.</span>
+<span class="w">        </span><span class="sd">"""Preprocess signal, keeping multi-channel structure.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            x_prep: (B, C&#39;, T&#39;) preprocessed signal (always 3D)</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">            x_prep: (B, C', T') preprocessed signal (always 3D)</span>
+<span class="sd">        """</span>
         <span class="k">if</span> <span class="n">x</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">4</span><span class="p">:</span>
             <span class="n">B</span><span class="p">,</span> <span class="n">L</span><span class="p">,</span> <span class="n">C</span><span class="p">,</span> <span class="n">T</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">shape</span>
             <span class="n">x</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">B</span> <span class="o">*</span> <span class="n">L</span><span class="p">,</span> <span class="n">C</span><span class="p">,</span> <span class="n">T</span><span class="p">)</span>
@@ -628,11 +628,11 @@ window.addEventListener("load", () => mermaid.run());
         <span class="k">return</span> <span class="n">math</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">n_freqs</span> <span class="o">/</span> <span class="n">bin_step</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_make_dim_scorer</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dim</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create a scoring function for a single embedding dimension.</span>
+<span class="w">        </span><span class="sd">"""Create a scoring function for a single embedding dimension.</span>
 
 <span class="sd">        The function maps multi-channel signal (B, C, T) -&gt; (B,) scalar.</span>
 <span class="sd">        Used as the `f` argument to MultiChannelSpectralGradients.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
 
         <span class="k">def</span><span class="w"> </span><span class="nf">f_dim</span><span class="p">(</span><span class="n">x_signal</span><span class="p">):</span>
             <span class="c1"># x_signal: (B, C, T) from MultiChannelSG</span>
@@ -651,7 +651,7 @@ window.addEventListener("load", () => mermaid.run());
         <span class="n">labels</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Tensor</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">max_concepts</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">CSDResult</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Compute per-concept CSD explanation.</span>
+<span class="w">        </span><span class="sd">"""Compute per-concept CSD explanation.</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            x: (B, C, T) or (B, L, C, T) raw signal.</span>
@@ -663,7 +663,7 @@ window.addEventListener("load", () => mermaid.run());
 
 <span class="sd">        Returns:</span>
 <span class="sd">            CSDResult with per-concept maps and aggregated class map.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">x</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">eval</span><span class="p">()</span>
@@ -682,8 +682,8 @@ window.addEventListener("load", () => mermaid.run());
 
         <span class="c1"># Apply LayerNorm to dataset embeddings too, so that static</span>
         <span class="c1"># strategies (CohenDSpecificity) operate on the same quantities</span>
-        <span class="c1"># that the probe sees.  Without this, Cohen&#39;s d would be computed</span>
-        <span class="c1"># on raw embeddings while the probe uses LayerNorm&#39;d embeddings,</span>
+        <span class="c1"># that the probe sees.  Without this, Cohen's d would be computed</span>
+        <span class="c1"># on raw embeddings while the probe uses LayerNorm'd embeddings,</span>
         <span class="c1"># potentially giving a different specificity ranking.</span>
         <span class="n">embeddings_normed</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="k">if</span> <span class="n">embeddings</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
@@ -718,8 +718,8 @@ window.addEventListener("load", () => mermaid.run());
         <span class="n">n_selected</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">selected_dims</span><span class="p">)</span>
 
         <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;[CSD] class=</span><span class="si">{</span><span class="n">target_class</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">n_selected</span><span class="si">}</span><span class="s2"> concepts selected &quot;</span>
-            <span class="sa">f</span><span class="s2">&quot;(threshold=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">mask_threshold</span><span class="si">}</span><span class="s2">, strategy=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">specificity</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">)&quot;</span>
+            <span class="sa">f</span><span class="s2">"[CSD] class=</span><span class="si">{</span><span class="n">target_class</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">n_selected</span><span class="si">}</span><span class="s2"> concepts selected "</span>
+            <span class="sa">f</span><span class="s2">"(threshold=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">mask_threshold</span><span class="si">}</span><span class="s2">, strategy=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">specificity</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">)"</span>
         <span class="p">)</span>
 
         <span class="c1"># 4. Run MultiChannelSG for each selected dimension independently</span>
@@ -758,8 +758,8 @@ window.addEventListener("load", () => mermaid.run());
             <span class="p">)</span>
 
             <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;  concept </span><span class="si">{</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">n_selected</span><span class="si">}</span><span class="s2">: dim=</span><span class="si">{</span><span class="n">d</span><span class="si">}</span><span class="s2">, W=</span><span class="si">{</span><span class="n">w_val</span><span class="si">:</span><span class="s2">+.3f</span><span class="si">}</span><span class="s2">, &quot;</span>
-                <span class="sa">f</span><span class="s2">&quot;mask=</span><span class="si">{</span><span class="n">mask_val</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">"  concept </span><span class="si">{</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">n_selected</span><span class="si">}</span><span class="s2">: dim=</span><span class="si">{</span><span class="n">d</span><span class="si">}</span><span class="s2">, W=</span><span class="si">{</span><span class="n">w_val</span><span class="si">:</span><span class="s2">+.3f</span><span class="si">}</span><span class="s2">, "</span>
+                <span class="sa">f</span><span class="s2">"mask=</span><span class="si">{</span><span class="n">mask_val</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">"</span>
             <span class="p">)</span>
 
         <span class="c1"># 5. Aggregate: class map = Σ_d W[c,d] · map_d</span>

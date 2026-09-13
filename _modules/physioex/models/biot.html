@@ -400,7 +400,7 @@ window.addEventListener("load", () => mermaid.run());
                 <article class="bd-article">
                   
   <h1>Source code for physioex.models.biot</h1><div class="highlight"><pre>
-<span></span><span class="sd">&quot;&quot;&quot;BIOT — Biosignal IO Transformer (Yang et al., NeurIPS 2023).</span>
+<span></span><span class="sd">"""BIOT — Biosignal IO Transformer (Yang et al., NeurIPS 2023).</span>
 
 <span class="sd">Pure encoder: (B, L, C, T) -&gt; (B, L, D)</span>
 <span class="sd">Fixed 16-channel double-banana montage. Derives bipolar pairs from</span>
@@ -412,7 +412,7 @@ window.addEventListener("load", () => mermaid.run());
 <span class="sd">  1. Mean-center per channel</span>
 <span class="sd">  2. Map to 16-channel double-banana layout (derive bipolar pairs)</span>
 <span class="sd">  3. Per-channel q95 normalization</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Tuple</span>
@@ -426,52 +426,52 @@ window.addEventListener("load", () => mermaid.run());
 <span class="n">_N_CHANNELS</span> <span class="o">=</span> <span class="mi">16</span>
 
 <span class="n">_BIOT_SLOT_ORDER</span> <span class="o">=</span> <span class="p">[</span>
-    <span class="s2">&quot;FP1-F7&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;F7-T7&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;T7-P7&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;P7-O1&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;FP2-F8&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;F8-T8&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;T8-P8&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;P8-O2&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;FP1-F3&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;F3-C3&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;C3-P3&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;P3-O1&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;FP2-F4&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;F4-C4&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;C4-P4&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;P4-O2&quot;</span><span class="p">,</span>
+    <span class="s2">"FP1-F7"</span><span class="p">,</span>
+    <span class="s2">"F7-T7"</span><span class="p">,</span>
+    <span class="s2">"T7-P7"</span><span class="p">,</span>
+    <span class="s2">"P7-O1"</span><span class="p">,</span>
+    <span class="s2">"FP2-F8"</span><span class="p">,</span>
+    <span class="s2">"F8-T8"</span><span class="p">,</span>
+    <span class="s2">"T8-P8"</span><span class="p">,</span>
+    <span class="s2">"P8-O2"</span><span class="p">,</span>
+    <span class="s2">"FP1-F3"</span><span class="p">,</span>
+    <span class="s2">"F3-C3"</span><span class="p">,</span>
+    <span class="s2">"C3-P3"</span><span class="p">,</span>
+    <span class="s2">"P3-O1"</span><span class="p">,</span>
+    <span class="s2">"FP2-F4"</span><span class="p">,</span>
+    <span class="s2">"F4-C4"</span><span class="p">,</span>
+    <span class="s2">"C4-P4"</span><span class="p">,</span>
+    <span class="s2">"P4-O2"</span><span class="p">,</span>
 <span class="p">]</span>
 
 <span class="n">_BIOT_DERIVATION</span> <span class="o">=</span> <span class="p">[</span>
-    <span class="p">(</span><span class="s2">&quot;FP1&quot;</span><span class="p">,</span> <span class="s2">&quot;F7&quot;</span><span class="p">),</span>
-    <span class="p">(</span><span class="s2">&quot;F7&quot;</span><span class="p">,</span> <span class="s2">&quot;T7&quot;</span><span class="p">),</span>
-    <span class="p">(</span><span class="s2">&quot;T7&quot;</span><span class="p">,</span> <span class="s2">&quot;P7&quot;</span><span class="p">),</span>
-    <span class="p">(</span><span class="s2">&quot;P7&quot;</span><span class="p">,</span> <span class="s2">&quot;O1&quot;</span><span class="p">),</span>
-    <span class="p">(</span><span class="s2">&quot;FP2&quot;</span><span class="p">,</span> <span class="s2">&quot;F8&quot;</span><span class="p">),</span>
-    <span class="p">(</span><span class="s2">&quot;F8&quot;</span><span class="p">,</span> <span class="s2">&quot;T8&quot;</span><span class="p">),</span>
-    <span class="p">(</span><span class="s2">&quot;T8&quot;</span><span class="p">,</span> <span class="s2">&quot;P8&quot;</span><span class="p">),</span>
-    <span class="p">(</span><span class="s2">&quot;P8&quot;</span><span class="p">,</span> <span class="s2">&quot;O2&quot;</span><span class="p">),</span>
-    <span class="p">(</span><span class="s2">&quot;FP1&quot;</span><span class="p">,</span> <span class="s2">&quot;F3&quot;</span><span class="p">),</span>
-    <span class="p">(</span><span class="s2">&quot;F3&quot;</span><span class="p">,</span> <span class="s2">&quot;C3&quot;</span><span class="p">),</span>
-    <span class="p">(</span><span class="s2">&quot;C3&quot;</span><span class="p">,</span> <span class="s2">&quot;P3&quot;</span><span class="p">),</span>
-    <span class="p">(</span><span class="s2">&quot;P3&quot;</span><span class="p">,</span> <span class="s2">&quot;O1&quot;</span><span class="p">),</span>
-    <span class="p">(</span><span class="s2">&quot;FP2&quot;</span><span class="p">,</span> <span class="s2">&quot;F4&quot;</span><span class="p">),</span>
-    <span class="p">(</span><span class="s2">&quot;F4&quot;</span><span class="p">,</span> <span class="s2">&quot;C4&quot;</span><span class="p">),</span>
-    <span class="p">(</span><span class="s2">&quot;C4&quot;</span><span class="p">,</span> <span class="s2">&quot;P4&quot;</span><span class="p">),</span>
-    <span class="p">(</span><span class="s2">&quot;P4&quot;</span><span class="p">,</span> <span class="s2">&quot;O2&quot;</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">"FP1"</span><span class="p">,</span> <span class="s2">"F7"</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">"F7"</span><span class="p">,</span> <span class="s2">"T7"</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">"T7"</span><span class="p">,</span> <span class="s2">"P7"</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">"P7"</span><span class="p">,</span> <span class="s2">"O1"</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">"FP2"</span><span class="p">,</span> <span class="s2">"F8"</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">"F8"</span><span class="p">,</span> <span class="s2">"T8"</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">"T8"</span><span class="p">,</span> <span class="s2">"P8"</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">"P8"</span><span class="p">,</span> <span class="s2">"O2"</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">"FP1"</span><span class="p">,</span> <span class="s2">"F3"</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">"F3"</span><span class="p">,</span> <span class="s2">"C3"</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">"C3"</span><span class="p">,</span> <span class="s2">"P3"</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">"P3"</span><span class="p">,</span> <span class="s2">"O1"</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">"FP2"</span><span class="p">,</span> <span class="s2">"F4"</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">"F4"</span><span class="p">,</span> <span class="s2">"C4"</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">"C4"</span><span class="p">,</span> <span class="s2">"P4"</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">"P4"</span><span class="p">,</span> <span class="s2">"O2"</span><span class="p">),</span>
 <span class="p">]</span>
 
-<span class="n">_10_20_ALIASES</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;T3&quot;</span><span class="p">:</span> <span class="s2">&quot;T7&quot;</span><span class="p">,</span> <span class="s2">&quot;T4&quot;</span><span class="p">:</span> <span class="s2">&quot;T8&quot;</span><span class="p">,</span> <span class="s2">&quot;T5&quot;</span><span class="p">:</span> <span class="s2">&quot;P7&quot;</span><span class="p">,</span> <span class="s2">&quot;T6&quot;</span><span class="p">:</span> <span class="s2">&quot;P8&quot;</span><span class="p">}</span>
+<span class="n">_10_20_ALIASES</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"T3"</span><span class="p">:</span> <span class="s2">"T7"</span><span class="p">,</span> <span class="s2">"T4"</span><span class="p">:</span> <span class="s2">"T8"</span><span class="p">,</span> <span class="s2">"T5"</span><span class="p">:</span> <span class="s2">"P7"</span><span class="p">,</span> <span class="s2">"T6"</span><span class="p">:</span> <span class="s2">"P8"</span><span class="p">}</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_strip_encoder_prefix</span><span class="p">(</span><span class="n">state</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
-    <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">key</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;encoder.&quot;</span><span class="p">)</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">state</span><span class="o">.</span><span class="n">keys</span><span class="p">()):</span>
+    <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">key</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"encoder."</span><span class="p">)</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">state</span><span class="o">.</span><span class="n">keys</span><span class="p">()):</span>
         <span class="k">return</span> <span class="p">{</span>
-            <span class="n">key</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="s2">&quot;encoder.&quot;</span><span class="p">)</span> <span class="p">:]:</span> <span class="n">val</span>
+            <span class="n">key</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="s2">"encoder."</span><span class="p">)</span> <span class="p">:]:</span> <span class="n">val</span>
             <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">val</span> <span class="ow">in</span> <span class="n">state</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
-            <span class="k">if</span> <span class="n">key</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;encoder.&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">key</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"encoder."</span><span class="p">)</span>
         <span class="p">}</span>
     <span class="k">return</span> <span class="n">state</span>
 
@@ -480,16 +480,16 @@ window.addEventListener("load", () => mermaid.run());
     <span class="n">x</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
     <span class="n">channel_names</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Map unipolar channels to BIOT&#39;s 16-ch double-banana layout.</span>
+<span class="w">    </span><span class="sd">"""Map unipolar channels to BIOT's 16-ch double-banana layout.</span>
 
 <span class="sd">    For each target slot, tries in order:</span>
-<span class="sd">      1. Direct match (e.g., input already has &quot;FP1-F7&quot;)</span>
+<span class="sd">      1. Direct match (e.g., input already has "FP1-F7")</span>
 <span class="sd">      2. Bipolar derivation (subtract electrode B from A)</span>
 <span class="sd">      3. Approximate (use only electrode A)</span>
 <span class="sd">      4. Zero-pad</span>
 
 <span class="sd">    Returns: (mapped_x, active_indices)</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">B</span><span class="p">,</span> <span class="n">C_in</span><span class="p">,</span> <span class="n">T</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">shape</span>
 
     <span class="n">name_to_idx</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
@@ -535,11 +535,11 @@ window.addEventListener("load", () => mermaid.run());
 <div class="viewcode-block" id="BIOTEncoder">
 <a class="viewcode-back" href="../../../api/_generated/physioex.models.BIOTEncoder.html#physioex.models.BIOTEncoder">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">BIOTEncoder</span><span class="p">(</span><span class="n">FoundationEncoder</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;BIOT with 16-channel double-banana layout + q95 normalization.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""BIOT with 16-channel double-banana layout + q95 normalization."""</span>
 
-    <span class="n">MODEL_NAME</span> <span class="o">=</span> <span class="s2">&quot;biot&quot;</span>
-    <span class="n">PIPELINE_PRESET</span> <span class="o">=</span> <span class="s2">&quot;biot&quot;</span>
-    <span class="n">CHANNEL_STRATEGY</span> <span class="o">=</span> <span class="s2">&quot;pad_fixed&quot;</span>
+    <span class="n">MODEL_NAME</span> <span class="o">=</span> <span class="s2">"biot"</span>
+    <span class="n">PIPELINE_PRESET</span> <span class="o">=</span> <span class="s2">"biot"</span>
+    <span class="n">CHANNEL_STRATEGY</span> <span class="o">=</span> <span class="s2">"pad_fixed"</span>
 
 <div class="viewcode-block" id="BIOTEncoder.__init__">
 <a class="viewcode-back" href="../../../api/_generated/physioex.models.BIOTEncoder.html#physioex.models.BIOTEncoder.__init__">[docs]</a>
@@ -555,7 +555,7 @@ window.addEventListener("load", () => mermaid.run());
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_channel_names</span> <span class="o">=</span> <span class="n">channel_names</span> <span class="ow">or</span> <span class="p">[]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_channel_map</span> <span class="o">=</span> <span class="n">channel_map</span> <span class="ow">or</span> <span class="p">{}</span>
-        <span class="n">resolved</span> <span class="o">=</span> <span class="n">ensure_checkpoint</span><span class="p">(</span><span class="s2">&quot;biot&quot;</span><span class="p">,</span> <span class="n">checkpoint_path</span><span class="p">)</span>
+        <span class="n">resolved</span> <span class="o">=</span> <span class="n">ensure_checkpoint</span><span class="p">(</span><span class="s2">"biot"</span><span class="p">,</span> <span class="n">checkpoint_path</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_ckpt_path</span> <span class="o">=</span> <span class="n">resolved</span>
         <span class="c1"># Resolve standard names from channel_map</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_resolved_names</span> <span class="o">=</span> <span class="p">(</span>
@@ -588,12 +588,12 @@ window.addEventListener("load", () => mermaid.run());
     <span class="k">def</span><span class="w"> </span><span class="nf">_load_pretrained</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">checkpoint_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">if</span> <span class="n">checkpoint_path</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">return</span>
-        <span class="n">state</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">checkpoint_path</span><span class="p">,</span> <span class="n">map_location</span><span class="o">=</span><span class="s2">&quot;cpu&quot;</span><span class="p">,</span> <span class="n">weights_only</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">state</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">checkpoint_path</span><span class="p">,</span> <span class="n">map_location</span><span class="o">=</span><span class="s2">"cpu"</span><span class="p">,</span> <span class="n">weights_only</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
         <span class="n">state</span> <span class="o">=</span> <span class="n">_strip_encoder_prefix</span><span class="p">(</span><span class="n">state</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">encoder</span><span class="o">.</span><span class="n">encoder</span><span class="o">.</span><span class="n">load_state_dict</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_preprocess</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;(B, C, T) -&gt; (B, 16, T) with DC removal + bipolar mapping + q95.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""(B, C, T) -&gt; (B, 16, T) with DC removal + bipolar mapping + q95."""</span>
         <span class="n">x</span> <span class="o">=</span> <span class="n">mean_center</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
 
         <span class="c1"># Map to 16-channel double-banana layout</span>
@@ -609,7 +609,7 @@ window.addEventListener("load", () => mermaid.run());
         <span class="k">return</span> <span class="n">x</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_encode</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;(B, 16, T) -&gt; (B, 256) embeddings.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""(B, 16, T) -&gt; (B, 256) embeddings."""</span>
         <span class="n">_</span><span class="p">,</span> <span class="n">emb</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">encoder</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>  <span class="c1"># BIOT returns (logits, embeddings)</span>
         <span class="k">return</span> <span class="n">emb</span></div>
 

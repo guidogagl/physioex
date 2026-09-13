@@ -400,7 +400,7 @@ window.addEventListener("load", () => mermaid.run());
                 <article class="bd-article">
                   
   <h1>Source code for physioex.models.reve</h1><div class="highlight"><pre>
-<span></span><span class="sd">&quot;&quot;&quot;REVE — Representations from EEG via Vision-language model (Chau et al., 2024).</span>
+<span></span><span class="sd">"""REVE — Representations from EEG via Vision-language model (Chau et al., 2024).</span>
 
 <span class="sd">Pure encoder: (B, L, C, T) -&gt; (B, L, D)</span>
 <span class="sd">Channel-name-aware via position bank. Per-recording z-score + ±15σ clip.</span>
@@ -412,7 +412,7 @@ window.addEventListener("load", () => mermaid.run());
 <span class="sd">  2. Per-sample z-score + ±15σ clip</span>
 <span class="sd">  3. Strip all-zero channels</span>
 <span class="sd">  4. Resolve channel names for position bank</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span>
 
@@ -431,8 +431,8 @@ window.addEventListener("load", () => mermaid.run());
         <span class="kn">from</span><span class="w"> </span><span class="nn">transformers</span><span class="w"> </span><span class="kn">import</span> <span class="n">AutoModel</span>
     <span class="k">except</span> <span class="ne">ImportError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>  <span class="c1"># pragma: no cover - dependency guard</span>
         <span class="k">raise</span> <span class="ne">ImportError</span><span class="p">(</span>
-            <span class="s2">&quot;The REVE encoder requires the &#39;transformers&#39; package. &quot;</span>
-            <span class="s2">&quot;Install it with: pip install &#39;physioex[foundation]&#39;&quot;</span>
+            <span class="s2">"The REVE encoder requires the 'transformers' package. "</span>
+            <span class="s2">"Install it with: pip install 'physioex[foundation]'"</span>
         <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">e</span>
     <span class="k">return</span> <span class="n">AutoModel</span>
 
@@ -440,29 +440,29 @@ window.addEventListener("load", () => mermaid.run());
 <span class="n">_SIGMA_CLIP</span> <span class="o">=</span> <span class="mf">15.0</span>
 
 <span class="n">_BIPOLAR_TO_STANDARD</span> <span class="o">=</span> <span class="p">{</span>
-    <span class="s2">&quot;C3-A2&quot;</span><span class="p">:</span> <span class="s2">&quot;C3&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;C4-A1&quot;</span><span class="p">:</span> <span class="s2">&quot;C4&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;O1-A2&quot;</span><span class="p">:</span> <span class="s2">&quot;O1&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;O2-A1&quot;</span><span class="p">:</span> <span class="s2">&quot;O2&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;F3-A2&quot;</span><span class="p">:</span> <span class="s2">&quot;F3&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;F4-A1&quot;</span><span class="p">:</span> <span class="s2">&quot;F4&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;FZ-CZ&quot;</span><span class="p">:</span> <span class="s2">&quot;FZ&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;CZ-PZ&quot;</span><span class="p">:</span> <span class="s2">&quot;PZ&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;T3&quot;</span><span class="p">:</span> <span class="s2">&quot;T7&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;T4&quot;</span><span class="p">:</span> <span class="s2">&quot;T8&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;T5&quot;</span><span class="p">:</span> <span class="s2">&quot;P7&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;T6&quot;</span><span class="p">:</span> <span class="s2">&quot;P8&quot;</span><span class="p">,</span>
+    <span class="s2">"C3-A2"</span><span class="p">:</span> <span class="s2">"C3"</span><span class="p">,</span>
+    <span class="s2">"C4-A1"</span><span class="p">:</span> <span class="s2">"C4"</span><span class="p">,</span>
+    <span class="s2">"O1-A2"</span><span class="p">:</span> <span class="s2">"O1"</span><span class="p">,</span>
+    <span class="s2">"O2-A1"</span><span class="p">:</span> <span class="s2">"O2"</span><span class="p">,</span>
+    <span class="s2">"F3-A2"</span><span class="p">:</span> <span class="s2">"F3"</span><span class="p">,</span>
+    <span class="s2">"F4-A1"</span><span class="p">:</span> <span class="s2">"F4"</span><span class="p">,</span>
+    <span class="s2">"FZ-CZ"</span><span class="p">:</span> <span class="s2">"FZ"</span><span class="p">,</span>
+    <span class="s2">"CZ-PZ"</span><span class="p">:</span> <span class="s2">"PZ"</span><span class="p">,</span>
+    <span class="s2">"T3"</span><span class="p">:</span> <span class="s2">"T7"</span><span class="p">,</span>
+    <span class="s2">"T4"</span><span class="p">:</span> <span class="s2">"T8"</span><span class="p">,</span>
+    <span class="s2">"T5"</span><span class="p">:</span> <span class="s2">"P7"</span><span class="p">,</span>
+    <span class="s2">"T6"</span><span class="p">:</span> <span class="s2">"P8"</span><span class="p">,</span>
 <span class="p">}</span>
 
 
 <div class="viewcode-block" id="REVEEncoder">
 <a class="viewcode-back" href="../../../api/_generated/physioex.models.REVEEncoder.html#physioex.models.REVEEncoder">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">REVEEncoder</span><span class="p">(</span><span class="n">FoundationEncoder</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;REVE with position bank for channel-aware embeddings.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""REVE with position bank for channel-aware embeddings."""</span>
 
-    <span class="n">MODEL_NAME</span> <span class="o">=</span> <span class="s2">&quot;reve&quot;</span>
-    <span class="n">PIPELINE_PRESET</span> <span class="o">=</span> <span class="s2">&quot;reve&quot;</span>
-    <span class="n">CHANNEL_STRATEGY</span> <span class="o">=</span> <span class="s2">&quot;layout&quot;</span>
+    <span class="n">MODEL_NAME</span> <span class="o">=</span> <span class="s2">"reve"</span>
+    <span class="n">PIPELINE_PRESET</span> <span class="o">=</span> <span class="s2">"reve"</span>
+    <span class="n">CHANNEL_STRATEGY</span> <span class="o">=</span> <span class="s2">"layout"</span>
 
 <div class="viewcode-block" id="REVEEncoder.__init__">
 <a class="viewcode-back" href="../../../api/_generated/physioex.models.REVEEncoder.html#physioex.models.REVEEncoder.__init__">[docs]</a>
@@ -478,7 +478,7 @@ window.addEventListener("load", () => mermaid.run());
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_channel_names</span> <span class="o">=</span> <span class="n">channel_names</span> <span class="ow">or</span> <span class="p">[]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_channel_map</span> <span class="o">=</span> <span class="n">channel_map</span> <span class="ow">or</span> <span class="p">{}</span>
-        <span class="n">resolved</span> <span class="o">=</span> <span class="n">ensure_checkpoint</span><span class="p">(</span><span class="s2">&quot;reve&quot;</span><span class="p">,</span> <span class="n">checkpoint_path</span><span class="p">)</span>
+        <span class="n">resolved</span> <span class="o">=</span> <span class="n">ensure_checkpoint</span><span class="p">(</span><span class="s2">"reve"</span><span class="p">,</span> <span class="n">checkpoint_path</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_ckpt_path</span> <span class="o">=</span> <span class="n">resolved</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_resolved_names</span> <span class="o">=</span> <span class="p">(</span>
             <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_channel_map</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">ch</span><span class="p">,</span> <span class="n">ch</span><span class="p">)</span> <span class="k">for</span> <span class="n">ch</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_channel_names</span><span class="p">]</span>
@@ -489,7 +489,7 @@ window.addEventListener("load", () => mermaid.run());
         <span class="bp">self</span><span class="o">.</span><span class="n">_standard_names</span> <span class="o">=</span> <span class="p">(</span>
             <span class="p">[</span><span class="n">_BIPOLAR_TO_STANDARD</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_resolved_names</span><span class="p">]</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_resolved_names</span>
-            <span class="k">else</span> <span class="p">[</span><span class="s2">&quot;Fpz&quot;</span><span class="p">]</span>
+            <span class="k">else</span> <span class="p">[</span><span class="s2">"Fpz"</span><span class="p">]</span>
         <span class="p">)</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
             <span class="n">in_chan</span><span class="o">=</span><span class="n">in_chan</span><span class="p">,</span>
@@ -502,7 +502,7 @@ window.addEventListener("load", () => mermaid.run());
         <span class="n">AutoModel</span> <span class="o">=</span> <span class="n">_import_automodel</span><span class="p">()</span>
 
         <span class="n">model</span> <span class="o">=</span> <span class="n">AutoModel</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_ckpt_path</span> <span class="ow">or</span> <span class="s2">&quot;brain-bzh/reve-base&quot;</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_ckpt_path</span> <span class="ow">or</span> <span class="s2">"brain-bzh/reve-base"</span><span class="p">,</span>
             <span class="n">trust_remote_code</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
         <span class="p">)</span>
         <span class="k">return</span> <span class="n">model</span>
@@ -515,8 +515,8 @@ window.addEventListener("load", () => mermaid.run());
         <span class="k">pass</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_build_pos_bank</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Build position bank (lazy, first call only).&quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;_pos_bank&quot;</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Build position bank (lazy, first call only)."""</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">"_pos_bank"</span><span class="p">):</span>
             <span class="kn">from</span><span class="w"> </span><span class="nn">physioex.models.foundation_checkpoints</span><span class="w"> </span><span class="kn">import</span> <span class="n">ensure_reve_positions</span>
 
             <span class="n">AutoModel</span> <span class="o">=</span> <span class="n">_import_automodel</span><span class="p">()</span>
@@ -530,13 +530,13 @@ window.addEventListener("load", () => mermaid.run());
             <span class="bp">self</span><span class="o">.</span><span class="n">_pos_bank</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_preprocess</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;(B, C, T) -&gt; (B, C&#39;, T) with DC removal + per-recording zscore + clip.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""(B, C, T) -&gt; (B, C', T) with DC removal + per-recording zscore + clip."""</span>
         <span class="n">x</span> <span class="o">=</span> <span class="n">mean_center</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
         <span class="n">x</span> <span class="o">=</span> <span class="n">zscore_per_recording</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">sigma_clip</span><span class="o">=</span><span class="n">_SIGMA_CLIP</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">x</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_encode</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;(B, C, T) -&gt; (B, 512) embeddings.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""(B, C, T) -&gt; (B, 512) embeddings."""</span>
         <span class="c1"># Strip all-zero channels</span>
         <span class="n">x_clean</span><span class="p">,</span> <span class="n">kept</span> <span class="o">=</span> <span class="n">strip_zero_channels</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
         <span class="n">ch_names</span> <span class="o">=</span> <span class="p">(</span>

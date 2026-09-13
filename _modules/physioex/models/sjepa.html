@@ -400,7 +400,7 @@ window.addEventListener("load", () => mermaid.run());
                 <article class="bd-article">
                   
   <h1>Source code for physioex.models.sjepa</h1><div class="highlight"><pre>
-<span></span><span class="sd">&quot;&quot;&quot;Signal-JEPA — Joint Embedding Predictive Architecture (Guetschel et al., 2024).</span>
+<span></span><span class="sd">"""Signal-JEPA — Joint Embedding Predictive Architecture (Guetschel et al., 2024).</span>
 
 <span class="sd">Pure encoder: (B, L, C, T) -&gt; (B, L, D)</span>
 <span class="sd">Fixed 19-channel standard 10-20 montage with spatial positional encoder.</span>
@@ -409,7 +409,7 @@ window.addEventListener("load", () => mermaid.run());
 
 <span class="sd">Preprocessing (pure PyTorch, differentiable):</span>
 <span class="sd">  1. Map to 19-channel layout via alias matching</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
@@ -421,45 +421,45 @@ window.addEventListener("load", () => mermaid.run());
 <span class="kn">from</span><span class="w"> </span><span class="nn">physioex.models.foundation_base</span><span class="w"> </span><span class="kn">import</span> <span class="n">FoundationEncoder</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">physioex.models.foundation_preproc</span><span class="w"> </span><span class="kn">import</span> <span class="n">map_channels_to_layout</span>
 
-<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">&quot;physioex.foundation&quot;</span><span class="p">)</span>
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">"physioex.foundation"</span><span class="p">)</span>
 
 <span class="n">_SJEPA_TARGET_CHANNELS</span> <span class="o">=</span> <span class="p">(</span>
-    <span class="s2">&quot;FP1&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;FP2&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;F3&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;F4&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;C3&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;C4&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;P3&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;P4&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;O1&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;O2&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;F7&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;F8&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;T3&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;T4&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;T5&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;T6&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;FZ&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;CZ&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;PZ&quot;</span><span class="p">,</span>
+    <span class="s2">"FP1"</span><span class="p">,</span>
+    <span class="s2">"FP2"</span><span class="p">,</span>
+    <span class="s2">"F3"</span><span class="p">,</span>
+    <span class="s2">"F4"</span><span class="p">,</span>
+    <span class="s2">"C3"</span><span class="p">,</span>
+    <span class="s2">"C4"</span><span class="p">,</span>
+    <span class="s2">"P3"</span><span class="p">,</span>
+    <span class="s2">"P4"</span><span class="p">,</span>
+    <span class="s2">"O1"</span><span class="p">,</span>
+    <span class="s2">"O2"</span><span class="p">,</span>
+    <span class="s2">"F7"</span><span class="p">,</span>
+    <span class="s2">"F8"</span><span class="p">,</span>
+    <span class="s2">"T3"</span><span class="p">,</span>
+    <span class="s2">"T4"</span><span class="p">,</span>
+    <span class="s2">"T5"</span><span class="p">,</span>
+    <span class="s2">"T6"</span><span class="p">,</span>
+    <span class="s2">"FZ"</span><span class="p">,</span>
+    <span class="s2">"CZ"</span><span class="p">,</span>
+    <span class="s2">"PZ"</span><span class="p">,</span>
 <span class="p">)</span>
 
 <span class="n">_CHANNEL_ALIASES</span> <span class="o">=</span> <span class="p">{</span>
-    <span class="s2">&quot;T7&quot;</span><span class="p">:</span> <span class="s2">&quot;T3&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;T8&quot;</span><span class="p">:</span> <span class="s2">&quot;T4&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;P7&quot;</span><span class="p">:</span> <span class="s2">&quot;T5&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;P8&quot;</span><span class="p">:</span> <span class="s2">&quot;T6&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;FPZ-CZ&quot;</span><span class="p">:</span> <span class="s2">&quot;FZ&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;PZ-OZ&quot;</span><span class="p">:</span> <span class="s2">&quot;PZ&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;EEG FPZ-CZ&quot;</span><span class="p">:</span> <span class="s2">&quot;FZ&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;EEG PZ-OZ&quot;</span><span class="p">:</span> <span class="s2">&quot;PZ&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;C3-A2&quot;</span><span class="p">:</span> <span class="s2">&quot;C3&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;C4-A1&quot;</span><span class="p">:</span> <span class="s2">&quot;C4&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;O1-A2&quot;</span><span class="p">:</span> <span class="s2">&quot;O1&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;O2-A1&quot;</span><span class="p">:</span> <span class="s2">&quot;O2&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;F3-A2&quot;</span><span class="p">:</span> <span class="s2">&quot;F3&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;F4-A1&quot;</span><span class="p">:</span> <span class="s2">&quot;F4&quot;</span><span class="p">,</span>
+    <span class="s2">"T7"</span><span class="p">:</span> <span class="s2">"T3"</span><span class="p">,</span>
+    <span class="s2">"T8"</span><span class="p">:</span> <span class="s2">"T4"</span><span class="p">,</span>
+    <span class="s2">"P7"</span><span class="p">:</span> <span class="s2">"T5"</span><span class="p">,</span>
+    <span class="s2">"P8"</span><span class="p">:</span> <span class="s2">"T6"</span><span class="p">,</span>
+    <span class="s2">"FPZ-CZ"</span><span class="p">:</span> <span class="s2">"FZ"</span><span class="p">,</span>
+    <span class="s2">"PZ-OZ"</span><span class="p">:</span> <span class="s2">"PZ"</span><span class="p">,</span>
+    <span class="s2">"EEG FPZ-CZ"</span><span class="p">:</span> <span class="s2">"FZ"</span><span class="p">,</span>
+    <span class="s2">"EEG PZ-OZ"</span><span class="p">:</span> <span class="s2">"PZ"</span><span class="p">,</span>
+    <span class="s2">"C3-A2"</span><span class="p">:</span> <span class="s2">"C3"</span><span class="p">,</span>
+    <span class="s2">"C4-A1"</span><span class="p">:</span> <span class="s2">"C4"</span><span class="p">,</span>
+    <span class="s2">"O1-A2"</span><span class="p">:</span> <span class="s2">"O1"</span><span class="p">,</span>
+    <span class="s2">"O2-A1"</span><span class="p">:</span> <span class="s2">"O2"</span><span class="p">,</span>
+    <span class="s2">"F3-A2"</span><span class="p">:</span> <span class="s2">"F3"</span><span class="p">,</span>
+    <span class="s2">"F4-A1"</span><span class="p">:</span> <span class="s2">"F4"</span><span class="p">,</span>
 <span class="p">}</span>
 
 <span class="n">_MIN_MATCH_RATIO</span> <span class="o">=</span> <span class="mf">0.5</span>
@@ -468,11 +468,11 @@ window.addEventListener("load", () => mermaid.run());
 <div class="viewcode-block" id="SJEEncoder">
 <a class="viewcode-back" href="../../../api/_generated/physioex.models.SJEEncoder.html#physioex.models.SJEEncoder">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">SJEEncoder</span><span class="p">(</span><span class="n">FoundationEncoder</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Signal-JEPA with fixed 19-channel 10-20 layout.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Signal-JEPA with fixed 19-channel 10-20 layout."""</span>
 
-    <span class="n">MODEL_NAME</span> <span class="o">=</span> <span class="s2">&quot;sjepa&quot;</span>
-    <span class="n">PIPELINE_PRESET</span> <span class="o">=</span> <span class="s2">&quot;sjepa&quot;</span>
-    <span class="n">CHANNEL_STRATEGY</span> <span class="o">=</span> <span class="s2">&quot;layout&quot;</span>
+    <span class="n">MODEL_NAME</span> <span class="o">=</span> <span class="s2">"sjepa"</span>
+    <span class="n">PIPELINE_PRESET</span> <span class="o">=</span> <span class="s2">"sjepa"</span>
+    <span class="n">CHANNEL_STRATEGY</span> <span class="o">=</span> <span class="s2">"layout"</span>
 
 <div class="viewcode-block" id="SJEEncoder.__init__">
 <a class="viewcode-back" href="../../../api/_generated/physioex.models.SJEEncoder.html#physioex.models.SJEEncoder.__init__">[docs]</a>
@@ -488,7 +488,7 @@ window.addEventListener("load", () => mermaid.run());
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_channel_names</span> <span class="o">=</span> <span class="n">channel_names</span> <span class="ow">or</span> <span class="p">[]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_channel_map</span> <span class="o">=</span> <span class="n">channel_map</span> <span class="ow">or</span> <span class="p">{}</span>
-        <span class="n">resolved</span> <span class="o">=</span> <span class="n">ensure_checkpoint</span><span class="p">(</span><span class="s2">&quot;sjepa&quot;</span><span class="p">,</span> <span class="n">checkpoint_path</span><span class="p">)</span>
+        <span class="n">resolved</span> <span class="o">=</span> <span class="n">ensure_checkpoint</span><span class="p">(</span><span class="s2">"sjepa"</span><span class="p">,</span> <span class="n">checkpoint_path</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_ckpt_path</span> <span class="o">=</span> <span class="n">resolved</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_resolved_names</span> <span class="o">=</span> <span class="p">(</span>
             <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_channel_map</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">ch</span><span class="p">,</span> <span class="n">ch</span><span class="p">)</span> <span class="k">for</span> <span class="n">ch</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_channel_names</span><span class="p">]</span>
@@ -505,20 +505,20 @@ window.addEventListener("load", () => mermaid.run());
     <span class="k">def</span><span class="w"> </span><span class="nf">_build_encoder</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">:</span>
         <span class="kn">from</span><span class="w"> </span><span class="nn">braindecode.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">SignalJEPA</span>
 
-        <span class="n">model</span> <span class="o">=</span> <span class="n">SignalJEPA</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="s2">&quot;braindecode/SignalJEPA-pretrained&quot;</span><span class="p">)</span>
+        <span class="n">model</span> <span class="o">=</span> <span class="n">SignalJEPA</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="s2">"braindecode/SignalJEPA-pretrained"</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_fix_spatial_pos_embedding</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">model</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_fix_spatial_pos_embedding</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Fix braindecode bug: _SpatialPosEmbedding reads loc[3:6] instead of loc[0:3].&quot;&quot;&quot;</span>
-        <span class="n">chs_info</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="s2">&quot;chs_info&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+<span class="w">        </span><span class="sd">"""Fix braindecode bug: _SpatialPosEmbedding reads loc[3:6] instead of loc[0:3]."""</span>
+        <span class="n">chs_info</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="s2">"chs_info"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">chs_info</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">return</span>
 
         <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">module</span> <span class="ow">in</span> <span class="n">model</span><span class="o">.</span><span class="n">named_modules</span><span class="p">():</span>
             <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">module</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span>
-                <span class="s2">&quot;_SpatialPosEmbedding&quot;</span><span class="p">,</span>
-                <span class="s2">&quot;_ChannelEmbedding&quot;</span><span class="p">,</span>
+                <span class="s2">"_SpatialPosEmbedding"</span><span class="p">,</span>
+                <span class="s2">"_ChannelEmbedding"</span><span class="p">,</span>
             <span class="p">):</span>
                 <span class="k">continue</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="n">torch</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">module</span><span class="o">.</span><span class="n">weight</span><span class="o">.</span><span class="n">data</span><span class="p">)</span><span class="o">.</span><span class="n">any</span><span class="p">()</span><span class="o">.</span><span class="n">item</span><span class="p">():</span>
@@ -526,8 +526,8 @@ window.addEventListener("load", () => mermaid.run());
 
             <span class="n">correct_locs</span> <span class="o">=</span> <span class="p">[]</span>
             <span class="k">for</span> <span class="n">ch</span> <span class="ow">in</span> <span class="n">chs_info</span><span class="p">:</span>
-                <span class="n">loc</span> <span class="o">=</span> <span class="n">ch</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;loc&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
-                <span class="k">if</span> <span class="n">loc</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">loc</span><span class="p">,</span> <span class="s2">&quot;__len__&quot;</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">loc</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">3</span><span class="p">:</span>
+                <span class="n">loc</span> <span class="o">=</span> <span class="n">ch</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"loc"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">loc</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">loc</span><span class="p">,</span> <span class="s2">"__len__"</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">loc</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">3</span><span class="p">:</span>
                     <span class="n">correct_locs</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="nb">float</span><span class="p">(</span><span class="n">loc</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="nb">float</span><span class="p">(</span><span class="n">loc</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span> <span class="nb">float</span><span class="p">(</span><span class="n">loc</span><span class="p">[</span><span class="mi">2</span><span class="p">])])</span>
                 <span class="k">else</span><span class="p">:</span>
                     <span class="n">correct_locs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
@@ -548,7 +548,7 @@ window.addEventListener("load", () => mermaid.run());
             <span class="n">module</span><span class="o">.</span><span class="n">channel_locations</span> <span class="o">=</span> <span class="n">correct_locs</span>
             <span class="n">module</span><span class="o">.</span><span class="n">reset_parameters</span><span class="p">()</span>
             <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
-                <span class="s2">&quot;SJEPA: patched </span><span class="si">%s</span><span class="s2"> spatial pos embedding (braindecode loc[3:6] bug)&quot;</span><span class="p">,</span>
+                <span class="s2">"SJEPA: patched </span><span class="si">%s</span><span class="s2"> spatial pos embedding (braindecode loc[3:6] bug)"</span><span class="p">,</span>
                 <span class="n">name</span><span class="p">,</span>
             <span class="p">)</span>
 
@@ -560,7 +560,7 @@ window.addEventListener("load", () => mermaid.run());
         <span class="k">pass</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_preprocess</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;(B, C, T) -&gt; (B, 19, T) mapped to SJEPA layout.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""(B, C, T) -&gt; (B, 19, T) mapped to SJEPA layout."""</span>
         <span class="n">target_layout</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">_SJEPA_TARGET_CHANNELS</span><span class="p">)</span>
         <span class="n">mapped</span><span class="p">,</span> <span class="n">active</span> <span class="o">=</span> <span class="n">map_channels_to_layout</span><span class="p">(</span>
             <span class="n">x</span><span class="p">,</span>
@@ -574,16 +574,16 @@ window.addEventListener("load", () => mermaid.run());
         <span class="n">match_ratio</span> <span class="o">=</span> <span class="n">n_matched</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="n">target_layout</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">match_ratio</span> <span class="o">&lt;</span> <span class="n">_MIN_MATCH_RATIO</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;SJEPA: channel match ratio </span><span class="si">{</span><span class="n">match_ratio</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> &lt; &quot;</span>
-                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">_MIN_MATCH_RATIO</span><span class="si">}</span><span class="s2">. Input channels: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_resolved_names</span><span class="si">!r}</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">"SJEPA: channel match ratio </span><span class="si">{</span><span class="n">match_ratio</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> &lt; "</span>
+                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">_MIN_MATCH_RATIO</span><span class="si">}</span><span class="s2">. Input channels: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_resolved_names</span><span class="si">!r}</span><span class="s2">"</span>
             <span class="p">)</span>
 
         <span class="k">return</span> <span class="n">mapped</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_encode</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;(B, 19, T) -&gt; (B, 64) embeddings.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""(B, 19, T) -&gt; (B, 64) embeddings."""</span>
         <span class="n">out</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">encoder</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">return_features</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-        <span class="n">features</span> <span class="o">=</span> <span class="n">out</span><span class="p">[</span><span class="s2">&quot;features&quot;</span><span class="p">]</span>  <span class="c1"># (B, L, 64)</span>
+        <span class="n">features</span> <span class="o">=</span> <span class="n">out</span><span class="p">[</span><span class="s2">"features"</span><span class="p">]</span>  <span class="c1"># (B, L, 64)</span>
         <span class="k">return</span> <span class="n">features</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>  <span class="c1"># (B, 64)</span></div>
 
 </pre></div>

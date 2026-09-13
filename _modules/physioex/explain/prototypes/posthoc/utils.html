@@ -400,12 +400,12 @@ window.addEventListener("load", () => mermaid.run());
                 <article class="bd-article">
                   
   <h1>Source code for physioex.explain.prototypes.posthoc.utils</h1><div class="highlight"><pre>
-<span></span><span class="sd">&quot;&quot;&quot;Shared utilities for post-hoc prototype learning.</span>
+<span></span><span class="sd">"""Shared utilities for post-hoc prototype learning.</span>
 
 <span class="sd">Functions for loading pre-extracted epoch embeddings, nearest-prototype</span>
 <span class="sd">classification, and evaluation metrics.  Works with any model that</span>
 <span class="sd">produces per-epoch embeddings in R^d_model.</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
@@ -418,29 +418,29 @@ window.addEventListener("load", () => mermaid.run());
 <a class="viewcode-back" href="../../../../../api/_generated/physioex.explain.prototypes.posthoc.html#physioex.explain.prototypes.posthoc.load_epoch_embeddings_per_subject">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">load_epoch_embeddings_per_subject</span><span class="p">(</span>
     <span class="n">emb_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span><span class="p">,</span>
-    <span class="n">split</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;train&quot;</span><span class="p">,</span>
+    <span class="n">split</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"train"</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Load per-subject epoch embeddings and labels for a split.</span>
+<span class="w">    </span><span class="sd">"""Load per-subject epoch embeddings and labels for a split.</span>
 
 <span class="sd">    Returns a list of (Z_subj, Y_subj) tuples, one per subject,</span>
 <span class="sd">    preserving the temporal order within each subject.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        emb_dir: Directory containing per-subject .npy files.</span>
-<span class="sd">        split: One of ``&quot;train&quot;``, ``&quot;valid&quot;``, ``&quot;test&quot;``.</span>
+<span class="sd">        split: One of ``"train"``, ``"valid"``, ``"test"``.</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">        List of (Z, Y) tuples where Z is (n_epochs, d_model) and Y is (n_epochs,).</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">split_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">emb_dir</span><span class="p">)</span> <span class="o">/</span> <span class="n">split</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">split_dir</span><span class="o">.</span><span class="n">is_dir</span><span class="p">():</span>
-        <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Split directory not found: </span><span class="si">{</span><span class="n">split_dir</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-    <span class="n">emb_files</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">split_dir</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="s2">&quot;*_embeddings.npy&quot;</span><span class="p">))</span>
+        <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Split directory not found: </span><span class="si">{</span><span class="n">split_dir</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+    <span class="n">emb_files</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">split_dir</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="s2">"*_embeddings.npy"</span><span class="p">))</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">emb_files</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;No *_embeddings.npy files in </span><span class="si">{</span><span class="n">split_dir</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"No *_embeddings.npy files in </span><span class="si">{</span><span class="n">split_dir</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
     <span class="n">subjects</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="k">for</span> <span class="n">ef</span> <span class="ow">in</span> <span class="n">emb_files</span><span class="p">:</span>
-        <span class="n">lf</span> <span class="o">=</span> <span class="n">ef</span><span class="o">.</span><span class="n">parent</span> <span class="o">/</span> <span class="n">ef</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;_embeddings.npy&quot;</span><span class="p">,</span> <span class="s2">&quot;_labels.npy&quot;</span><span class="p">)</span>
+        <span class="n">lf</span> <span class="o">=</span> <span class="n">ef</span><span class="o">.</span><span class="n">parent</span> <span class="o">/</span> <span class="n">ef</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">"_embeddings.npy"</span><span class="p">,</span> <span class="s2">"_labels.npy"</span><span class="p">)</span>
         <span class="n">Z</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">ef</span><span class="p">))</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
         <span class="n">Y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">lf</span><span class="p">))</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">)</span>
         <span class="n">subjects</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">Z</span><span class="p">,</span> <span class="n">Y</span><span class="p">))</span>
@@ -452,9 +452,9 @@ window.addEventListener("load", () => mermaid.run());
 <a class="viewcode-back" href="../../../../../api/_generated/physioex.explain.prototypes.posthoc.html#physioex.explain.prototypes.posthoc.load_epoch_embeddings">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">load_epoch_embeddings</span><span class="p">(</span>
     <span class="n">emb_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span><span class="p">,</span>
-    <span class="n">split</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;train&quot;</span><span class="p">,</span>
+    <span class="n">split</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"train"</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Load pre-extracted epoch embeddings and labels for a split.</span>
+<span class="w">    </span><span class="sd">"""Load pre-extracted epoch embeddings and labels for a split.</span>
 
 <span class="sd">    Supports two layouts:</span>
 
@@ -470,29 +470,29 @@ window.addEventListener("load", () => mermaid.run());
 
 <span class="sd">    Args:</span>
 <span class="sd">        emb_dir: Directory containing the embeddings.</span>
-<span class="sd">        split: One of ``&quot;train&quot;``, ``&quot;valid&quot;``, ``&quot;test&quot;``.</span>
+<span class="sd">        split: One of ``"train"``, ``"valid"``, ``"test"``.</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">        Tuple of (Z, Y) where Z is (N, d_model) float32 and Y is (N,) int64.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">emb_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">emb_dir</span><span class="p">)</span>
     <span class="n">split_dir</span> <span class="o">=</span> <span class="n">emb_dir</span> <span class="o">/</span> <span class="n">split</span>
 
     <span class="c1"># Per-subject layout</span>
     <span class="k">if</span> <span class="n">split_dir</span><span class="o">.</span><span class="n">is_dir</span><span class="p">():</span>
-        <span class="n">emb_files</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">split_dir</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="s2">&quot;*_embeddings.npy&quot;</span><span class="p">))</span>
+        <span class="n">emb_files</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">split_dir</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="s2">"*_embeddings.npy"</span><span class="p">))</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">emb_files</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;No *_embeddings.npy files in </span><span class="si">{</span><span class="n">split_dir</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"No *_embeddings.npy files in </span><span class="si">{</span><span class="n">split_dir</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
         <span class="n">all_Z</span><span class="p">,</span> <span class="n">all_Y</span> <span class="o">=</span> <span class="p">[],</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">ef</span> <span class="ow">in</span> <span class="n">emb_files</span><span class="p">:</span>
-            <span class="n">lf</span> <span class="o">=</span> <span class="n">ef</span><span class="o">.</span><span class="n">parent</span> <span class="o">/</span> <span class="n">ef</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;_embeddings.npy&quot;</span><span class="p">,</span> <span class="s2">&quot;_labels.npy&quot;</span><span class="p">)</span>
+            <span class="n">lf</span> <span class="o">=</span> <span class="n">ef</span><span class="o">.</span><span class="n">parent</span> <span class="o">/</span> <span class="n">ef</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">"_embeddings.npy"</span><span class="p">,</span> <span class="s2">"_labels.npy"</span><span class="p">)</span>
             <span class="n">all_Z</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">ef</span><span class="p">))</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">))</span>
             <span class="n">all_Y</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">lf</span><span class="p">))</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">))</span>
         <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span><span class="n">all_Z</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span><span class="n">all_Y</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
 
     <span class="c1"># Flat layout (legacy)</span>
-    <span class="n">Z</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">emb_dir</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">split</span><span class="si">}</span><span class="s2">_embeddings.npy&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
-    <span class="n">Y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">emb_dir</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">split</span><span class="si">}</span><span class="s2">_labels.npy&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">)</span>
+    <span class="n">Z</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">emb_dir</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">split</span><span class="si">}</span><span class="s2">_embeddings.npy"</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+    <span class="n">Y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">emb_dir</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">split</span><span class="si">}</span><span class="s2">_labels.npy"</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">Z</span><span class="p">,</span> <span class="n">Y</span></div>
 
 
@@ -503,9 +503,9 @@ window.addEventListener("load", () => mermaid.run());
     <span class="n">Z</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
     <span class="n">prototypes</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
     <span class="n">proto_labels</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
-    <span class="n">metric</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;cosine&quot;</span><span class="p">,</span>
+    <span class="n">metric</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"cosine"</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Classify embeddings via nearest prototype.</span>
+<span class="w">    </span><span class="sd">"""Classify embeddings via nearest prototype.</span>
 
 <span class="sd">    For each embedding z_i, finds the prototype with highest similarity</span>
 <span class="sd">    (cosine) or lowest distance (euclidean) and assigns its class label.</span>
@@ -514,19 +514,19 @@ window.addEventListener("load", () => mermaid.run());
 <span class="sd">        Z: (N, d_model) embeddings to classify.</span>
 <span class="sd">        prototypes: (M, d_model) prototype vectors.</span>
 <span class="sd">        proto_labels: (M,) class label for each prototype.</span>
-<span class="sd">        metric: ``&quot;cosine&quot;`` or ``&quot;euclidean&quot;``.</span>
+<span class="sd">        metric: ``"cosine"`` or ``"euclidean"``.</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">        (N,) predicted class labels.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">if</span> <span class="n">metric</span> <span class="o">==</span> <span class="s2">&quot;cosine&quot;</span><span class="p">:</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="n">metric</span> <span class="o">==</span> <span class="s2">"cosine"</span><span class="p">:</span>
         <span class="c1"># Normalize both</span>
         <span class="n">Z_norm</span> <span class="o">=</span> <span class="n">Z</span> <span class="o">/</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">Z</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">keepdims</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="o">+</span> <span class="mf">1e-8</span><span class="p">)</span>
         <span class="n">P_norm</span> <span class="o">=</span> <span class="n">prototypes</span> <span class="o">/</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">prototypes</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">keepdims</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="o">+</span> <span class="mf">1e-8</span><span class="p">)</span>
         <span class="c1"># Similarity matrix (N, M)</span>
         <span class="n">sim</span> <span class="o">=</span> <span class="n">Z_norm</span> <span class="o">@</span> <span class="n">P_norm</span><span class="o">.</span><span class="n">T</span>
         <span class="n">best_idx</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-    <span class="k">elif</span> <span class="n">metric</span> <span class="o">==</span> <span class="s2">&quot;euclidean&quot;</span><span class="p">:</span>
+    <span class="k">elif</span> <span class="n">metric</span> <span class="o">==</span> <span class="s2">"euclidean"</span><span class="p">:</span>
         <span class="c1"># Distance matrix (N, M) via broadcasting</span>
         <span class="c1"># ||z - p||^2 = ||z||^2 + ||p||^2 - 2 z.p</span>
         <span class="n">Z_sq</span> <span class="o">=</span> <span class="p">(</span><span class="n">Z</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">keepdims</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>  <span class="c1"># (N, 1)</span>
@@ -534,7 +534,7 @@ window.addEventListener("load", () => mermaid.run());
         <span class="n">dist</span> <span class="o">=</span> <span class="n">Z_sq</span> <span class="o">+</span> <span class="n">P_sq</span> <span class="o">-</span> <span class="mi">2</span> <span class="o">*</span> <span class="p">(</span><span class="n">Z</span> <span class="o">@</span> <span class="n">prototypes</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
         <span class="n">best_idx</span> <span class="o">=</span> <span class="n">dist</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unknown metric: </span><span class="si">{</span><span class="n">metric</span><span class="si">!r}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Unknown metric: </span><span class="si">{</span><span class="n">metric</span><span class="si">!r}</span><span class="s2">"</span><span class="p">)</span>
 
     <span class="k">return</span> <span class="n">proto_labels</span><span class="p">[</span><span class="n">best_idx</span><span class="p">]</span></div>
 
@@ -548,7 +548,7 @@ window.addEventListener("load", () => mermaid.run());
     <span class="n">class_names</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">n_classes</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Compute standard sleep staging metrics.</span>
+<span class="w">    </span><span class="sd">"""Compute standard sleep staging metrics.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        y_true: (N,) ground truth labels.</span>
@@ -558,9 +558,9 @@ window.addEventListener("load", () => mermaid.run());
 
 <span class="sd">    Returns:</span>
 <span class="sd">        Dict with accuracy, f1_macro, kappa, per_class_f1, confusion_matrix.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">if</span> <span class="n">class_names</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">class_names</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;W&quot;</span><span class="p">,</span> <span class="s2">&quot;N1&quot;</span><span class="p">,</span> <span class="s2">&quot;N2&quot;</span><span class="p">,</span> <span class="s2">&quot;N3&quot;</span><span class="p">,</span> <span class="s2">&quot;REM&quot;</span><span class="p">][:</span><span class="n">n_classes</span><span class="p">]</span>
+        <span class="n">class_names</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"W"</span><span class="p">,</span> <span class="s2">"N1"</span><span class="p">,</span> <span class="s2">"N2"</span><span class="p">,</span> <span class="s2">"N3"</span><span class="p">,</span> <span class="s2">"REM"</span><span class="p">][:</span><span class="n">n_classes</span><span class="p">]</span>
 
     <span class="c1"># Filter out unscored (-1)</span>
     <span class="n">mask</span> <span class="o">=</span> <span class="n">y_true</span> <span class="o">&gt;=</span> <span class="mi">0</span>
@@ -583,7 +583,7 @@ window.addEventListener("load", () => mermaid.run());
 
     <span class="n">f1_macro</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">per_class_f1</span><span class="o">.</span><span class="n">values</span><span class="p">())))</span>
 
-    <span class="c1"># Cohen&#39;s kappa</span>
+    <span class="c1"># Cohen's kappa</span>
     <span class="n">cm</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">n_classes</span><span class="p">,</span> <span class="n">n_classes</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">)</span>
     <span class="k">for</span> <span class="n">t</span><span class="p">,</span> <span class="n">p</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">y_true</span><span class="p">,</span> <span class="n">y_pred</span><span class="p">):</span>
         <span class="k">if</span> <span class="mi">0</span> <span class="o">&lt;=</span> <span class="n">t</span> <span class="o">&lt;</span> <span class="n">n_classes</span> <span class="ow">and</span> <span class="mi">0</span> <span class="o">&lt;=</span> <span class="n">p</span> <span class="o">&lt;</span> <span class="n">n_classes</span><span class="p">:</span>
@@ -595,12 +595,12 @@ window.addEventListener("load", () => mermaid.run());
     <span class="n">kappa</span> <span class="o">=</span> <span class="p">(</span><span class="n">p_o</span> <span class="o">-</span> <span class="n">p_e</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">p_e</span><span class="p">)</span> <span class="k">if</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">p_e</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="mf">0.0</span>
 
     <span class="k">return</span> <span class="p">{</span>
-        <span class="s2">&quot;accuracy&quot;</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="n">accuracy</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span>
-        <span class="s2">&quot;f1_macro&quot;</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="n">f1_macro</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span>
-        <span class="s2">&quot;kappa&quot;</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="n">kappa</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span>
-        <span class="s2">&quot;per_class_f1&quot;</span><span class="p">:</span> <span class="n">per_class_f1</span><span class="p">,</span>
-        <span class="s2">&quot;n_epochs&quot;</span><span class="p">:</span> <span class="n">N</span><span class="p">,</span>
-        <span class="s2">&quot;confusion_matrix&quot;</span><span class="p">:</span> <span class="n">cm</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span>
+        <span class="s2">"accuracy"</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="n">accuracy</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span>
+        <span class="s2">"f1_macro"</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="n">f1_macro</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span>
+        <span class="s2">"kappa"</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="n">kappa</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span>
+        <span class="s2">"per_class_f1"</span><span class="p">:</span> <span class="n">per_class_f1</span><span class="p">,</span>
+        <span class="s2">"n_epochs"</span><span class="p">:</span> <span class="n">N</span><span class="p">,</span>
+        <span class="s2">"confusion_matrix"</span><span class="p">:</span> <span class="n">cm</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span>
     <span class="p">}</span></div>
 
 </pre></div>

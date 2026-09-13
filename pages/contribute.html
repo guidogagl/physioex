@@ -52,7 +52,7 @@
     <link rel="icon" href="../_static/logo_bar.svg"/>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="prev" title="physioex.explain.prototypes.posthoc" href="../api/_generated/physioex.explain.prototypes.posthoc.html" />
+    <link rel="prev" title="physioex.explain.lrp" href="../api/_generated/physioex.explain.lrp.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
   <meta name="docsearch:version" content="" />
@@ -499,10 +499,10 @@ fixtures in <code class="docutils literal notranslate"><span class="pre">tests/c
 <section id="running-the-tests">
 <h3>Running the tests<a class="headerlink" href="#running-the-tests" title="Link to this heading">#</a></h3>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Fast unit/integration suite — exactly what CI runs (no data, network, or GPU):</span>
-pytest<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;not real_data and not gpu and not hf&quot;</span>
+pytest<span class="w"> </span>-m<span class="w"> </span><span class="s2">"not real_data and not gpu and not hf"</span>
 
 <span class="c1"># With the coverage gate (CI fails below the threshold):</span>
-pytest<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;not real_data and not gpu and not hf&quot;</span><span class="w"> </span>--cov<span class="o">=</span>physioex<span class="w"> </span>--cov-report<span class="o">=</span>term-missing
+pytest<span class="w"> </span>-m<span class="w"> </span><span class="s2">"not real_data and not gpu and not hf"</span><span class="w"> </span>--cov<span class="o">=</span>physioex<span class="w"> </span>--cov-report<span class="o">=</span>term-missing
 
 <span class="c1"># A single subpackage or file:</span>
 pytest<span class="w"> </span>tests/data
@@ -596,12 +596,12 @@ structured. These are internal references, not needed to <em>use</em> PhysioEx.<
                   
 <div class="prev-next-area">
     <a class="left-prev"
-       href="../api/_generated/physioex.explain.prototypes.posthoc.html"
+       href="../api/_generated/physioex.explain.lrp.html"
        title="previous page">
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
         <p class="prev-next-subtitle">previous</p>
-        <p class="prev-next-title">physioex.explain.prototypes.posthoc</p>
+        <p class="prev-next-title">physioex.explain.lrp</p>
       </div>
     </a>
 </div>

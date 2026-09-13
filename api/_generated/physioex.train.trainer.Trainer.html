@@ -418,6 +418,7 @@
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="physioex.explain.foundational.html">physioex.explain.foundational</a></li>
 <li class="toctree-l1"><a class="reference internal" href="physioex.explain.prototypes.posthoc.html">physioex.explain.prototypes.posthoc</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.explain.lrp.html">physioex.explain.lrp</a></li>
 </ul>
 </div>
 </nav></div>
@@ -526,8 +527,8 @@ This matches the evaluation protocol of the current library’s voting_strategy(
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>model</strong> (<a class="reference external" href="https://docs.pytorch.org/docs/stable/generated/torch.nn.Module.html#torch.nn.Module" title="(in PyTorch v2.13)"><em>Module</em></a>) – model with forward(x) accepting shape (batch, L, …) and returning (batch, L, n_classes)</p></li>
-<li><p><strong>dataset</strong> (<em>PhysioExDataset</em><em> | </em><a class="reference external" href="https://docs.pytorch.org/docs/stable/data.html#torch.utils.data.DataLoader" title="(in PyTorch v2.13)"><em>DataLoader</em></a>) – a PhysioExDataset (will be wrapped in eval loader) OR a DataLoader</p></li>
+<li><p><strong>model</strong> (<a class="reference external" href="https://docs.pytorch.org/docs/stable/generated/torch.nn.Module.html#torch.nn.Module" title="(in PyTorch v2.14)"><em>Module</em></a>) – model with forward(x) accepting shape (batch, L, …) and returning (batch, L, n_classes)</p></li>
+<li><p><strong>dataset</strong> (<em>PhysioExDataset</em><em> | </em><a class="reference external" href="https://docs.pytorch.org/docs/stable/data.html#torch.utils.data.DataLoader" title="(in PyTorch v2.14)"><em>DataLoader</em></a>) – a PhysioExDataset (will be wrapped in eval loader) OR a DataLoader</p></li>
 <li><p><strong>L</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>) – sequence length the model was trained on (default 21)</p></li>
 <li><p><strong>metrics</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a>) – dict of metric_name -&gt; callable(preds, targets, ignore_index=…).
 Defaults to accuracy/f1/precision/recall/cohen_kappa/confusion_matrix/support.</p></li>

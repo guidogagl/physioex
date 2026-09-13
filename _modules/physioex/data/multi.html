@@ -400,7 +400,7 @@ window.addEventListener("load", () => mermaid.run());
                 <article class="bd-article">
                   
   <h1>Source code for physioex.data.multi</h1><div class="highlight"><pre>
-<span></span><span class="sd">&quot;&quot;&quot;MultiDataset: wraps multiple BasePhysioDataset instances into a single unified dataset.&quot;&quot;&quot;</span>
+<span></span><span class="sd">"""MultiDataset: wraps multiple BasePhysioDataset instances into a single unified dataset."""</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
@@ -412,20 +412,20 @@ window.addEventListener("load", () => mermaid.run());
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">physioex.data.base</span><span class="w"> </span><span class="kn">import</span> <span class="n">BasePhysioDataset</span>
 
-<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">&quot;physioex.data&quot;</span><span class="p">)</span>
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">"physioex.data"</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="MultiDataset">
 <a class="viewcode-back" href="../../../pages/data.html#physioex.data.MultiDataset">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">MultiDataset</span><span class="p">(</span><span class="n">Dataset</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Wraps multiple BasePhysioDataset instances into a single unified dataset.</span>
+<span class="w">    </span><span class="sd">"""Wraps multiple BasePhysioDataset instances into a single unified dataset.</span>
 
 <span class="sd">    Provides ConcatDataset-like flat indexing across all datasets, with:</span>
 <span class="sd">    - Unified __getitem__ returning the same dict format as BasePhysioDataset</span>
 <span class="sd">    - Cross-dataset split coordination via split(fold)</span>
-<span class="sd">    - dataset_idx tracking in the returned dict&#39;s subject metadata</span>
+<span class="sd">    - dataset_idx tracking in the returned dict's subject metadata</span>
 <span class="sd">    - Proportional memmap cache distribution across constituent datasets</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
 <div class="viewcode-block" id="MultiDataset.__init__">
 <a class="viewcode-back" href="../../../api/_generated/physioex.data.MultiDataset.html#physioex.data.MultiDataset.__init__">[docs]</a>
@@ -434,11 +434,11 @@ window.addEventListener("load", () => mermaid.run());
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">datasets</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;MultiDataset requires at least one dataset&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"MultiDataset requires at least one dataset"</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_datasets</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">datasets</span><span class="p">)</span>
         
         <span class="c1"># all the datasets should have the same sequence length</span>
-        <span class="k">assert</span> <span class="nb">all</span><span class="p">(</span><span class="n">ds</span><span class="o">.</span><span class="n">sequence_length</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">_datasets</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">sequence_length</span> <span class="k">for</span> <span class="n">ds</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_datasets</span><span class="p">),</span> <span class="s2">&quot;All datasets must have the same sequence length for MultiDataset&quot;</span>
+        <span class="k">assert</span> <span class="nb">all</span><span class="p">(</span><span class="n">ds</span><span class="o">.</span><span class="n">sequence_length</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">_datasets</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">sequence_length</span> <span class="k">for</span> <span class="n">ds</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_datasets</span><span class="p">),</span> <span class="s2">"All datasets must have the same sequence length for MultiDataset"</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">sequence_length</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_datasets</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">sequence_length</span>
         
         <span class="c1"># Build cumulative offset table for flat indexing.</span>
@@ -467,15 +467,15 @@ window.addEventListener("load", () => mermaid.run());
         <span class="k">if</span> <span class="n">idx</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
             <span class="n">idx</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_length</span>
         <span class="k">if</span> <span class="n">idx</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">idx</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_length</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">IndexError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Index </span><span class="si">{</span><span class="n">idx</span><span class="si">}</span><span class="s2"> out of range [0, </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_length</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">IndexError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Index </span><span class="si">{</span><span class="n">idx</span><span class="si">}</span><span class="s2"> out of range [0, </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_length</span><span class="si">}</span><span class="s2">)"</span><span class="p">)</span>
 
         <span class="n">ds_idx</span><span class="p">,</span> <span class="n">local_idx</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_resolve_index</span><span class="p">(</span><span class="n">idx</span><span class="p">)</span>
         <span class="n">item</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_datasets</span><span class="p">[</span><span class="n">ds_idx</span><span class="p">][</span><span class="n">local_idx</span><span class="p">]</span>
 
         <span class="c1"># Inject / overwrite dataset_idx in the subject metadata dict so</span>
         <span class="c1"># downstream code can identify which dataset a sample came from.</span>
-        <span class="k">if</span> <span class="s2">&quot;subject&quot;</span> <span class="ow">in</span> <span class="n">item</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">item</span><span class="p">[</span><span class="s2">&quot;subject&quot;</span><span class="p">],</span> <span class="nb">dict</span><span class="p">):</span>
-            <span class="n">item</span><span class="p">[</span><span class="s2">&quot;subject&quot;</span><span class="p">][</span><span class="s2">&quot;dataset_idx&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">ds_idx</span>
+        <span class="k">if</span> <span class="s2">"subject"</span> <span class="ow">in</span> <span class="n">item</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">item</span><span class="p">[</span><span class="s2">"subject"</span><span class="p">],</span> <span class="nb">dict</span><span class="p">):</span>
+            <span class="n">item</span><span class="p">[</span><span class="s2">"subject"</span><span class="p">][</span><span class="s2">"dataset_idx"</span><span class="p">]</span> <span class="o">=</span> <span class="n">ds_idx</span>
         <span class="k">return</span> <span class="n">item</span>
 
 <div class="viewcode-block" id="MultiDataset.split">
@@ -483,13 +483,13 @@ window.addEventListener("load", () => mermaid.run());
     <span class="k">def</span><span class="w"> </span><span class="nf">split</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">fold</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">]],</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return train/valid/test indices coordinated across all datasets.</span>
+<span class="w">        </span><span class="sd">"""Return train/valid/test indices coordinated across all datasets.</span>
 
-<span class="sd">        Training: flat integer indices into this MultiDataset&#39;s ``__getitem__``.</span>
+<span class="sd">        Training: flat integer indices into this MultiDataset's ``__getitem__``.</span>
 <span class="sd">        Valid/Test: list of ``(dataset_idx, subject_id)`` tuples, where</span>
 <span class="sd">        ``dataset_idx`` is the position of the originating dataset in the</span>
 <span class="sd">        ``datasets`` list passed to the constructor.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">all_train</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="n">all_valid</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="n">all_test</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>
@@ -499,7 +499,7 @@ window.addEventListener("load", () => mermaid.run());
             <span class="n">train_flat</span><span class="p">,</span> <span class="n">valid_subjects</span><span class="p">,</span> <span class="n">test_subjects</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">fold</span><span class="o">=</span><span class="n">fold</span><span class="p">)</span>
 
             <span class="c1"># Shift the per-dataset flat training indices by the cumulative</span>
-            <span class="c1"># offset so they point into this MultiDataset&#39;s flat index space.</span>
+            <span class="c1"># offset so they point into this MultiDataset's flat index space.</span>
             <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">train_flat</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
                 <span class="n">shifted</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">train_flat</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">)</span> <span class="o">+</span> <span class="n">offset_start</span>
                 <span class="n">all_train</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">shifted</span><span class="o">.</span><span class="n">tolist</span><span class="p">())</span>
@@ -520,24 +520,24 @@ window.addEventListener("load", () => mermaid.run());
 
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">datasets</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">BasePhysioDataset</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the wrapped dataset list (read-only reference).&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Return the wrapped dataset list (read-only reference)."""</span>
         <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_datasets</span><span class="p">)</span>
 
 <div class="viewcode-block" id="MultiDataset.get_n_subjects">
 <a class="viewcode-back" href="../../../pages/data.html#physioex.data.MultiDataset.get_n_subjects">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">get_n_subjects</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return total number of subjects across all datasets.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Return total number of subjects across all datasets."""</span>
         <span class="k">return</span> <span class="nb">sum</span><span class="p">(</span><span class="n">ds</span><span class="o">.</span><span class="n">get_n_subjects</span><span class="p">()</span> <span class="k">for</span> <span class="n">ds</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_datasets</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="MultiDataset.get_subjects">
 <a class="viewcode-back" href="../../../pages/data.html#physioex.data.MultiDataset.get_subjects">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">get_subjects</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return all subject IDs across all datasets.</span>
+<span class="w">        </span><span class="sd">"""Return all subject IDs across all datasets.</span>
 
 <span class="sd">        Note: IDs are not guaranteed to be unique across datasets. If</span>
 <span class="sd">        disambiguation is needed, use ``get_subjects_with_dataset_idx``.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">out</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">ds</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_datasets</span><span class="p">:</span>
             <span class="n">out</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">ds</span><span class="o">.</span><span class="n">get_subjects</span><span class="p">())</span>
@@ -547,7 +547,7 @@ window.addEventListener("load", () => mermaid.run());
 <div class="viewcode-block" id="MultiDataset.get_subjects_with_dataset_idx">
 <a class="viewcode-back" href="../../../pages/data.html#physioex.data.MultiDataset.get_subjects_with_dataset_idx">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">get_subjects_with_dataset_idx</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return ``(dataset_idx, subject_id)`` pairs for every subject.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Return ``(dataset_idx, subject_id)`` pairs for every subject."""</span>
         <span class="n">out</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">ds</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_datasets</span><span class="p">):</span>
             <span class="k">for</span> <span class="n">sid</span> <span class="ow">in</span> <span class="n">ds</span><span class="o">.</span><span class="n">get_subjects</span><span class="p">():</span>
@@ -558,7 +558,7 @@ window.addEventListener("load", () => mermaid.run());
 <div class="viewcode-block" id="MultiDataset.available_channels">
 <a class="viewcode-back" href="../../../pages/data.html#physioex.data.MultiDataset.available_channels">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">available_channels</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return union of available channels across all datasets.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Return union of available channels across all datasets."""</span>
         <span class="kn">from</span><span class="w"> </span><span class="nn">collections</span><span class="w"> </span><span class="kn">import</span> <span class="n">Counter</span>
 
         <span class="n">merged</span><span class="p">:</span> <span class="n">Counter</span> <span class="o">=</span> <span class="n">Counter</span><span class="p">()</span>
@@ -572,22 +572,22 @@ window.addEventListener("load", () => mermaid.run());
     <span class="c1"># ------------------------------------------------------------------</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_resolve_index</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">idx</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Map a flat index to ``(dataset_index, local_index)``.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Map a flat index to ``(dataset_index, local_index)``."""</span>
         <span class="k">for</span> <span class="n">ds_idx</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">end</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_offsets</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">start</span> <span class="o">&lt;=</span> <span class="n">idx</span> <span class="o">&lt;</span> <span class="n">end</span><span class="p">:</span>
                 <span class="k">return</span> <span class="n">ds_idx</span><span class="p">,</span> <span class="n">idx</span> <span class="o">-</span> <span class="n">start</span>
-        <span class="k">raise</span> <span class="ne">IndexError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Flat index </span><span class="si">{</span><span class="n">idx</span><span class="si">}</span><span class="s2"> not in any dataset range&quot;</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">IndexError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Flat index </span><span class="si">{</span><span class="n">idx</span><span class="si">}</span><span class="s2"> not in any dataset range"</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-        <span class="n">parts</span> <span class="o">=</span> <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">ds</span><span class="o">.</span><span class="n">DATASET_NAME</span><span class="si">}</span><span class="s2">(</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">ds</span><span class="p">)</span><span class="si">}</span><span class="s2">)&quot;</span> <span class="k">for</span> <span class="n">ds</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_datasets</span><span class="p">)</span>
-        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;MultiDataset(total=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_length</span><span class="si">}</span><span class="s2">, datasets=[</span><span class="si">{</span><span class="n">parts</span><span class="si">}</span><span class="s2">])&quot;</span>
+        <span class="n">parts</span> <span class="o">=</span> <span class="s2">", "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">ds</span><span class="o">.</span><span class="n">DATASET_NAME</span><span class="si">}</span><span class="s2">(</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">ds</span><span class="p">)</span><span class="si">}</span><span class="s2">)"</span> <span class="k">for</span> <span class="n">ds</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_datasets</span><span class="p">)</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">"MultiDataset(total=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_length</span><span class="si">}</span><span class="s2">, datasets=[</span><span class="si">{</span><span class="n">parts</span><span class="si">}</span><span class="s2">])"</span>
 
     <span class="c1"># ------------------------------------------------------------------</span>
     <span class="c1"># Memmap cache management</span>
     <span class="c1"># ------------------------------------------------------------------</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_distribute_memmap_cache</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">total_cache_size</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Distribute memmap cache proportionally across constituent datasets.</span>
+<span class="w">        </span><span class="sd">"""Distribute memmap cache proportionally across constituent datasets.</span>
 
 <span class="sd">        Each dataset gets a share proportional to its number of subjects.</span>
 <span class="sd">        This ensures that larger datasets get more cache while respecting</span>
@@ -595,13 +595,13 @@ window.addEventListener("load", () => mermaid.run());
 
 <span class="sd">        Args:</span>
 <span class="sd">            total_cache_size: Total number of memmap files to cache across all datasets.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">if</span> <span class="n">total_cache_size</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
             <span class="k">return</span>
 
         <span class="n">total_subjects</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">ds</span><span class="o">.</span><span class="n">get_n_subjects</span><span class="p">()</span> <span class="k">for</span> <span class="n">ds</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_datasets</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">total_subjects</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;MultiDataset: no subjects found, skipping cache distribution&quot;</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">"MultiDataset: no subjects found, skipping cache distribution"</span><span class="p">)</span>
             <span class="k">return</span>
 
         <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">ds</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_datasets</span><span class="p">):</span>
@@ -611,53 +611,53 @@ window.addEventListener("load", () => mermaid.run());
                 <span class="n">share</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">n_subjects</span> <span class="o">/</span> <span class="n">total_subjects</span> <span class="o">*</span> <span class="n">total_cache_size</span><span class="p">))</span>
                 <span class="n">ds</span><span class="o">.</span><span class="n">_memmap_cache_size</span> <span class="o">=</span> <span class="n">share</span>
                 <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
-                    <span class="sa">f</span><span class="s2">&quot;MultiDataset: </span><span class="si">{</span><span class="n">ds</span><span class="o">.</span><span class="n">DATASET_NAME</span><span class="si">}</span><span class="s2"> (n=</span><span class="si">{</span><span class="n">n_subjects</span><span class="si">}</span><span class="s2">) &quot;</span>
-                    <span class="sa">f</span><span class="s2">&quot;allocated memmap_cache_size=</span><span class="si">{</span><span class="n">share</span><span class="si">}</span><span class="s2">&quot;</span>
+                    <span class="sa">f</span><span class="s2">"MultiDataset: </span><span class="si">{</span><span class="n">ds</span><span class="o">.</span><span class="n">DATASET_NAME</span><span class="si">}</span><span class="s2"> (n=</span><span class="si">{</span><span class="n">n_subjects</span><span class="si">}</span><span class="s2">) "</span>
+                    <span class="sa">f</span><span class="s2">"allocated memmap_cache_size=</span><span class="si">{</span><span class="n">share</span><span class="si">}</span><span class="s2">"</span>
                 <span class="p">)</span>
 
 <div class="viewcode-block" id="MultiDataset.memmap_cache_stats">
 <a class="viewcode-back" href="../../../pages/data.html#physioex.data.MultiDataset.memmap_cache_stats">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">memmap_cache_stats</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Aggregate memmap cache statistics across all constituent datasets.</span>
+<span class="w">        </span><span class="sd">"""Aggregate memmap cache statistics across all constituent datasets.</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            Dict with aggregated stats (total_hits, total_misses, hit_rate, etc.)</span>
 <span class="sd">            and per-dataset breakdown.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">total_hits</span> <span class="o">=</span> <span class="mi">0</span>
         <span class="n">total_misses</span> <span class="o">=</span> <span class="mi">0</span>
         <span class="n">per_dataset</span> <span class="o">=</span> <span class="p">{}</span>
 
         <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">ds</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_datasets</span><span class="p">):</span>
-            <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">ds</span><span class="p">,</span> <span class="s2">&quot;memmap_cache_stats&quot;</span><span class="p">):</span>
+            <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">ds</span><span class="p">,</span> <span class="s2">"memmap_cache_stats"</span><span class="p">):</span>
                 <span class="n">stats</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">memmap_cache_stats</span><span class="p">()</span>
-                <span class="n">total_hits</span> <span class="o">+=</span> <span class="n">stats</span><span class="p">[</span><span class="s2">&quot;hits&quot;</span><span class="p">]</span>
-                <span class="n">total_misses</span> <span class="o">+=</span> <span class="n">stats</span><span class="p">[</span><span class="s2">&quot;misses&quot;</span><span class="p">]</span>
+                <span class="n">total_hits</span> <span class="o">+=</span> <span class="n">stats</span><span class="p">[</span><span class="s2">"hits"</span><span class="p">]</span>
+                <span class="n">total_misses</span> <span class="o">+=</span> <span class="n">stats</span><span class="p">[</span><span class="s2">"misses"</span><span class="p">]</span>
                 <span class="n">per_dataset</span><span class="p">[</span><span class="n">ds</span><span class="o">.</span><span class="n">DATASET_NAME</span><span class="p">]</span> <span class="o">=</span> <span class="n">stats</span>
 
         <span class="n">total</span> <span class="o">=</span> <span class="n">total_hits</span> <span class="o">+</span> <span class="n">total_misses</span>
         <span class="n">hit_rate</span> <span class="o">=</span> <span class="p">(</span><span class="n">total_hits</span> <span class="o">/</span> <span class="n">total</span> <span class="o">*</span> <span class="mi">100</span><span class="p">)</span> <span class="k">if</span> <span class="n">total</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="mf">0.0</span>
 
         <span class="k">return</span> <span class="p">{</span>
-            <span class="s2">&quot;total_hits&quot;</span><span class="p">:</span> <span class="n">total_hits</span><span class="p">,</span>
-            <span class="s2">&quot;total_misses&quot;</span><span class="p">:</span> <span class="n">total_misses</span><span class="p">,</span>
-            <span class="s2">&quot;total_requests&quot;</span><span class="p">:</span> <span class="n">total</span><span class="p">,</span>
-            <span class="s2">&quot;hit_rate_percent&quot;</span><span class="p">:</span> <span class="n">hit_rate</span><span class="p">,</span>
-            <span class="s2">&quot;per_dataset&quot;</span><span class="p">:</span> <span class="n">per_dataset</span><span class="p">,</span>
+            <span class="s2">"total_hits"</span><span class="p">:</span> <span class="n">total_hits</span><span class="p">,</span>
+            <span class="s2">"total_misses"</span><span class="p">:</span> <span class="n">total_misses</span><span class="p">,</span>
+            <span class="s2">"total_requests"</span><span class="p">:</span> <span class="n">total</span><span class="p">,</span>
+            <span class="s2">"hit_rate_percent"</span><span class="p">:</span> <span class="n">hit_rate</span><span class="p">,</span>
+            <span class="s2">"per_dataset"</span><span class="p">:</span> <span class="n">per_dataset</span><span class="p">,</span>
         <span class="p">}</span></div>
 
 
 <div class="viewcode-block" id="MultiDataset.close">
 <a class="viewcode-back" href="../../../pages/data.html#physioex.data.MultiDataset.close">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">close</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Close all memmap caches in constituent datasets.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Close all memmap caches in constituent datasets."""</span>
         <span class="k">for</span> <span class="n">ds</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_datasets</span><span class="p">:</span>
-            <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">ds</span><span class="p">,</span> <span class="s2">&quot;close&quot;</span><span class="p">):</span>
+            <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">ds</span><span class="p">,</span> <span class="s2">"close"</span><span class="p">):</span>
                 <span class="n">ds</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
 
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__del__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Cleanup memmap caches on deletion.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Cleanup memmap caches on deletion."""</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
         <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
