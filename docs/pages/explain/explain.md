@@ -108,6 +108,36 @@ masks, `batch_first=False` transformers, explicit RNN initial states, `proj_size
 ProtoSleepNet's VQ path (`quantize=True`) runs under `no_grad`, so no relevance can
 flow through it — `ModelLRP` explains the default `quantize=False` forward.
 
+**Choosing ε.** The stabiliser must be scaled to the activations: on the
+pretrained SeqSleepNet (dB-scale spectrograms, 4-layer BiLSTM/BiGRU) ε = 1e-6
+inflates total relevance 2–3× through near-zero state sums, ε = 1e-2 conserves
+(`ΣR/f ≈ 0.96`) and ε = 1e-1 over-absorbs. Sweep ε and read the
+`ConservationReport`; `examples/explain/lrp_seqsleepnet_n3.py` does this on a
+real model and compares the LRP rule assignments with Saliency, Input×Gradient
+and Integrated Gradients.
+
+**Related methods — LRP vs path-based attribution.** LRP is *not* path-based:
+by Deep Taylor Decomposition (Montavon et al. 2017) every rule is a first-order
+Taylor expansion of each neuron at a closed-form *root point* (ε/LRP-0 → root at
+0, hence LRP-0 = Gradient×Input; z⁺ → along the positive contributions; z^B →
+on the input box), applied layer by layer in one backward pass — the baseline
+is implicit in the rule. Integrated Gradients (Sundararajan et al. 2017)
+instead integrates the gradient along the straight path from an explicit
+baseline x′ to x; both satisfy completeness (Σ R = f(x) − f(x′)) by different
+routes. The propagation-family counterpart of a *baseline* method is
+**DeepLIFT** (Shrikumar et al. 2017): finite-difference multipliers
+Δy/Δx w.r.t. a reference, i.e. Integrated Gradients applied layer-wise in a
+single backward pass; Ancona et al. (2018) prove ε-LRP ≡ DeepLIFT-Rescale with a
+zero baseline (ReLU nets without bias, ε → 0) and cast both as
+modified-gradient × input, and **DeepSHAP** (Lundberg & Lee 2017) adds an
+expectation over baselines — the analogue of `ExpectedGradients`. Averaging LRP
+relevance along the x′→x path ("integrated LRP", e.g. Zennit's
+`IntegratedGradients` attributor combined with a composite) is a supported
+construct: it reduces exactly to IG for LRP-0 but carries no completeness
+guarantee for ε/γ/CP rules and should be read as an ensemble. On LSTMs, Arras
+et al. (2019) found gate-rule LRP the best-performing method, with DeepLIFT
+close and IG/gradients behind.
+
 - **Composites** (`lrp/composites.py`): `physioex_composite` (ε/γ/w²),
   `epsilon_composite` (pure-ε reference). **Canonizers** (`lrp/canonizers.py`):
   `default_canonizers` (BatchNorm merge).
