@@ -12,8 +12,11 @@ recipe:
 * **multiplicative gates** ``z = gate ⊙ source`` → the **signal-take rule**: all
   relevance to the *source* (the information signal), none to the *gate* (a
   learned control);
-* the *source* nonlinearities (``tanh``) pass relevance as identity
-  (:func:`~physioex.explain.lrp._functional.st_identity`).
+* the nonlinearities (``tanh`` on the sources, ``sigmoid`` on the gates) pass
+  relevance as identity (:func:`~physioex.explain.lrp._functional.st_identity`);
+  under signal-take the gates receive none, under ``gate_rule="uniform"``
+  (Arras 2019 "LRP-all") their half flows to the gate pre-activations, so both
+  variants conserve.
 
 Applying ε-LRP separately to ``W x`` and ``U h`` and combining with the
 proportional ``add_eps`` is equivalent to Arras's single ε-rule on the full
@@ -112,7 +115,7 @@ class LRPLSTM(nn.LSTM):
                 linear_eps(x[t], w_ih, b_ih, eps), linear_eps(h, w_hh, b_hh, eps), eps
             )
             ii, ff, gg, oo = gates.split(H, dim=-1)
-            i, f, o = torch.sigmoid(ii), torch.sigmoid(ff), torch.sigmoid(oo)
+            i, f, o = (st_identity(g, torch.sigmoid(g)) for g in (ii, ff, oo))
             g = st_identity(gg, torch.tanh(gg))  # source nonlinearity → identity
             c = add_eps(mul(f, c), mul(i, g), eps)
             h = mul(o, st_identity(c, torch.tanh(c)))
@@ -205,11 +208,13 @@ class LRPGRU(nn.GRU):
             gh = linear_eps(h, w_hh, b_hh, eps)
             i_r, i_z, i_n = gi.split(H, dim=-1)
             h_r, h_z, h_n = gh.split(H, dim=-1)
-            r = torch.sigmoid(add_eps(i_r, h_r, eps))
-            z = torch.sigmoid(add_eps(i_z, h_z, eps))
+            r_pre, z_pre = add_eps(i_r, h_r, eps), add_eps(i_z, h_z, eps)
+            r = st_identity(r_pre, torch.sigmoid(r_pre))
+            z = st_identity(z_pre, torch.sigmoid(z_pre))
+            one_minus_z = st_identity(z_pre, 1.0 - torch.sigmoid(z_pre))
             n_pre = add_eps(i_n, mul(r, h_n), eps)
             n = st_identity(n_pre, torch.tanh(n_pre))
-            h = add_eps(mul(1.0 - z, n), mul(z, h), eps)
+            h = add_eps(mul(one_minus_z, n), mul(z, h), eps)
             outs[t] = h
         return torch.stack(outs, dim=0), h
 

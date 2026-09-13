@@ -141,6 +141,16 @@ class TestGateRule:
         f, r = _conservation(lrp, x, t=2, k=4)
         assert torch.allclose(r, f, rtol=1e-3, atol=1e-5), (r, f)  # 50/50 split also conserves
 
+    def test_uniform_gate_rule_gru_conserves(self):
+        torch.manual_seed(3)
+        gru = nn.GRU(4, 3, num_layers=2, batch_first=True, bidirectional=True, bias=False).eval()
+        lrp = LRPGRU.from_torch(gru, gate_rule="uniform")
+        x = torch.randn(2, 5, 4)
+        with torch.no_grad():
+            assert torch.allclose(lrp(x)[0], gru(x)[0], atol=1e-5)
+        f, r = _conservation(lrp, x, t=1, k=4)
+        assert torch.allclose(r, f, rtol=1e-3, atol=1e-5), (r, f)
+
     def test_gate_rules_differ_and_invalid_raises(self):
         torch.manual_seed(2)
         gru = nn.GRU(4, 3, batch_first=True, bias=False).eval()
