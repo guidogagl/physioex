@@ -307,7 +307,7 @@ class TestRobustness:
 
     def test_shared_module_replaced_once(self):
         lin = nn.Linear(4, 4)
-        m = nn.Module()
+        m = nn.Module().eval()
         m.a = lin
         m.b = lin
         prepare_model_for_lrp(m)
@@ -353,9 +353,9 @@ class TestRobustness:
 
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
-            prep = prepare_model_for_lrp(copy.deepcopy(Net()))
+            prep = prepare_model_for_lrp(copy.deepcopy(Net()).eval())
         assert audit_lrp_coverage(prep) == ["weird"] and any(
             "weird" in str(m.message) for m in w
         )
         with pytest.raises(RuntimeError):
-            prepare_model_for_lrp(Net(), strict=True)
+            prepare_model_for_lrp(Net().eval(), strict=True)
