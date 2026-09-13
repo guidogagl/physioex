@@ -113,7 +113,19 @@ Note: the github version of the library is kept updated weekly, the PiPy version
 $ pip install "physioex[foundation]"   # transformers, for the REVE encoder
 $ pip install "physioex[datasets]"     # mne, for the HOMEPAP EDF fallback reader
 $ pip install "physioex[tracking]"     # tensorboard / wandb logging
+$ pip install "physioex[explain]"      # zennit, for Layer-wise Relevance Propagation
 ```
+
+> **Note on `torchvision` (CPU-only installs).** The `explain` extra depends on
+> `zennit`, which requires `torchvision`. If your `torch` comes from the PyTorch
+> CPU index, install `torchvision` from the **same** index *before* the extra,
+> otherwise pip pulls a CUDA build from PyPI that fails at import with
+> `operator torchvision::nms does not exist`:
+>
+> ```bash
+> $ pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+> $ pip install "physioex[explain]"
+> ```
 
 ## Quickstart
 
