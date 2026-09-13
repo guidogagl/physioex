@@ -17,6 +17,12 @@ Beyond training classic architectures from scratch, PhysioEx wraps a family of
 **pretrained foundation encoders** behind a uniform interface, so you can extract
 embeddings, run linear probes, and apply the explainability tools on top of them.
 
+The explainability toolkit (`physioex.explain`) offers gradient-based attribution
+(Saliency, Input×Gradient, Integrated / Expected Gradients and their DFT/STFT
+variants), concept and prototype methods, and — since 2.0.1 — **Layer-wise
+Relevance Propagation** for CNN, recurrent and attention/transformer models
+(`pip install "physioex[explain]"`), with built-in conservation diagnostics.
+
 ## Supported deep learning architectures
 
 PhysioEx ships two families of models under `physioex.models`.
