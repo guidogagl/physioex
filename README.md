@@ -5,7 +5,7 @@
 # PhysioEx
 
 ![Python Version](https://img.shields.io/badge/python-3.11%2B-blue)
-[![PyPI Version](https://img.shields.io/pypi/v/physioex)](https://pypi.org/project/physioex/)
+[![PyPI Version](https://img.shields.io/pypi/v/physioex?cacheSeconds=3600)](https://pypi.org/project/physioex/)
 
 **PhysioEx ( Physiological Signal Explainer )** is a versatile python library tailored for building, training, and explaining deep learning models for physiological signal analysis. 
 
