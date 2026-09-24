@@ -47,6 +47,7 @@ legacy = ["pytorch_lightning>=2.5.0", "lightning>=2.5.0", "torchmetrics>=1.8.0"]
 explain = [
     "zennit>=0.5.1",   # LRP composites/canonizers (Zennit path) + BatchNorm merging; attention/RNN rules are built in
 ]
+xlstm = ["xlstm>=2.0.6"]                # mLSTM sequence encoder (physioex.models.xseqsleepnet); pulls mlstm_kernels
 docs = [
     "sphinx==8.1.3",
     "pydata-sphinx-theme==0.16.1",

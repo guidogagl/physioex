@@ -29,7 +29,8 @@ their own modules and referenced by dotted `module:Class` spec in the CLIs:
 | Chambon 2018 | `physioex.models.chambon2018:Chambon2018Net` |
 | TinySleepNet | `physioex.models.tinysleepnet:TinySleepNet` |
 | SeqSleepNet | `physioex.models.seqsleepnet:SeqSleepNet` |
-| L-SeqSleepNet | `physioex.models.lseqsleepnet:LSeqSleepNet` |
+| L-SeqSleepNet | `physioex.models.lseqsleepnet:LSeqSleepNet` (paper-compliant; `LSeqSleepNetDraft` is the deprecated pre-2026-09 draft kept for the Hub checkpoint) |
+| XSeqSleepNet | `physioex.models.xseqsleepnet:XSeqSleepNet` (SeqSleepNet with swappable epoch/sequence encoders: GRU controls, xLSTM via `pip install physioex[xlstm]`) |
 | SleepTransformer | `physioex.models.sleeptransformer:SleepTransformer` |
 | Tsinalis CNN | `physioex.models.tsinalis:TsinalisCNN` |
 | CoRe-Sleep | `physioex.models.coresleep:CoReSleep` |

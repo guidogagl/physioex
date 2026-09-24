@@ -77,6 +77,9 @@ CASES = {
             seq_hidden_ms=8,
             d_clf=16,
             dropout=0.0,
+            # cuDNN nn.LSTM path: the LRP adapters key on nn.LSTM; the
+            # paper-default BN-LSTM cell has no LRP surrogate yet.
+            recurrent_bn=False,
         ),
         (2, 4, 1, 10, 129),
         None,

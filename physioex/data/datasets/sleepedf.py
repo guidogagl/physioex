@@ -137,6 +137,14 @@ class SleepEDFDataset(BasePhysioDataset):
             )
         return subjects
 
+    def _filter_subset(self, subjects: List[SubjectSpec], subset: str) -> List[SubjectSpec]:
+        """``subset="2013"`` (alias ``"sc20"``): the 20-subject Sleep Cassette
+        release used by most benchmarks (subjects ``SC400``..``SC419``, 39 nights).
+        Any other value is passed to the base class (no filtering)."""
+        if subset in ("2013", "sc20"):
+            return [s for s in subjects if int(s.subject_id[3:5]) < 20]
+        return super()._filter_subset(subjects, subset)
+
     def _subject_group_key(self, subject_id: str) -> str:
         """Return the real-subject key shared by all nights of the same person.
 

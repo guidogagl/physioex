@@ -407,13 +407,28 @@ class Trainer:
         per_subject: bool = False,
         ci_method: str = "bootstrap",
         n_bootstrap: int = 1000,
+        mode: str = "voting",
+        return_predictions: bool = False,
     ) -> dict:
         """
         Evaluate using sliding-window voting over full-night sequences.
 
         For each subject, the night is scanned with L-length windows at L different
-        starting offsets (0 to L-1). Predictions from overlapping windows are averaged.
-        This matches the evaluation protocol of the current library's voting_strategy().
+        starting offsets (0 to L-1). Logits from overlapping windows are averaged:
+        softmax(mean of logits) is the normalised geometric mean of the per-window
+        posteriors, i.e. the multiplicative aggregation of SeqSleepNet (Phan et al.
+        2019, Eqs. 16-18). This matches the evaluation protocol of the current
+        library's voting_strategy().
+
+        ``mode="single_pass"`` instead feeds the whole night to the model in one
+        forward call (one decision per epoch, no window ensemble). Meant for
+        causal / stateful sequence models (e.g. XSeqSleepNet with an
+        ``xlstm_causal`` encoder); the model must accept sequences longer than L.
+
+        ``return_predictions=True`` adds ``results["predictions"]`` with one entry
+        per evaluated subject: ``{"subject_ids", "logits", "targets"}`` (lists of
+        ids / ``(n_epochs, n_classes)`` tensors / ``(n_epochs,)`` tensors), for
+        paired subject-level comparisons between models.
 
         Args:
             model: model with forward(x) accepting shape (batch, L, ...) and returning (batch, L, n_classes)
@@ -427,6 +442,9 @@ class Trainer:
         """
         if seed is not None:
             seed_everything(seed)
+
+        if mode not in ("voting", "single_pass"):
+            raise ValueError(f"mode must be 'voting' or 'single_pass', got {mode!r}")
 
         if metrics is None:
             metrics = {
@@ -481,7 +499,7 @@ class Trainer:
             if gpu_id is not None and torch.cuda.is_available()
             else torch.device("cpu")
         )
-        print(f"[Info] Using device: {device}")
+        print(f"[Info] Using device: {device} (mode={mode})")
 
         # Accept BasePhysioDataset alongside PhysioExDataset and DataLoader
         _is_base_dataset_v = False
@@ -515,15 +533,23 @@ class Trainer:
         model = model.to(device)
         model.eval()
 
-        all_preds, all_targets = [], []
+        all_preds, all_targets, all_sids = [], [], []
         n_skipped = 0
 
+        def _subject_id(batch, i):
+            meta = batch.get("subject") if isinstance(batch, dict) else None
+            if isinstance(meta, (list, tuple)) and meta:
+                meta = meta[0]
+            if isinstance(meta, dict) and meta.get("subject_id") is not None:
+                return str(meta["subject_id"])
+            return f"subject_{i}"
+
         with torch.autocast(device.type if "cuda" in device.type else "cpu"):
-            for batch in track(
+            for batch_idx, batch in enumerate(track(
                 eval_loader,
                 description="Voting evaluation",
                 total=len(eval_loader) if hasattr(eval_loader, "__len__") else None,
-            ):
+            )):
                 # Support embeddings, dict signals, and legacy tuple batches
                 if isinstance(batch, dict) and "embeddings" in batch:
                     inputs = batch["embeddings"].to(device)
@@ -540,6 +566,24 @@ class Trainer:
                     ) = batch  # inputs: (B, night_length, ...), targets: (B, night_length)
                 inputs = inputs.to(device)
                 batch_size_b, night_length = inputs.shape[0], inputs.shape[1]
+                sid = _subject_id(batch, batch_idx)
+
+                if mode == "single_pass":
+                    # One forward over the whole night: one decision per epoch.
+                    try:
+                        with torch.no_grad():
+                            votes = model(inputs)  # (B, night_length, n_classes)
+                    except (ValueError, RuntimeError) as e:
+                        warnings.warn(
+                            f"Skipping subject: single-pass forward failed "
+                            f"(input shape {tuple(inputs.shape)}): {e}"
+                        )
+                        n_skipped += 1
+                        continue
+                    all_preds.append(votes.float().cpu())
+                    all_targets.append(targets.cpu())
+                    all_sids.append(sid)
+                    continue
 
                 if night_length < L:
                     warnings.warn(
@@ -596,6 +640,7 @@ class Trainer:
 
                 all_preds.append(votes.cpu())
                 all_targets.append(targets.cpu())
+                all_sids.append(sid)
 
         if n_skipped > 0:
             warnings.warn(
@@ -625,6 +670,13 @@ class Trainer:
             results["aggregated"] = _stats.aggregate(
                 ps, ci_method=ci_method, n_bootstrap=n_bootstrap, seed=seed
             )
+
+        if return_predictions:
+            results["predictions"] = {
+                "subject_ids": all_sids,
+                "logits": [p.float() for p in flat_preds],
+                "targets": flat_targets,
+            }
 
         return results
 

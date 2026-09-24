@@ -33,7 +33,8 @@ PhysioEx ships two families of models under `physioex.models`.
 - [TinySleepNet](https://github.com/akaraspt/tinysleepnet) — raw time series as input.
 - Tsinalis (`TsinalisCNN`) — raw time series as input.
 - [SeqSleepNet](https://arxiv.org/pdf/1809.10932.pdf) — time-frequency images as input.
-- L-SeqSleepNet (`LSeqSleepNet`) — long-sequence time-frequency modelling.
+- [L-SeqSleepNet](https://arxiv.org/abs/2301.03441) (`LSeqSleepNet`) — whole-cycle long-sequence modelling (fold/unfold, recurrent-BN BLSTMs).
+- XSeqSleepNet (`XSeqSleepNet`) — SeqSleepNet with swappable sequence encoders (BiGRU controls, xLSTM/mLSTM via the `xlstm` extra).
 - [SleepTransformer](https://arxiv.org/pdf/2105.11043) — time-frequency images as input.
 - CoReSleep — multimodal architecture.
 - ProtoSleepNet — prototype-based, interpretable-by-design architecture.

@@ -262,11 +262,23 @@ class BasePhysioDataset(Dataset):
         legacy API.  The convention is: one dataset here -> ``dataset_idx=0``
         for all subjects.
         """
-        train_ids, valid_ids, test_ids = self.get_splits(fold=fold)
+        split_fn = getattr(self, "_split_fn", None)
+        if split_fn is not None:
+            train_ids, valid_ids, test_ids = split_fn(fold)
+        else:
+            train_ids, valid_ids, test_ids = self.get_splits(fold=fold)
         train_flat = self._subject_ids_to_flat_indices(train_ids)
         valid_subjects = [(0, sid) for sid in valid_ids]
         test_subjects = [(0, sid) for sid in test_ids]
         return np.asarray(train_flat, dtype=np.int64), valid_subjects, test_subjects
+
+    def set_split_fn(self, fn) -> None:
+        """Override the subject split: ``fn(fold) -> (train_ids, valid_ids, test_ids)``.
+
+        Takes precedence over :meth:`get_splits` in :meth:`split`. Pass ``None``
+        to restore the default. See :mod:`physioex.data.splits` for k-fold CV.
+        """
+        self._split_fn = fn
 
     def get_splits(self, fold: int = 0) -> Tuple[List[str], List[str], List[str]]:
         """Return ``(train, valid, test)`` subject_id lists.
