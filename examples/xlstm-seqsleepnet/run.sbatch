@@ -2,8 +2,9 @@
 #SBATCH --partition=zen4_h200
 #SBATCH --gres=gpu:nvidia_h200:1
 #SBATCH --account=zen4-h200-2026_101-1
-#SBATCH --cpus-per-task=8
+#SBATCH --cpus-per-task=24
 #SBATCH --time=24:00:00
+# zen4_h200 enforces exactly 24 CPUs per GPU (DefCpuPerGPU=24); --mem is not allowed.
 #SBATCH --job-name=xlstm-seqsleepnet
 #SBATCH --output=/sofia/projects/2026_101/WORK/logs/xlstm-seqsleepnet/%x_%A_%a.out
 #
@@ -45,8 +46,9 @@ mkdir -p "$OUT_DIR" "$(dirname "/sofia/projects/2026_101/WORK/logs/xlstm-seqslee
 cd "$REPO"
 echo "[sbatch] $(date) host=$(hostname) gpu=$(nvidia-smi --query-gpu=name --format=csv,noheader | head -1)"
 echo "[sbatch] commit=$(git rev-parse --short HEAD) branch=$(git rev-parse --abbrev-ref HEAD)"
-echo "[sbatch] physioex from $(python -c 'import physioex; print(physioex.__file__)')"
+# fail fast if the environment is wrong (torch from the module, physioex from $REPO)
+python -c "import torch, physioex, sys; print(f'[sbatch] python {sys.version.split()[0]} torch {torch.__version__} cuda={torch.cuda.is_available()} physioex from {physioex.__file__}')"
 echo "[sbatch] run.py ${RUN_ARGS}"
 
 # shellcheck disable=SC2086
-python examples/xlstm-seqsleepnet/run.py ${RUN_ARGS} --out_dir "$OUT_DIR" --gpu_id 0 --num_workers "${SLURM_CPUS_PER_TASK:-8}"
+python examples/xlstm-seqsleepnet/run.py ${RUN_ARGS} --out_dir "$OUT_DIR" --gpu_id 0 --num_workers "${NUM_WORKERS:-8}"
