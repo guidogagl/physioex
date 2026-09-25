@@ -88,14 +88,22 @@ def main():
     ap.add_argument("--mode", default="voting")
     ap.add_argument("--metrics", nargs="+", default=["kappa", "acc", "mf1", "f1_N1", "err_transition", "err_stable"])
     ap.add_argument("--json", default=None, help="write the full table here")
+    ap.add_argument("--pool_seeds", action="store_true",
+                    help="with --glob: also pool runs over seeds (_s<k> stripped from the label; "
+                         "subjects keyed subject@seed so arms pair per fold AND seed)")
     args = ap.parse_args()
 
-    # group run dirs -> label; with --glob, pool folds of the same tag (strip _f<k>)
+    def _is_tok(x, prefix):
+        return x.startswith(prefix) and x[len(prefix):].isdigit()
+
+    # group run dirs -> label; with --glob, pool folds of the same tag (strip _f<k>, and _s<k>
+    # with --pool_seeds)
     groups: dict[str, list[Path]] = defaultdict(list)
     if args.glob:
         for d in sorted(glob.glob(args.glob)):
             d = Path(d)
-            tag = "_".join(x for x in d.name.split("_") if not x.startswith("f") or not x[1:].isdigit())
+            toks = d.name.split("_")
+            tag = "_".join(x for x in toks if not _is_tok(x, "f") and not (args.pool_seeds and _is_tok(x, "s")))
             groups[tag].append(d)
     for d in args.runs:
         groups[Path(d).name].append(Path(d))
@@ -106,11 +114,14 @@ def main():
     for label, dirs in groups.items():
         merged = {}
         for d in dirs:
+            seed = next((x for x in d.name.split("_") if _is_tok(x, "s")), "s?")
             for sid, v in load_run(d, args.mode).items():
-                # real ids are unique across folds (each subject tested once); fall back to a
-                # fold-qualified key only on collision (e.g. placeholder ids), so that the same
-                # subject pairs across runs of different models.
-                key = sid if sid not in merged else f"{d.name}::{sid}"
+                # real ids are unique across folds (each subject tested once); with seeds pooled
+                # the key carries the seed so the same subject pairs across arms per seed. Fall
+                # back to a dir-qualified key only on collision (e.g. placeholder ids).
+                key = f"{sid}@{seed}" if args.pool_seeds else sid
+                if key in merged:
+                    key = f"{d.name}::{sid}"
                 merged[key] = v
         runs[label] = merged
 
