@@ -123,7 +123,10 @@ def main():
                 if key in merged:
                     key = f"{d.name}::{sid}"
                 merged[key] = v
-        runs[label] = merged
+        if merged:
+            runs[label] = merged
+        else:
+            print(f"[warn] no predictions yet for {label}: skipped")
 
     labels = list(runs)
     ref = labels[0]
