@@ -43,9 +43,13 @@ REPO="${REPO:-/sofia/projects/2026_101/WORK/physioex}"
 OUT_DIR="${OUT_DIR:-/sofia/projects/2026_101/WORK/outputs/xlstm-seqsleepnet}"
 # the venv's editable physioex may point at another checkout: import from $REPO first
 export PYTHONPATH="${REPO}${PYTHONPATH:+:$PYTHONPATH}"
-: "${RUN_ARGS:?set RUN_ARGS to the run.py arguments}"
-if [[ "${FOLD_FROM_ARRAY:-0}" == "1" && -n "${SLURM_ARRAY_TASK_ID:-}" ]]; then
-  RUN_ARGS="${RUN_ARGS} --fold ${SLURM_ARRAY_TASK_ID}"
+# RUN_ARGS_FILE: read the arguments from a file (sbatch --export splits on commas, which
+# breaks JSON kwargs). {fold} inside the arguments is replaced by the array task id.
+if [[ -n "${RUN_ARGS_FILE:-}" ]]; then RUN_ARGS="$(cat "$RUN_ARGS_FILE")"; fi
+: "${RUN_ARGS:?set RUN_ARGS (or RUN_ARGS_FILE) to the run.py arguments}"
+if [[ -n "${SLURM_ARRAY_TASK_ID:-}" ]]; then
+  RUN_ARGS="${RUN_ARGS//\{fold\}/${SLURM_ARRAY_TASK_ID}}"
+  if [[ "${FOLD_FROM_ARRAY:-0}" == "1" ]]; then RUN_ARGS="${RUN_ARGS} --fold ${SLURM_ARRAY_TASK_ID}"; fi
 fi
 
 mkdir -p "$OUT_DIR" "$(dirname "/sofia/projects/2026_101/WORK/logs/xlstm-seqsleepnet/x")"

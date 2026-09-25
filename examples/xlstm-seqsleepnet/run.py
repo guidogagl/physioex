@@ -188,10 +188,16 @@ def main():
     }
     (out / "config.json").write_text(json.dumps(_jsonable(config), indent=2))
 
+    def _load_weights(path):
+        obj = torch.load(path, map_location="cpu")
+        state = obj["model_state_dict"] if isinstance(obj, dict) and "model_state_dict" in obj else obj
+        model.load_state_dict(state)
+        return obj.get("epoch") if isinstance(obj, dict) else None
+
     t0 = time.time()
     if args.eval_only:
-        model.load_state_dict(torch.load(args.eval_only, map_location="cpu"))
-        print(f"[eval_only] loaded {args.eval_only}")
+        ep = _load_weights(args.eval_only)
+        print(f"[eval_only] loaded {args.eval_only} (epoch={ep})")
         train_seconds = 0.0
     else:
         optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay,
@@ -205,6 +211,15 @@ def main():
             pin_memory=args.num_workers > 0, persistent_workers=args.num_workers > 0, prefetch_factor=2,
         )
         train_seconds = time.time() - t0
+        # Trainer.train returns the last-epoch weights; the protocol (Phan) retains the
+        # model that performed best on the validation set, which Trainer saved as the
+        # single checkpoint under checkpoints/. Restore it before evaluating.
+        ckpts = sorted((out / "checkpoints").glob("*.pt"), key=lambda p: p.stat().st_mtime)
+        if ckpts:
+            ep = _load_weights(ckpts[-1])
+            print(f"[best] restored {ckpts[-1].name} (epoch={ep})")
+        else:
+            print("[best] WARNING: no checkpoint found, evaluating last-epoch weights")
         torch.save(model.cpu().state_dict(), out / "model.pt")
 
     summary = {"train_seconds": train_seconds}
