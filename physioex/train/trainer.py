@@ -537,11 +537,15 @@ class Trainer:
         n_skipped = 0
 
         def _subject_id(batch, i):
+            # full-night batches carry batch["subject"] = [{"id", "dataset", ...}]
             meta = batch.get("subject") if isinstance(batch, dict) else None
             if isinstance(meta, (list, tuple)) and meta:
                 meta = meta[0]
-            if isinstance(meta, dict) and meta.get("subject_id") is not None:
-                return str(meta["subject_id"])
+            if isinstance(meta, dict):
+                sid = meta.get("subject_id", meta.get("id"))
+                if sid is not None:
+                    ds = meta.get("dataset")
+                    return f"{ds}/{sid}" if ds else str(sid)
             return f"subject_{i}"
 
         with torch.autocast(device.type if "cuda" in device.type else "cpu"):

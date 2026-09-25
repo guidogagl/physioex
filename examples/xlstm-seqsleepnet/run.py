@@ -93,6 +93,8 @@ def parse_args():
     p.add_argument("--out_dir", default="outputs/xlstm-seqsleepnet")
     p.add_argument("--run_name", default=None)
     p.add_argument("--smoke", action="store_true", help="1 training epoch, tiny validation, for pipeline checks")
+    p.add_argument("--eval_only", default=None, metavar="MODEL_PT",
+                   help="skip training: load this state_dict and only run the evaluation modes")
     return p.parse_args()
 
 
@@ -186,19 +188,24 @@ def main():
     }
     (out / "config.json").write_text(json.dumps(_jsonable(config), indent=2))
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay,
-                                 eps=args.adam_eps)
     t0 = time.time()
-    model = Trainer.train(
-        model=model, dataset=dataset, optimizer=optimizer, lr=args.lr, weight_decay=args.weight_decay,
-        max_epochs=args.max_epochs, train_batch_size=args.batch_size, fold=args.fold,
-        gpu_id=args.gpu_id, checkpoint_path=str(out / "checkpoints"),
-        early_stopping_patience=args.patience, valid_interval_ratio=args.valid_interval_ratio,
-        accumulate_grad_batches=args.accumulate, num_workers=args.num_workers,
-        pin_memory=args.num_workers > 0, persistent_workers=args.num_workers > 0, prefetch_factor=2,
-    )
-    train_seconds = time.time() - t0
-    torch.save(model.cpu().state_dict(), out / "model.pt")
+    if args.eval_only:
+        model.load_state_dict(torch.load(args.eval_only, map_location="cpu"))
+        print(f"[eval_only] loaded {args.eval_only}")
+        train_seconds = 0.0
+    else:
+        optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay,
+                                     eps=args.adam_eps)
+        model = Trainer.train(
+            model=model, dataset=dataset, optimizer=optimizer, lr=args.lr, weight_decay=args.weight_decay,
+            max_epochs=args.max_epochs, train_batch_size=args.batch_size, fold=args.fold,
+            gpu_id=args.gpu_id, checkpoint_path=str(out / "checkpoints"),
+            early_stopping_patience=args.patience, valid_interval_ratio=args.valid_interval_ratio,
+            accumulate_grad_batches=args.accumulate, num_workers=args.num_workers,
+            pin_memory=args.num_workers > 0, persistent_workers=args.num_workers > 0, prefetch_factor=2,
+        )
+        train_seconds = time.time() - t0
+        torch.save(model.cpu().state_dict(), out / "model.pt")
 
     summary = {"train_seconds": train_seconds}
     for mode in args.eval_modes:
