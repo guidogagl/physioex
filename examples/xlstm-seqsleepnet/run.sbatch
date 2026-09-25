@@ -33,8 +33,11 @@ source /sofia/projects/2026_101/WORK/.venv/physioex/bin/activate
 export PYTHONUNBUFFERED=1
 export HF_HUB_OFFLINE=1
 export CUBLAS_WORKSPACE_CONFIG=:4096:8
-export PHYSIOEX_CACHE_DIR="${PHYSIOEX_CACHE_DIR:-/sofia/projects/2026_101/cache}"
-export PHYSIOEX_DATA="${PHYSIOEX_DATA:-/sofia/projects/2026_101/raw_data}"
+# Force the 2026_101 paths: with --export=ALL the login profile's PHYSIOEX_CACHE_DIR (still the
+# full, read-only pilot_2026_0042 fileset) would win over a `${VAR:-default}`; raw data are passed
+# to run.py via --dataset_root (they only exist on the pilot scratch, read-only).
+export PHYSIOEX_CACHE_DIR="${CACHE_DIR:-/sofia/projects/2026_101/cache}"
+export PHYSIOEX_DATA="${DATA_DIR:-/sofia/projects/2026_101/raw_data}"
 
 REPO="${REPO:-/sofia/projects/2026_101/WORK/physioex}"
 OUT_DIR="${OUT_DIR:-/sofia/projects/2026_101/WORK/outputs/xlstm-seqsleepnet}"
