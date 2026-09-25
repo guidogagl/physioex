@@ -1,10 +1,13 @@
 #!/bin/bash
 #SBATCH --partition=zen4_h200
-#SBATCH --gres=gpu:nvidia_h200:1
 #SBATCH --account=zen4-h200-2026_101-1
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=1
+#SBATCH --gpus-per-node=nvidia_h200:1
 #SBATCH --cpus-per-task=24
 #SBATCH --time=24:00:00
-# zen4_h200 enforces exactly 24 CPUs per GPU (DefCpuPerGPU=24); --mem is not allowed.
+# zen4_h200 (Sep 2026): the old `--gres=gpu:nvidia_h200:1` form is rejected; the partition wants
+# --nodes/--ntasks-per-node/--gpus-per-node (typed) and exactly 24 CPUs per GPU. --mem is not allowed.
 #SBATCH --job-name=xlstm-seqsleepnet
 #SBATCH --output=/sofia/projects/2026_101/WORK/logs/xlstm-seqsleepnet/%x_%A_%a.out
 #
