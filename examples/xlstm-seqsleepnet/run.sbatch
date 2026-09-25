@@ -54,6 +54,8 @@ if [[ -n "${SLURM_ARRAY_TASK_ID:-}" ]]; then
   RUN_ARGS="${RUN_ARGS//\{fold\}/${SLURM_ARRAY_TASK_ID}}"
   if [[ "${FOLD_FROM_ARRAY:-0}" == "1" ]]; then RUN_ARGS="${RUN_ARGS} --fold ${SLURM_ARRAY_TASK_ID}"; fi
 fi
+# {seed} is replaced by $SEED (default 0), so one argument file serves every seed
+RUN_ARGS="${RUN_ARGS//\{seed\}/${SEED:-0}}"
 
 mkdir -p "$OUT_DIR" "$(dirname "/sofia/projects/2026_101/WORK/logs/xlstm-seqsleepnet/x")"
 cd "$REPO"
