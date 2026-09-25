@@ -47,6 +47,13 @@ from physioex.models.seqsleepnet import AttentionLayer, LearnableFilterbank, Seq
 
 
 def _import_xlstm():
+    # `xlstm/__init__` imports the sLSTM CUDA loader, which at import time only
+    # *computes* include paths from CUDA_HOME and raises if it is unset -- even
+    # though we never instantiate an sLSTM block. A placeholder is enough for the
+    # pure-torch mLSTM path used here (a real toolkit is only needed for sLSTM).
+    import os
+
+    os.environ.setdefault("CUDA_HOME", "/usr/local/cuda")
     try:
         from xlstm import (
             mLSTMBlockConfig,
