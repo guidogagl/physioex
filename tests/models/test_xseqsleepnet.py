@@ -5,6 +5,8 @@ the optional ``xlstm`` extra is not installed.
 import pytest
 import torch
 
+import physioex.models.xseqsleepnet  # noqa: F401  (sets the CUDA_HOME placeholder before `import xlstm`)
+
 T, F = 29, 129
 XLSTM_KW = dict(num_blocks=2, num_heads=2, context_length=64)
 

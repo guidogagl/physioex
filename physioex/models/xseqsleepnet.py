@@ -34,6 +34,7 @@ Every sequence encoder exposes ``output_size`` and ``is_causal``.
 
 from __future__ import annotations
 
+import os
 from typing import Callable, Optional
 
 import torch
@@ -45,15 +46,15 @@ from physioex.models.seqsleepnet import AttentionLayer, LearnableFilterbank, Seq
 # xlstm (optional dependency)
 # ---------------------------------------------------------------------------
 
+# `xlstm/__init__` imports the sLSTM CUDA loader, which at import time only
+# *computes* include paths from CUDA_HOME and raises if it is unset -- even
+# though we never instantiate an sLSTM block. A placeholder is enough for the
+# pure-torch mLSTM path used here (a real toolkit is only needed for sLSTM).
+# Set at module import so that `import xlstm` works anywhere after importing us.
+os.environ.setdefault("CUDA_HOME", "/usr/local/cuda")
+
 
 def _import_xlstm():
-    # `xlstm/__init__` imports the sLSTM CUDA loader, which at import time only
-    # *computes* include paths from CUDA_HOME and raises if it is unset -- even
-    # though we never instantiate an sLSTM block. A placeholder is enough for the
-    # pure-torch mLSTM path used here (a real toolkit is only needed for sLSTM).
-    import os
-
-    os.environ.setdefault("CUDA_HOME", "/usr/local/cuda")
     try:
         from xlstm import (
             mLSTMBlockConfig,

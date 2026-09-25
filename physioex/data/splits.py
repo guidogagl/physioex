@@ -62,8 +62,6 @@ def kfold_subject_splits(
     keys = sorted(groups.keys(), key=str)
     if n_folds > len(keys):
         raise ValueError(f"n_folds={n_folds} exceeds the {len(keys)} subject groups")
-    if n_valid > len(keys) - max(1, len(keys) // n_folds):
-        raise ValueError(f"n_valid={n_valid} leaves no training subjects")
     rng = random.Random(seed)
     rng.shuffle(keys)
 
@@ -75,6 +73,10 @@ def kfold_subject_splits(
     test_keys = keys[bounds[fold] : bounds[fold + 1]]
     # cyclic order starting right after the test chunk
     rest = keys[bounds[fold + 1] :] + keys[: bounds[fold]]
+    if n_valid < 0 or n_valid >= len(rest):
+        raise ValueError(
+            f"n_valid={n_valid} leaves no training subjects ({len(rest)} groups outside the test fold)"
+        )
     valid_keys, train_keys = rest[:n_valid], rest[n_valid:]
 
     expand = lambda ks: [sid for k in ks for sid in groups[k]]  # noqa: E731
