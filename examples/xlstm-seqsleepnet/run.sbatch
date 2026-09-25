@@ -18,7 +18,8 @@
 
 set -euo pipefail
 
-module swap cluster/sofia/zen4_h200 2>/dev/null || true
+# login nodes may have no cluster module preloaded (swap fails) -> load, then swap as fallback
+module load cluster/sofia/zen4_h200 2>/dev/null || module swap cluster/sofia/zen4_h200 2>/dev/null || true
 module load PyTorch/2.9.1-foss-2025a-CUDA-12.8.0
 module load matplotlib/3.10.3-gfbf-2025a scikit-learn/1.7.0-gfbf-2025a
 module load h5py/3.14.0-foss-2025a PyYAML/6.0.2-GCCcore-14.2.0
@@ -33,6 +34,8 @@ export PHYSIOEX_DATA="${PHYSIOEX_DATA:-/sofia/projects/2026_101/raw_data}"
 
 REPO="${REPO:-/sofia/projects/2026_101/WORK/physioex}"
 OUT_DIR="${OUT_DIR:-/sofia/projects/2026_101/WORK/outputs/xlstm-seqsleepnet}"
+# the venv's editable physioex may point at another checkout: import from $REPO first
+export PYTHONPATH="${REPO}${PYTHONPATH:+:$PYTHONPATH}"
 : "${RUN_ARGS:?set RUN_ARGS to the run.py arguments}"
 if [[ "${FOLD_FROM_ARRAY:-0}" == "1" && -n "${SLURM_ARRAY_TASK_ID:-}" ]]; then
   RUN_ARGS="${RUN_ARGS} --fold ${SLURM_ARRAY_TASK_ID}"
@@ -42,6 +45,7 @@ mkdir -p "$OUT_DIR" "$(dirname "/sofia/projects/2026_101/WORK/logs/xlstm-seqslee
 cd "$REPO"
 echo "[sbatch] $(date) host=$(hostname) gpu=$(nvidia-smi --query-gpu=name --format=csv,noheader | head -1)"
 echo "[sbatch] commit=$(git rev-parse --short HEAD) branch=$(git rev-parse --abbrev-ref HEAD)"
+echo "[sbatch] physioex from $(python -c 'import physioex; print(physioex.__file__)')"
 echo "[sbatch] run.py ${RUN_ARGS}"
 
 # shellcheck disable=SC2086

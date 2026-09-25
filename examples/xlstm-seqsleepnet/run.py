@@ -168,7 +168,7 @@ def main():
         args.max_epochs, args.valid_interval_ratio = 1, 0.5
 
     tag = args.model if args.model != "xseqsleepnet" else f"x_{args.epoch_encoder}_{args.sequence_encoder}"
-    run_name = args.run_name or f"{args.dataset}_{tag}_L{args.L}_f{args.fold}_s{args.seed}"
+    run_name = args.run_name or f"{args.dataset}_{tag}_{len(args.channels)}ch_L{args.L}_f{args.fold}_s{args.seed}"
     out = Path(args.out_dir) / run_name
     out.mkdir(parents=True, exist_ok=True)
 
