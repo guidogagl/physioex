@@ -41,8 +41,11 @@ export PHYSIOEX_DATA="${DATA_DIR:-/sofia/projects/2026_101/raw_data}"
 
 REPO="${REPO:-/sofia/projects/2026_101/WORK/physioex}"
 OUT_DIR="${OUT_DIR:-/sofia/projects/2026_101/WORK/outputs/xlstm-seqsleepnet}"
-# the venv's editable physioex may point at another checkout: import from $REPO first
-export PYTHONPATH="${REPO}${PYTHONPATH:+:$PYTHONPATH}"
+# the venv's editable physioex may point at another checkout: import from $REPO first.
+# PYLIB: vendored pure-python packages (xlstm, mlstm_kernels, safetensors, einops) unpacked
+# from wheels — the job venv lives on a full, read-only fileset and cannot be pip-installed.
+PYLIB="${PYLIB:-/sofia/projects/2026_101/WORK/pylib}"
+export PYTHONPATH="${REPO}:${PYLIB}${PYTHONPATH:+:$PYTHONPATH}"
 # RUN_ARGS_FILE: read the arguments from a file (sbatch --export splits on commas, which
 # breaks JSON kwargs). {fold} inside the arguments is replaced by the array task id.
 if [[ -n "${RUN_ARGS_FILE:-}" ]]; then RUN_ARGS="$(cat "$RUN_ARGS_FILE")"; fi

@@ -26,8 +26,13 @@ CLASSES = ["W", "N1", "N2", "N3", "REM"]
 
 
 def load_run(run_dir: Path, mode: str):
-    """-> dict subject_id -> (pred (n,), target (n,)) restricted to valid epochs."""
-    p = torch.load(run_dir / f"predictions_{mode}.pt", map_location="cpu")
+    """-> dict subject_id -> (pred (n,), target (n,)) restricted to valid epochs.
+    Runs without predictions yet (still training) are skipped with a warning."""
+    f = run_dir / f"predictions_{mode}.pt"
+    if not f.exists():
+        print(f"[warn] skipping {run_dir.name}: no {f.name}")
+        return {}
+    p = torch.load(f, map_location="cpu")
     out = {}
     for sid, logits, tgt in zip(p["subject_ids"], p["logits"], p["targets"]):
         pred = logits.argmax(-1).numpy()
@@ -102,7 +107,11 @@ def main():
         merged = {}
         for d in dirs:
             for sid, v in load_run(d, args.mode).items():
-                merged[f"{d.name}::{sid}" if len(dirs) > 1 else sid] = v
+                # real ids are unique across folds (each subject tested once); fall back to a
+                # fold-qualified key only on collision (e.g. placeholder ids), so that the same
+                # subject pairs across runs of different models.
+                key = sid if sid not in merged else f"{d.name}::{sid}"
+                merged[key] = v
         runs[label] = merged
 
     labels = list(runs)

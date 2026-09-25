@@ -63,6 +63,9 @@ def parse_args():
     p.add_argument("--subset", default=None, help="dataset subset (sleepedf: '2013' = 20-subject SC set)")
     p.add_argument("--channels", nargs="+", default=["EEG"])
     p.add_argument("--L", type=int, default=20, help="training sequence length (epochs)")
+    p.add_argument("--train_stride", type=int, default=1,
+                   help="step between training windows (1 = all offsets, Phan's protocol; "
+                        "use e.g. L/20 for long L to keep epochs affordable — same for every arm)")
     p.add_argument("--n_folds", type=int, default=20, help="0 = dataset's own get_splits (e.g. SHHS benchmark)")
     p.add_argument("--n_valid", type=int, default=10, help="validation subject groups per fold")
     p.add_argument("--fold", type=int, default=0)
@@ -100,7 +103,8 @@ def parse_args():
 
 def build_dataset(args):
     """Return (dataset, group_fn) with the protocol's k-fold split installed."""
-    kw = dict(channels=args.channels, pipelines="seqsleepnet", sequence_length=args.L)
+    kw = dict(channels=args.channels, pipelines="seqsleepnet", sequence_length=args.L,
+              sequence_stride=args.train_stride)
     if args.dataset_root:
         kw["root"] = args.dataset_root
     group_fn = None

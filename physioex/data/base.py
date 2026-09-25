@@ -113,6 +113,7 @@ class BasePhysioDataset(Dataset):
             PreprocessingPipeline, str, Dict[str, Union[PreprocessingPipeline, str]]
         ] = "raw",
         sequence_length: int = 21,
+        sequence_stride: int = 1,
         subset: Optional[str] = None,
         cache_dir: Optional[str] = None,
         cache_enabled: bool = True,
@@ -136,6 +137,10 @@ class BasePhysioDataset(Dataset):
         self._channels_request = channels  # raw user input (may be None)
         self.channels = list(channels) if channels is not None else []
         self.sequence_length = int(sequence_length)
+        # Step between consecutive training windows (1 = every offset, i.e. L-1 overlap,
+        # the SeqSleepNet protocol). Larger strides thin the window set for long L;
+        # full-night evaluation (sequence_length=0 / voting) is unaffected.
+        self.sequence_stride = max(1, int(sequence_stride))
         self.subset = subset
         self.epoch_length_sec = (
             float(epoch_length_sec)
@@ -998,7 +1003,7 @@ class BasePhysioDataset(Dataset):
         for spec in self._subjects:
             n = self._n_epochs[spec.subject_id]
             if self.sequence_length > 0:
-                count = n - self.sequence_length + 1
+                count = (n - self.sequence_length) // self.sequence_stride + 1
             else:
                 count = 1  # one recording per subject
             self._subject_ranges.append((spec.subject_id, running, running + count))
@@ -1028,7 +1033,8 @@ class BasePhysioDataset(Dataset):
     # ------------------------------------------------------------------
 
     def _get_sequence_item(self, flat_idx: int) -> Dict[str, Any]:
-        spec, epoch_start = self._find_subject_for_flat_idx(flat_idx)
+        spec, local = self._find_subject_for_flat_idx(flat_idx)
+        epoch_start = local * self.sequence_stride
         epoch_end = epoch_start + self.sequence_length
         return self._build_item(spec, epoch_start, epoch_end)
 
