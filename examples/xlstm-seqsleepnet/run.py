@@ -95,6 +95,7 @@ def parse_args():
     p.add_argument("--num_workers", type=int, default=0)
     p.add_argument("--out_dir", default="outputs/xlstm-seqsleepnet")
     p.add_argument("--run_name", default=None)
+    p.add_argument("--tag", default=None, help="extra token in the default run name (e.g. lr1e-3)")
     p.add_argument("--smoke", action="store_true", help="1 training epoch, tiny validation, for pipeline checks")
     p.add_argument("--eval_only", default=None, metavar="MODEL_PT",
                    help="skip training: load this state_dict and only run the evaluation modes")
@@ -174,7 +175,8 @@ def main():
         args.max_epochs, args.valid_interval_ratio = 1, 0.5
 
     tag = args.model if args.model != "xseqsleepnet" else f"x_{args.epoch_encoder}_{args.sequence_encoder}"
-    run_name = args.run_name or f"{args.dataset}_{tag}_{len(args.channels)}ch_L{args.L}_f{args.fold}_s{args.seed}"
+    extra = f"_{args.tag}" if args.tag else ""
+    run_name = args.run_name or f"{args.dataset}_{tag}_{len(args.channels)}ch_L{args.L}{extra}_f{args.fold}_s{args.seed}"
     out = Path(args.out_dir) / run_name
     out.mkdir(parents=True, exist_ok=True)
 

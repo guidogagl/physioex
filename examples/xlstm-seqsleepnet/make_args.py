@@ -81,6 +81,17 @@ def main():
         name = f"sweep_lseqsleepnet_L200_lr{lr}"
         files[name] = f"{base} {lseq(200)} --lr {lr} --run_name {name}_f0_s0"
 
+    # v2: Stage 1+2 re-run with the validation-selected learning rate per arm (fold-0 sweep, L=200):
+    # 1e-3 for every flat arm, 3e-4 for L-SeqSleepNet. --tag keeps the outputs apart from the lr-1e-4 runs.
+    LR_FLAT, LR_LSEQ = "1e-3", "3e-4"
+    for arm, spec in ARMS.items():
+        files[f"v2_s1_{arm}_L20"] = f"{mass} {spec} --L 20 --batch_size 32 --lr {LR_FLAT} --tag lr{LR_FLAT} --seed {{seed}}"
+    for L in (100, 200, 400):
+        common = f"{mass} --L {L} --train_stride {L // 20} --batch_size 8 --seed {{seed}}"
+        for arm, spec in ARMS.items():
+            files[f"v2_s2_{arm}_L{L}"] = f"{common} {spec} --lr {LR_FLAT} --tag lr{LR_FLAT}"
+        files[f"v2_s2_lseqsleepnet_L{L}"] = f"{common} {lseq(L)} --lr {LR_LSEQ} --tag lr{LR_LSEQ}"
+
     for name, content in files.items():
         (out / f"{name}.txt").write_text(content + "\n")
     print(f"wrote {len(files)} argument files to {out}")
