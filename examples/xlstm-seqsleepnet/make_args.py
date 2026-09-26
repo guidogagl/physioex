@@ -92,6 +92,24 @@ def main():
             files[f"v2_s2_{arm}_L{L}"] = f"{common} {spec} --lr {LR_FLAT} --tag lr{LR_FLAT}"
         files[f"v2_s2_lseqsleepnet_L{L}"] = f"{common} {lseq(L)} --lr {LR_LSEQ} --tag lr{LR_LSEQ}"
 
+    # Stage 0a at the selected lr: 20-fold parity claim for the baseline
+    files["s0a_mass_seqsleepnet_lr1e-3"] = (f"{mass} --model seqsleepnet --L 20 --batch_size 32 --lr {LR_FLAT} "
+                                            f"--tag lr{LR_FLAT} --seed {{seed}}")
+
+    # Stage 4: causal single-pass inference. Causal mLSTM vs unidirectional GRU (both at the selected lr),
+    # evaluated with window voting AND one forward pass over the whole night; train at L=20 too, to test
+    # length extrapolation (train short, infer on the full night).
+    CAUSAL = {
+        "xlstm_causal": f"--model xseqsleepnet --sequence_encoder xlstm_causal --seq_kwargs {XK}",
+        "gru_uni": '--model xseqsleepnet --sequence_encoder gru_uni --seq_kwargs {"hidden":128,"num_layers":4}',
+    }
+    for L in (20, 200):
+        stride = 1 if L == 20 else L // 20
+        bs = 32 if L == 20 else 8
+        for arm, spec in CAUSAL.items():
+            files[f"s4_{arm}_L{L}"] = (f"{mass} {spec} --L {L} --train_stride {stride} --batch_size {bs} --lr {LR_FLAT} "
+                                       f"--tag lr{LR_FLAT} --eval_modes voting single_pass --seed {{seed}}")
+
     for name, content in files.items():
         (out / f"{name}.txt").write_text(content + "\n")
     print(f"wrote {len(files)} argument files to {out}")
