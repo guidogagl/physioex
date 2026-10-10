@@ -52,9 +52,17 @@ from physioex.train.metrics import accuracy_score
 
 
 class ZeroEmbeddingDropout(nn.Module):
-    """Drop channels by replacing embeddings with the encoder's zero-input
-    embedding. Drop probability is accuracy-weighted: low-accuracy channels
-    are dropped more often.
+    """Accuracy-weighted modality dropout.
+
+    Replaces the embeddings of selected channels with the encoder's
+    zero-input embedding. The drop probability of channel ``c`` is
+    proportional to its accuracy, ``p_c = a_c / sum_j a_j``, so the
+    channels the model relies on most are occluded most often and the
+    model must learn to stage from the secondary modalities.
+
+    For each sample, with probability ``p_apply`` a number ``n`` of
+    channels drawn uniformly in ``{1, ..., C-1}`` is sampled without
+    replacement according to ``{p_c}`` and replaced.
 
     Only active during training.
 
@@ -84,11 +92,13 @@ class ZeroEmbeddingDropout(nn.Module):
         else:
             acc = torch.tensor(channel_acc, device=device, dtype=torch.float32)
 
-        proba = 1.0 - acc
+        proba = acc.clamp(min=0.0)
         proba_sum = proba.sum()
         if proba_sum <= 0:
-            return x
-        proba = proba / proba_sum
+            # No accuracy estimate yet: fall back to uniform sampling.
+            proba = torch.full((nchan,), 1.0 / nchan, device=device)
+        else:
+            proba = proba / proba_sum
 
         apply_mask = torch.rand(batch, device=device) < self.p_apply
         n_to_drop = torch.randint(1, nchan, (batch,), device=device)

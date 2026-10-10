@@ -4,6 +4,18 @@ All notable changes to PhysioEx are documented here. Versions follow the
 `physioex.__version__` string (read dynamically by the build) and the `v*` git tags
 that publish to PyPI.
 
+## 2.0.2 — 2026-10-10
+
+### Fixed — accuracy-weighted modality dropout (`physioex.models.protosleepnet`)
+
+`ZeroEmbeddingDropout` now samples the channels to occlude with probability
+proportional to their accuracy, `p_c = a_c / sum_j a_j`, so the channels the
+model relies on most are dropped most often. This is the rule the released
+ProtoSleepNet and ProtoSleepTransformer models were trained with; a later
+refactoring had inverted the sampling weights to `1 - a_c`. When no accuracy
+estimate is available yet the sampling is uniform. Unit tests in
+`tests/test_modality_dropout.py`.
+
 ## 2.0.1 — 2026-09-13
 
 ### Added — Layer-wise Relevance Propagation (`physioex.explain.lrp`)
