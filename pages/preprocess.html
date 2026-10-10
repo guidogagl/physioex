@@ -503,10 +503,10 @@ presets apply modality-specific filtering.</p>
 <dl class="py class">
 <dt class="sig sig-object py">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">physioex.data.</span></span><span class="sig-name descname"><span class="pre">PreprocessingPipeline</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">steps</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/physioex/data/pipeline.html#PreprocessingPipeline"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
-<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/builtins/functions.html#object" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>steps</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.14)"><em>List</em></a><em>[</em><a class="reference internal" href="../api/_generated/physioex.data.PreprocessingStep.html#physioex.data.PreprocessingStep" title="physioex.data.pipeline.PreprocessingStep"><em>PreprocessingStep</em></a><em>]</em>)</p>
+<dd class="field-odd"><p><strong>steps</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.15)"><em>List</em></a><em>[</em><a class="reference internal" href="../api/_generated/physioex.data.PreprocessingStep.html#physioex.data.PreprocessingStep" title="physioex.data.pipeline.PreprocessingStep"><em>PreprocessingStep</em></a><em>]</em>)</p>
 </dd>
 </dl>
 </dd></dl>
@@ -514,7 +514,7 @@ presets apply modality-specific filtering.</p>
 <dl class="py class">
 <dt class="sig sig-object py">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">physioex.data.</span></span><span class="sig-name descname"><span class="pre">PreprocessingStep</span></span><a class="reference internal" href="../_modules/physioex/data/pipeline.html#PreprocessingStep"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
-<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/abc.html#abc.ABC" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">ABC</span></code></a></p>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/abc.html#abc.ABC" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">ABC</span></code></a></p>
 <p>Base class for all preprocessing operations.</p>
 <dl class="py method">
 <dt class="sig sig-object py">
@@ -522,7 +522,7 @@ presets apply modality-specific filtering.</p>
 <dd><p>Precompute any expensive state and return a callable specialized for fs_in.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>fs_in</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a>)</p>
+<dd class="field-odd"><p><strong>fs_in</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><em>float</em></a>)</p>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p><a class="reference internal" href="../api/_generated/physioex.data.CompiledStep.html#physioex.data.CompiledStep" title="physioex.data.pipeline.CompiledStep"><em>CompiledStep</em></a></p>
@@ -538,7 +538,7 @@ presets apply modality-specific filtering.</p>
 normalized via f’{float(v):.10g}’.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)">str</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)">str</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -554,10 +554,10 @@ normalized via f’{float(v):.10g}’.</p>
 and <code class="docutils literal notranslate"><span class="pre">time_frequency</span></code>).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>)</p>
+<dd class="field-odd"><p><strong>name</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><em>str</em></a>)</p>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p><a class="reference internal" href="../api/_generated/physioex.data.PreprocessingPipeline.html#physioex.data.PreprocessingPipeline" title="physioex.data.pipeline.PreprocessingPipeline"><em>PreprocessingPipeline</em></a> | <a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Dict" title="(in Python v3.14)"><em>Dict</em></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)">str</a>, <a class="reference internal" href="../api/_generated/physioex.data.PreprocessingPipeline.html#physioex.data.PreprocessingPipeline" title="physioex.data.pipeline.PreprocessingPipeline"><em>PreprocessingPipeline</em></a>]</p>
+<dd class="field-even"><p><a class="reference internal" href="../api/_generated/physioex.data.PreprocessingPipeline.html#physioex.data.PreprocessingPipeline" title="physioex.data.pipeline.PreprocessingPipeline"><em>PreprocessingPipeline</em></a> | <a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Dict" title="(in Python v3.15)"><em>Dict</em></a>[<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)">str</a>, <a class="reference internal" href="../api/_generated/physioex.data.PreprocessingPipeline.html#physioex.data.PreprocessingPipeline" title="physioex.data.pipeline.PreprocessingPipeline"><em>PreprocessingPipeline</em></a>]</p>
 </dd>
 </dl>
 </dd></dl>
@@ -568,7 +568,7 @@ and <code class="docutils literal notranslate"><span class="pre">time_frequency<
 <dd><p>Return sorted list of available preset names.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)">list</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)">list</a></p>
 </dd>
 </dl>
 </dd></dl>

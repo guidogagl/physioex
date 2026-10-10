@@ -526,8 +526,8 @@
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>outputs</strong> (<a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.14)"><em>Tensor</em></a>) – Model outputs (logits), shape (…, n_classes).</p></li>
 <li><p><strong>targets</strong> (<a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.14)"><em>Tensor</em></a>) – Ground-truth labels.</p></li>
-<li><p><strong>ignore_index</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>) – Label value to ignore (default -1).</p></li>
-<li><p><strong>average</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – Averaging method. <code class="docutils literal notranslate"><span class="pre">&quot;micro&quot;</span></code> computes global accuracy (correct / total).
+<li><p><strong>ignore_index</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><em>int</em></a>) – Label value to ignore (default -1).</p></li>
+<li><p><strong>average</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><em>str</em></a>) – Averaging method. <code class="docutils literal notranslate"><span class="pre">&quot;micro&quot;</span></code> computes global accuracy (correct / total).
 <code class="docutils literal notranslate"><span class="pre">&quot;weighted&quot;</span></code> is equivalent to <code class="docutils literal notranslate"><span class="pre">&quot;micro&quot;</span></code> for accuracy and is accepted for
 API consistency with the other metric functions.</p></li>
 </ul>
@@ -536,7 +536,7 @@ API consistency with the other metric functions.</p></li>
 <dd class="field-even"><p>Accuracy as a float in [0, 1].</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)">float</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)">float</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -550,8 +550,8 @@ API consistency with the other metric functions.</p></li>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>outputs</strong> (<a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.14)"><em>Tensor</em></a>) – Model outputs (logits), shape (…, n_classes).</p></li>
 <li><p><strong>targets</strong> (<a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.14)"><em>Tensor</em></a>) – Ground-truth labels.</p></li>
-<li><p><strong>ignore_index</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>) – Label value to ignore (default -1).</p></li>
-<li><p><strong>average</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – <code class="docutils literal notranslate"><span class="pre">&quot;macro&quot;</span></code> returns unweighted mean of per-class F1 across classes
+<li><p><strong>ignore_index</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><em>int</em></a>) – Label value to ignore (default -1).</p></li>
+<li><p><strong>average</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><em>str</em></a>) – <code class="docutils literal notranslate"><span class="pre">&quot;macro&quot;</span></code> returns unweighted mean of per-class F1 across classes
 with non-zero support. <code class="docutils literal notranslate"><span class="pre">&quot;weighted&quot;</span></code> weights each class F1 by its
 support (number of true instances).</p></li>
 </ul>
@@ -560,7 +560,7 @@ support (number of true instances).</p></li>
 <dd class="field-even"><p>F1 score as a float in [0, 1].</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)">float</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)">float</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -574,11 +574,11 @@ support (number of true instances).</p></li>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>outputs</strong> (<a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.14)"><em>Tensor</em></a>)</p></li>
 <li><p><strong>targets</strong> (<a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.14)"><em>Tensor</em></a>)</p></li>
-<li><p><strong>ignore_index</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>)</p></li>
+<li><p><strong>ignore_index</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><em>int</em></a>)</p></li>
 </ul>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)">float</a></p>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)">float</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -592,11 +592,11 @@ support (number of true instances).</p></li>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>outputs</strong> (<a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.14)"><em>Tensor</em></a>)</p></li>
 <li><p><strong>targets</strong> (<a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.14)"><em>Tensor</em></a>)</p></li>
-<li><p><strong>ignore_index</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>)</p></li>
+<li><p><strong>ignore_index</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><em>int</em></a>)</p></li>
 </ul>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)">float</a></p>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)">float</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -610,8 +610,8 @@ support (number of true instances).</p></li>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>outputs</strong> (<a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.14)"><em>Tensor</em></a>) – Model outputs (logits), shape (…, n_classes).</p></li>
 <li><p><strong>targets</strong> (<a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.14)"><em>Tensor</em></a>) – Ground-truth labels.</p></li>
-<li><p><strong>ignore_index</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>) – Label value to ignore (default -1).</p></li>
-<li><p><strong>average</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – <code class="docutils literal notranslate"><span class="pre">&quot;macro&quot;</span></code> returns unweighted mean of per-class precision across
+<li><p><strong>ignore_index</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><em>int</em></a>) – Label value to ignore (default -1).</p></li>
+<li><p><strong>average</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><em>str</em></a>) – <code class="docutils literal notranslate"><span class="pre">&quot;macro&quot;</span></code> returns unweighted mean of per-class precision across
 classes with non-zero support. <code class="docutils literal notranslate"><span class="pre">&quot;weighted&quot;</span></code> weights each class precision
 by its support.</p></li>
 </ul>
@@ -620,7 +620,7 @@ by its support.</p></li>
 <dd class="field-even"><p>Precision as a float in [0, 1].</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)">float</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)">float</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -634,11 +634,11 @@ by its support.</p></li>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>outputs</strong> (<a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.14)"><em>Tensor</em></a>)</p></li>
 <li><p><strong>targets</strong> (<a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.14)"><em>Tensor</em></a>)</p></li>
-<li><p><strong>ignore_index</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>)</p></li>
+<li><p><strong>ignore_index</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><em>int</em></a>)</p></li>
 </ul>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)">float</a></p>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)">float</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -652,8 +652,8 @@ by its support.</p></li>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>outputs</strong> (<a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.14)"><em>Tensor</em></a>) – Model outputs (logits), shape (…, n_classes).</p></li>
 <li><p><strong>targets</strong> (<a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.14)"><em>Tensor</em></a>) – Ground-truth labels.</p></li>
-<li><p><strong>ignore_index</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>) – Label value to ignore (default -1).</p></li>
-<li><p><strong>average</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – <code class="docutils literal notranslate"><span class="pre">&quot;macro&quot;</span></code> returns unweighted mean of per-class recall across classes
+<li><p><strong>ignore_index</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><em>int</em></a>) – Label value to ignore (default -1).</p></li>
+<li><p><strong>average</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><em>str</em></a>) – <code class="docutils literal notranslate"><span class="pre">&quot;macro&quot;</span></code> returns unweighted mean of per-class recall across classes
 with non-zero support. <code class="docutils literal notranslate"><span class="pre">&quot;weighted&quot;</span></code> weights each class recall by its
 support.</p></li>
 </ul>
@@ -662,7 +662,7 @@ support.</p></li>
 <dd class="field-even"><p>Recall as a float in [0, 1].</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)">float</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)">float</a></p>
 </dd>
 </dl>
 </dd></dl>
