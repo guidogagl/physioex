@@ -37,5 +37,6 @@
       ~BasePhysioDataset.CHANNEL_PREFERENCES
       ~BasePhysioDataset.DATASET_NAME
       ~BasePhysioDataset.DEFAULT_EPOCH_LENGTH_SEC
+      ~BasePhysioDataset.LABELS_REVISION
    
    

@@ -415,7 +415,7 @@ window.addEventListener("load", () => mermaid.run());
 <a class="viewcode-back" href="../../../api/_generated/physioex.data.SleepEvent.html#physioex.data.SleepEvent">[docs]</a>
 <span class="nd">@dataclass</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">SleepEvent</span><span class="p">:</span>
-    <span class="nb">type</span><span class="p">:</span> <span class="nb">str</span>  <span class="c1"># "respiratory" | "arousal" | "limb_movement" | "position" | "desaturation" | "other"</span>
+    <span class="nb">type</span><span class="p">:</span> <span class="nb">str</span>  <span class="c1"># "respiratory" | "arousal" | "limb_movement" | "position" | "desaturation" | "artifact" | "other"</span>
     <span class="n">concept</span><span class="p">:</span> <span class="nb">str</span>  <span class="c1"># e.g. "Hypopnea", "ASDA arousal", "PLM (Left)", "Supine"</span>
     <span class="n">onset_sec</span><span class="p">:</span> <span class="nb">float</span>  <span class="c1"># absolute seconds from recording start</span>
     <span class="n">duration_sec</span><span class="p">:</span> <span class="nb">float</span>

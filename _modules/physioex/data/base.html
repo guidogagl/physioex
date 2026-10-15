@@ -512,6 +512,11 @@ window.addEventListener("load", () => mermaid.run());
     <span class="c1"># Epoch length in seconds (30 for humans, 4 for mouse)</span>
     <span class="n">DEFAULT_EPOCH_LENGTH_SEC</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">30.0</span>
 
+    <span class="c1">#: Revision of the label reader. Cached labels store the revision they were computed with; a cache with a</span>
+    <span class="c1">#: LOWER revision is stale (the reader changed how labels are built) and is recomputed. Caches without the</span>
+    <span class="c1">#: key count as revision 1. Bump it in a subclass whenever a fix changes the labels it returns.</span>
+    <span class="n">LABELS_REVISION</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span>
+
 <div class="viewcode-block" id="BasePhysioDataset.__init__">
 <a class="viewcode-back" href="../../../api/_generated/physioex.data.BasePhysioDataset.html#physioex.data.BasePhysioDataset.__init__">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
@@ -1031,6 +1036,7 @@ window.addEventListener("load", () => mermaid.run());
 <span class="w">        </span><span class="sd">"""Return the EDF header for a subject, using on-disk cache when</span>
 <span class="sd">        valid.  When ``self.cache_enabled`` is False, the header is always</span>
 <span class="sd">        probed from the source file and no disk I/O is performed."""</span>
+        <span class="n">stale_header</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">cache_enabled</span><span class="p">:</span>
             <span class="n">hpath</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cache</span><span class="o">.</span><span class="n">header_path</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">DATASET_NAME</span><span class="p">,</span> <span class="n">spec</span><span class="o">.</span><span class="n">subject_id</span><span class="p">)</span>
             <span class="n">src_mtime</span> <span class="o">=</span> <span class="kc">None</span>
@@ -1048,11 +1054,24 @@ window.addEventListener("load", () => mermaid.run());
                             <span class="ow">or</span> <span class="nb">abs</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">cached</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"source_mtime"</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span> <span class="o">-</span> <span class="n">src_mtime</span><span class="p">)</span>
                             <span class="o">&lt;</span> <span class="mf">1e-3</span>
                         <span class="p">):</span>
-                            <span class="k">return</span> <span class="n">EDFHeader</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span><span class="n">cached</span><span class="p">)</span>
+                            <span class="k">if</span> <span class="s2">"start_sec"</span> <span class="ow">in</span> <span class="n">cached</span><span class="p">:</span>
+                                <span class="k">return</span> <span class="n">EDFHeader</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span><span class="n">cached</span><span class="p">)</span>
+                            <span class="c1"># Written before ``start_sec`` existed (label readers such as STAGES need it</span>
+                            <span class="c1"># to align the hypnogram to the EDF start): probe the header again.</span>
+                            <span class="n">stale_header</span> <span class="o">=</span> <span class="n">cached</span>
                     <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
                         <span class="k">pass</span>
 
-        <span class="n">header</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_read_edf_header</span><span class="p">(</span><span class="n">spec</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">header</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_read_edf_header</span><span class="p">(</span><span class="n">spec</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">stale_header</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">raise</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"[</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">DATASET_NAME</span><span class="si">}</span><span class="s2">] </span><span class="si">{</span><span class="n">spec</span><span class="o">.</span><span class="n">subject_id</span><span class="si">}</span><span class="s2">: cached header predates the 'start_sec' field and "</span>
+                <span class="sa">f</span><span class="s2">"cannot be refreshed (</span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">exc</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">); using the cached header"</span>
+            <span class="p">)</span>
+            <span class="k">return</span> <span class="n">EDFHeader</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span><span class="n">stale_header</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">cache_enabled</span><span class="p">:</span>
             <span class="k">try</span><span class="p">:</span>
@@ -1071,8 +1090,10 @@ window.addEventListener("load", () => mermaid.run());
 <span class="sd">        unconditionally available; subjects missing a channel get it</span>
 <span class="sd">        zero-filled at access time.</span>
 
-<span class="sd">        Subjects are **never dropped** due to missing channels.</span>
-<span class="sd">        Only genuinely corrupt EDFs (header unreadable) are skipped</span>
+<span class="sd">        Subjects are **never dropped** due to missing channels (missing</span>
+<span class="sd">        channels are zero-filled with the shape the pipeline produces; a</span>
+<span class="sd">        subject with none of the requested channels gets a warning and all</span>
+<span class="sd">        zeros). Only genuinely corrupt EDFs (header unreadable) are skipped</span>
 <span class="sd">        when ``skip_corrupt=True``.</span>
 <span class="sd">        """</span>
         <span class="c1"># Phase 1: probe all headers</span>
@@ -1129,6 +1150,13 @@ window.addEventListener("load", () => mermaid.run());
                     <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">missing</span><span class="si">}</span><span class="s2"> not available (will be zero-filled)"</span>
                 <span class="p">)</span>
 
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">channels</span> <span class="ow">and</span> <span class="nb">all</span><span class="p">(</span><span class="n">rc</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">for</span> <span class="n">rc</span> <span class="ow">in</span> <span class="n">resolved</span><span class="p">):</span>
+                <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">"[</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">DATASET_NAME</span><span class="si">}</span><span class="s2">] Subject </span><span class="si">{</span><span class="n">spec</span><span class="o">.</span><span class="n">subject_id</span><span class="si">}</span><span class="s2">: none of the requested channels "</span>
+                    <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="p">)</span><span class="si">}</span><span class="s2"> is available (EDF channels: </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="n">header</span><span class="o">.</span><span class="n">available_channels</span><span class="p">)</span><span class="si">}</span><span class="s2">); "</span>
+                    <span class="sa">f</span><span class="s2">"its signals will be all zeros"</span>
+                <span class="p">)</span>
+
             <span class="bp">self</span><span class="o">.</span><span class="n">_resolved</span><span class="p">[</span><span class="n">spec</span><span class="o">.</span><span class="n">subject_id</span><span class="p">]</span> <span class="o">=</span> <span class="n">resolved</span>
 
     <span class="c1"># ------------------------------------------------------------------</span>
@@ -1148,29 +1176,92 @@ window.addEventListener("load", () => mermaid.run());
             <span class="k">if</span> <span class="n">lp</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span> <span class="ow">and</span> <span class="n">lmeta</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
                 <span class="k">try</span><span class="p">:</span>
                     <span class="n">memmap</span><span class="p">,</span> <span class="n">meta</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cache</span><span class="o">.</span><span class="n">load_memmap</span><span class="p">(</span><span class="n">lp</span><span class="p">)</span>
-                    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">memmap</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+                    <span class="n">cached</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">memmap</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+                    <span class="n">cached_rev</span> <span class="o">=</span> <span class="nb">int</span><span class="p">((</span><span class="n">meta</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"labels_revision"</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+                    <span class="k">if</span> <span class="n">cached_rev</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">LABELS_REVISION</span><span class="p">:</span>
+                        <span class="k">return</span> <span class="n">cached</span>
+                    <span class="n">stale_rev</span> <span class="o">=</span> <span class="n">cached_rev</span>
                 <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
                     <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
                         <span class="sa">f</span><span class="s2">"Corrupt label cache for </span><span class="si">{</span><span class="n">spec</span><span class="o">.</span><span class="n">subject_id</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">; "</span>
                         <span class="sa">f</span><span class="s2">"rebuilding"</span>
                     <span class="p">)</span>
+                    <span class="n">stale_rev</span> <span class="o">=</span> <span class="kc">None</span>
+                <span class="k">if</span> <span class="n">stale_rev</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="c1"># cache written by an older label reader: recompute if the source is available</span>
+                    <span class="k">try</span><span class="p">:</span>
+                        <span class="n">fresh</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sanitize_labels</span><span class="p">(</span>
+                            <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_read_subject_labels</span><span class="p">(</span><span class="n">spec</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int16</span><span class="p">)</span>
+                        <span class="p">)</span>
+                    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+                        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                            <span class="sa">f</span><span class="s2">"[</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">DATASET_NAME</span><span class="si">}</span><span class="s2">] </span><span class="si">{</span><span class="n">spec</span><span class="o">.</span><span class="n">subject_id</span><span class="si">}</span><span class="s2">: cached labels have revision "</span>
+                            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">stale_rev</span><span class="si">}</span><span class="s2"> &lt; </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">LABELS_REVISION</span><span class="si">}</span><span class="s2"> (stale) and cannot be recomputed "</span>
+                            <span class="sa">f</span><span class="s2">"(</span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">exc</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">); using the cached labels"</span>
+                        <span class="p">)</span>
+                        <span class="k">return</span> <span class="n">cached</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">"_warned_stale_labels"</span><span class="p">,</span> <span class="kc">False</span><span class="p">):</span>
+                        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                            <span class="sa">f</span><span class="s2">"[</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">DATASET_NAME</span><span class="si">}</span><span class="s2">] cached labels have revision </span><span class="si">{</span><span class="n">stale_rev</span><span class="si">}</span><span class="s2"> &lt; "</span>
+                            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">LABELS_REVISION</span><span class="si">}</span><span class="s2"> (the label reader changed): recomputing them"</span>
+                        <span class="p">)</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">_warned_stale_labels</span> <span class="o">=</span> <span class="kc">True</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_save_labels_cache</span><span class="p">(</span><span class="n">lp</span><span class="p">,</span> <span class="n">spec</span><span class="p">,</span> <span class="n">fresh</span><span class="p">)</span>
+                    <span class="k">return</span> <span class="n">fresh</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 
         <span class="n">labels</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_read_subject_labels</span><span class="p">(</span><span class="n">spec</span><span class="p">)</span>
         <span class="n">labels</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sanitize_labels</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">labels</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int16</span><span class="p">))</span>
 
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">cache_enabled</span><span class="p">:</span>
-            <span class="n">meta</span> <span class="o">=</span> <span class="p">{</span>
-                <span class="s2">"dataset"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">DATASET_NAME</span><span class="p">,</span>
-                <span class="s2">"subject_id"</span><span class="p">:</span> <span class="n">spec</span><span class="o">.</span><span class="n">subject_id</span><span class="p">,</span>
-                <span class="s2">"n_epochs"</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">labels</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span>
-                <span class="s2">"sanitized_to"</span><span class="p">:</span> <span class="s2">"AASM_5_class"</span><span class="p">,</span>
-            <span class="p">}</span>
-            <span class="k">try</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">cache</span><span class="o">.</span><span class="n">atomic_save_array</span><span class="p">(</span><span class="n">lp</span><span class="p">,</span> <span class="n">labels</span><span class="p">,</span> <span class="n">meta</span><span class="p">)</span>
-            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
-                <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Could not cache labels for </span><span class="si">{</span><span class="n">spec</span><span class="o">.</span><span class="n">subject_id</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_save_labels_cache</span><span class="p">(</span><span class="n">lp</span><span class="p">,</span> <span class="n">spec</span><span class="p">,</span> <span class="n">labels</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="n">labels</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_pipeline_output_shape</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">"""Per-epoch output shape of the pipeline (e.g. ``(29, 129)`` for the spectrogram presets).</span>
+
+<span class="sd">        Used to zero-fill a subject for which no requested channel could be resolved: its zeros must have the</span>
+<span class="sd">        same trailing shape as the signals of the other subjects, or batches mixing them cannot be stacked.</span>
+<span class="sd">        """</span>
+        <span class="n">cached</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">"_fallback_out_shape"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">cached</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">cached</span>
+        <span class="n">shape</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="p">()</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">fs</span> <span class="o">=</span> <span class="mf">100.0</span>
+            <span class="n">req</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">channels</span> <span class="k">else</span> <span class="s2">"EEG"</span>
+            <span class="n">stub</span> <span class="o">=</span> <span class="n">ResolvedChannel</span><span class="p">(</span>
+                <span class="n">request</span><span class="o">=</span><span class="n">req</span><span class="p">,</span>
+                <span class="n">physical</span><span class="o">=</span><span class="n">req</span><span class="p">,</span>
+                <span class="n">modality</span><span class="o">=</span><span class="n">infer_channel_modality</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">req</span><span class="p">))</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                <span class="n">fs_in</span><span class="o">=</span><span class="n">fs</span><span class="p">,</span>
+                <span class="n">is_differential</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="n">compiled</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pipeline_for_channel</span><span class="p">(</span><span class="n">stub</span><span class="p">)</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">fs</span><span class="p">)</span>
+            <span class="n">n</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">epoch_length_sec</span> <span class="o">*</span> <span class="n">fs</span><span class="p">))</span>
+            <span class="n">out</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_epoch_and_run_pipeline</span><span class="p">(</span>
+                <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">),</span> <span class="n">fs</span><span class="p">,</span> <span class="n">compiled</span><span class="p">,</span> <span class="n">stub</span>
+            <span class="p">)</span>
+            <span class="n">shape</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">out</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>  <span class="c1"># fall back to the historical 1-D zeros</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"[</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">DATASET_NAME</span><span class="si">}</span><span class="s2">] could not infer the pipeline output shape: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">"</span>
+            <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_fallback_out_shape</span> <span class="o">=</span> <span class="n">shape</span>
+        <span class="k">return</span> <span class="n">shape</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_save_labels_cache</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">lp</span><span class="p">,</span> <span class="n">spec</span><span class="p">:</span> <span class="n">SubjectSpec</span><span class="p">,</span> <span class="n">labels</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">meta</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">"dataset"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">DATASET_NAME</span><span class="p">,</span>
+            <span class="s2">"subject_id"</span><span class="p">:</span> <span class="n">spec</span><span class="o">.</span><span class="n">subject_id</span><span class="p">,</span>
+            <span class="s2">"n_epochs"</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">labels</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span>
+            <span class="s2">"sanitized_to"</span><span class="p">:</span> <span class="s2">"AASM_5_class"</span><span class="p">,</span>
+            <span class="s2">"labels_revision"</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">LABELS_REVISION</span><span class="p">),</span>
+        <span class="p">}</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">cache</span><span class="o">.</span><span class="n">atomic_save_array</span><span class="p">(</span><span class="n">lp</span><span class="p">,</span> <span class="n">labels</span><span class="p">,</span> <span class="n">meta</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Could not cache labels for </span><span class="si">{</span><span class="n">spec</span><span class="o">.</span><span class="n">subject_id</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_load_or_compute_channel</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">spec</span><span class="p">:</span> <span class="n">SubjectSpec</span><span class="p">,</span> <span class="n">resolved</span><span class="p">:</span> <span class="n">ResolvedChannel</span>
@@ -1633,7 +1724,7 @@ window.addEventListener("load", () => mermaid.run());
 
         <span class="c1"># Fill in missing channels with zeros (same shape as resolved ones)</span>
         <span class="k">if</span> <span class="n">_ref_shape</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">_ref_shape</span> <span class="o">=</span> <span class="p">(</span><span class="n">requested_len</span><span class="p">,)</span>
+            <span class="n">_ref_shape</span> <span class="o">=</span> <span class="p">(</span><span class="n">requested_len</span><span class="p">,)</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pipeline_output_shape</span><span class="p">()</span>
         <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">channel_order</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">signals_raw</span><span class="p">:</span>
                 <span class="n">signals_raw</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">_ref_shape</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>

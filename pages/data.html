@@ -616,6 +616,14 @@ See the <a class="reference internal" href="train/train.html"><span class="std s
 </ul>
 </dd>
 </dl>
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">LABELS_REVISION</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><span class="pre">int</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">1</span></em></dt>
+<dd><p>Revision of the label reader. Cached labels store the revision they were computed with; a cache with a
+LOWER revision is stale (the reader changed how labels are built) and is recomputed. Caches without the
+key count as revision 1. Bump it in a subclass whenever a fix changes the labels it returns.</p>
+</dd></dl>
+
 <dl class="py method">
 <dt class="sig sig-object py">
 <span class="sig-name descname"><span class="pre">available_channels</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/physioex/data/base.html#BasePhysioDataset.available_channels"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
