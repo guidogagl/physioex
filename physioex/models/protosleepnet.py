@@ -173,6 +173,10 @@ class ChannelMixer(nn.Module):
         # Accuracy tracking buffers
         self.register_buffer("channels_acc", torch.ones(n_channels) / n_classes)
         self.channels_acc_list: list[torch.Tensor] = []
+        # Opt-in (default keeps the released behaviour): refresh the buffer from
+        # *training* batches too, smoothed with an EMA, so p_c follows the model.
+        self.acc_momentum = 0.0
+        self.track_train_acc = False
 
     def update_channel_acc(self, acc_list):
         acc_tensor = torch.tensor(acc_list, dtype=torch.float32)
@@ -200,7 +204,11 @@ class ChannelMixer(nn.Module):
         # Update accuracy buffer
         if self.training and len(self.channels_acc_list) > 0:
             mean_acc = torch.stack(self.channels_acc_list, dim=0).mean(dim=0)
-            self.channels_acc.copy_(mean_acc)
+            m = float(self.acc_momentum)
+            self.channels_acc.copy_(
+                m * self.channels_acc
+                + (1.0 - m) * mean_acc.to(self.channels_acc.device)
+            )
             self.channels_acc_list.clear()
 
         # Dropout
@@ -583,8 +591,11 @@ class ProtoSleepNetTrainer(Trainer):
                 chan_out = mcy[:, :, c].reshape(-1, n_classes)
                 loss = loss + loss_fn(chan_out, targets_flat)
 
-            # Track per-channel accuracy during eval
-            if not model.training:
+            # Track per-channel accuracy during eval (and during training when
+            # the mixer opts in via ``track_train_acc``). ``mcy`` is computed
+            # before the dropout, so these are clean per-channel accuracies.
+            _cm = getattr(model, "channel_mixer", None)
+            if not model.training or getattr(_cm, "track_train_acc", False):
                 chan_accs = []
                 for c in range(C):
                     chan_out = mcy[:, :, c].reshape(-1, n_classes)

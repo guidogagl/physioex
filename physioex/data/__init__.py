@@ -29,6 +29,7 @@ from physioex.data.steps import (
 from physioex.data.presets import get_preset, available_presets, PRESETS
 from physioex.data.base import BasePhysioDataset, SubjectSpec
 from physioex.data.multi import MultiDataset
+from physioex.data.sampling import site_balanced_weights, make_site_sampler
 from physioex.data.cache import ChannelCache, SCHEMA_VERSION
 from physioex.data.collate import dict_collate_fn, stack_channels, is_dict_batch
 from physioex.data.readers import (
@@ -67,6 +68,9 @@ __all__ = [
     "BasePhysioDataset",
     "SubjectSpec",
     "MultiDataset",
+    # Sampling
+    "site_balanced_weights",
+    "make_site_sampler",
     # Cache
     "ChannelCache",
     "SCHEMA_VERSION",
