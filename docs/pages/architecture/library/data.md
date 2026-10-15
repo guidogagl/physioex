@@ -67,13 +67,14 @@ classDiagram
     _NSRRBaseDataset <|-- MrOSDataset
     _NSRRBaseDataset <|-- SHHSDataset
     _NSRRBaseDataset <|-- HPAPDataset
+    _NSRRBaseDataset <|-- CCSHSDataset
     MultiDataset o-- "N" BasePhysioDataset
     BasePhysioDataset ..> SubjectSpec : yields
 ```
 
-The 12 concrete datasets are resolved by name from a **string registry** in
+The 13 concrete datasets are resolved by name from a **string registry** in
 `physioex/data/datasets/__init__.py` — `get_dataset(name)` / `available_datasets()`;
-keys: `hmc, sleepedf, dcsm, mesa, mros, hpap, wsc, mass, alzheimers, parkinsons, shhs, stages`.
+keys: `hmc, sleepedf, dcsm, mesa, mros, hpap, ccshs, wsc, mass, alzheimers, parkinsons, shhs, stages`.
 
 ### Legacy (deprecated)
 

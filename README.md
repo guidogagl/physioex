@@ -46,7 +46,7 @@ linear probing): `CBraMod`, `BENDR`, `LaBraM`, `BIOT`, `SleepFM`, `TFC`, `REVE`,
 ## Supported datasets
 
 All datasets are resolved by name via `get_dataset(name)`; `available_datasets()` returns:
-`alzheimers`, `dcsm`, `hmc`, `hpap`, `mass`, `mesa`, `mros`, `parkinsons`, `shhs`, `sleepedf`, `stages`, `wsc`.
+`alzheimers`, `ccshs`, `dcsm`, `hmc`, `hpap`, `mass`, `mesa`, `mros`, `parkinsons`, `shhs`, `sleepedf`, `stages`, `wsc`.
 
 ### Publicly Available:
 
@@ -66,6 +66,7 @@ These datasets can be obtained from the NSRR archive. Once downloaded, point Phy
 - [MrOS (The Osteoporotic Fractures in Men Study)](https://sleepdata.org/datasets/mros), is a multicenter study comprising 2,911 PSG recordings from men aged 65 years or older, enrolled at six clinical centers. PSG recordings were conducted in home settings and included C3/A2 and C4/A1 EEGs, chin EMG, and left-right EOG, all sampled at 256 Hz.
 - [WSC (The Wisconsin Sleep Cohort)](https://sleepdata.org/datasets/wsc) A longitudinal study of the causes, consequences, and natural history of sleep disorders using overnight in-laboratory sleep recordings gathered at the University of Wisconsin, United States, with a baseline sample of 1,500 subjects assessed at four-year intervals. The study consists of multiple visits with overnight PSG data acquisition. PSG recordings included C3/M2 EEG, EMG, and left-right EOG, all sampled at 200 Hz.
 - [STAGES (Stanford Technology Analytics and Genomics in Sleep)](https://sleepdata.org/datasets/stages), 1,914 recordings across 13 clinical sites with a bipolar EEG montage (C4-M1 / C3-M2 equivalent), EOG and chin EMG, plus rich respiratory / arousal / PLM event annotations. Selectable by site and by recording (`first` / `second` / `all`).
+- [CCSHS (Cleveland Children's Sleep and Health Study)](https://sleepdata.org/datasets/ccshs) (`ccshs`), 515 children and adolescents with one in-home PSG each (NSRR `ccshs-trec`): C3/A2 and C4/A1 EEG (128 Hz), LOC/ROC EOG (128 Hz) and chin EMG (256 Hz), stages scored by Rechtschaffen & Kales and merged to N3. Eleven recordings whose hypnogram cannot be reconciled with the NSRR summary table are excluded by default (`exclude_subjects=[]` keeps them).
 - [HomePAP](https://sleepdata.org/datasets/homepap) (`hpap`), a positive-airway-pressure study in NSRR format, with three subsets — `lab-full`, `lab-split` and `home` — selectable via the `subset` parameter.
 
 ### Others
