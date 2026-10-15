@@ -205,7 +205,10 @@ class ChannelMixer(nn.Module):
         if self.training and len(self.channels_acc_list) > 0:
             mean_acc = torch.stack(self.channels_acc_list, dim=0).mean(dim=0)
             m = float(self.acc_momentum)
-            self.channels_acc.copy_(m * self.channels_acc + (1.0 - m) * mean_acc.to(self.channels_acc.device))
+            self.channels_acc.copy_(
+                m * self.channels_acc
+                + (1.0 - m) * mean_acc.to(self.channels_acc.device)
+            )
             self.channels_acc_list.clear()
 
         # Dropout
