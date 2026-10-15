@@ -15,6 +15,18 @@ excluded by default (`CCSHSDataset.EXCLUDED_SUBJECTS`, `exclude_subjects=[]` kee
 disagree with the NSRR summary table and two without a row in it. Metadata is read from
 `datasets/ccshs-trec-dataset-*.csv` whatever its version. Tests in `tests/test_ccshs.py`.
 
+### Added — site-balanced sampling (`physioex.data.sampling`)
+
+`site_balanced_weights` / `make_site_sampler` (also exported from `physioex.data`): sampling weights that give every
+site the same mass and, inside a site, every subject the same mass, for training on collections of datasets of very
+different sizes with `MultiDataset`. Tests in `tests/test_sampling.py`.
+
+### Added — opt-in channel-accuracy tracking during training (`ChannelMixer`)
+
+`ChannelMixer.track_train_acc` and `acc_momentum` update the per-channel accuracy that drives the accuracy-weighted
+modality dropout from the training step too (EMA of the clean per-channel logits). Off by default, so the released
+models and existing training runs behave exactly as before. Tests in `tests/test_channel_acc_tracking.py`.
+
 ## 2.0.2 — 2026-10-10
 
 ### Fixed — accuracy-weighted modality dropout (`physioex.models.protosleepnet`)

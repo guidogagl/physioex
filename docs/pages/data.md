@@ -98,6 +98,29 @@ dcsm = get_dataset("dcsm")(channels=["EEG"], pipelines="raw", sequence_length=21
 merged = MultiDataset([hmc, dcsm])
 ```
 
+### Balancing sites with very different sizes
+
+When the merged datasets differ a lot in size, uniform sampling lets the largest one dominate. `make_site_sampler`
+gives every *site* the same total probability mass and, inside a site, every *subject* the same mass:
+`p(window) ∝ 1 / (N_s · W_u)` with `N_s` the number of training subjects of the site and `W_u` the number of windows of
+the subject. Several wrapped datasets can form one site (for example the visits of one cohort): give them the same
+name in `site_of_dataset`.
+
+```python
+from torch.utils.data import DataLoader, Subset
+from physioex.data import dict_collate_fn, make_site_sampler
+
+train_idx = ...                                    # flat MultiDataset indices of the training windows
+sampler, report = make_site_sampler(
+    merged, train_idx, site_of_dataset=["hmc", "dcsm"], num_samples=100_000, seed=0
+)
+loader = DataLoader(Subset(merged, train_idx), batch_size=32, sampler=sampler, collate_fn=dict_collate_fn)
+report["hmc"]   # {'subjects': ..., 'windows': ..., 'mass': 0.5}
+```
+
+`site_balanced_weights(merged, train_idx, site_of_dataset)` returns the weights (summing to 1) if you want to build
+your own sampler.
+
 ## Building a DataLoader
 
 Because items are dicts, use `dict_collate_fn` as the loader's `collate_fn`:
