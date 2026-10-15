@@ -48,9 +48,7 @@ CCSHS_STAGE_MAP: Dict[str, int] = {
 }
 
 
-def parse_ccshs_xml(
-    xml_path, epoch_length_sec: float = 30.0
-) -> Dict[str, Any]:
+def parse_ccshs_xml(xml_path, epoch_length_sec: float = 30.0) -> Dict[str, Any]:
     """Parse a CCSHS NSRR XML.
 
     Returns dict with ``labels`` (int16, indexed by event ONSET, length
@@ -77,8 +75,11 @@ def parse_ccshs_xml(
             (float(ev.findtext("Start")), float(ev.findtext("Duration")), concept)
         )
     if not events:
-        return {"labels": np.array([], dtype=np.int16), "duration_sec": rec_dur,
-                "clock_time": clock}
+        return {
+            "labels": np.array([], dtype=np.int16),
+            "duration_sec": rec_dur,
+            "clock_time": clock,
+        }
     end = max(s + d for s, d, _ in events)
     total = rec_dur if rec_dur is not None else end
     n = int(total // epoch_length_sec)
@@ -103,8 +104,17 @@ class CCSHSDataset(_NSRRBaseDataset):
     EXCLUDED_SUBJECTS = frozenset(
         f"ccshs-trec-{n}"
         for n in (
-            1800064, 1800224, 1800306, 1800384, 1800432, 1800458, 1800620, 1800640, 1800873,  # CSV-discordant
-            1800109, 1800489,  # no CSV row
+            1800064,
+            1800224,
+            1800306,
+            1800384,
+            1800432,
+            1800458,
+            1800620,
+            1800640,
+            1800873,  # CSV-discordant
+            1800109,
+            1800489,  # no CSV row
         )
     )
 
@@ -152,7 +162,9 @@ class CCSHSDataset(_NSRRBaseDataset):
         # version-independent: ccshs-trec-dataset-<version>.csv (newest version wins)
         found = sorted((Path(root) / "datasets").glob("ccshs-trec-dataset-*.csv"))
         if not found:
-            logger.warning("CCSHS metadata CSV not found under %s", Path(root) / "datasets")
+            logger.warning(
+                "CCSHS metadata CSV not found under %s", Path(root) / "datasets"
+            )
             return {}
         csv_path = found[-1]
         import pandas as pd
@@ -173,7 +185,10 @@ class CCSHSDataset(_NSRRBaseDataset):
         if self._exclude:
             kept = [s for s in specs if s.subject_id not in self._exclude]
             if len(kept) != len(specs):
-                logger.info("CCSHS: %d recordings excluded by default list", len(specs) - len(kept))
+                logger.info(
+                    "CCSHS: %d recordings excluded by default list",
+                    len(specs) - len(kept),
+                )
             specs = kept
         for spec in specs:
             nid = spec.subject_id.replace("ccshs-trec-", "")
