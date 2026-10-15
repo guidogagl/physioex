@@ -530,6 +530,27 @@ same <code class="docutils literal notranslate"><span class="pre">sequence_lengt
 <span class="n">merged</span> <span class="o">=</span> <span class="n">MultiDataset</span><span class="p">([</span><span class="n">hmc</span><span class="p">,</span> <span class="n">dcsm</span><span class="p">])</span>
 </pre></div>
 </div>
+<section id="balancing-sites-with-very-different-sizes">
+<h3>Balancing sites with very different sizes<a class="headerlink" href="#balancing-sites-with-very-different-sizes" title="Link to this heading">#</a></h3>
+<p>When the merged datasets differ a lot in size, uniform sampling lets the largest one dominate. <code class="docutils literal notranslate"><span class="pre">make_site_sampler</span></code>
+gives every <em>site</em> the same total probability mass and, inside a site, every <em>subject</em> the same mass:
+<code class="docutils literal notranslate"><span class="pre">p(window)</span> <span class="pre">∝</span> <span class="pre">1</span> <span class="pre">/</span> <span class="pre">(N_s</span> <span class="pre">·</span> <span class="pre">W_u)</span></code> with <code class="docutils literal notranslate"><span class="pre">N_s</span></code> the number of training subjects of the site and <code class="docutils literal notranslate"><span class="pre">W_u</span></code> the number of windows of
+the subject. Several wrapped datasets can form one site (for example the visits of one cohort): give them the same
+name in <code class="docutils literal notranslate"><span class="pre">site_of_dataset</span></code>.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">torch.utils.data</span><span class="w"> </span><span class="kn">import</span> <span class="n">DataLoader</span><span class="p">,</span> <span class="n">Subset</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">physioex.data</span><span class="w"> </span><span class="kn">import</span> <span class="n">dict_collate_fn</span><span class="p">,</span> <span class="n">make_site_sampler</span>
+
+<span class="n">train_idx</span> <span class="o">=</span> <span class="o">...</span>                                    <span class="c1"># flat MultiDataset indices of the training windows</span>
+<span class="n">sampler</span><span class="p">,</span> <span class="n">report</span> <span class="o">=</span> <span class="n">make_site_sampler</span><span class="p">(</span>
+    <span class="n">merged</span><span class="p">,</span> <span class="n">train_idx</span><span class="p">,</span> <span class="n">site_of_dataset</span><span class="o">=</span><span class="p">[</span><span class="s2">"hmc"</span><span class="p">,</span> <span class="s2">"dcsm"</span><span class="p">],</span> <span class="n">num_samples</span><span class="o">=</span><span class="mi">100_000</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="mi">0</span>
+<span class="p">)</span>
+<span class="n">loader</span> <span class="o">=</span> <span class="n">DataLoader</span><span class="p">(</span><span class="n">Subset</span><span class="p">(</span><span class="n">merged</span><span class="p">,</span> <span class="n">train_idx</span><span class="p">),</span> <span class="n">batch_size</span><span class="o">=</span><span class="mi">32</span><span class="p">,</span> <span class="n">sampler</span><span class="o">=</span><span class="n">sampler</span><span class="p">,</span> <span class="n">collate_fn</span><span class="o">=</span><span class="n">dict_collate_fn</span><span class="p">)</span>
+<span class="n">report</span><span class="p">[</span><span class="s2">"hmc"</span><span class="p">]</span>   <span class="c1"># {'subjects': ..., 'windows': ..., 'mass': 0.5}</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">site_balanced_weights(merged,</span> <span class="pre">train_idx,</span> <span class="pre">site_of_dataset)</span></code> returns the weights (summing to 1) if you want to build
+your own sampler.</p>
+</section>
 </section>
 <section id="building-a-dataloader">
 <h2>Building a DataLoader<a class="headerlink" href="#building-a-dataloader" title="Link to this heading">#</a></h2>
@@ -959,7 +980,10 @@ The collate sorts channels by (modality, index) for deterministic ordering.</p>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#resolving-a-dataset-by-name">Resolving a dataset by name</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#instantiating-a-dataset">Instantiating a dataset</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#splitting">Splitting</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#merging-datasets">Merging datasets</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#merging-datasets">Merging datasets</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#balancing-sites-with-very-different-sizes">Balancing sites with very different sizes</a></li>
+</ul>
+</li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#building-a-dataloader">Building a DataLoader</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#api">API</a></li>
 </ul>
