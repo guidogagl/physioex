@@ -105,6 +105,11 @@ class BasePhysioDataset(Dataset):
     # Epoch length in seconds (30 for humans, 4 for mouse)
     DEFAULT_EPOCH_LENGTH_SEC: float = 30.0
 
+    #: Revision of the label reader. Cached labels store the revision they were computed with; a cache with a
+    #: LOWER revision is stale (the reader changed how labels are built) and is recomputed. Caches without the
+    #: key count as revision 1. Bump it in a subclass whenever a fix changes the labels it returns.
+    LABELS_REVISION: int = 1
+
     def __init__(
         self,
         root: Optional[str] = None,
@@ -594,6 +599,7 @@ class BasePhysioDataset(Dataset):
         """Return the EDF header for a subject, using on-disk cache when
         valid.  When ``self.cache_enabled`` is False, the header is always
         probed from the source file and no disk I/O is performed."""
+        stale_header = None
         if self.cache_enabled:
             hpath = self.cache.header_path(self.DATASET_NAME, spec.subject_id)
             src_mtime = None
@@ -611,11 +617,24 @@ class BasePhysioDataset(Dataset):
                             or abs(float(cached.get("source_mtime", 0)) - src_mtime)
                             < 1e-3
                         ):
-                            return EDFHeader.from_dict(cached)
+                            if "start_sec" in cached:
+                                return EDFHeader.from_dict(cached)
+                            # Written before ``start_sec`` existed (label readers such as STAGES need it
+                            # to align the hypnogram to the EDF start): probe the header again.
+                            stale_header = cached
                     except Exception:
                         pass
 
-        header = self._read_edf_header(spec)
+        try:
+            header = self._read_edf_header(spec)
+        except Exception as exc:
+            if stale_header is None:
+                raise
+            logger.warning(
+                f"[{self.DATASET_NAME}] {spec.subject_id}: cached header predates the 'start_sec' field and "
+                f"cannot be refreshed ({type(exc).__name__}: {exc}); using the cached header"
+            )
+            return EDFHeader.from_dict(stale_header)
 
         if self.cache_enabled:
             try:
@@ -634,8 +653,10 @@ class BasePhysioDataset(Dataset):
         unconditionally available; subjects missing a channel get it
         zero-filled at access time.
 
-        Subjects are **never dropped** due to missing channels.
-        Only genuinely corrupt EDFs (header unreadable) are skipped
+        Subjects are **never dropped** due to missing channels (missing
+        channels are zero-filled with the shape the pipeline produces; a
+        subject with none of the requested channels gets a warning and all
+        zeros). Only genuinely corrupt EDFs (header unreadable) are skipped
         when ``skip_corrupt=True``.
         """
         # Phase 1: probe all headers
@@ -692,6 +713,13 @@ class BasePhysioDataset(Dataset):
                     f"{missing} not available (will be zero-filled)"
                 )
 
+            if self.channels and all(rc is None for rc in resolved):
+                warnings.warn(
+                    f"[{self.DATASET_NAME}] Subject {spec.subject_id}: none of the requested channels "
+                    f"{list(self.channels)} is available (EDF channels: {list(header.available_channels)}); "
+                    f"its signals will be all zeros"
+                )
+
             self._resolved[spec.subject_id] = resolved
 
     # ------------------------------------------------------------------
@@ -711,29 +739,92 @@ class BasePhysioDataset(Dataset):
             if lp.exists() and lmeta.exists():
                 try:
                     memmap, meta = self.cache.load_memmap(lp)
-                    return np.asarray(memmap).astype(np.int64, copy=False)
+                    cached = np.asarray(memmap).astype(np.int64, copy=False)
+                    cached_rev = int((meta or {}).get("labels_revision", 1))
+                    if cached_rev >= self.LABELS_REVISION:
+                        return cached
+                    stale_rev = cached_rev
                 except Exception as exc:
                     logger.warning(
                         f"Corrupt label cache for {spec.subject_id}: {exc}; "
                         f"rebuilding"
                     )
+                    stale_rev = None
+                if stale_rev is not None:
+                    # cache written by an older label reader: recompute if the source is available
+                    try:
+                        fresh = self._sanitize_labels(
+                            np.asarray(self._read_subject_labels(spec), dtype=np.int16)
+                        )
+                    except Exception as exc:
+                        logger.warning(
+                            f"[{self.DATASET_NAME}] {spec.subject_id}: cached labels have revision "
+                            f"{stale_rev} < {self.LABELS_REVISION} (stale) and cannot be recomputed "
+                            f"({type(exc).__name__}: {exc}); using the cached labels"
+                        )
+                        return cached
+                    if not getattr(self, "_warned_stale_labels", False):
+                        logger.warning(
+                            f"[{self.DATASET_NAME}] cached labels have revision {stale_rev} < "
+                            f"{self.LABELS_REVISION} (the label reader changed): recomputing them"
+                        )
+                        self._warned_stale_labels = True
+                    self._save_labels_cache(lp, spec, fresh)
+                    return fresh.astype(np.int64, copy=False)
 
         labels = self._read_subject_labels(spec)
         labels = self._sanitize_labels(np.asarray(labels, dtype=np.int16))
 
         if self.cache_enabled:
-            meta = {
-                "dataset": self.DATASET_NAME,
-                "subject_id": spec.subject_id,
-                "n_epochs": int(labels.shape[0]),
-                "sanitized_to": "AASM_5_class",
-            }
-            try:
-                self.cache.atomic_save_array(lp, labels, meta)
-            except Exception as exc:
-                logger.warning(f"Could not cache labels for {spec.subject_id}: {exc}")
+            self._save_labels_cache(lp, spec, labels)
 
         return labels.astype(np.int64, copy=False)
+
+    def _pipeline_output_shape(self) -> Tuple[int, ...]:
+        """Per-epoch output shape of the pipeline (e.g. ``(29, 129)`` for the spectrogram presets).
+
+        Used to zero-fill a subject for which no requested channel could be resolved: its zeros must have the
+        same trailing shape as the signals of the other subjects, or batches mixing them cannot be stacked.
+        """
+        cached = getattr(self, "_fallback_out_shape", None)
+        if cached is not None:
+            return cached
+        shape: Tuple[int, ...] = ()
+        try:
+            fs = 100.0
+            req = self.channels[0] if self.channels else "EEG"
+            stub = ResolvedChannel(
+                request=req,
+                physical=req,
+                modality=infer_channel_modality(str(req)).name,
+                fs_in=fs,
+                is_differential=False,
+            )
+            compiled = self._pipeline_for_channel(stub).compile(fs)
+            n = int(round(self.epoch_length_sec * fs))
+            out = self._epoch_and_run_pipeline(
+                np.zeros(n, dtype=np.float32), fs, compiled, stub
+            )
+            shape = tuple(out.shape[1:])
+        except Exception as exc:  # fall back to the historical 1-D zeros
+            logger.warning(
+                f"[{self.DATASET_NAME}] could not infer the pipeline output shape: {exc}"
+            )
+        self._fallback_out_shape = shape
+        return shape
+
+    def _save_labels_cache(self, lp, spec: SubjectSpec, labels: np.ndarray) -> None:
+        meta = {
+            "dataset": self.DATASET_NAME,
+            "subject_id": spec.subject_id,
+            "n_epochs": int(labels.shape[0]),
+            "sanitized_to": "AASM_5_class",
+            "labels_revision": int(self.LABELS_REVISION),
+        }
+        try:
+            self.cache.atomic_save_array(lp, labels, meta)
+        except Exception as exc:
+            logger.warning(f"Could not cache labels for {spec.subject_id}: {exc}")
 
     def _load_or_compute_channel(
         self, spec: SubjectSpec, resolved: ResolvedChannel
@@ -1190,7 +1281,7 @@ class BasePhysioDataset(Dataset):
 
         # Fill in missing channels with zeros (same shape as resolved ones)
         if _ref_shape is None:
-            _ref_shape = (requested_len,)
+            _ref_shape = (requested_len,) + self._pipeline_output_shape()
         for key in channel_order:
             if key not in signals_raw:
                 signals_raw[key] = np.zeros(_ref_shape, dtype=np.float32)

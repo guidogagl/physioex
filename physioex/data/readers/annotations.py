@@ -143,7 +143,7 @@ def parse_nsrr_xml_events(xml_path: Union[str, Path]) -> List:
     """Parse non-stage events from an NSRR XML file.
 
     Returns list of ``SleepEvent`` objects for respiratory, arousal,
-    limb movement, desaturation, and other events.
+    limb movement, desaturation, signal artifact (``artifact``) and other events.
     """
     from physioex.data.events import SleepEvent
 
@@ -168,7 +168,9 @@ def parse_nsrr_xml_events(xml_path: Union[str, Path]) -> List:
             continue
         category = CATEGORY_MAP.get(etype, "other")
         clean_concept = concept.split("|")[0].strip() if "|" in concept else concept
-        if "desaturation" in clean_concept.lower():
+        if "artifact" in clean_concept.lower():
+            category = "artifact"  # e.g. "SpO2 artifact": unreliable oximeter signal, not a physiological event
+        elif "desaturation" in clean_concept.lower():
             category = "desaturation"
         extra: Dict[str, object] = {}
         for tag in ("SpO2Nadir", "SpO2Baseline", "SignalLocation"):
@@ -224,7 +226,7 @@ _STAGES_EVENT_CATEGORIES: Dict[str, str] = {
     # Desaturation
     "Desaturation": "desaturation",
     "Desaturation w/ Respiratory": "desaturation",
-    "SpO2 artifact": "desaturation",
+    "SpO2 artifact": "artifact",
     # Arousal
     "Arousal": "arousal",
     "Arousal w/ Respiratory": "arousal",
