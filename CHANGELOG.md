@@ -4,7 +4,10 @@ All notable changes to PhysioEx are documented here. Versions follow the
 `physioex.__version__` string (read dynamically by the build) and the `v*` git tags
 that publish to PyPI.
 
-## Unreleased
+## 2.0.3 — 2026-10-15
+
+CCSHS dataset, opt-in utilities for multi-dataset training, and three data-layer fixes. STAGES and Alzheimers label
+caches are recomputed on first use, and event counts per type change (see "`artifact` event type").
 
 ### Added — CCSHS dataset (`physioex.data.datasets.ccshs`)
 
