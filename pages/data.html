@@ -435,11 +435,11 @@ imported directly. For the full class diagram and how the pieces fit together,
 see the <a class="reference internal" href="architecture/library/data.html"><span class="std std-doc">data-layer architecture</span></a> page.</p>
 <section id="resolving-a-dataset-by-name">
 <h2>Resolving a dataset by name<a class="headerlink" href="#resolving-a-dataset-by-name" title="Link to this heading">#</a></h2>
-<p><code class="docutils literal notranslate"><span class="pre">physioex.data.datasets</span></code> exposes a registry of the 12 concrete datasets:</p>
+<p><code class="docutils literal notranslate"><span class="pre">physioex.data.datasets</span></code> exposes a registry of the 13 concrete datasets:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">physioex.data.datasets</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_dataset</span><span class="p">,</span> <span class="n">available_datasets</span>
 
 <span class="n">available_datasets</span><span class="p">()</span>
-<span class="c1"># ['alzheimers', 'dcsm', 'hmc', 'hpap', 'mass', 'mesa', 'mros',</span>
+<span class="c1"># ['alzheimers', 'ccshs', 'dcsm', 'hmc', 'hpap', 'mass', 'mesa', 'mros',</span>
 <span class="c1">#  'parkinsons', 'shhs', 'sleepedf', 'stages', 'wsc']</span>
 
 <span class="n">HMCDataset</span> <span class="o">=</span> <span class="n">get_dataset</span><span class="p">(</span><span class="s2">"hmc"</span><span class="p">)</span>   <span class="c1"># the class, not an instance</span>

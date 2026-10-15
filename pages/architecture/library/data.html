@@ -465,11 +465,12 @@ lazy, content-addressed pipeline. Source: <code class="docutils literal notransl
     _NSRRBaseDataset &lt;|-- MrOSDataset
     _NSRRBaseDataset &lt;|-- SHHSDataset
     _NSRRBaseDataset &lt;|-- HPAPDataset
+    _NSRRBaseDataset &lt;|-- CCSHSDataset
     MultiDataset o-- &quot;N&quot; BasePhysioDataset
     BasePhysioDataset ..&gt; SubjectSpec : yields
-    </pre><p>The 12 concrete datasets are resolved by name from a <strong>string registry</strong> in
+    </pre><p>The 13 concrete datasets are resolved by name from a <strong>string registry</strong> in
 <code class="docutils literal notranslate"><span class="pre">physioex/data/datasets/__init__.py</span></code> — <code class="docutils literal notranslate"><span class="pre">get_dataset(name)</span></code> / <code class="docutils literal notranslate"><span class="pre">available_datasets()</span></code>;
-keys: <code class="docutils literal notranslate"><span class="pre">hmc,</span> <span class="pre">sleepedf,</span> <span class="pre">dcsm,</span> <span class="pre">mesa,</span> <span class="pre">mros,</span> <span class="pre">hpap,</span> <span class="pre">wsc,</span> <span class="pre">mass,</span> <span class="pre">alzheimers,</span> <span class="pre">parkinsons,</span> <span class="pre">shhs,</span> <span class="pre">stages</span></code>.</p>
+keys: <code class="docutils literal notranslate"><span class="pre">hmc,</span> <span class="pre">sleepedf,</span> <span class="pre">dcsm,</span> <span class="pre">mesa,</span> <span class="pre">mros,</span> <span class="pre">hpap,</span> <span class="pre">ccshs,</span> <span class="pre">wsc,</span> <span class="pre">mass,</span> <span class="pre">alzheimers,</span> <span class="pre">parkinsons,</span> <span class="pre">shhs,</span> <span class="pre">stages</span></code>.</p>
 <section id="legacy-deprecated">
 <h3>Legacy (deprecated)<a class="headerlink" href="#legacy-deprecated" title="Link to this heading">#</a></h3>
 <pre  class="mermaid">

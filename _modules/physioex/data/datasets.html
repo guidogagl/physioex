@@ -417,6 +417,7 @@ window.addEventListener("load", () => mermaid.run());
 <span class="kn">from</span><span class="w"> </span><span class="nn">physioex.data.datasets.parkinsons</span><span class="w"> </span><span class="kn">import</span> <span class="n">ParkinsonsDataset</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">physioex.data.datasets.shhs</span><span class="w"> </span><span class="kn">import</span> <span class="n">SHHSDataset</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">physioex.data.datasets.stages</span><span class="w"> </span><span class="kn">import</span> <span class="n">STAGESDataset</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">physioex.data.datasets.ccshs</span><span class="w"> </span><span class="kn">import</span> <span class="n">CCSHSDataset</span>
 
 <span class="n">REGISTRY</span> <span class="o">=</span> <span class="p">{</span>
     <span class="s2">"hmc"</span><span class="p">:</span> <span class="n">HMCDataset</span><span class="p">,</span>
@@ -431,6 +432,7 @@ window.addEventListener("load", () => mermaid.run());
     <span class="s2">"parkinsons"</span><span class="p">:</span> <span class="n">ParkinsonsDataset</span><span class="p">,</span>
     <span class="s2">"shhs"</span><span class="p">:</span> <span class="n">SHHSDataset</span><span class="p">,</span>
     <span class="s2">"stages"</span><span class="p">:</span> <span class="n">STAGESDataset</span><span class="p">,</span>
+    <span class="s2">"ccshs"</span><span class="p">:</span> <span class="n">CCSHSDataset</span><span class="p">,</span>
 <span class="p">}</span>
 
 
@@ -463,6 +465,7 @@ window.addEventListener("load", () => mermaid.run());
     <span class="s2">"ParkinsonsDataset"</span><span class="p">,</span>
     <span class="s2">"SHHSDataset"</span><span class="p">,</span>
     <span class="s2">"STAGESDataset"</span><span class="p">,</span>
+    <span class="s2">"CCSHSDataset"</span><span class="p">,</span>
     <span class="s2">"REGISTRY"</span><span class="p">,</span>
     <span class="s2">"get_dataset"</span><span class="p">,</span>
     <span class="s2">"available_datasets"</span><span class="p">,</span>
