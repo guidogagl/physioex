@@ -148,6 +148,8 @@ class STAGESDataset(BasePhysioDataset):
 
     DATASET_NAME = "stages"
     DATASET_SUBDIR = "stages"
+    #: 2: labels are placed by timestamp relative to the EDF start (fix 7b96d20); revision-1 caches are misaligned.
+    LABELS_REVISION = 2
     DEFAULT_EPOCH_LENGTH_SEC = 30.0
     CHANNEL_PREFERENCES = CHANNEL_PREFERENCES
 

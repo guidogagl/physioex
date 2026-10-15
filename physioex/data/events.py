@@ -11,7 +11,7 @@ from typing import Any, Dict, List
 
 @dataclass
 class SleepEvent:
-    type: str  # "respiratory" | "arousal" | "limb_movement" | "position" | "desaturation" | "other"
+    type: str  # "respiratory" | "arousal" | "limb_movement" | "position" | "desaturation" | "artifact" | "other"
     concept: str  # e.g. "Hypopnea", "ASDA arousal", "PLM (Left)", "Supine"
     onset_sec: float  # absolute seconds from recording start
     duration_sec: float

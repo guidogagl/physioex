@@ -27,6 +27,31 @@ different sizes with `MultiDataset`. Tests in `tests/test_sampling.py`.
 modality dropout from the training step too (EMA of the clean per-channel logits). Off by default, so the released
 models and existing training runs behave exactly as before. Tests in `tests/test_channel_acc_tracking.py`.
 
+### Fixed — subjects without any requested channel (`BasePhysioDataset`)
+
+A subject for which none of the requested channels can be resolved was returned as a block of zeros with the wrong
+shape (`(L,)` instead of `(L, F, T)`), which made `dict_collate_fn` fail on any batch containing it. Its zeros now have
+the per-epoch shape of the pipeline output, like the zero-filled channels of subjects that miss only some channels, and
+a warning names the subject. Subjects are still never dropped.
+
+### Fixed — stale cached labels (`BasePhysioDataset.LABELS_REVISION`)
+
+Cached labels had no version, so after a fix of a label reader the old caches kept serving the wrong labels without any
+warning. Datasets now declare `LABELS_REVISION` (default 1); the revision is stored with the cached labels and a cache
+with a lower revision is recomputed (with a warning), or used with a warning when the source files are not available.
+Caches without the key count as revision 1, so existing caches of unchanged readers stay valid. `STAGESDataset` and
+`AlzheimersDataset` are at revision 2 (timestamp-based alignment of STAGES labels, onset-indexed Alzheimer labels):
+caches written before those fixes are recomputed on first use. Cached EDF headers that predate the `start_sec` field
+(STAGES labels are aligned to the EDF start time with it) are probed again, or used with a warning when the EDF is not
+available.
+
+### Changed — `artifact` event type
+
+"SpO2 artifact" intervals (an unreliable oximeter signal, not a physiological event) were counted as `respiratory` by
+the NSRR parser and as `desaturation` by the STAGES parser. They now have their own type `artifact`; the concept text is
+unchanged. Event counts per type change accordingly, for example in CCSHS `respiratory` drops from 51 915 to 15 040
+and `artifact` has 36 875.
+
 ## 2.0.2 — 2026-10-10
 
 ### Fixed — accuracy-weighted modality dropout (`physioex.models.protosleepnet`)

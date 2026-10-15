@@ -41,6 +41,8 @@ class AlzheimersDataset(BasePhysioDataset):
 
     DATASET_NAME = "alzheimers"
     DATASET_SUBDIR = "AlzheimerData"
+    #: 2: labels are indexed by event onset (gaps stay -1); revision-1 caches are compacted and misaligned.
+    LABELS_REVISION = 2
     DEFAULT_EPOCH_LENGTH_SEC = 30.0
 
     # Channel preference lists.
