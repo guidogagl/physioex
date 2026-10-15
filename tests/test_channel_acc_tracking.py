@@ -68,7 +68,7 @@ def _tiny_batch(L=2):
 def test_trainer_step_records_accuracy_in_training_only_when_enabled(track):
     torch.manual_seed(0)
     model = ProtoSleepNet.from_seq_sleep_net(
-        n_channels=3, use_channel_mixer=True, cm_n_heads=2, cm_d_ff=32, cm_n_layers=1
+        n_channels=3, cdropout=0.0, use_channel_mixer=True, cm_n_heads=2, cm_d_ff=32, cm_n_layers=1
     )
     model.channel_mixer.track_train_acc = track
     model.train()
@@ -79,7 +79,7 @@ def test_trainer_step_records_accuracy_in_training_only_when_enabled(track):
 
 def test_trainer_step_in_eval_mode_always_records_accuracy():
     model = ProtoSleepNet.from_seq_sleep_net(
-        n_channels=3, use_channel_mixer=True, cm_n_heads=2, cm_d_ff=32, cm_n_layers=1
+        n_channels=3, cdropout=0.0, use_channel_mixer=True, cm_n_heads=2, cm_d_ff=32, cm_n_layers=1
     ).eval()
     loss_fn = torch.nn.CrossEntropyLoss(ignore_index=-1)
     with torch.no_grad():
