@@ -426,6 +426,30 @@ Comprehensive reference of available channels, modality types, and sampling freq
 
 ---
 
+## 13. CCSHS (Cleveland Children's Sleep and Health Study)
+
+**Source:** NSRR `ccshs-trec` - 515 children and adolescents, one in-home PSG each
+**Native Sampling Rate:** 128 Hz (EEG, EOG), 256 Hz (chin EMG)
+**Epoch Length:** 30 seconds
+**Stage vocabulary:** Wake, Stage 1-4, REM, Movement (NSRR XML, `Stages|Stages`). Stage 3 and 4 are merged to N3; Movement and unscored epochs are -1.
+
+| Channel Name | Modality Type | FS (Hz) | Usability | Notes |
+|--------------|---------------|---------|-----------|-------|
+| C3, C4 | EEG (0) | 128 | ✅ Usable | Recorded against the contralateral mastoid; use the pairs `(C3, A2)` and `(C4, A1)` |
+| A1, A2 | - | 128 | ➖ Reference | Mastoid references, used only to build the pairs |
+| LOC, ROC | EOG (1) | 128 | ✅ Usable | Pair `(LOC, ROC)` |
+| EMG1, EMG2, EMG3 | EMG (2) | 256 | ✅ Usable | Chin EMG, pair `(EMG1, EMG2)` preferred |
+
+**Modality Assessment:** ✅ Pair-resolved channels are classified correctly.
+
+**Exclusions:** eleven recordings are left out by default (`CCSHSDataset.EXCLUDED_SUBJECTS`): nine whose per-stage minutes in the NSRR XML disagree with the stage minutes in the NSRR summary CSV, and two with no CSV row. Pass `exclude_subjects=[]` to keep them.
+
+**Available Modalities for Sleep Staging:** EEG, EOG, EMG
+
+**Summary:** Paediatric community cohort with a standard AASM-like montage at a lower sampling rate than the clinical datasets; mixed rates inside one EDF are handled by the per-channel pipeline.
+
+---
+
 ## Cross-Dataset Summary
 
 ### Sampling Rate Summary
@@ -444,6 +468,7 @@ Comprehensive reference of available channels, modality types, and sampling freq
 | WSC | 512 | Uniform high frequency |
 | Alzheimer's | 200 | Uniform |
 | Parkinson's | 500 | Highest uniform frequency |
+| CCSHS | 128 (EEG, EOG), 256 (EMG) | Mixed inside one EDF |
 
 ### Modality Type Coverage
 

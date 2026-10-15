@@ -19,13 +19,13 @@ see the [data-layer architecture](architecture/library/data.md) page.
 
 ## Resolving a dataset by name
 
-`physioex.data.datasets` exposes a registry of the 12 concrete datasets:
+`physioex.data.datasets` exposes a registry of the 13 concrete datasets:
 
 ```python
 from physioex.data.datasets import get_dataset, available_datasets
 
 available_datasets()
-# ['alzheimers', 'dcsm', 'hmc', 'hpap', 'mass', 'mesa', 'mros',
+# ['alzheimers', 'ccshs', 'dcsm', 'hmc', 'hpap', 'mass', 'mesa', 'mros',
 #  'parkinsons', 'shhs', 'sleepedf', 'stages', 'wsc']
 
 HMCDataset = get_dataset("hmc")   # the class, not an instance

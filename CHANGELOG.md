@@ -4,6 +4,17 @@ All notable changes to PhysioEx are documented here. Versions follow the
 `physioex.__version__` string (read dynamically by the build) and the `v*` git tags
 that publish to PyPI.
 
+## Unreleased
+
+### Added — CCSHS dataset (`physioex.data.datasets.ccshs`)
+
+`get_dataset("ccshs")`: Cleveland Children's Sleep and Health Study (NSRR `ccshs-trec`, 515 recordings). EEG
+`(C3, A2)` / `(C4, A1)` and EOG `(LOC, ROC)` at 128 Hz, chin EMG at 256 Hz; stage 3 and 4 merged to N3,
+Movement/unscored to -1, labels indexed by event onset, unknown stage vocabulary raises. Eleven recordings are
+excluded by default (`CCSHSDataset.EXCLUDED_SUBJECTS`, `exclude_subjects=[]` keeps them): nine whose stage minutes
+disagree with the NSRR summary table and two without a row in it. Metadata is read from
+`datasets/ccshs-trec-dataset-*.csv` whatever its version. Tests in `tests/test_ccshs.py`.
+
 ## 2.0.2 — 2026-10-10
 
 ### Fixed — accuracy-weighted modality dropout (`physioex.models.protosleepnet`)

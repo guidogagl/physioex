@@ -284,6 +284,14 @@ DATASET_CONFIGS: Dict[str, DatasetConfig] = {
         extra_kwargs={"subset": "home"},
         channel_map={"C3__M2": "C3", "C4__M1": "C4"},
     ),
+    # ── CCSHS (NSRR ccshs-trec; C3/A2, C4/A1 re-referenced via pair) ─
+    "ccshs": DatasetConfig(
+        channels=["EEG", "EEG"],
+        default_root="ccshs",
+        module_path="physioex.data.datasets.ccshs",
+        class_name="CCSHSDataset",
+        channel_map={"C3__A2": "C3", "C4__A1": "C4"},
+    ),
     # ── STAGES ──────────────────────────────────────────────────────
     "stages": DatasetConfig(
         channels=["EEG"] * 6,
