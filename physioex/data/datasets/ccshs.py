@@ -13,6 +13,10 @@ EEG C3/C4 are recorded against the contralateral mastoid (A2/A1) and are
 re-referenced by the differential-pair resolution (``("C3", "A2")``).
 EDF is mixed-rate (EEG/EOG 128 Hz, chin EMG 256 Hz).
 
+Eleven recordings are excluded by default (``CCSHSDataset.EXCLUDED_SUBJECTS``): nine whose
+per-stage minutes in the NSRR XML disagree with the stage minutes of the NSRR summary
+dataset CSV, and two that have no row in that CSV. Pass ``exclude_subjects=[]`` to keep them.
+
 Stage vocabulary in the NSRR XML (``EventType`` ``Stages|Stages``): ``Wake|0``,
 ``Stage 1..4 sleep|1..4``, ``REM sleep|5``, ``Movement|6``. Stage 3 and 4 are
 merged to N3. Movement/unscored -> -1.  Any *other* stage concept raises, so
@@ -23,7 +27,7 @@ from __future__ import annotations
 import logging
 import xml.etree.ElementTree as ET
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Iterable, List, Optional
 
 import numpy as np
 
@@ -93,6 +97,17 @@ class CCSHSDataset(_NSRRBaseDataset):
     DATASET_NAME = "ccshs"
     DATASET_SUBDIR = "ccshs"
 
+    #: Recordings left out by default. Nine: stage minutes in the XML differ from the NSRR
+    #: summary CSV (``ccshs-trec-dataset-*.csv``); two: no CSV row, so the hypnogram cannot be
+    #: cross-checked. Subject ids are EDF stems.
+    EXCLUDED_SUBJECTS = frozenset(
+        f"ccshs-trec-{n}"
+        for n in (
+            1800064, 1800224, 1800306, 1800384, 1800432, 1800458, 1800620, 1800640, 1800873,  # CSV-discordant
+            1800109, 1800489,  # no CSV row
+        )
+    )
+
     CHANNEL_PREFERENCES: Dict[str, List] = {
         "EEG": [
             ("C3", "A2"),
@@ -112,18 +127,34 @@ class CCSHSDataset(_NSRRBaseDataset):
         ],
     }
 
-    def __init__(self, root: Optional[str] = None, **kwargs):
+    def __init__(
+        self,
+        root: Optional[str] = None,
+        exclude_subjects: Optional[Iterable[str]] = None,
+        **kwargs,
+    ):
+        """
+        Args:
+            root: dataset root (default ``<data_root>/ccshs``).
+            exclude_subjects: subject ids (``ccshs-trec-<nsrrid>``) to leave out. ``None`` uses
+                :attr:`EXCLUDED_SUBJECTS`; pass ``[]`` to keep every recording.
+        """
         if root is None:
             root = str(get_data_root() / self.DATASET_SUBDIR)
+        self._exclude = frozenset(
+            self.EXCLUDED_SUBJECTS if exclude_subjects is None else exclude_subjects
+        )
         self._metadata = self._load_metadata(root)
         super().__init__(root=root, **kwargs)
 
     @staticmethod
     def _load_metadata(root: str) -> Dict[str, Dict[str, Any]]:
-        csv_path = Path(root) / "datasets" / "ccshs-trec-dataset-0.8.0.csv"
-        if not csv_path.exists():
-            logger.warning("CCSHS metadata CSV not found: %s", csv_path)
+        # version-independent: ccshs-trec-dataset-<version>.csv (newest version wins)
+        found = sorted((Path(root) / "datasets").glob("ccshs-trec-dataset-*.csv"))
+        if not found:
+            logger.warning("CCSHS metadata CSV not found under %s", Path(root) / "datasets")
             return {}
+        csv_path = found[-1]
         import pandas as pd
 
         df = pd.read_csv(csv_path, low_memory=False)
@@ -139,6 +170,11 @@ class CCSHSDataset(_NSRRBaseDataset):
             root / "polysomnography" / "edfs",
             root / "polysomnography" / "annotations-events-nsrr",
         )
+        if self._exclude:
+            kept = [s for s in specs if s.subject_id not in self._exclude]
+            if len(kept) != len(specs):
+                logger.info("CCSHS: %d recordings excluded by default list", len(specs) - len(kept))
+            specs = kept
         for spec in specs:
             nid = spec.subject_id.replace("ccshs-trec-", "")
             if nid in self._metadata:
