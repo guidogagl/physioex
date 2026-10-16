@@ -208,4 +208,10 @@ class AlzheimersDataset(BasePhysioDataset):
         for epoch_idx, stage in rows:
             labels[epoch_idx] = stage
 
-        return labels
+        # Some EDFs are shorter than the annotated night (truncated recordings): labels
+        # past the end of the signal are dropped instead of being paired with zero padding.
+        import pyedflib
+
+        with pyedflib.EdfReader(str(spec.edf_path)) as f:
+            n_signal = int(f.getFileDuration() // self.epoch_length_sec)
+        return labels[:n_signal]
