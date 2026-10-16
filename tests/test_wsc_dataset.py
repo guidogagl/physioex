@@ -508,3 +508,31 @@ def test_sco_scan_with_extra_digits_falls_back_to_clock(tmp_path):
     ev = WSCDataset._parse_sco_events(_write_sco(tmp_path / "s.sco.txt", rows), 200.0, start)
     assert ev[0].onset_sec == 1197.0 and abs(ev[0].duration_sec - 23.935) < 1e-6
     assert ev[1].onset_sec == 1195.0
+
+
+def test_sco_negative_length_is_the_x100_format(tmp_path):
+    rows = ["767\t4598192\t-472300\t200\tHypopnea\t10\t4:35:03\t97.7\t\t-2361.5"]
+    ev = WSCDataset._parse_sco_events(_write_sco(tmp_path / "s.sco.txt", rows), 200.0)
+    assert abs(ev[0].duration_sec - 23.615) < 1e-9
+
+
+def test_events_past_the_end_of_the_edf_are_dropped():
+    stg_lines = [f"{i + 1}\t2\t2" for i in range(5)]
+    with tempfile.TemporaryDirectory() as data_dir, tempfile.TemporaryDirectory() as cache_dir:
+        data_dir = Path(data_dir)
+        make_wsc_subject(data_dir, visit=1, subject_num="12345", stg_lines=stg_lines, duration_sec=150.0)
+        import datetime
+        import pyedflib
+
+        edf = data_dir / "polysomnography" / "wsc-visit1-12345-nsrr.edf"
+        with pyedflib.EdfReader(str(edf)) as f:
+            fs = float(f.getSampleFrequency(0))
+            t0 = f.getStartdatetime()
+        late = t0 + datetime.timedelta(seconds=1000)   # 1000 s into a 150 s signal
+        early = t0 + datetime.timedelta(seconds=60)
+        rows = [f"40\t{int(60 * 2 * fs)}\t\t407\tSpon Arousal\t2\t{early:%H:%M:%S}\t\t\t0",
+                f"41\t{int(1000 * 2 * fs)}\t\t407\tSpon Arousal\t2\t{late:%H:%M:%S}\t\t\t0"]
+        _write_sco(data_dir / "polysomnography" / "wsc-visit1-12345-nsrr.sco.txt", rows)
+        ds = WSCDataset(root=str(data_dir), visit=1, channels=["EEG"], pipelines="raw", sequence_length=5, cache_dir=cache_dir)
+        ev = ds.get_subject_events(ds._subjects[0].subject_id)
+        assert [e.onset_sec for e in ev] == [60.0]

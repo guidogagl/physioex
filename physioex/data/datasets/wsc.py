@@ -353,6 +353,17 @@ class WSCDataset(BasePhysioDataset):
         if spec.label_path is None:
             return []
         label = str(spec.label_path)
+        events = self._read_subject_events_unfiltered(spec, label)
+        if not events:
+            return events
+        # A few EDFs are cuts of a longer recording: events past the end of the signal are dropped.
+        import pyedflib
+
+        with pyedflib.EdfReader(str(spec.edf_path)) as f:
+            end = float(f.getFileDuration())
+        return [e for e in events if e.onset_sec <= end]
+
+    def _read_subject_events_unfiltered(self, spec, label):
         if label.endswith(".allscore.txt"):
             return self._parse_allscore_events(spec.label_path)
         if label.endswith(".stg.txt"):
@@ -416,8 +427,8 @@ class WSCDataset(BasePhysioDataset):
 
         Columns: ``Epoch#, Scan # x2, Length (Scanx2), Marker Code, Marker Text,
         Channel #, Time, Value, Drop, Length``. Onset and duration are scans divided
-        by ``scans_per_sec`` (the length is not measured for limb movements and arousals).
-        Rows without a marker code are padding.
+        by ``scans_per_sec`` (the length is not measured for limb movements and arousals; a negative
+        length means the value was written 100 times too large). Rows without a marker code are padding.
 
         A few files write the scan columns with two extra digits. When ``start_clock_sec``
         (clock time of the EDF start, in seconds) is given, the ``Time`` column is used as a
@@ -438,7 +449,9 @@ class WSCDataset(BasePhysioDataset):
                 continue
             try:
                 onset = float(parts[1]) / rate
-                duration = float(parts[2]) / rate if parts[2] else 0.0
+                length = float(parts[2]) if parts[2] else 0.0
+                # Some files store the length with two extra digits and a negative sign
+                duration = length / rate if length >= 0 else -length / (rate * 100.0)
             except ValueError:
                 continue
             if start_clock_sec is not None:
