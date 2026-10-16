@@ -4,7 +4,7 @@ All notable changes to PhysioEx are documented here. Versions follow the
 `physioex.__version__` string (read dynamically by the build) and the `v*` git tags
 that publish to PyPI.
 
-## Unreleased
+## 2.0.4 — 2026-10-16
 
 Data-layer fixes found by an audit of what physioex reads against the raw files of every dataset. Label caches of
 Sleep-EDF, WSC and Alzheimers are recomputed on first use (`LABELS_REVISION` 2, 2 and 3). Cached WSC events are not
