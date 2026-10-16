@@ -380,3 +380,62 @@ def test_real_data_smoke():
 # Runner
 # ===================================================================
 
+def _write_allscore(tmp_path, rows):
+    p = tmp_path / "s.allscore.txt"
+    p.write_text("\n".join(rows) + "\n")
+    return p
+
+
+def test_allscore_ignores_entries_before_start_recording(tmp_path):
+    """A stage line timed before START RECORDING must not move the time origin back."""
+    rows = [
+        "16:44:00.00\tSTAGE - NO STAGE",
+        "23:48:00.00\tSTART RECORDING",
+        "23:48:00.00\tSTAGE - W",
+        "23:50:00.00\tSTAGE - N2",
+        "00:00:00.00\tSTAGE - R",
+        "00:02:00.00\tLIGHTS ON",
+    ]
+    labels = WSCDataset._parse_allscore(_write_allscore(tmp_path, rows))
+    # 2 min W (4 epochs), 10 min N2 (20 epochs), 2 min R (4 epochs); midnight crossed once
+    assert list(labels) == [0] * 4 + [2] * 20 + [4] * 4
+
+
+def test_allscore_events_use_the_same_origin(tmp_path):
+    rows = [
+        "16:44:00.00\tSTAGE - NO STAGE",
+        "23:48:00.00\tSTART RECORDING",
+        "23:48:00.00\tSTAGE - W",
+        "23:49:00.00\tAROUSAL 3.0 DUR: 4 SEC",
+        "00:01:00.00\tAROUSAL 3.0 DUR: 4 SEC",
+    ]
+    ev = WSCDataset._parse_allscore_events(_write_allscore(tmp_path, rows))
+    assert [e.onset_sec for e in ev] == [60.0, 780.0]
+
+
+def test_allscore_without_start_recording_is_empty(tmp_path):
+    rows = ["23:48:00.00\tSTAGE - W"]
+    assert len(WSCDataset._parse_allscore(_write_allscore(tmp_path, rows))) == 0
+
+
+def test_allscore_removes_paused_stretches(tmp_path):
+    rows = [
+        "12:00:00.00\tSTART RECORDING",
+        "12:00:00.00\tSTAGE - W",
+        "12:01:00.00\tPAUSED",
+        "16:00:00.00\tRECORDING RESUMED",
+        "16:00:30.00\tSTAGE - N2",
+        "16:02:30.00\tLIGHTS ON",
+    ]
+    labels = WSCDataset._parse_allscore(_write_allscore(tmp_path, rows))
+    # 1.5 min of signal before N2 starts (3 epochs of W), then 2 min of N2 (4 epochs)
+    assert list(labels) == [0] * 3 + [2] * 4
+
+
+def test_labels_are_cut_at_the_end_of_the_edf():
+    stg_lines = [f"{i + 1}\t2\t2" for i in range(8)]   # 8 labelled epochs, 5 epochs of signal
+    with tempfile.TemporaryDirectory() as data_dir, tempfile.TemporaryDirectory() as cache_dir:
+        data_dir = Path(data_dir)
+        make_wsc_subject(data_dir, visit=1, subject_num="12345", stg_lines=stg_lines, duration_sec=150.0)
+        ds = WSCDataset(root=str(data_dir), visit=1, channels=["EEG"], pipelines="raw", sequence_length=5, cache_dir=cache_dir)
+        assert len(ds._read_subject_labels(ds._subjects[0])) == 5

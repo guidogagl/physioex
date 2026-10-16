@@ -199,11 +199,17 @@ class WSCDataset(BasePhysioDataset):
         path = spec.label_path
         suffix = str(path)
         if suffix.endswith(".allscore.txt"):
-            return self._parse_allscore(path)
+            labels = self._parse_allscore(path)
         elif suffix.endswith(".stg.txt"):
-            return self._parse_stg(path)
+            labels = self._parse_stg(path)
         else:
             return np.array([], dtype=np.int16)
+        # In some nights the scoring runs past the end of the EDF; labels without signal are dropped.
+        import pyedflib
+
+        with pyedflib.EdfReader(str(spec.edf_path)) as f:
+            n_signal = int(f.getFileDuration() // self.epoch_length_sec)
+        return labels[:n_signal]
 
     # ------------------------------------------------------------------
     # .stg.txt parser
@@ -248,6 +254,48 @@ class WSCDataset(BasePhysioDataset):
     # ------------------------------------------------------------------
 
     @staticmethod
+    def _allscore_offsets(lines):
+        """Seconds from "START RECORDING" for every line of an ``.allscore.txt``, ``None`` where unusable.
+
+        Only lines from the START RECORDING line on are timed: some files list a
+        ``STAGE - NO STAGE`` line with a clock time before the recording starts, which
+        used to pull the time origin back by hours and shift every later label.
+        Midnight is detected as a large backward jump of the clock, not by the hour of day.
+        The time between a PAUSED line and the next RECORDING RESUMED line is removed,
+        because the EDF has no samples for it.
+        Returns ``None`` when there is no START RECORDING line.
+        """
+
+        def _clock(line):
+            t = datetime.datetime.strptime(line.split("\t")[0].strip(), "%H:%M:%S.%f")
+            return t.hour * 3600 + t.minute * 60 + t.second + t.microsecond / 1e6
+
+        start_i = next((i for i, ln in enumerate(lines) if "START RECORDING" in ln), None)
+        if start_i is None:
+            return None
+        start_sec = _clock(lines[start_i])
+        offsets = [None] * len(lines)
+        day, prev = 0, start_sec
+        skipped, pause_start = 0.0, None   # the EDF does not contain the paused stretches
+        for i in range(start_i, len(lines)):
+            try:
+                t = _clock(lines[i])
+            except (ValueError, TypeError):
+                continue
+            if t < prev - 6 * 3600:
+                day += 1
+            prev = t
+            raw = day * 86400 + t - start_sec
+            if "RECORDING RESUMED" in lines[i]:
+                if pause_start is not None:
+                    skipped += raw - pause_start
+                    pause_start = None
+            elif "PAUSED" in lines[i] and pause_start is None:
+                pause_start = raw
+            offsets[i] = raw - skipped
+        return offsets
+
+    @staticmethod
     def _parse_allscore(path: Path) -> np.ndarray:
         """Parse a WSC ``.allscore.txt`` file.
 
@@ -261,23 +309,16 @@ class WSCDataset(BasePhysioDataset):
         with open(path, encoding="latin1") as f:
             lines = f.readlines()
 
-        # Find START RECORDING time
-        start_time = None
-        for line in lines:
-            if "START RECORDING" in line:
-                time_str = line.split("\t")[0]
-                start_time = datetime.datetime.strptime(time_str, "%H:%M:%S.%f")
-                break
-
-        if start_time is None:
+        offsets = WSCDataset._allscore_offsets(lines)
+        if offsets is None:
             return np.array([], dtype=np.int16)
 
         stages = []
-        current_time = start_time
+        current = 0.0
         stage = 7  # unscored at the beginning (maps to -1)
 
-        for line in lines:
-            if "STAGE - " not in line:
+        for line, off in zip(lines, offsets):
+            if off is None or "STAGE - " not in line:
                 continue
 
             new_stage_str = line.split("STAGE - ")[-1].strip()
@@ -286,35 +327,20 @@ class WSCDataset(BasePhysioDataset):
                 # Unrecognised stage label -- treat as unscored
                 new_stage = -1
 
-            stage_time_str = line.split("\t")[0]
-            stage_time = datetime.datetime.strptime(stage_time_str, "%H:%M:%S.%f")
-
-            # Handle midnight crossing: hours <= 12 assumed next day
-            if stage_time.hour <= 12:
-                stage_time += datetime.timedelta(days=1)
-
-            # Fill epochs from current_time to stage_time with the previous stage
-            time_passed = stage_time - current_time
-            passed_epochs = int(time_passed.total_seconds() / 30)
+            # Fill epochs from the current stage onset to this one with the previous stage
+            passed_epochs = int((off - current) / 30)
             # Map the initial "unscored" sentinel (7) to -1
             fill_val = -1 if stage == 7 else stage
-            stages.extend([fill_val] * passed_epochs)
+            stages.extend([fill_val] * max(passed_epochs, 0))
 
             stage = new_stage
-            current_time = stage_time
+            current = max(off, current)
 
-        # Handle the tail: last STAGE event to end of file
-        if lines:
-            end_time_str = lines[-1].split("\t")[0]
-            try:
-                end_time = datetime.datetime.strptime(end_time_str, "%H:%M:%S.%f")
-                end_time += datetime.timedelta(days=1)
-                time_passed = end_time - current_time
-                passed_epochs = int(time_passed.total_seconds() / 30)
-                fill_val = -1 if stage == 7 else stage
-                stages.extend([fill_val] * passed_epochs)
-            except ValueError:
-                pass  # malformed last line -- ignore
+        # Tail: last stage event to the last timed line of the file
+        last = max((o for o in offsets if o is not None), default=current)
+        passed_epochs = int((last - current) / 30)
+        fill_val = -1 if stage == 7 else stage
+        stages.extend([fill_val] * max(passed_epochs, 0))
 
         return np.array(stages, dtype=np.int16)
 
@@ -344,25 +370,9 @@ class WSCDataset(BasePhysioDataset):
         with open(path, encoding="latin1") as f:
             lines = f.readlines()
 
-        # Find START RECORDING time to compute absolute offsets
-        start_time = None
-        for line in lines:
-            if "START RECORDING" in line:
-                time_str = line.split("\t")[0]
-                start_time = datetime.datetime.strptime(time_str, "%H:%M:%S.%f")
-                break
-
-        if start_time is None:
+        offsets = WSCDataset._allscore_offsets(lines)
+        if offsets is None:
             return []
-
-        def _to_seconds(time_str: str) -> float:
-            """Convert a time string to seconds from recording start."""
-            t = datetime.datetime.strptime(time_str.strip(), "%H:%M:%S.%f")
-            # Handle midnight crossing: hours <= 12 assumed next day
-            if t.hour <= 12:
-                t += datetime.timedelta(days=1)
-            diff = t - start_time
-            return diff.total_seconds()
 
         # Patterns for event lines
         dur_pattern = re.compile(r"DUR:\s*([\d.]+)\s*SEC", re.IGNORECASE)
@@ -372,7 +382,9 @@ class WSCDataset(BasePhysioDataset):
         )
 
         events = []
-        for line in lines:
+        for line, onset in zip(lines, offsets):
+            if onset is None:
+                continue
             parts = line.split("\t")
             if len(parts) < 2:
                 continue
@@ -383,14 +395,6 @@ class WSCDataset(BasePhysioDataset):
             if "STAGE - " in content or "START RECORDING" in content:
                 continue
             if "LIGHTS OFF" in content or "LIGHTS ON" in content:
-                continue
-
-            try:
-                onset = _to_seconds(time_str)
-            except (ValueError, TypeError):
-                continue
-
-            if onset < 0:
                 continue
 
             # Extract duration if present
