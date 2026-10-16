@@ -350,11 +350,123 @@ class WSCDataset(BasePhysioDataset):
 
     def _read_subject_events(self, spec):
         """Parse non-stage events from WSC .allscore.txt annotation files."""
-        if spec.label_path is None or not str(spec.label_path).endswith(
-            ".allscore.txt"
-        ):
+        if spec.label_path is None:
             return []
-        return self._parse_allscore_events(spec.label_path)
+        label = str(spec.label_path)
+        if label.endswith(".allscore.txt"):
+            return self._parse_allscore_events(spec.label_path)
+        if label.endswith(".stg.txt"):
+            # Gamma-system nights (2000-2009): events are in the ``.sco.txt`` next to the ``.stg.txt``
+            sco = Path(label[: -len(".stg.txt")] + ".sco.txt")
+            if sco.exists():
+                import pyedflib
+
+                # "Scan # x2" counts samples at twice the EDF rate (200/s for the 100 Hz
+                # files, 256/s for the 128 Hz ones); checked against the clock column.
+                with pyedflib.EdfReader(str(spec.edf_path)) as f:
+                    scans_per_sec = 2.0 * float(f.getSampleFrequency(0))
+                    start = f.getStartdatetime()
+                start_sec = start.hour * 3600 + start.minute * 60 + start.second
+                return self._parse_sco_events(sco, scans_per_sec, start_sec)
+        return []
+
+    @staticmethod
+    def _sco_event(text: str):
+        """Map the ``Marker Text`` of a ``.sco.txt`` row to ``(type, concept)``; ``None`` to skip it."""
+        t = text.strip().lower()
+        if not t:
+            return None
+        if "arousal" in t or t in ("respa", "spona"):
+            if t.startswith("resp"):
+                return "arousal", "Respiratory arousal"
+            if t.startswith("spon"):
+                return "arousal", "Spontaneous arousal"
+            return "arousal", "Arousal"
+        if "hypopnea" in t:
+            return "respiratory", "Central hypopnea" if t.startswith("central") else "Hypopnea"
+        if "apnea" in t or t == "oa":
+            if t.startswith(("obs", "oa")):
+                return "respiratory", "Obstructive apnea"
+            if t.startswith("central"):
+                return "respiratory", "Central apnea"
+            if t.startswith("mixed"):
+                return "respiratory", "Mixed apnea"
+            return "respiratory", "Apnea"
+        if t == "ca":
+            return "respiratory", "Central apnea"
+        if t == "ma":
+            return "respiratory", "Mixed apnea"
+        if t == "sao2":
+            return "desaturation", "SaO2 desaturation"
+        if t.startswith("plm"):
+            return "limb_movement", "Periodic limb movement"
+        if t in ("lma", "lm a"):
+            return "limb_movement", "Limb movement with arousal"
+        if t == "lm":
+            return "limb_movement", "Limb movement"
+        if t.startswith("bad ") or "artifact" in t:
+            return "artifact", text.strip()
+        return None
+
+    @staticmethod
+    def _parse_sco_events(
+        path: Path, scans_per_sec: float = 200.0, start_clock_sec: Optional[float] = None
+    ):
+        """Parse the event rows of a WSC ``.sco.txt`` (Gamma system, 2000-2009).
+
+        Columns: ``Epoch#, Scan # x2, Length (Scanx2), Marker Code, Marker Text,
+        Channel #, Time, Value, Drop, Length``. Onset and duration are scans divided
+        by ``scans_per_sec`` (the length is not measured for limb movements and arousals).
+        Rows without a marker code are padding.
+
+        A few files write the scan columns with two extra digits. When ``start_clock_sec``
+        (clock time of the EDF start, in seconds) is given, the ``Time`` column is used as a
+        check and, where it disagrees with the scan by more than 5 s, it gives the onset.
+        """
+        from physioex.data.events import SleepEvent
+
+        rate = float(scans_per_sec)
+        events = []
+        with open(path, encoding="latin1") as f:
+            rows = f.read().splitlines()[1:]
+        for line in rows:
+            parts = [x.strip() for x in line.split("\t")]
+            if len(parts) < 7 or not parts[3] or not parts[1]:
+                continue
+            kind = WSCDataset._sco_event(parts[4])
+            if kind is None:
+                continue
+            try:
+                onset = float(parts[1]) / rate
+                duration = float(parts[2]) / rate if parts[2] else 0.0
+            except ValueError:
+                continue
+            if start_clock_sec is not None:
+                try:
+                    h, m, sec = (float(x) for x in parts[6].split(":")[:3] + ["0"] * (3 - len(parts[6].split(":"))))
+                    clock = (h * 3600 + m * 60 + sec - start_clock_sec) % 86400
+                except ValueError:
+                    clock = None
+                if clock is not None and abs(onset - clock) > 5.0:
+                    scale = 100.0 if onset > 50 * max(clock, 1.0) else 1.0   # the "two extra digits" files
+                    onset, duration = clock, duration / scale
+            extra = {}
+            if kind[0] == "desaturation":
+                for key, idx in (("spO2_min", 7), ("spO2_drop", 8)):
+                    try:
+                        extra[key] = float(parts[idx])
+                    except (ValueError, IndexError):
+                        pass
+            events.append(
+                SleepEvent(
+                    type=kind[0],
+                    concept=kind[1],
+                    onset_sec=onset,
+                    duration_sec=duration,
+                    extra=extra,
+                )
+            )
+        return events
 
     @staticmethod
     def _parse_allscore_events(path: Path):
