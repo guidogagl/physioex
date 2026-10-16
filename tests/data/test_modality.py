@@ -115,3 +115,13 @@ def test_empty_channel_name_is_device():
     # Empty/whitespace collapses to "" which the DEVICE bucket claims.
     assert infer_channel_modality("") == ModalityType.DEVICE
     assert infer_channel_modality("   ") == ModalityType.DEVICE
+
+
+@pytest.mark.parametrize("name", ["EEG1_Off", "EEG3_Off", "EOG-L_Off", "EOG-R_Off", "EMG_Off", "EKG_Off"])
+def test_electrode_off_flags_are_other(name):
+    assert infer_channel_modality(name) == ModalityType.OTHER
+
+
+def test_off_rule_does_not_touch_signals():
+    assert infer_channel_modality("EEG1") == ModalityType.EEG
+    assert infer_channel_modality("EOG-L") == ModalityType.EOG
