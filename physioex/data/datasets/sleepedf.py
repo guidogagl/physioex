@@ -190,6 +190,11 @@ class SleepEDFDataset(BasePhysioDataset):
 
         # Total recording span determines number of epochs
         total_sec = max(float(o) + float(d) for o, d in zip(onsets, durations))
+        # The Sleep-EDF hypnograms always run to 24 h (86400 s) while the PSG stops earlier;
+        # the tail is "Sleep stage ?" or, in some nights, "Sleep stage W". Labels past the
+        # end of the signal would be paired with zero padding, so they are dropped here.
+        with pyedflib.EdfReader(str(spec.edf_path)) as g:
+            total_sec = min(total_sec, float(g.getFileDuration()))
         n_epochs = int(total_sec // self.epoch_length_sec)
         labels = np.full(n_epochs, -1, dtype=np.int16)
 
