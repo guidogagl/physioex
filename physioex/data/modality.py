@@ -62,6 +62,10 @@ def infer_channel_modality(channel_name: str, hint: Optional[str] = None) -> Mod
     u = n.upper()
     c = re.sub(r"[-_\s.()#/]", "", u)
 
+    # Electrode-off status flags (MESA "EEG1_Off", "EOG-L_Off", ...) are 1 Hz indicators, not signals.
+    if re.search(r"[_\s-]OFF$", u):
+        return ModalityType.OTHER
+
     # ── EEG ──
     if (
         c.startswith("EEG")

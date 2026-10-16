@@ -42,7 +42,8 @@ class AlzheimersDataset(BasePhysioDataset):
     DATASET_NAME = "alzheimers"
     DATASET_SUBDIR = "AlzheimerData"
     #: 2: labels are indexed by event onset (gaps stay -1); revision-1 caches are compacted and misaligned.
-    LABELS_REVISION = 2
+    #: 3: labels past the end of the EDF are dropped (truncated recordings).
+    LABELS_REVISION = 3
     DEFAULT_EPOCH_LENGTH_SEC = 30.0
 
     # Channel preference lists.
@@ -208,4 +209,10 @@ class AlzheimersDataset(BasePhysioDataset):
         for epoch_idx, stage in rows:
             labels[epoch_idx] = stage
 
-        return labels
+        # Some EDFs are shorter than the annotated night (truncated recordings): labels
+        # past the end of the signal are dropped instead of being paired with zero padding.
+        import pyedflib
+
+        with pyedflib.EdfReader(str(spec.edf_path)) as f:
+            n_signal = int(f.getFileDuration() // self.epoch_length_sec)
+        return labels[:n_signal]

@@ -236,6 +236,20 @@ def test_sleepedf_label_parsing():
         )
 
 
+def test_sleepedf_labels_cut_at_end_of_signal():
+    """Hypnogram longer than the PSG (Sleep-EDF runs to 24 h): labels stop where the signal stops."""
+    stages = ["Sleep stage W"] * 4 + ["Sleep stage 2"] * 4 + ["Sleep stage ?"] * 3 + ["Sleep stage W"] * 5  # 16 epochs of labels
+    with tempfile.TemporaryDirectory() as data_dir, tempfile.TemporaryDirectory() as cache_dir:
+        data_dir = Path(data_dir)
+        make_sleepedf_subject(data_dir, "SC4001E0-PSG.edf", "SC4001EC-Hypnogram.edf", stages=stages)
+        write_fake_edf(data_dir / "SC4001E0-PSG.edf", n_channels=3, duration_sec=10 * 30.0, fs_per_channel=[100] * 3,
+                       channel_names=["EEG Fpz-Cz", "EOG horizontal", "EMG submental"])  # signal of 10 epochs
+        ds = SleepEDFDataset(root=str(data_dir), channels=["EEG"], pipelines="raw", sequence_length=5, cache_dir=cache_dir)
+        labels = ds._read_subject_labels(ds._subjects[0])
+        assert len(labels) == 10
+        assert list(labels) == [0] * 4 + [2] * 4 + [-1] * 2
+
+
 def test_sleepedf_end_to_end():
     """6. ds[0] returns a valid dict with expected keys and shapes."""
     stages = ["Sleep stage W"] * 5 + ["Sleep stage R"] * 5

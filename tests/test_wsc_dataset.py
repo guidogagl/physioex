@@ -380,3 +380,159 @@ def test_real_data_smoke():
 # Runner
 # ===================================================================
 
+def _write_allscore(tmp_path, rows):
+    p = tmp_path / "s.allscore.txt"
+    p.write_text("\n".join(rows) + "\n")
+    return p
+
+
+def test_allscore_ignores_entries_before_start_recording(tmp_path):
+    """A stage line timed before START RECORDING must not move the time origin back."""
+    rows = [
+        "16:44:00.00\tSTAGE - NO STAGE",
+        "23:48:00.00\tSTART RECORDING",
+        "23:48:00.00\tSTAGE - W",
+        "23:50:00.00\tSTAGE - N2",
+        "00:00:00.00\tSTAGE - R",
+        "00:02:00.00\tLIGHTS ON",
+    ]
+    labels = WSCDataset._parse_allscore(_write_allscore(tmp_path, rows))
+    # 2 min W (4 epochs), 10 min N2 (20 epochs), 2 min R (4 epochs); midnight crossed once
+    assert list(labels) == [0] * 4 + [2] * 20 + [4] * 4
+
+
+def test_allscore_events_use_the_same_origin(tmp_path):
+    rows = [
+        "16:44:00.00\tSTAGE - NO STAGE",
+        "23:48:00.00\tSTART RECORDING",
+        "23:48:00.00\tSTAGE - W",
+        "23:49:00.00\tAROUSAL 3.0 DUR: 4 SEC",
+        "00:01:00.00\tAROUSAL 3.0 DUR: 4 SEC",
+    ]
+    ev = WSCDataset._parse_allscore_events(_write_allscore(tmp_path, rows))
+    assert [e.onset_sec for e in ev] == [60.0, 780.0]
+
+
+def test_allscore_without_start_recording_is_empty(tmp_path):
+    rows = ["23:48:00.00\tSTAGE - W"]
+    assert len(WSCDataset._parse_allscore(_write_allscore(tmp_path, rows))) == 0
+
+
+def test_allscore_removes_paused_stretches(tmp_path):
+    rows = [
+        "12:00:00.00\tSTART RECORDING",
+        "12:00:00.00\tSTAGE - W",
+        "12:01:00.00\tPAUSED",
+        "16:00:00.00\tRECORDING RESUMED",
+        "16:00:30.00\tSTAGE - N2",
+        "16:02:30.00\tLIGHTS ON",
+    ]
+    labels = WSCDataset._parse_allscore(_write_allscore(tmp_path, rows))
+    # 1.5 min of signal before N2 starts (3 epochs of W), then 2 min of N2 (4 epochs)
+    assert list(labels) == [0] * 3 + [2] * 4
+
+
+def test_labels_are_cut_at_the_end_of_the_edf():
+    stg_lines = [f"{i + 1}\t2\t2" for i in range(8)]   # 8 labelled epochs, 5 epochs of signal
+    with tempfile.TemporaryDirectory() as data_dir, tempfile.TemporaryDirectory() as cache_dir:
+        data_dir = Path(data_dir)
+        make_wsc_subject(data_dir, visit=1, subject_num="12345", stg_lines=stg_lines, duration_sec=150.0)
+        ds = WSCDataset(root=str(data_dir), visit=1, channels=["EEG"], pipelines="raw", sequence_length=5, cache_dir=cache_dir)
+        assert len(ds._read_subject_labels(ds._subjects[0])) == 5
+
+
+SCO_HEADER = "Epoch#\tScan # x2\tLength (Scanx2)\tMarker Code\tMarker Text\tChannel #\tTime\tValue\t\tLength"
+
+
+def _write_sco(path, rows):
+    path.write_text("\n".join([SCO_HEADER] + rows + ["\t\t\t\t\t\t\t\t\t0\r"]) + "\n")
+    return path
+
+
+def test_sco_events_are_parsed(tmp_path):
+    rows = [
+        "40\t236418\t\t407\tSpon Arousal\t2\t22:30:11\t\t\t0",
+        "176\t1054820\t4787\t202\tHypopnea \t18\t23:38:23\t94.5\t\t0.235",
+        "177\t1061266\t3894\t301\tSaO2\t33\t23:38:55\t95.0\t3.2\t0.19",
+        "180\t1100000\t\t405\tLMA\t3\t23:40:00\t\t\t0",
+        "181\t1110000\t\t406\tLM\t3\t23:41:00\t\t\t0",
+        "182\t1120000\t6000\t100\tOBS Apnea\t18\t23:42:00\t\t\t0.3",
+        "183\t1130000\t\t426\tBad ECG Epoch\t1\t23:43:00\t\t\t0",
+        "184\t1140000\t\t999\tSomething new\t1\t23:44:00\t\t\t0",
+    ]
+    ev = WSCDataset._parse_sco_events(_write_sco(tmp_path / "s.sco.txt", rows))
+    got = [(e.type, e.concept, e.onset_sec, e.duration_sec) for e in ev]
+    assert got == [
+        ("arousal", "Spontaneous arousal", 1182.09, 0.0),
+        ("respiratory", "Hypopnea", 5274.1, 23.935),
+        ("desaturation", "SaO2 desaturation", 5306.33, 19.47),
+        ("limb_movement", "Limb movement with arousal", 5500.0, 0.0),
+        ("limb_movement", "Limb movement", 5550.0, 0.0),
+        ("respiratory", "Obstructive apnea", 5600.0, 30.0),
+        ("artifact", "Bad ECG Epoch", 5650.0, 0.0),
+    ]
+    assert ev[2].extra == {"spO2_min": 95.0, "spO2_drop": 3.2}
+
+
+def test_subject_with_stg_gets_events_from_sco():
+    stg_lines = [f"{i + 1}\t2\t2" for i in range(5)]
+    with tempfile.TemporaryDirectory() as data_dir, tempfile.TemporaryDirectory() as cache_dir:
+        data_dir = Path(data_dir)
+        make_wsc_subject(data_dir, visit=1, subject_num="12345", stg_lines=stg_lines)
+        import datetime
+        import pyedflib
+
+        with pyedflib.EdfReader(str(data_dir / "polysomnography" / "wsc-visit1-12345-nsrr.edf")) as f:
+            fs = float(f.getSampleFrequency(0))
+            clock = f.getStartdatetime() + datetime.timedelta(seconds=6000 / (2 * fs))
+        _write_sco(data_dir / "polysomnography" / "wsc-visit1-12345-nsrr.sco.txt",
+                   [f"40\t6000\t\t407\tSpon Arousal\t2\t{clock:%H:%M:%S}\t\t\t0"])
+        ds = WSCDataset(root=str(data_dir), visit=1, channels=["EEG"], pipelines="raw", sequence_length=5, cache_dir=cache_dir)
+        ev = ds.get_subject_events(ds._subjects[0].subject_id)
+        assert [(e.type, e.onset_sec) for e in ev] == [("arousal", 6000 / (2 * fs))]
+
+
+def test_sco_rate_follows_the_edf_rate(tmp_path):
+    rows = ["40\t12800\t\t407\tSpon Arousal\t2\t22:30:11\t\t\t0"]
+    p = _write_sco(tmp_path / "s.sco.txt", rows)
+    assert WSCDataset._parse_sco_events(p, 200.0)[0].onset_sec == 64.0
+    assert WSCDataset._parse_sco_events(p, 256.0)[0].onset_sec == 50.0
+
+
+def test_sco_scan_with_extra_digits_falls_back_to_clock(tmp_path):
+    rows = [
+        "40\t23641800\t478700\t202\tHypopnea\t18\t22:30:11\t94.5\t\t0.2",     # scan written x100
+        "41\t239000\t\t407\tSpon Arousal\t2\t22:30:09\t\t\t0",                # correct scan: 1195 s
+    ]
+    start = (22 * 3600 + 10 * 60 + 14)   # EDF start 22:10:14 -> first row at 1197 s by the clock
+    ev = WSCDataset._parse_sco_events(_write_sco(tmp_path / "s.sco.txt", rows), 200.0, start)
+    assert ev[0].onset_sec == 1197.0 and abs(ev[0].duration_sec - 23.935) < 1e-6
+    assert ev[1].onset_sec == 1195.0
+
+
+def test_sco_negative_length_is_the_x100_format(tmp_path):
+    rows = ["767\t4598192\t-472300\t200\tHypopnea\t10\t4:35:03\t97.7\t\t-2361.5"]
+    ev = WSCDataset._parse_sco_events(_write_sco(tmp_path / "s.sco.txt", rows), 200.0)
+    assert abs(ev[0].duration_sec - 23.615) < 1e-9
+
+
+def test_events_past_the_end_of_the_edf_are_dropped():
+    stg_lines = [f"{i + 1}\t2\t2" for i in range(5)]
+    with tempfile.TemporaryDirectory() as data_dir, tempfile.TemporaryDirectory() as cache_dir:
+        data_dir = Path(data_dir)
+        make_wsc_subject(data_dir, visit=1, subject_num="12345", stg_lines=stg_lines, duration_sec=150.0)
+        import datetime
+        import pyedflib
+
+        edf = data_dir / "polysomnography" / "wsc-visit1-12345-nsrr.edf"
+        with pyedflib.EdfReader(str(edf)) as f:
+            fs = float(f.getSampleFrequency(0))
+            t0 = f.getStartdatetime()
+        late = t0 + datetime.timedelta(seconds=1000)   # 1000 s into a 150 s signal
+        early = t0 + datetime.timedelta(seconds=60)
+        rows = [f"40\t{int(60 * 2 * fs)}\t\t407\tSpon Arousal\t2\t{early:%H:%M:%S}\t\t\t0",
+                f"41\t{int(1000 * 2 * fs)}\t\t407\tSpon Arousal\t2\t{late:%H:%M:%S}\t\t\t0"]
+        _write_sco(data_dir / "polysomnography" / "wsc-visit1-12345-nsrr.sco.txt", rows)
+        ds = WSCDataset(root=str(data_dir), visit=1, channels=["EEG"], pipelines="raw", sequence_length=5, cache_dir=cache_dir)
+        ev = ds.get_subject_events(ds._subjects[0].subject_id)
+        assert [e.onset_sec for e in ev] == [60.0]

@@ -41,6 +41,8 @@ def make_alzheimers_subject(
     stages: list = None,
     channel_names=None,
     duration_sec: float = 150.0,
+    fs: int = 200,
+    onset_sec: int = 0,
 ):
     """Create a fake Alzheimer's subject: EDF + TSV with comment headers."""
     if channel_names is None:
@@ -58,14 +60,14 @@ def make_alzheimers_subject(
         n_channels=len(channel_names),
         duration_sec=duration_sec,
         channel_names=channel_names,
-        fs_per_channel=[200] * len(channel_names),
+        fs_per_channel=[fs] * len(channel_names),
     )
 
     tsv_path = data_dir / f"{subj_id}_r1_a1.tsv"
-    _write_alzheimers_tsv(tsv_path, stages, subj_id=subj_id)
+    _write_alzheimers_tsv(tsv_path, stages, subj_id=subj_id, onset_sec=onset_sec)
 
 
-def _write_alzheimers_tsv(path: Path, stages: list, subj_id: str = "AD008"):
+def _write_alzheimers_tsv(path: Path, stages: list, subj_id: str = "AD008", onset_sec: int = 0):
     """Write a fake Alzheimer's TSV with comment header lines."""
     with open(path, "w") as f:
         f.write(f"# Source: Alzheimer disease Database UZ Leuven\n")
@@ -75,7 +77,7 @@ def _write_alzheimers_tsv(path: Path, stages: list, subj_id: str = "AD008"):
         f.write(f"# Offset wrt orignal PSG: 900\n")
         f.write(f"#Start & end of sleep annotations: 40830.02- 78564.14 \n")
         f.write(f"\n")  # blank line after comments
-        onset = 40860
+        onset = onset_sec
         for stage in stages:
             end = onset + 30
             f.write(f"{onset}\t{end}\t{stage}\t\n")
@@ -266,9 +268,8 @@ def test_alz_tsv_parsing():
         )
         spec = ds._subjects[0]
         labels = ds._read_subject_labels(spec)
-        # Labels are aligned by absolute onset epoch (onset 40860s / 30s =
-        # epoch 1362): pre-sleep epochs are -1, the 5 scored epochs carry the
-        # stages. Assert the scored (non-masked) sequence, robust to the offset.
+        # Labels are aligned by absolute onset epoch; unscored epochs are -1.
+        # Assert the scored (non-masked) sequence.
         scored = [int(x) for x in labels if x != -1]
         report("ALZ TSV parsing (onset-aligned scored epochs)",
                scored == [0, 1, 2, 3, 4],
@@ -751,3 +752,16 @@ def test_real_data_smoke():
             report(f"{name} channels probe", False, f"SKIP: {e}")
 
 
+
+
+def test_alz_labels_aligned_by_onset_and_cut_at_signal_end():
+    with tempfile.TemporaryDirectory() as data_dir, tempfile.TemporaryDirectory() as cache_dir:
+        data_dir = Path(data_dir)
+        # 1 Hz EDF of 600 s (20 epochs); 5 scored epochs from 480 s (epoch 16): epochs 16..19 fit, epoch 20 is past the signal
+        make_alzheimers_subject(data_dir, "AD001", stages=["Wake", "S1", "S2", "S3", "REM"],
+                                duration_sec=600.0, fs=1, onset_sec=480)
+        ds = AlzheimersDataset(root=str(data_dir), channels=["EEG"], pipelines="raw", sequence_length=1, cache_dir=cache_dir)
+        labels = ds._read_subject_labels(ds._subjects[0])
+        assert len(labels) == 20
+        assert list(labels[:16]) == [-1] * 16
+        assert list(labels[16:]) == [0, 1, 2, 3]

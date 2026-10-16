@@ -4,6 +4,27 @@ All notable changes to PhysioEx are documented here. Versions follow the
 `physioex.__version__` string (read dynamically by the build) and the `v*` git tags
 that publish to PyPI.
 
+## Unreleased
+
+Data-layer fixes found by an audit of what physioex reads against the raw files of every dataset. Label caches of
+Sleep-EDF, WSC and Alzheimers are recomputed on first use (`LABELS_REVISION` 2, 2 and 3). Cached WSC events are not
+versioned: delete `events/<subject>.json` of the 26 allscore nights whose events changed.
+
+### Fixed
+- **WSC `.allscore.txt`:** labels and events are anchored at `START RECORDING`. A `STAGE - NO STAGE` line timed before it
+  moved the time origin back by hours and shifted every later label (45 of 743 files). Midnight is a backward jump of
+  the clock, `PAUSED` to `RECORDING RESUMED` stretches are removed (the EDF has no samples there), and labels or events
+  past the end of the EDF are dropped. A file without `START RECORDING` yields no labels, as before.
+- **Sleep-EDF:** the hypnogram always runs to 24 h; its tail is cut at the end of the PSG instead of being paired with
+  zero padding (in one night 614 epochs of `Wake`).
+- **Alzheimers:** labels past the end of a truncated EDF are dropped.
+- **MESA:** `*_Off` electrode-status flags (1 Hz) are classified `OTHER`, not EEG/EOG/EMG.
+
+### Added
+- **WSC events from `.sco.txt`** (the 1827 Gamma-system nights; only the 743 Twin-system `.allscore.txt` nights had
+  events). Same event types as the allscore parser. `Scan # x2` counts samples at twice the EDF rate; a few files write
+  the scan with two extra digits (the clock column is used) and 548 write the length ×100 with a negative sign.
+
 ## 2.0.3 — 2026-10-15
 
 CCSHS dataset, opt-in utilities for multi-dataset training, and three data-layer fixes. STAGES and Alzheimers label
