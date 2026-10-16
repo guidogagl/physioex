@@ -205,3 +205,14 @@ def test_stages_spo2_artifact_is_its_own_type(tmp_path):
     by = {e.concept: e.type for e in events}
     assert by["SpO2 artifact"] == "artifact"
     assert by["Desaturation"] == "desaturation"
+
+
+def test_label_readers_fixed_in_the_dataset_audit_have_a_new_revision():
+    """Caches written by the old readers (shifted WSC labels, SleepEDF tail, truncated Alzheimer EDFs) are recomputed."""
+    from physioex.data.datasets.alzheimers import AlzheimersDataset
+    from physioex.data.datasets.sleepedf import SleepEDFDataset
+    from physioex.data.datasets.wsc import WSCDataset
+
+    assert SleepEDFDataset.LABELS_REVISION >= 2
+    assert WSCDataset.LABELS_REVISION >= 2
+    assert AlzheimersDataset.LABELS_REVISION >= 3

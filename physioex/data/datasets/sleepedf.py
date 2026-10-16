@@ -50,6 +50,8 @@ class SleepEDFDataset(BasePhysioDataset):
     """PhysioNet Sleep-EDF Cassette dataset (~153 recordings, ~78 subjects)."""
 
     DATASET_NAME = "sleepedf"
+    #: 2: hypnogram labels are cut at the end of the PSG (the 24 h hypnogram tail is dropped).
+    LABELS_REVISION = 2
     DATASET_SUBDIR = "physionet-sleep-data"
     DEFAULT_EPOCH_LENGTH_SEC = 30.0
 

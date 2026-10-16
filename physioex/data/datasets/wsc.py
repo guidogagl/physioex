@@ -67,6 +67,8 @@ class WSCDataset(BasePhysioDataset):
     """
 
     DATASET_NAME = "wsc"
+    #: 2: allscore labels anchored at START RECORDING (paused stretches removed), labels cut at the EDF end.
+    LABELS_REVISION = 2
     DATASET_SUBDIR = "wsc"
     DEFAULT_EPOCH_LENGTH_SEC = 30.0
 
