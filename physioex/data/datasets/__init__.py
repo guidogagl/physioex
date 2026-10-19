@@ -16,6 +16,7 @@ from physioex.data.datasets.parkinsons import ParkinsonsDataset
 from physioex.data.datasets.shhs import SHHSDataset
 from physioex.data.datasets.stages import STAGESDataset
 from physioex.data.datasets.ccshs import CCSHSDataset
+from physioex.data.datasets.lsec import LeuvenSleepEpilepsyChildrenDataset
 
 REGISTRY = {
     "hmc": HMCDataset,
@@ -31,6 +32,7 @@ REGISTRY = {
     "shhs": SHHSDataset,
     "stages": STAGESDataset,
     "ccshs": CCSHSDataset,
+    "lsec": LeuvenSleepEpilepsyChildrenDataset,
 }
 
 
@@ -58,6 +60,7 @@ __all__ = [
     "SHHSDataset",
     "STAGESDataset",
     "CCSHSDataset",
+    "LeuvenSleepEpilepsyChildrenDataset",
     "REGISTRY",
     "get_dataset",
     "available_datasets",

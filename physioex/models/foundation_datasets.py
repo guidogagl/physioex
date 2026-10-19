@@ -292,6 +292,14 @@ DATASET_CONFIGS: Dict[str, DatasetConfig] = {
         class_name="CCSHSDataset",
         channel_map={"C3__A2": "C3", "C4__A1": "C4"},
     ),
+    # ── LSEC (children, 256 Hz; C3/C4 re-referenced to the contralateral mastoid via pair) ─
+    "lsec": DatasetConfig(
+        channels=["EEG", "EEG"],
+        default_root=None,
+        module_path="physioex.data.datasets.lsec",
+        class_name="LeuvenSleepEpilepsyChildrenDataset",
+        channel_map={"C3__A2": "C3", "C4__A1": "C4"},
+    ),
     # ── STAGES ──────────────────────────────────────────────────────
     "stages": DatasetConfig(
         channels=["EEG"] * 6,
