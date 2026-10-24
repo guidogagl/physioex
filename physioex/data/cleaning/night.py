@@ -218,6 +218,10 @@ class NightCleaner:
                 "eeg": cardiac_residual(eeg_x["eeg"], self.fs, peaks),
                 "eog": cardiac_residual(ocu_x["eog"], self.fs, peaks),
             }
+            diag["cardiac"]["residual_raw_uV"] = {
+                k: cardiac_residual(self._prep(*signals[k], None), self.fs, peaks)
+                for k in ("eeg", "eog")
+            }
         st = self.states(eeg_x["eeg"], ocu_x["eog"])
         scored, quiet, active = st["ok"], st["quiet"], st["active"]
         diag["states"] = {k: round(float(v.mean()), 3) for k, v in st.items()}
