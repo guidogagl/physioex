@@ -1,2 +1,4 @@
 include physioex/train/models/check_table.csv
 include physioex/data/datasets/_splits/shhs.json
+include physioex/data/datasets/_tables/SC-subjects.csv
+include physioex/data/datasets/_tables/ST-subjects.csv

@@ -68,6 +68,8 @@ packages = ["physioex"]
 [tool.hatch.build.targets.wheel.force-include]
 "physioex/train/models/check_table.csv" = "physioex/train/models/check_table.csv"
 "physioex/data/datasets/_splits/shhs.json" = "physioex/data/datasets/_splits/shhs.json"
+"physioex/data/datasets/_tables/SC-subjects.csv" = "physioex/data/datasets/_tables/SC-subjects.csv"
+"physioex/data/datasets/_tables/ST-subjects.csv" = "physioex/data/datasets/_tables/ST-subjects.csv"
 
 
 [project.scripts]

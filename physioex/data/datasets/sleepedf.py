@@ -196,7 +196,7 @@ class SleepEDFDataset(BasePhysioDataset):
 
     def _lights_off_on(self, spec: SubjectSpec):
         """Lights-off from PhysioNet's SC-subjects / ST-subjects tables (csv next to the
-        EDFs); lights-on is not recorded."""
+        EDFs, else the copy shipped in ``_tables``); lights-on is not recorded."""
         import csv
         from datetime import datetime, timedelta
 
@@ -206,6 +206,8 @@ class SleepEDFDataset(BasePhysioDataset):
             return None, None
         kind, subj, night = m.group(1), int(m.group(2)), int(m.group(3))
         table = Path(self.root) / f"{kind}-subjects.csv"
+        if not table.exists():
+            table = Path(__file__).parent / "_tables" / f"{kind}-subjects.csv"
         if not table.exists():
             return None, None
         clock = None
