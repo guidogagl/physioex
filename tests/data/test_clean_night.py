@@ -156,3 +156,15 @@ def test_missing_eog():
         {"eeg": (np.zeros(6000), 100.0)}, {}
     )
     assert out.level == "missing" and not out.outputs
+
+
+def test_window_crops_and_realigns(night):
+    sig, extra, _ = night
+    m = CleanMontage(eeg=["x"], eog=["x"])
+    full = NightCleaner(m).clean(sig, {}, level="poor")
+    win = NightCleaner(m).clean(sig, {}, level="poor", window=(240.0, 960.0))
+    for name, (y, fs) in win.outputs.items():
+        assert len(y) == len(full.outputs[name][0])  # still aligned with the recording
+        a, b = int(240 * fs), int(960 * fs)
+        assert not y[:a].any() and not y[b + 1 :].any() and y[a:b].any()
+    assert win.diagnostics["window_s"] == [240.0, 960.0]

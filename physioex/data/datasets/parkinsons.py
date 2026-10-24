@@ -290,6 +290,23 @@ class ParkinsonsDataset(BasePhysioDataset):
     # Label reading
     # ------------------------------------------------------------------
 
+    def _lights_off_on(self, spec: SubjectSpec):
+        """``LIGHTS_OFF`` / ``LIGHTS_ON`` rows of the annotation TSV (onset, seconds)."""
+        off = on = None
+        try:
+            with open(spec.label_path) as f:
+                for line in f:
+                    parts = line.rstrip("\n").split("\t")
+                    if len(parts) >= 3 and parts[2].strip() in ("LIGHTS_OFF", "LIGHTS_ON"):
+                        t = float(parts[0])
+                        if parts[2].strip() == "LIGHTS_OFF":
+                            off = t
+                        else:
+                            on = t
+        except (OSError, ValueError):
+            return None, None
+        return off, on
+
     def _read_subject_labels(self, spec: SubjectSpec) -> np.ndarray:
         """Parse Parkinson's TSV annotation file.
 

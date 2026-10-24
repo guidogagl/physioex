@@ -712,7 +712,8 @@ class BasePhysioDataset(Dataset):
         if night is None:
             rm = self._clean[sid]
             sig, extra = self._read_clean_inputs(spec, rm)
-            night = cleaner.clean(sig, extra, level=rm.level)  # label-free
+            # label-free: only the night window (lights-off/on, else scoring bounds) is used
+            night = cleaner.clean(sig, extra, level=rm.level, window=self._night_window(spec))
             night.diagnostics["resolved"] = {
                 o: (d.label if d else None) for o, d in rm.derivations.items()
             }
@@ -742,6 +743,35 @@ class BasePhysioDataset(Dataset):
         if len(self._clean_memo) > 2:
             self._clean_memo.popitem(last=False)
         return night
+
+    def _lights_off_on(
+        self, spec: SubjectSpec
+    ) -> Tuple[Optional[float], Optional[float]]:
+        """Lights-off and lights-on in seconds from the recording start (None if not recorded).
+
+        Override in datasets whose annotations carry the markers.
+        """
+        return None, None
+
+    def _night_window(self, spec: SubjectSpec) -> Optional[Tuple[float, float]]:
+        """Seconds of the recording that make up the night, for the clean channels.
+
+        Lights-off/on where recorded; otherwise the scoring window (first to last
+        scored epoch, whatever the stage): it bounds the night without telling
+        the cleaning anything about the stages. None if neither is available.
+        """
+        off, on = self._lights_off_on(spec)
+        try:
+            scored = np.where(np.asarray(self._load_or_compute_labels(spec)) >= 0)[0]
+        except Exception:  # noqa: BLE001
+            scored = np.array([], dtype=int)
+        ep = float(self.epoch_length_sec)
+        if len(scored):
+            off = scored[0] * ep if off is None else off
+            on = (scored[-1] + 1) * ep if on is None else on
+        if off is None or on is None or on <= off:
+            return None
+        return float(off), float(on)
 
     def get_clean_diagnostics(self, subject_id: str) -> Dict[str, Any]:
         """Level and diagnostics of the clean channels of a subject (cleans the night if needed)."""

@@ -17,6 +17,11 @@ Order (Croft & Barry: the EOG is cleaned of brain before it is used to clean the
 7. EMG: bipolar chin and legs, 10-100 Hz, notch, cardiac template/blanking,
    spindle regression when the chin carries EEG sigma, RMS envelope.
 
+Night window: ``clean(..., window=(t0, t1))`` cleans only the seconds between
+lights-off and lights-on (or the scoring window where the recording has no
+lights markers); outputs keep the full recording length, zero outside, so they
+stay aligned with the EDF. A 28 h recording is not cleaned as one night.
+
 Label-free: the cleaning never reads the hypnogram, so a night is cleaned the
 same way in training and in evaluation. The epochs each fit uses come from
 :func:`states.state_masks` (eye, delta and sigma indices of the night); its
@@ -120,9 +125,9 @@ class NightCleaner:
             extra = {k: read_derivation(f, d) for k, d in r.extra.items()}
         return sig, extra, r
 
-    def clean_edf(self, edf_path) -> CleanNight:
+    def clean_edf(self, edf_path, window: Optional[Tuple[float, float]] = None) -> CleanNight:
         sig, extra, r = self.read(edf_path)
-        night = self.clean(sig, extra, level=r.level)
+        night = self.clean(sig, extra, level=r.level, window=window)
         night.diagnostics["resolved"] = {
             o: (d.label if d else None) for o, d in r.derivations.items()
         }
@@ -147,8 +152,37 @@ class NightCleaner:
         signals: Dict[str, Signal],
         extra: Dict[str, Signal],
         level: Optional[str] = None,
+        window: Optional[Tuple[float, float]] = None,
     ) -> CleanNight:
-        """``signals`` keyed by montage outputs (eeg, eog, chin, leg_l, leg_r, ecg), ``extra`` by recipe extra names."""
+        """``signals`` keyed by montage outputs (eeg, eog, chin, leg_l, leg_r, ecg), ``extra`` by recipe extra names.
+
+        ``window``: (start, end) in seconds from the recording start; outside it the outputs are zero.
+        """
+        if window is None:
+            return self._clean(signals, extra, level)
+        t0, t1 = max(0.0, float(window[0])), float(window[1])
+        crop = lambda x, fs: (np.asarray(x)[int(round(t0 * fs)) : int(round(t1 * fs))], fs)  # noqa: E731
+        dur = len(signals["eeg"][0]) / signals["eeg"][1] if "eeg" in signals else 0.0
+        night = self._clean(
+            {k: crop(*v) for k, v in signals.items()},
+            {k: crop(*v) for k, v in extra.items()},
+            level,
+        )
+        for name, (y, fs) in night.outputs.items():
+            full = np.zeros(int(round(dur * fs)), dtype=np.float64)
+            a = int(round(t0 * fs))
+            m = max(0, min(len(y), len(full) - a))
+            full[a : a + m] = y[:m]
+            night.outputs[name] = (full, fs)
+        night.diagnostics["window_s"] = [t0, t1]
+        return night
+
+    def _clean(
+        self,
+        signals: Dict[str, Signal],
+        extra: Dict[str, Signal],
+        level: Optional[str] = None,
+    ) -> CleanNight:
         level = level or self.montage.level
         diag: Dict[str, Any] = {"spec": self.spec()}
         if "eeg" not in signals or "eog" not in signals:

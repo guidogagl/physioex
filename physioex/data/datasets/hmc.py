@@ -125,6 +125,16 @@ class HMCDataset(BasePhysioDataset):
             )
         return subjects
 
+    def _lights_off_on(self, spec: SubjectSpec):
+        """``Lights off`` / ``Lights on`` annotations of the sleepscoring EDF (seconds)."""
+        try:
+            with pyedflib.EdfReader(str(spec.label_path)) as f:
+                onsets, _, texts = f.readAnnotations()
+        except OSError:
+            return None, None
+        t = {str(x).strip().lower(): float(o) for o, x in zip(onsets, texts)}
+        return t.get("lights off"), t.get("lights on")
+
     def _read_subject_labels(self, spec: SubjectSpec) -> np.ndarray:
         """Parse HMC's embedded sleepscoring annotations -> per-epoch labels.
 
