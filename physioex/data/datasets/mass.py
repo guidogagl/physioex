@@ -135,6 +135,7 @@ class MASSDataset(BasePhysioDataset):
         },
         extra_eeg=["C3", "F3", "F4", "O1", "O2", "Fz", "Cz", "Pz", "Fp1", "Fp2"],
         level="rich",
+        mains=60.0,
         notes="EOG reference to verify",
     )
 

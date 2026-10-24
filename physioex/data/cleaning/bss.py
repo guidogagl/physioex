@@ -110,3 +110,82 @@ def split_ocular(
         mixing=A,
         keys=keys,
     )
+
+
+def amuse(X: np.ndarray, lag: int = 1) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """BSS-CCA in its AMUSE form (De Clercq et al. 2006): whitening, then the
+    eigenvectors of the symmetrised lag-``lag`` covariance. The eigenvalues are
+    the lag autocorrelations of the sources, so broadband muscle activity ends
+    up in the components with the lowest values.
+
+    Returns ``(U, A, autocorr)``, sources sorted by decreasing autocorrelation.
+    """
+    X = np.asarray(X, dtype=np.float64)
+    X = X - X.mean(1, keepdims=True)
+    d, E = np.linalg.eigh(np.cov(X))
+    keep = d > 1e-10 * d.max()
+    W = (E[:, keep] / np.sqrt(d[keep])).T
+    Z = W @ X
+    C = Z[:, lag:] @ Z[:, :-lag].T / (Z.shape[1] - lag)
+    r, V = np.linalg.eigh((C + C.T) / 2)
+    order = np.argsort(r)[::-1]
+    U = V[:, order].T @ W
+    return U, np.linalg.pinv(U), r[order]
+
+
+def _is_front(k: str) -> bool:
+    u = k.upper()
+    return u.startswith(("FP", "F", "EOG", "E1", "E2"))
+
+
+def _is_back(k: str) -> bool:
+    u = k.upper()
+    return u.startswith(("O", "P", "CZOZ"))
+
+
+def classify_ocular(
+    S: np.ndarray,
+    A: np.ndarray,
+    keys: Sequence[str],
+    ocular_keys: Sequence[str],
+    fs: float,
+    active: np.ndarray,
+    quiet: np.ndarray,
+    lf_hz: float = 5.0,
+    lf_share: float = 0.6,
+    activity_ratio: float = 1.5,
+    back_over_front: float = 0.5,
+) -> Tuple[np.ndarray, Dict[str, np.ndarray]]:
+    """Ocular components by three criteria, all required:
+
+    (a) topography: the largest contribution ``|A[i, k]| * std(S_k)`` is on an
+        ocular or frontal channel (EOG, Fp*, F*), and occipito-parietal
+        channels carry less than ``back_over_front`` of it;
+    (b) spectrum: at least ``lf_share`` of the 0.3-35 Hz power below ``lf_hz``
+        (slow eye movements, saccades and blinks);
+    (c) state: variance in ``active`` samples (REM + wake) at least
+        ``activity_ratio`` times the variance in ``quiet`` samples (N2 + N3),
+        which keeps frontal slow waves out.
+
+    Returns the boolean mask and the per-component criteria for diagnostics.
+    """
+    keys = list(keys)
+    contrib = np.abs(A) * S.std(1)[None, :]
+    front = np.array([k in ocular_keys or _is_front(k) for k in keys])
+    back = np.array([_is_back(k) for k in keys])
+    top = contrib.argmax(0)
+    fmax = contrib[front].max(0) if front.any() else np.zeros(S.shape[0])
+    bmax = contrib[back].max(0) if back.any() else np.zeros(S.shape[0])
+    a = front[top] & (bmax < back_over_front * np.maximum(fmax, 1e-12))
+    F = np.fft.rfft(S, axis=1)
+    f = np.fft.rfftfreq(S.shape[1], 1.0 / fs)
+    P = np.abs(F) ** 2
+    tot = P[:, (f >= 0.3) & (f < 35)].sum(1) + 1e-12
+    lf = P[:, (f >= 0.3) & (f < lf_hz)].sum(1) / tot
+    b = lf >= lf_share
+    if active.any() and quiet.any():
+        ratio = S[:, active].var(1) / (S[:, quiet].var(1) + 1e-12)
+    else:
+        ratio = np.full(S.shape[0], np.nan)
+    c = ratio >= activity_ratio
+    return a & b & c, {"topography": a, "lf_share": lf, "activity_ratio": ratio}

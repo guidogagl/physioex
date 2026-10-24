@@ -53,6 +53,7 @@ class CleanMontage:
     # (e.g. a vertical EOG) are still used by the cleaning.
     extra_eeg: Sequence[str] = ()
     level: str = "rich"
+    mains: float = 50.0  # power-line frequency (Hz) of the recording site
     notes: str = ""
 
     def spec(self) -> str:
@@ -71,6 +72,7 @@ class CleanMontage:
                 sorted((k, tuple(norm(c) for c in v)) for k, v in self.extra.items()),
                 tuple(self.extra_eeg),
                 self.level,
+                self.mains,
             )
         )
         return "CleanMontage:" + hashlib.sha1(payload.encode()).hexdigest()[:12]

@@ -83,6 +83,7 @@ class SHHSDataset(_NSRRBaseDataset):
         extra={"C3": ["EEG(sec)"]},
         extra_eeg=["C3"],
         level="poor",
+        mains=60.0,
     )
 
     CHANNEL_PREFERENCES: Dict[str, List] = {

@@ -47,6 +47,7 @@ class MESADataset(_NSRRBaseDataset):
         extra={"FzCz": ["EEG1"], "CzOz": ["EEG2"]},
         extra_eeg=["FzCz", "CzOz"],
         level="poor",
+        mains=60.0,
     )
 
     CHANNEL_PREFERENCES: Dict[str, List] = {

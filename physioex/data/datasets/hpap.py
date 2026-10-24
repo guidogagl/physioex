@@ -108,6 +108,7 @@ class HPAPDataset(_NSRRBaseDataset):
         },
         extra_eeg=["C3", "F3", "F4", "O1", "O2", "FPz"],
         level="rich",
+        mains=60.0,
     )
 
     CHANNEL_PREFERENCES: Dict[str, List] = {

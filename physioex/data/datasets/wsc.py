@@ -91,6 +91,7 @@ class WSCDataset(BasePhysioDataset):
         },
         extra_eeg=["F3", "O1", "C4", "Cz", "Fz", "Pz"],
         level="rich",
+        mains=60.0,
         notes="E1/E2 reference to verify",
     )
 

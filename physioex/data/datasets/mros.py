@@ -49,6 +49,7 @@ class MrOSDataset(_NSRRBaseDataset):
         extra={"C3": [("C3", "A2")]},
         extra_eeg=["C3"],
         level="poor",
+        mains=60.0,
     )
 
     CHANNEL_PREFERENCES: Dict[str, List] = {
