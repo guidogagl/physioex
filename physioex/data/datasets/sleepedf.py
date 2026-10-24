@@ -194,6 +194,54 @@ class SleepEDFDataset(BasePhysioDataset):
 
         return train, valid, test
 
+    def _lights_off_on(self, spec: SubjectSpec):
+        """Lights-off from PhysioNet's SC-subjects / ST-subjects tables (csv next to the
+        EDFs); lights-on is not recorded."""
+        import csv
+        from datetime import datetime, timedelta
+
+        sid = spec.subject_id
+        m = re.match(r"(SC|ST)\d(\d\d)(\d)", sid)
+        if not m:
+            return None, None
+        kind, subj, night = m.group(1), int(m.group(2)), int(m.group(3))
+        table = Path(self.root) / f"{kind}-subjects.csv"
+        if not table.exists():
+            return None, None
+        clock = None
+        with open(table) as f:
+            rows = list(csv.reader(f))
+        if kind == "SC":  # subject, night, age, sex, LightsOff
+            for r in rows[1:]:
+                if r[0].isdigit() and int(r[0]) == subj and int(r[1]) == night:
+                    clock = r[4]
+        else:  # Nr, age, sex, placebo night, lights off, temazepam night, lights off
+            for r in rows[2:]:
+                if r[0].isdigit() and int(r[0]) == subj:
+                    clock = r[4] if int(r[3]) == night else r[6] if int(r[5]) == night else None
+        if not clock:
+            return None, None
+        with pyedflib.EdfReader(str(spec.edf_path)) as f:
+            start = f.getStartdatetime()
+        h, mi, se = (int(float(x)) for x in clock.split(":"))
+        off = start.replace(hour=h, minute=mi, second=se)
+        if off < start - timedelta(hours=1):  # after midnight
+            off += timedelta(days=1)
+        return max(0.0, (off - start).total_seconds()), None
+
+    def _night_window(self, spec: SubjectSpec):
+        """Lights-off to 30 min after the last sleep epoch: SC recordings run ~22 h with the
+        whole day scored as wake, and lights-on is not recorded (the end uses the stages)."""
+        w = super()._night_window(spec)
+        if w is None:
+            return None
+        labels = np.asarray(self._load_or_compute_labels(spec))
+        sleep = np.where(labels > 0)[0]
+        if not len(sleep):
+            return w
+        end = min(w[1], (sleep[-1] + 1) * self.epoch_length_sec + 1800.0)
+        return (w[0], end) if end > w[0] else w
+
     def _read_subject_labels(self, spec: SubjectSpec) -> np.ndarray:
         """Parse hypnogram EDF annotations into a per-epoch label array."""
         with pyedflib.EdfReader(str(spec.label_path)) as f:
