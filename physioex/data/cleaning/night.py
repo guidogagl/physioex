@@ -35,12 +35,13 @@ from fractions import Fraction
 from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
-from scipy.signal import butter, resample_poly, sosfiltfilt
+from scipy.signal import butter, hilbert, resample_poly, sosfiltfilt
 
 from physioex.data.cleaning.bss import amuse, classify_ocular, sobi
 from physioex.data.cleaning.cardiac import (
     cardiac_residual,
     detect_r_peaks,
+    merge_peaks,
     subtract_cardiac,
 )
 from physioex.data.cleaning.emg import clean_emg, notch_mains, rms_envelope
@@ -97,6 +98,8 @@ class NightCleaner:
     active_q: float = 0.8
     deep_q: float = 0.75
     sigma_q: float = 0.7
+    # step 4 also regresses on the Hilbert transform of every EEG (phase-shifted coupling)
+    quadrature: bool = False
 
     def spec(self) -> str:
         p = asdict(self)
@@ -188,17 +191,17 @@ class NightCleaner:
         if "eeg" not in signals or "eog" not in signals:
             return CleanNight({}, "missing", {**diag, "error": "no EEG or EOG"})
 
-        # 1. R peaks: ECG first, chin as surrogate
-        peaks, src, q = None, None, 0.0
+        # 1. R peaks: ECG first, chin as surrogate in the blocks where the ECG has no clean beat
+        peaks, src, cover = None, [], {}
         for k in ("ecg", "chin"):
             if k in signals and signals[k][1] >= 50:
-                peaks, q = detect_r_peaks(*signals[k])
-                if peaks is not None:
-                    src = k
-                    break
+                pk, cover[k] = detect_r_peaks(*signals[k])
+                if pk is not None:
+                    peaks = pk if peaks is None else merge_peaks(peaks, pk)
+                    src.append(k)
         diag["cardiac"] = {
-            "source": src,
-            "quality": q,
+            "source": "+".join(src) or None,
+            "quality": cover,  # share of the night with clean beats, per channel
             "n_peaks": 0 if peaks is None else len(peaks),
         }
         if peaks is None:
@@ -263,7 +266,10 @@ class NightCleaner:
         if quiet.any():
             deep = st["deep"]
             fit_d, fit_o = quiet & deep, quiet & ~deep
-            reg = lambda fit: band_regression({"eog": eog_c}, eeg_c, fit, self.fs)[0]["eog"]  # noqa: E731
+            regs = dict(eeg_c)
+            if self.quadrature:
+                regs.update({k + "_q": np.imag(hilbert(v)) for k, v in eeg_c.items()})
+            reg = lambda fit: band_regression({"eog": eog_c}, regs, fit, self.fs)[0]["eog"]  # noqa: E731
             if fit_d.sum() > 10 * self.fs and fit_o.sum() > 10 * self.fs:
                 eog_c = np.where(deep, reg(fit_d), reg(fit_o))
             else:

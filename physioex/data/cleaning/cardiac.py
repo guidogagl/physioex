@@ -17,16 +17,23 @@ def _band(x, fs, lo, hi, order=3):
 
 
 def detect_r_peaks(
-    ecg: np.ndarray, fs: float, min_quality: float = 0.8
+    ecg: np.ndarray,
+    fs: float,
+    min_quality: float = 0.8,
+    block_s: float = 300.0,
+    min_coverage: float = 0.1,
 ) -> Tuple[Optional[np.ndarray], float]:
     """R-peak times in seconds, or None when the signal does not carry a usable heartbeat.
 
     The QRS band (5-20 Hz) is taken with its polarity (sign of the larger tail,
     so inverted leads work); peaks at least RR_MIN apart above half the 99th
     percentile in 10 s blocks (and above a quarter of the night median of that
-    percentile) are kept. Quality is the share of RR intervals
-    within [RR_MIN, RR_MAX] that differ from the local median RR by less than
-    20%; below ``min_quality`` the detection is rejected. This makes the
+    percentile) are kept. Quality is judged in blocks of ``block_s``: the share
+    of RR intervals within [RR_MIN, RR_MAX] that differ from the local median
+    RR by less than 20%. Only the peaks of blocks with quality >= ``min_quality``
+    are returned, so a lead that is flat or detached for part of the night keeps
+    its good hours. The second value is the share of the night covered by good
+    blocks; below ``min_coverage`` the detection is rejected. This makes the
     function usable on surrogate channels (chin, mastoid) when no ECG is
     recorded: it returns None rather than noise.
     """
@@ -47,10 +54,27 @@ def detect_r_peaks(
     rr = np.diff(pk) / fs
     med = median_filter(rr, size=15, mode="nearest")
     ok = (rr >= RR_MIN) & (rr <= RR_MAX) & (np.abs(rr - med) < 0.2 * med)
-    quality = float(ok.mean())
-    if quality < min_quality:
-        return None, quality
-    return pk / fs, quality
+    nb = int(np.ceil(len(x) / (block_s * fs)))
+    blk = (pk[1:] / (block_s * fs)).astype(int)
+    good = np.zeros(nb, bool)
+    for i in range(nb):
+        m = blk == i
+        # a block needs enough beats (>= 30 bpm on average) and regular intervals
+        good[i] = m.sum() >= block_s / 2.0 and ok[m].mean() >= min_quality
+    coverage = float(good.mean())
+    if coverage < min_coverage:
+        return None, coverage
+    keep = good[(pk / (block_s * fs)).astype(int)]
+    return pk[keep] / fs, coverage
+
+
+def merge_peaks(
+    primary: np.ndarray, secondary: np.ndarray, block_s: float = 300.0
+) -> np.ndarray:
+    """Peaks of ``primary``, plus those of ``secondary`` in the blocks where ``primary`` has none."""
+    have = set((np.asarray(primary) // block_s).astype(int).tolist())
+    extra = [t for t in secondary if int(t // block_s) not in have]
+    return np.sort(np.concatenate([primary, np.asarray(extra, dtype=float)]))
 
 
 def peak_aligned_mean(

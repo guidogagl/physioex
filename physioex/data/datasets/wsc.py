@@ -75,12 +75,13 @@ class WSCDataset(BasePhysioDataset):
 
     # Channel preferences: WSC uses non-standard channel names.
     #: Clean-channel recipe (physioex.data.cleaning). EEG already referenced to M2; reference of
-    #: E1/E2 not verified (the difference is exact only if it is common). No ECG.
+    #: E1/E2 not verified (the difference is exact only if it is common). ECG in part of the nights.
     CLEAN_MONTAGE = CleanMontage(
         eeg=["C3_M2", "C4_M1"],
         eog=[("E1", "E2")],
         chin=["chin", "cchin_l"],
         leg_l=["lleg_r"],
+        ecg=["ECG"],
         extra={
             "F3": ["F3_M2"],
             "O1": ["O1_M2"],
