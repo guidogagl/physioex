@@ -93,7 +93,7 @@ def test_clean_channels(make):
     assert not np.allclose(sig[:, 0], sig[:, 4])
     assert ds.get_subject_metadata("sub01")["clean_level"] == "poor"
     diag = ds.get_clean_diagnostics("sub01")
-    assert diag["level"] == "poor" and diag["resolved"]["eog"] == "E1-E2"
+    assert diag["level"] == "poor" and diag["resolved"]["eog"] == "E1 - E2"
 
     # a second dataset on the same cache reads the cleaned night back, identical
     again = make(CleanFake, chans, pipelines=PIPES)
