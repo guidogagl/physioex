@@ -40,6 +40,8 @@ from physioex.data.events import (
     dicts_to_events,
 )
 from physioex.data.modality import infer_channel_modality, ModalityType, MODALITY_TYPES
+from physioex.data.cleaning.montage import ResolvedMontage, resolve_montage
+from physioex.data.cleaning.night import CLEAN_CHANNELS, CleanNight, NightCleaner
 
 logger = logging.getLogger("physioex.data")
 
@@ -202,6 +204,11 @@ class BasePhysioDataset(Dataset):
         self._compiled_pipelines: Dict[Tuple[str, float, str], CompiledPipeline] = {}
         # Per-subject label arrays (loaded lazily)
         self._n_epochs: Dict[str, int] = {}
+
+        # Clean channels (EEG_clean, ...): recipe resolved per subject, last nights cleaned kept in memory
+        self._clean: Dict[str, ResolvedMontage] = {}
+        self._clean_memo: "OrderedDict[str, CleanNight]" = OrderedDict()
+        self._night_cleaner: Optional[NightCleaner] = None
 
         self._init_headers_and_resolution()
 
@@ -519,6 +526,8 @@ class BasePhysioDataset(Dataset):
         if header is not None:
             meta.update({k: v for k, v in header.patient_meta.items() if v is not None})
         meta.update(spec.external_meta)
+        if spec.subject_id in self._clean:
+            meta["clean_level"] = self._clean[spec.subject_id].level
         return meta
 
     def get_all_subject_metadata(self) -> Dict[str, Dict[str, Any]]:
@@ -588,12 +597,160 @@ class BasePhysioDataset(Dataset):
             and resolved.physical in self._pipelines_spec
         ):
             return self._pipelines_spec[resolved.physical]
+        if resolved.request in CLEAN_CHANNELS and resolved.request in self._pipelines_spec:
+            return self._pipelines_spec[resolved.request]
         if resolved.modality and resolved.modality in self._pipelines_spec:
             return self._pipelines_spec[resolved.modality]
         if "__default__" in self._pipelines_spec:
             return self._pipelines_spec["__default__"]
         # Fall back to identity if no explicit default was provided
         return PreprocessingPipeline([Identity()])
+
+    # ------------------------------------------------------------------
+    # Clean channels (physioex.data.cleaning)
+    # ------------------------------------------------------------------
+
+    @property
+    def night_cleaner(self) -> Optional[NightCleaner]:
+        """The NightCleaner built from ``CLEAN_MONTAGE`` (None if the dataset has no recipe)."""
+        if self._night_cleaner is None and self.CLEAN_MONTAGE is not None:
+            self._night_cleaner = NightCleaner(self.CLEAN_MONTAGE)
+        return self._night_cleaner
+
+    def _resolve_clean(
+        self, spec: SubjectSpec, header: EDFHeader, name: str
+    ) -> Optional[ResolvedChannel]:
+        """Resolve a clean channel request; None (zero-filled) when the recipe cannot produce it."""
+        cleaner = self.night_cleaner
+        if cleaner is None:
+            return None
+        rm = self._clean.get(spec.subject_id)
+        if rm is None:
+            rm = resolve_montage(
+                self.CLEAN_MONTAGE, header.available_channels, header.channel_fs
+            )
+            self._clean[spec.subject_id] = rm
+        if rm.level == "missing":
+            return None
+        d = rm.derivations
+        chin_fs = d["chin"].fs if d["chin"] is not None else None
+        fs = {
+            "EEG_clean": cleaner.fs,
+            "EOG_clean": cleaner.fs,
+            "EMG_clean": chin_fs if chin_fs and chin_fs >= 25 else None,
+            "EMG_ENV_clean": (
+                None if chin_fs is None else cleaner.env_fs if chin_fs >= 25 else chin_fs
+            ),
+            "LEG_L_clean": d["leg_l"].fs if d["leg_l"] is not None else None,
+            "LEG_R_clean": d["leg_r"].fs if d["leg_r"] is not None else None,
+        }[name]
+        if fs is None or (name.startswith("LEG") and 0.45 * fs <= 11.0):
+            return None
+        # The envelope is not a signal: no modality, so an EMG pipeline never band-passes it.
+        modality = {"EEG": "EEG", "EOG": "EOG", "EMG_ENV": None}.get(
+            name.rsplit("_", 1)[0], "EMG"
+        )
+        tag = cleaner.spec().split(":")[1]
+        return ResolvedChannel(
+            request=name,
+            physical=f"{name}_{tag}",
+            modality=modality,
+            fs_in=float(fs),
+            is_differential=False,
+        )
+
+    def _read_clean_inputs(self, spec: SubjectSpec, rm: ResolvedMontage):
+        """Read every derivation of the recipe through the dataset reader (µV, native rate)."""
+
+        def read(d):
+            xs = []
+            for lab, w, j in d.terms:
+                rc = ResolvedChannel(
+                    request=lab,
+                    physical=lab,
+                    modality=None,
+                    fs_in=d.fs,
+                    is_differential=False,
+                    _indices=(j,),
+                )
+                x, _ = self._read_subject_channel(spec, rc)
+                xs.append(w * np.asarray(x, dtype=np.float64))
+            n = min(len(x) for x in xs)
+            return np.sum([x[:n] for x in xs], axis=0), d.fs
+
+        sig = {o: read(d) for o, d in rm.derivations.items() if d is not None}
+        extra = {k: read(d) for k, d in rm.extra.items()}
+        return sig, extra
+
+    def _clean_night(self, spec: SubjectSpec) -> CleanNight:
+        """Clean a night once: all outputs together, in memory and (if enabled) in the disk cache."""
+        sid = spec.subject_id
+        if sid in self._clean_memo:
+            self._clean_memo.move_to_end(sid)
+            return self._clean_memo[sid]
+        cleaner = self.night_cleaner
+        tag = cleaner.spec().split(":")[1]
+        night = None
+        if self.cache_enabled:
+            mpath = self.cache.signal_meta_path(
+                self.DATASET_NAME, sid, f"NIGHT_{tag}", "night"
+            )
+            meta = self.cache.load_json(mpath) if mpath.exists() else None
+            if meta is not None:
+                try:
+                    outs = {}
+                    for name, fs in meta["outputs"].items():
+                        arr, _ = self.cache.load_memmap(
+                            self.cache.signal_path(
+                                self.DATASET_NAME, sid, f"{name}_{tag}", "night"
+                            )
+                        )
+                        outs[name] = (np.asarray(arr, dtype=np.float64), float(fs))
+                    night = CleanNight(outs, meta["level"], meta["diagnostics"])
+                except Exception as exc:
+                    logger.warning(f"Corrupt clean-night cache for {sid}: {exc}")
+        if night is None:
+            rm = self._clean[sid]
+            sig, extra = self._read_clean_inputs(spec, rm)
+            hyp = self._load_or_compute_labels(spec)
+            night = cleaner.clean(sig, extra, hyp, level=rm.level)
+            night.diagnostics["resolved"] = {
+                o: (d.label if d else None) for o, d in rm.derivations.items()
+            }
+            night.diagnostics["level_reasons"] = rm.reasons
+            if self.cache_enabled:
+                try:
+                    for name, (x, fs) in night.outputs.items():
+                        self.cache.atomic_save_array(
+                            self.cache.signal_path(
+                                self.DATASET_NAME, sid, f"{name}_{tag}", "night"
+                            ),
+                            np.asarray(x, dtype=np.float32),
+                            {"fs": fs, "cleaner": cleaner.spec()},
+                        )
+                    self.cache.save_json(
+                        mpath,
+                        {
+                            "outputs": {k: v[1] for k, v in night.outputs.items()},
+                            "level": night.level,
+                            "diagnostics": night.diagnostics,
+                            "cleaner": cleaner.spec(),
+                        },
+                    )
+                except Exception as exc:
+                    logger.warning(f"Could not cache the clean night of {sid}: {exc}")
+        self._clean_memo[sid] = night
+        if len(self._clean_memo) > 2:
+            self._clean_memo.popitem(last=False)
+        return night
+
+    def get_clean_diagnostics(self, subject_id: str) -> Dict[str, Any]:
+        """Level and diagnostics of the clean channels of a subject (cleans the night if needed)."""
+        spec = next(s for s in self._subjects if s.subject_id == subject_id)
+        if subject_id not in self._clean:
+            raise KeyError(f"{subject_id!r}: no clean channel was requested")
+        night = self._clean_night(spec)
+        return {"level": night.level, **night.diagnostics}
 
     # ------------------------------------------------------------------
     # Internal: headers, resolution, cache compilation
@@ -701,13 +858,26 @@ class BasePhysioDataset(Dataset):
         for spec in self._subjects:
             header = self._headers[spec.subject_id]
 
-            resolved = resolve_channels(
-                self.channels,
-                header.available_channels,
-                header.channel_fs,
-                preferences=self.CHANNEL_PREFERENCES,
-                allow_missing=True,
+            # Clean channels are resolved through CLEAN_MONTAGE, all the others exactly as before.
+            is_clean = [
+                isinstance(ch, str) and ch in CLEAN_CHANNELS for ch in self.channels
+            ]
+            others = [ch for ch, c in zip(self.channels, is_clean) if not c]
+            resolved_others = iter(
+                resolve_channels(
+                    others,
+                    header.available_channels,
+                    header.channel_fs,
+                    preferences=self.CHANNEL_PREFERENCES,
+                    allow_missing=True,
+                )
+                if others or not any(is_clean)
+                else []
             )
+            resolved = [
+                self._resolve_clean(spec, header, ch) if c else next(resolved_others)
+                for ch, c in zip(self.channels, is_clean)
+            ]
 
             # Log missing channels (informational, not fatal)
             missing = [self.channels[i] for i, rc in enumerate(resolved) if rc is None]
@@ -884,8 +1054,11 @@ class BasePhysioDataset(Dataset):
             compiled = pipeline.compile(fs_in)
             self._compiled_pipelines[compile_key] = compiled
 
-        # Read raw signal
-        raw, fs = self._read_subject_channel(spec, resolved)
+        # Read raw signal (clean channels: the cleaned night)
+        if resolved.request in CLEAN_CHANNELS:
+            raw, fs = self._clean_night(spec).outputs[resolved.request]
+        else:
+            raw, fs = self._read_subject_channel(spec, resolved)
 
         # Epoch the signal and run through the pipeline
         processed = self._epoch_and_run_pipeline(raw, fs, compiled, resolved)
