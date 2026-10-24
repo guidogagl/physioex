@@ -27,6 +27,7 @@ from typing import Any, Dict, List, Optional
 
 from physioex.data.base import SubjectSpec, get_data_root
 from physioex.data.datasets._nsrr import _NSRRBaseDataset
+from physioex.data.cleaning.montage import CleanMontage
 
 logger = logging.getLogger("physioex.data")
 
@@ -36,6 +37,19 @@ class MrOSDataset(_NSRRBaseDataset):
 
     DATASET_NAME = "mros"
     DATASET_SUBDIR = "mros"
+
+    #: Clean-channel recipe (physioex.data.cleaning). Raw electrodes: the derivations are built here.
+    CLEAN_MONTAGE = CleanMontage(
+        eeg=[("C4", "A1"), ("C3", "A2")],
+        eog=[("LOC", "ROC")],
+        chin=[("L Chin", "R Chin"), ("LCHIN", "RCHIN")],
+        leg_l=["Leg L"],
+        leg_r=["Leg R"],
+        ecg=[("ECG L", "ECG R")],
+        extra={"C3": [("C3", "A2")]},
+        extra_eeg=["C3"],
+        level="poor",
+    )
 
     CHANNEL_PREFERENCES: Dict[str, List] = {
         "EEG": [

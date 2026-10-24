@@ -29,6 +29,7 @@ from typing import Dict, List, Optional
 import numpy as np
 
 from physioex.data.base import BasePhysioDataset, SubjectSpec, get_data_root
+from physioex.data.cleaning.montage import CleanMontage
 
 
 # R&K / AASM stage mapping -- same convention as SleepEDF.
@@ -105,6 +106,38 @@ class MASSDataset(BasePhysioDataset):
     # Channel preference lists for generic modality requests.
     # MASS uses two derivation types: -CLE (Contralateral Linked Ear, majority)
     # and -LER (Linked Ear Reference, ~6 subjects in SS01). Both must be listed.
+    #: Clean-channel recipe (physioex.data.cleaning). EEG on linked ears (CLE) or LER; reference of the
+    #: horizontal EOG pair not verified. The vertical pair, when present, helps the source separation.
+    CLEAN_MONTAGE = CleanMontage(
+        eeg=["EEG C4-CLE", "EEG C4-LER"],
+        eog=[("EOG Left Horiz", "EOG Right Horiz")],
+        chin=[
+            ("EMG Chin1", "EMG Chin2"),
+            ("EMG Chin2", "EMG Chin3"),
+            ("EMG Chin1", "EMG Chin3"),
+            "EMG Chin",
+        ],
+        leg_l=["EMG Ant Tibial L"],
+        leg_r=["EMG Ant Tibial R"],
+        ecg=["ECG I", "ECG II", "ECG"],
+        extra={
+            "C3": ["EEG C3-CLE", "EEG C3-LER"],
+            "F3": ["EEG F3-CLE", "EEG F3-LER"],
+            "F4": ["EEG F4-CLE", "EEG F4-LER"],
+            "O1": ["EEG O1-CLE", "EEG O1-LER"],
+            "O2": ["EEG O2-CLE", "EEG O2-LER"],
+            "Fz": ["EEG Fz-CLE", "EEG Fz-LER"],
+            "Cz": ["EEG Cz-CLE", "EEG Cz-LER"],
+            "Pz": ["EEG Pz-CLE", "EEG Pz-LER"],
+            "Fp1": ["EEG Fp1-CLE", "EEG Fp1-LER"],
+            "Fp2": ["EEG Fp2-CLE", "EEG Fp2-LER"],
+            "EOGV": [("EOG Upper Vertic", "EOG Lower Vertic")],
+        },
+        extra_eeg=["C3", "F3", "F4", "O1", "O2", "Fz", "Cz", "Pz", "Fp1", "Fp2"],
+        level="rich",
+        notes="EOG reference to verify",
+    )
+
     CHANNEL_PREFERENCES: Dict[str, List] = {
         "EEG": [
             "EEG C3-CLE",

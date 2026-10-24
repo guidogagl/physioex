@@ -12,6 +12,7 @@ import numpy as np
 import pyedflib
 
 from physioex.data.base import BasePhysioDataset, SubjectSpec, get_data_root
+from physioex.data.cleaning.montage import CleanMontage
 
 
 # Maps the stage strings from HMC sleepscoring EDF annotations to AASM 5-class.
@@ -45,6 +46,17 @@ class HMCDataset(BasePhysioDataset):
     # and adds HMC-specific single-channel fallbacks.
     # Real HMC EDF channels: "EEG C4-M1", "EEG C3-M2", "EEG F4-M1",
     # "EEG O2-M1", "EOG E1-M2", "EOG E2-M2", "EMG chin", "ECG"
+    #: Clean-channel recipe (physioex.data.cleaning). Both eyes on M2: the difference cancels it.
+    CLEAN_MONTAGE = CleanMontage(
+        eeg=["EEG C4-M1", "EEG C3-M2"],
+        eog=[("EOG E1-M2", "EOG E2-M2")],
+        chin=["EMG chin"],
+        ecg=["ECG"],
+        extra={"C3": ["EEG C3-M2"], "F4": ["EEG F4-M1"], "O2": ["EEG O2-M1"]},
+        extra_eeg=["C3", "F4", "O2"],
+        level="rich",
+    )
+
     CHANNEL_PREFERENCES = {
         "EEG": [
             "EEG C4-M1",

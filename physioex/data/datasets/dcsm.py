@@ -29,6 +29,7 @@ from typing import Dict, List, Optional
 import numpy as np
 
 from physioex.data.base import BasePhysioDataset, SubjectSpec, get_data_root
+from physioex.data.cleaning.montage import CleanMontage
 
 
 DCSM_STAGE_MAP: Dict[str, int] = {
@@ -49,6 +50,25 @@ class DCSMDataset(BasePhysioDataset):
     DATASET_NAME = "dcsm"
     DATASET_SUBDIR = "DCSM"
     DEFAULT_EPOCH_LENGTH_SEC = 30.0
+
+    #: Clean-channel recipe (physioex.data.cleaning). Both eyes on M2: the difference cancels it.
+    CLEAN_MONTAGE = CleanMontage(
+        eeg=["C4-M1", "C3-M2"],
+        eog=[("E1-M2", "E2-M2")],
+        chin=["CHIN"],
+        leg_l=["LAT"],
+        leg_r=["RAT"],
+        ecg=["ECG-II"],
+        extra={
+            "C3": ["C3-M2"],
+            "F3": ["F3-M2"],
+            "F4": ["F4-M1"],
+            "O1": ["O1-M2"],
+            "O2": ["O2-M1"],
+        },
+        extra_eeg=["C3", "F3", "F4", "O1", "O2"],
+        level="rich",
+    )
 
     CHANNEL_PREFERENCES: Dict[str, List] = {
         "EEG": ["C3-M2", "C4-M1", ("C3", "M2"), ("C4", "M1"), "EEG"],

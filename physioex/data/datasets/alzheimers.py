@@ -18,6 +18,7 @@ from typing import Dict, List, Optional
 import numpy as np
 
 from physioex.data.base import BasePhysioDataset, SubjectSpec, get_data_root
+from physioex.data.cleaning.montage import CleanMontage
 
 
 # AASM 5-class mapping from TSV stage strings.
@@ -51,6 +52,30 @@ class AlzheimersDataset(BasePhysioDataset):
     # via T9/T10 (≈ M1/M2) to match AASM-standard C4-M1 montage
     # used by pre-trained sleep staging models.
     # Two hardware variants: 33 subjects have EMG1/EMG2, 36 have EMG Chin.
+    #: Clean-channel recipe (physioex.data.cleaning). Common-reference recording: EEG re-referenced to
+    #: the contralateral pseudo-mastoid (T9/T10) as in CHANNEL_PREFERENCES; the eyes share REF, so
+    #: EOG1 - EOG2 cancels it.
+    CLEAN_MONTAGE = CleanMontage(
+        eeg=[("EEG C4-REF", "EEG T9-REF"), ("EEG C3-REF", "EEG T10-REF")],
+        eog=[("EEG EOG1-REF", "EEG EOG2-REF")],
+        chin=["EMG Chin", ("EMG1", "EMG2")],
+        leg_r=["EMG RAT"],
+        ecg=["ECG V1", "ECG"],
+        extra={
+            "C3": [("EEG C3-REF", "EEG T10-REF")],
+            "F3": [("EEG F3-REF", "EEG T10-REF")],
+            "F4": [("EEG F4-REF", "EEG T9-REF")],
+            "O1": [("EEG O1-REF", "EEG T10-REF")],
+            "O2": [("EEG O2-REF", "EEG T9-REF")],
+            "Fp1": [("EEG Fp1-REF", "EEG T10-REF")],
+            "Fp2": [("EEG Fp2-REF", "EEG T9-REF")],
+            "Fz": [("EEG Fz-REF", "EEG T9-REF")],
+            "Pz": [("EEG Pz-REF", "EEG T9-REF")],
+        },
+        extra_eeg=["C3", "F3", "F4", "O1", "O2", "Fp1", "Fp2", "Fz", "Pz"],
+        level="rich",
+    )
+
     CHANNEL_PREFERENCES = {
         "EEG": [
             ("EEG C4-REF", "EEG T9-REF"),   # C4-T9 ≈ C4-M1

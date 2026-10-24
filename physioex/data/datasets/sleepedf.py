@@ -30,6 +30,7 @@ import numpy as np
 import pyedflib
 
 from physioex.data.base import BasePhysioDataset, SubjectSpec, get_data_root
+from physioex.data.cleaning.montage import CleanMontage, Fallback
 
 logger = logging.getLogger("physioex.data")
 
@@ -54,6 +55,17 @@ class SleepEDFDataset(BasePhysioDataset):
     LABELS_REVISION = 2
     DATASET_SUBDIR = "physionet-sleep-data"
     DEFAULT_EPOCH_LENGTH_SEC = 30.0
+
+    #: Clean-channel recipe (physioex.data.cleaning). No mastoid: Fpz-Cz is the exception to C4-M1.
+    #: The chin channel is a 1 Hz envelope and cannot be cleaned.
+    CLEAN_MONTAGE = CleanMontage(
+        eeg=["EEG Fpz-Cz"],
+        eog=["EOG horizontal"],
+        chin=[Fallback("EMG submental", "envelope", "1 Hz envelope")],
+        extra={"PzOz": ["EEG Pz-Oz"]},
+        extra_eeg=["PzOz"],
+        level="poor",
+    )
 
     CHANNEL_PREFERENCES: Dict[str, List] = {
         "EEG": ["EEG Fpz-Cz", "EEG Pz-Oz", "EEG"],

@@ -6,7 +6,10 @@ import numpy as np
 
 
 def sobi(
-    X: np.ndarray, lags: Sequence[int], max_sweeps: int = 100, tol: float = 1e-8,
+    X: np.ndarray,
+    lags: Sequence[int],
+    max_sweeps: int = 100,
+    tol: float = 1e-8,
     rank_tol: float = 1e-10,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """SOBI (Belouchrani et al. 1997): whitening, then joint diagonalisation of
@@ -39,7 +42,7 @@ def sobi(
                 g = np.array([M[p, p::n] - M[q, q::n], M[p, q::n] + M[q, p::n]])
                 gg = g @ g.T
                 ton, toff = gg[0, 0] - gg[1, 1], gg[0, 1] + gg[1, 0]
-                th = 0.5 * np.arctan2(toff, ton + np.sqrt(ton ** 2 + toff ** 2))
+                th = 0.5 * np.arctan2(toff, ton + np.sqrt(ton**2 + toff**2))
                 c, s = np.cos(th), np.sin(th)
                 if abs(s) > tol:
                     done = False
@@ -58,7 +61,9 @@ def sobi(
 
 class SplitResult(NamedTuple):
     eog_ocular: Dict[str, np.ndarray]  # EOG channels rebuilt from the ocular components
-    eeg_cerebral: Dict[str, np.ndarray]  # EEG channels rebuilt from the other components
+    eeg_cerebral: Dict[
+        str, np.ndarray
+    ]  # EEG channels rebuilt from the other components
     eog_cerebral: Dict[str, np.ndarray]  # what the split removed from the EOG channels
     ocular: np.ndarray  # bool per component
     mixing: np.ndarray  # A, (channels, components), rows in the order of keys
@@ -83,9 +88,15 @@ def split_ocular(
     The two parts sum back to the mean-removed input on every channel.
     """
     keys = list(eog) + list(eeg)
-    X = np.stack([np.asarray(eog[k] if k in eog else eeg[k], dtype=np.float64) for k in keys])
+    X = np.stack(
+        [np.asarray(eog[k] if k in eog else eeg[k], dtype=np.float64) for k in keys]
+    )
     X = X - X.mean(1, keepdims=True)
-    idx = np.arange(X.shape[1]) if fit is None else np.where(np.asarray(fit, dtype=bool))[0]
+    idx = (
+        np.arange(X.shape[1])
+        if fit is None
+        else np.where(np.asarray(fit, dtype=bool))[0]
+    )
     U, A = sobi(X[:, idx[::subsample]], lags=lags)
     S = U @ X
     ocu = np.abs(A).argmax(0) < len(eog)

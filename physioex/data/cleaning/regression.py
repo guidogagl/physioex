@@ -29,13 +29,17 @@ def fft_band(x: np.ndarray, lo: float, hi: float, fs: float) -> np.ndarray:
 
 
 def epoch_mask(
-    hypnogram: Sequence[int], stages: Iterable[int], n: int, fs: float, epoch_s: float = 30.0
+    hypnogram: Sequence[int],
+    stages: Iterable[int],
+    n: int,
+    fs: float,
+    epoch_s: float = 30.0,
 ) -> np.ndarray:
     """Boolean sample mask of length ``n``, True inside the epochs whose label is in ``stages``."""
     step = int(round(epoch_s * fs))
     m = np.zeros(n, dtype=bool)
     for e in np.where(np.isin(np.asarray(hypnogram), list(stages)))[0]:
-        m[e * step:(e + 1) * step] = True
+        m[e * step : (e + 1) * step] = True
     return m
 
 

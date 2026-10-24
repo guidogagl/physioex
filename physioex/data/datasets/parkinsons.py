@@ -25,6 +25,7 @@ from typing import Any, Dict, List, Optional
 import numpy as np
 
 from physioex.data.base import BasePhysioDataset, SubjectSpec, get_data_root
+from physioex.data.cleaning.montage import CleanMontage, Fallback
 
 logger = logging.getLogger("physioex.data")
 
@@ -59,6 +60,31 @@ class ParkinsonsDataset(BasePhysioDataset):
     # Channel preference lists -- bipolar montage.
     # Two hardware variants: ~46 subjects have "EOG Left"/"EOG right"/"EMG Chin",
     # ~40 subjects have "EOG1"/"EOG2"/"EMG1".
+    #: Clean-channel recipe (physioex.data.cleaning). Two montages across subjects: mastoid-referenced
+    #: (-A1/-A2) or common reference (-REF, no mastoid recorded: poor EEG). EOG reference not verified.
+    CLEAN_MONTAGE = CleanMontage(
+        eeg=[
+            "EEG C4-A1",
+            "EEG C3-A2",
+            Fallback("EEG C4-REF", "poor", "common reference, no mastoid"),
+        ],
+        eog=[("EOG Left", "EOG right"), ("EOG1", "EOG2")],
+        chin=["EMG Chin", "EMG1"],
+        ecg=["ECG V1", "ECG"],
+        extra={
+            "C3": ["EEG C3-A2", "EEG C3-REF"],
+            "F3": ["EEG F3-A2", "EEG F3-REF"],
+            "F4": ["EEG F4-A1", "EEG F4-REF"],
+            "O1": ["EEG O1-A2", "EEG O1-REF"],
+            "O2": ["EEG O2-A1", "EEG O2-REF"],
+            "T5": ["EEG T5-A1", "EEG T5-REF"],
+            "T6": ["EEG T6-A1", "EEG T6-REF"],
+        },
+        extra_eeg=["C3", "F3", "F4", "O1", "O2", "T5", "T6"],
+        level="rich",
+        notes="EOG reference to verify",
+    )
+
     CHANNEL_PREFERENCES = {
         "EEG": [
             "EEG C3-A2",

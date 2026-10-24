@@ -25,6 +25,7 @@ from typing import Any, Dict, List, Optional
 
 from physioex.data.base import SubjectSpec, get_data_root
 from physioex.data.datasets._nsrr import _NSRRBaseDataset
+from physioex.data.cleaning.montage import CleanMontage, Fallback
 
 logger = logging.getLogger("physioex.data")
 
@@ -34,6 +35,19 @@ class MESADataset(_NSRRBaseDataset):
 
     DATASET_NAME = "mesa"
     DATASET_SUBDIR = "mesa"
+
+    #: Clean-channel recipe (physioex.data.cleaning). EEG1 = Fz-Cz, EEG2 = Cz-Oz, EEG3 = C4-M1;
+    #: EOG-L = E1-Fpz and EOG-R = E2-Fpz, so the difference cancels Fpz exactly.
+    CLEAN_MONTAGE = CleanMontage(
+        eeg=["EEG3", "EEG C4-M1"],
+        eog=[("EOG-L", "EOG-R")],
+        chin=["EMG"],
+        leg_l=[Fallback("Leg", "poor", "one leg channel at 32 Hz")],
+        ecg=["EKG", "ECG"],
+        extra={"FzCz": ["EEG1"], "CzOz": ["EEG2"]},
+        extra_eeg=["FzCz", "CzOz"],
+        level="poor",
+    )
 
     CHANNEL_PREFERENCES: Dict[str, List] = {
         "EEG": [

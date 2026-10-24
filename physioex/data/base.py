@@ -102,6 +102,10 @@ class BasePhysioDataset(Dataset):
     # Default preferences (can be overridden per-subclass)
     CHANNEL_PREFERENCES: Dict[str, List] = DEFAULT_PREFERENCES
 
+    #: Recipe of the clean channels (physioex.data.cleaning.montage.CleanMontage), None when the
+    #: dataset has none. Independent of CHANNEL_PREFERENCES, which it does not change.
+    CLEAN_MONTAGE = None
+
     # Epoch length in seconds (30 for humans, 4 for mouse)
     DEFAULT_EPOCH_LENGTH_SEC: float = 30.0
 

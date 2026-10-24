@@ -33,6 +33,7 @@ import numpy as np
 
 from physioex.data.base import SubjectSpec, get_data_root
 from physioex.data.datasets._nsrr import _NSRRBaseDataset
+from physioex.data.cleaning.montage import CleanMontage
 
 logger = logging.getLogger("physioex.data")
 
@@ -116,6 +117,19 @@ class CCSHSDataset(_NSRRBaseDataset):
             1800109,
             1800489,  # no CSV row
         )
+    )
+
+    #: Clean-channel recipe (physioex.data.cleaning). Raw electrodes: the derivations are built here.
+    CLEAN_MONTAGE = CleanMontage(
+        eeg=[("C4", "A1"), ("C3", "A2")],
+        eog=[("LOC", "ROC")],
+        chin=[("EMG1", "EMG2"), ("EMG1", "EMG3"), ("EMG2", "EMG3")],
+        leg_l=[("LEFT LEG1", "LEFT LEG2")],
+        leg_r=[("RIGHT LEG1", "RIGHT LEG2")],
+        ecg=[("ECG1", "ECG2")],
+        extra={"C3": [("C3", "A2")]},
+        extra_eeg=["C3"],
+        level="poor",
     )
 
     CHANNEL_PREFERENCES: Dict[str, List] = {

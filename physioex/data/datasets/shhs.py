@@ -38,6 +38,7 @@ from typing import Any, Dict, List, Optional
 
 from physioex.data.base import SubjectSpec, get_data_root
 from physioex.data.datasets._nsrr import _NSRRBaseDataset
+from physioex.data.cleaning.montage import CleanMontage
 
 logger = logging.getLogger("physioex.data")
 
@@ -72,6 +73,18 @@ class SHHSDataset(_NSRRBaseDataset):
     #   EMG:  "EMG" (chin)
     #   ECG:  "ECG"
     # Sample rates vary: SHHS-1 mostly 125 Hz, SHHS-2 mostly 125/128 Hz.
+    #: Clean-channel recipe (physioex.data.cleaning). EEG = C4-A1, EEG(sec) = C3-A2; both eyes are
+    #: referenced to PG1, so EOG(L) - EOG(R) cancels the reference exactly.
+    CLEAN_MONTAGE = CleanMontage(
+        eeg=["EEG"],
+        eog=[("EOG(L)", "EOG(R)")],
+        chin=["EMG"],
+        ecg=["ECG"],
+        extra={"C3": ["EEG(sec)"]},
+        extra_eeg=["C3"],
+        level="poor",
+    )
+
     CHANNEL_PREFERENCES: Dict[str, List] = {
         "EEG": [
             "EEG",

@@ -7,6 +7,14 @@ about datasets: the per-dataset recipe lives with the dataset classes.
 """
 
 from physioex.data.cleaning.bss import SplitResult, sobi, split_ocular
+from physioex.data.cleaning.montage import (
+    CleanMontage,
+    Fallback,
+    ResolvedDerivation,
+    ResolvedMontage,
+    read_derivation,
+    resolve_montage,
+)
 from physioex.data.cleaning.regression import (
     DEFAULT_BANDS,
     band_regression,
@@ -15,7 +23,13 @@ from physioex.data.cleaning.regression import (
 )
 
 __all__ = [
+    "CleanMontage",
     "DEFAULT_BANDS",
+    "Fallback",
+    "ResolvedDerivation",
+    "ResolvedMontage",
+    "read_derivation",
+    "resolve_montage",
     "SplitResult",
     "band_regression",
     "epoch_mask",

@@ -25,6 +25,7 @@ from typing import Any, Dict, List, Optional
 import numpy as np
 
 from physioex.data.base import BasePhysioDataset, SubjectSpec, get_data_root
+from physioex.data.cleaning.montage import CleanMontage
 
 logger = logging.getLogger("physioex.data")
 
@@ -73,6 +74,26 @@ class WSCDataset(BasePhysioDataset):
     DEFAULT_EPOCH_LENGTH_SEC = 30.0
 
     # Channel preferences: WSC uses non-standard channel names.
+    #: Clean-channel recipe (physioex.data.cleaning). EEG already referenced to M2; reference of
+    #: E1/E2 not verified (the difference is exact only if it is common). No ECG.
+    CLEAN_MONTAGE = CleanMontage(
+        eeg=["C3_M2", "C4_M1"],
+        eog=[("E1", "E2")],
+        chin=["chin", "cchin_l"],
+        leg_l=["lleg_r"],
+        extra={
+            "F3": ["F3_M2"],
+            "O1": ["O1_M2"],
+            "C4": ["C4_M1"],
+            "Cz": ["Cz_M2"],
+            "Fz": ["Fz_M2"],
+            "Pz": ["Pz_M2"],
+        },
+        extra_eeg=["F3", "O1", "C4", "Cz", "Fz", "Pz"],
+        level="rich",
+        notes="E1/E2 reference to verify",
+    )
+
     CHANNEL_PREFERENCES = {
         "EEG": [
             "C3_M2",
