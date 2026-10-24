@@ -8,21 +8,26 @@ Order (Croft & Barry: the EOG is cleaned of brain before it is used to clean the
 2. EOG derivation: already in the recipe (E1 - E2 where possible);
 3. source separation (rich nights only): SOBI on all EEG/EOG channels, ocular
    components by topography + spectrum + state (bss.classify_ocular);
-4. brain left in the EOG: band regression on all clean EEG, fitted on N2+N3;
-5. eyes left in the EEG: band regression on the clean EOG, fitted on REM+W;
+4. brain left in the EOG: band regression on all clean EEG, fitted on the
+   epochs with still eyes, separately for slow-wave and other epochs;
+5. eyes left in the EEG: band regression on the clean EOG, fitted on the
+   epochs with moving eyes;
 6. muscle in the EEG (rich nights only): AMUSE components with low
    autocorrelation whose 20-35 Hz envelope follows the chin envelope;
 7. EMG: bipolar chin and legs, 10-100 Hz, notch, cardiac template/blanking,
-   spindle regression when the chin carries EEG sigma in N2, RMS envelope.
+   spindle regression when the chin carries EEG sigma, RMS envelope.
 
-Stages follow physioex: W=0, N1=1, N2=2, N3=3, REM=4, -1 unscored.
+Label-free: the cleaning never reads the hypnogram, so a night is cleaned the
+same way in training and in evaluation. The epochs each fit uses come from
+:func:`states.state_masks` (eye, delta and sigma indices of the night); its
+quantiles are calibrated against the stages of training nights only.
 """
 
 import hashlib
 import json
 from dataclasses import asdict, dataclass, field
 from fractions import Fraction
-from typing import Any, Dict, Optional, Sequence, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
 from scipy.signal import butter, resample_poly, sosfiltfilt
@@ -40,9 +45,8 @@ from physioex.data.cleaning.montage import (
     read_derivation,
     resolve_montage,
 )
-from physioex.data.cleaning.regression import band_regression, epoch_mask, fft_band
-
-W, N1, N2, N3, REM = 0, 1, 2, 3, 4
+from physioex.data.cleaning.regression import band_regression, fft_band
+from physioex.data.cleaning.states import state_masks
 Signal = Tuple[np.ndarray, float]
 
 #: Names of the clean outputs, as requested from a dataset.
@@ -83,6 +87,11 @@ class NightCleaner:
     muscle_env_corr_min: float = 0.3
     spindle_corr_max: float = 0.1
     env_fs: float = 10.0
+    # state_masks quantiles (calibrated on training nights)
+    quiet_q: float = 0.4
+    active_q: float = 0.8
+    deep_q: float = 0.75
+    sigma_q: float = 0.7
 
     def spec(self) -> str:
         p = asdict(self)
@@ -111,9 +120,9 @@ class NightCleaner:
             extra = {k: read_derivation(f, d) for k, d in r.extra.items()}
         return sig, extra, r
 
-    def clean_edf(self, edf_path, hypnogram: Sequence[int]) -> CleanNight:
+    def clean_edf(self, edf_path) -> CleanNight:
         sig, extra, r = self.read(edf_path)
-        night = self.clean(sig, extra, hypnogram, level=r.level)
+        night = self.clean(sig, extra, level=r.level)
         night.diagnostics["resolved"] = {
             o: (d.label if d else None) for o, d in r.derivations.items()
         }
@@ -137,7 +146,6 @@ class NightCleaner:
         self,
         signals: Dict[str, Signal],
         extra: Dict[str, Signal],
-        hypnogram: Sequence[int],
         level: Optional[str] = None,
     ) -> CleanNight:
         """``signals`` keyed by montage outputs (eeg, eog, chin, leg_l, leg_r, ecg), ``extra`` by recipe extra names."""
@@ -145,7 +153,6 @@ class NightCleaner:
         diag: Dict[str, Any] = {"spec": self.spec()}
         if "eeg" not in signals or "eog" not in signals:
             return CleanNight({}, "missing", {**diag, "error": "no EEG or EOG"})
-        hyp = np.asarray(hypnogram)
 
         # 1. R peaks: ECG first, chin as surrogate
         peaks, src, q = None, None, 0.0
@@ -170,7 +177,6 @@ class NightCleaner:
             target = eeg_x if k in self.montage.extra_eeg else ocu_x
             target[k] = self._prep(x, fs, peaks)
         n = min(len(v) for v in {**eeg_x, **ocu_x}.values())
-        n = min(n, len(hyp) * int(30 * self.fs)) if len(hyp) else n
         eeg_x = {k: v[:n] for k, v in eeg_x.items()}
         ocu_x = {k: v[:n] for k, v in ocu_x.items()}
         if peaks is not None:
@@ -178,9 +184,9 @@ class NightCleaner:
                 "eeg": cardiac_residual(eeg_x["eeg"], self.fs, peaks),
                 "eog": cardiac_residual(ocu_x["eog"], self.fs, peaks),
             }
-        scored = epoch_mask(hyp, [W, N1, N2, N3, REM], n, self.fs)
-        quiet = epoch_mask(hyp, [N2, N3], n, self.fs)
-        active = epoch_mask(hyp, [W, REM], n, self.fs)
+        st = self.states(eeg_x["eeg"], ocu_x["eog"])
+        scored, quiet, active = st["ok"], st["quiet"], st["active"]
+        diag["states"] = {k: round(float(v.mean()), 3) for k, v in st.items()}
 
         # 3. source separation (rich)
         eog_c, eeg_c = ocu_x["eog"], dict(eeg_x)
@@ -215,11 +221,17 @@ class NightCleaner:
                 "activity_ratio": np.round(crit["activity_ratio"], 3).tolist(),
             }
 
-        # 4. brain left in the EOG
+        # 4. brain left in the EOG: coupling differs in slow-wave epochs, own coefficients there
         if quiet.any():
-            eog_c = band_regression({"eog": eog_c}, eeg_c, quiet, self.fs)[0]["eog"]
+            deep = st["deep"]
+            fit_d, fit_o = quiet & deep, quiet & ~deep
+            reg = lambda fit: band_regression({"eog": eog_c}, eeg_c, fit, self.fs)[0]["eog"]  # noqa: E731
+            if fit_d.sum() > 10 * self.fs and fit_o.sum() > 10 * self.fs:
+                eog_c = np.where(deep, reg(fit_d), reg(fit_o))
+            else:
+                eog_c = reg(quiet)
         else:
-            diag["eog_regression"] = "skipped: no N2/N3"
+            diag["eog_regression"] = "skipped: no epoch with still eyes"
         # brain-eye coupling before step 5 (step 5 subtracts the EOG from the EEG)
         diag["r_eog_eeg_before_step5"] = {
             name: float(
@@ -228,7 +240,7 @@ class NightCleaner:
                     fft_band(eeg_c["eeg"], 0.3, 4.0, self.fs)[m],
                 )[0, 1]
             )
-            for name, m in (("N2", epoch_mask(hyp, [N2], n, self.fs)), ("N3", epoch_mask(hyp, [N3], n, self.fs)))
+            for name, m in (("quiet", quiet & ~st["deep"]), ("deep", quiet & st["deep"]))
             if m.sum() > 10
         }
         # 5. eyes left in the EEG
@@ -237,7 +249,7 @@ class NightCleaner:
                 {"eeg": eeg_c["eeg"]}, {"eog": eog_c}, active, self.fs
             )[0]["eeg"]
         else:
-            diag["eeg_regression"] = "skipped: no REM/W"
+            diag["eeg_regression"] = "skipped: no epoch with moving eyes"
 
         out: Dict[str, Signal] = {"EOG_clean": (eog_c, self.fs)}
 
@@ -250,7 +262,7 @@ class NightCleaner:
                 diag["chin"] = {"note": f"envelope at {fs} Hz, not cleaned"}
             else:
                 y, d = clean_emg(x, fs, self.montage.mains, peaks)
-                y, d["spindle"] = self._spindles(y, fs, eeg_c["eeg"], hyp)
+                y, d["spindle"] = self._spindles(y, fs, eeg_c["eeg"], st["sigma"])
                 out["EMG_clean"] = (y, fs)
                 out["EMG_ENV_clean"] = (
                     rms_envelope(y, fs, 1.0, self.env_fs),
@@ -302,20 +314,35 @@ class NightCleaner:
             "env_corr": corr.round(3).tolist(),
         }
 
+    def states(self, eeg: np.ndarray, eog: np.ndarray) -> Dict[str, np.ndarray]:
+        """Label-free epoch masks of the night (see :func:`states.state_masks`)."""
+        return state_masks(
+            eeg,
+            eog,
+            self.fs,
+            quiet_q=self.quiet_q,
+            active_q=self.active_q,
+            deep_q=self.deep_q,
+            sigma_q=self.sigma_q,
+        )
+
     def _spindles(
-        self, chin: np.ndarray, fs: float, eeg: np.ndarray, hyp: np.ndarray
+        self, chin: np.ndarray, fs: float, eeg: np.ndarray, sigma: np.ndarray
     ) -> Tuple[np.ndarray, Dict]:
-        """Regress the EEG sigma band out of the chin when they correlate in N2."""
+        """Regress the EEG sigma band out of the chin when they correlate in spindle-rich epochs."""
         e = resample(fft_band(eeg, 11.0, 16.0, self.fs), self.fs, fs)
         n = min(len(e), len(chin))
         c = fft_band(chin[:n], 11.0, 16.0, fs)
-        n2 = epoch_mask(hyp, [N2], n, fs)
-        if not n2.any():
-            return chin, {"note": "no N2"}
-        r = float(np.corrcoef(c[n2], e[:n][n2])[0, 1])
-        d = {"corr_N2": r}
+        idx = np.floor(np.arange(n) * self.fs / fs).astype(int)
+        m = np.zeros(n, bool)
+        ok = idx < len(sigma)
+        m[ok] = sigma[idx[ok]]
+        if not m.any():
+            return chin, {"note": "no spindle-rich epoch"}
+        r = float(np.corrcoef(c[m], e[:n][m])[0, 1])
+        d = {"corr_sigma": r}
         if abs(r) > self.spindle_corr_max:
-            b = float(np.dot(e[:n][n2], c[n2]) / np.dot(e[:n][n2], e[:n][n2]))
+            b = float(np.dot(e[:n][m], c[m]) / np.dot(e[:n][m], e[:n][m]))
             chin = chin.copy()
             chin[:n] -= b * e[:n]
             d["regressed"] = b

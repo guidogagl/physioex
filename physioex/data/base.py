@@ -712,8 +712,7 @@ class BasePhysioDataset(Dataset):
         if night is None:
             rm = self._clean[sid]
             sig, extra = self._read_clean_inputs(spec, rm)
-            hyp = self._load_or_compute_labels(spec)
-            night = cleaner.clean(sig, extra, hyp, level=rm.level)
+            night = cleaner.clean(sig, extra, level=rm.level)  # label-free
             night.diagnostics["resolved"] = {
                 o: (d.label if d else None) for o, d in rm.derivations.items()
             }

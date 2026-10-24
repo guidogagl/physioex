@@ -108,7 +108,7 @@ def test_clean_emg(night):
 def test_night_cleaner(night, level):
     sig, extra, src = night
     m = CleanMontage(eeg=["x"], eog=["x"], extra_eeg=["C3", "F3", "O1"], level=level)
-    out = NightCleaner(m).clean(sig, extra if level == "rich" else {}, HYP, level=level)
+    out = NightCleaner(m).clean(sig, extra if level == "rich" else {}, level=level)
     assert out.level == level
     assert set(out.outputs) >= {"EEG_clean", "EOG_clean", "EMG_clean", "EMG_ENV_clean"}
     fs = 100.0
@@ -128,6 +128,19 @@ def test_night_cleaner(night, level):
         assert out.diagnostics["sobi"]["n_ocular"] >= 1
 
 
+def test_states_follow_the_night(night):
+    """Label-free masks find the stages they stand for (stages used only to check)."""
+    sig, extra, _ = night
+    cl = NightCleaner(CleanMontage(eeg=["x"], eog=["x"]))
+    eeg, eog = (cl._prep(*sig[k], None) for k in ("eeg", "eog"))
+    st = cl.states(eeg, eog)
+    n = len(st["quiet"])
+    stage = lambda s: epoch_mask(HYP, s, n, 100.0)  # noqa: E731
+    assert not (st["quiet"] & stage([0, 4])).any()  # still eyes: never W/REM
+    assert (st["active"] & stage([0, 4])).sum() == st["active"].sum()
+    assert (st["deep"] & stage([3])).sum() > 0.8 * st["deep"].sum()
+
+
 def test_spec_changes_with_parameters():
     m = CleanMontage(eeg=["x"], eog=["y"])
     assert NightCleaner(m).spec() == NightCleaner(m).spec()
@@ -140,6 +153,6 @@ def test_spec_changes_with_parameters():
 
 def test_missing_eog():
     out = NightCleaner(CleanMontage(eeg=["x"], eog=["y"])).clean(
-        {"eeg": (np.zeros(6000), 100.0)}, {}, [2, 2]
+        {"eeg": (np.zeros(6000), 100.0)}, {}
     )
     assert out.level == "missing" and not out.outputs
