@@ -63,7 +63,14 @@ def make(tmp_path):
 
 
 def _signals(ds):
-    return np.stack([np.asarray(ds[i]["signals"]) for i in range(len(ds))])
+    """(epochs, channels, samples), channels in the requested order."""
+    items = [ds[i] for i in range(len(ds))]
+    return np.stack(
+        [
+            np.stack([it["signals"][k].numpy().reshape(-1) for k in it["channel_order"]])
+            for it in items
+        ]
+    )
 
 
 def test_classic_channels_unchanged(make):
@@ -79,7 +86,7 @@ def test_clean_channels(make):
     ds = make(CleanFake, chans, pipelines=PIPES)
     x = _signals(ds)
     assert x.shape[0] == len(STAGES) and x.shape[-1] == 3000
-    sig = x.reshape(len(STAGES), len(chans), -1) if x.ndim > 3 else x
+    sig = x
     assert np.abs(sig[:, 0]).sum() > 0 and np.abs(sig[:, 1]).sum() > 0
     assert np.abs(sig[:, 3]).sum() == 0  # no leg in the recording: zero-filled
     # requested order kept: the classic EEG is not the clean one
