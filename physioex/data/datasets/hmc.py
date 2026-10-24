@@ -132,7 +132,8 @@ class HMCDataset(BasePhysioDataset):
                 onsets, _, texts = f.readAnnotations()
         except OSError:
             return None, None
-        t = {str(x).strip().lower(): float(o) for o, x in zip(onsets, texts)}
+        # texts carry the linked channel: "Lights off@@EEG F4-A1"
+        t = {str(x).split("@@")[0].strip().lower(): float(o) for o, x in zip(onsets, texts)}
         return t.get("lights off"), t.get("lights on")
 
     def _read_subject_labels(self, spec: SubjectSpec) -> np.ndarray:
