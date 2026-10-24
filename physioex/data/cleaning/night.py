@@ -94,10 +94,10 @@ class NightCleaner:
     spindle_corr_max: float = 0.1
     env_fs: float = 10.0
     # state_masks quantiles (calibrated on training nights)
-    quiet_q: float = 0.4
-    active_q: float = 0.8
-    deep_q: float = 0.75
-    sigma_q: float = 0.7
+    quiet_q: float = 0.25
+    active_q: float = 0.9
+    deep_q: float = 0.9
+    sigma_q: float = 0.3
     # step 4 also regresses on the Hilbert transform of every EEG (phase-shifted coupling)
     quadrature: bool = False
 
