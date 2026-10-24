@@ -113,3 +113,16 @@ def test_night_window_cuts_long_wake(make):
     ds = make(CleanFake, ["EEG_clean"])
     ds.NIGHT_MARGIN_SEC = 60.0
     assert ds._night_window(ds._subjects[0]) == (4 * 30.0 - 60.0, len(STAGES) * 30.0)
+
+
+def test_night_not_cached_keeps_diagnostics(make):
+    """CACHE_CLEAN_NIGHT=False: channels cached, night arrays not, diagnostics still there."""
+    ds = make(CleanFake, ["EEG_clean", "EOG_clean"], cache="c3")
+    ds.CACHE_CLEAN_NIGHT = False
+    x = _signals(ds)
+    tag = ds.night_cleaner.spec().split(":")[1]
+    meta = ds.cache.load_json(ds.cache.signal_meta_path(ds.DATASET_NAME, "sub01", f"NIGHT_{tag}", "night"))
+    assert meta["outputs"] == {} and meta["level"] == "poor"
+    assert not ds.cache.signal_path(ds.DATASET_NAME, "sub01", f"EEG_clean_{tag}", "night").exists()
+    again = make(CleanFake, ["EEG_clean", "EOG_clean"], cache="c3")
+    np.testing.assert_allclose(_signals(again), x, atol=1e-3)

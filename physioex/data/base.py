@@ -111,6 +111,11 @@ class BasePhysioDataset(Dataset):
     #: Wake kept around the sleep period in the night window of the clean channels (seconds).
     NIGHT_MARGIN_SEC: float = 1800.0
 
+    #: Keep the cleaned night itself (all outputs, float32) in the cache, besides the per-channel
+    #: arrays. False halves the disk of a cache fill that requests every clean channel of a
+    #: subject at once; the diagnostics are cached either way.
+    CACHE_CLEAN_NIGHT: bool = True
+
     # Epoch length in seconds (30 for humans, 4 for mouse)
     DEFAULT_EPOCH_LENGTH_SEC: float = 30.0
 
@@ -699,7 +704,7 @@ class BasePhysioDataset(Dataset):
                 self.DATASET_NAME, sid, f"NIGHT_{tag}", "night"
             )
             meta = self.cache.load_json(mpath) if mpath.exists() else None
-            if meta is not None:
+            if meta is not None and meta.get("outputs"):
                 try:
                     outs = {}
                     for name, fs in meta["outputs"].items():
@@ -723,7 +728,7 @@ class BasePhysioDataset(Dataset):
             night.diagnostics["level_reasons"] = rm.reasons
             if self.cache_enabled:
                 try:
-                    for name, (x, fs) in night.outputs.items():
+                    for name, (x, fs) in (night.outputs.items() if self.CACHE_CLEAN_NIGHT else ()):
                         self.cache.atomic_save_array(
                             self.cache.signal_path(
                                 self.DATASET_NAME, sid, f"{name}_{tag}", "night"
@@ -734,7 +739,7 @@ class BasePhysioDataset(Dataset):
                     self.cache.save_json(
                         mpath,
                         {
-                            "outputs": {k: v[1] for k, v in night.outputs.items()},
+                            "outputs": {k: v[1] for k, v in night.outputs.items()} if self.CACHE_CLEAN_NIGHT else {},
                             "level": night.level,
                             "diagnostics": night.diagnostics,
                             "cleaner": cleaner.spec(),
