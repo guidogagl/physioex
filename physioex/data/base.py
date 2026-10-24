@@ -108,6 +108,9 @@ class BasePhysioDataset(Dataset):
     #: dataset has none. Independent of CHANNEL_PREFERENCES, which it does not change.
     CLEAN_MONTAGE = None
 
+    #: Wake kept around the sleep period in the night window of the clean channels (seconds).
+    NIGHT_MARGIN_SEC: float = 1800.0
+
     # Epoch length in seconds (30 for humans, 4 for mouse)
     DEFAULT_EPOCH_LENGTH_SEC: float = 30.0
 
@@ -756,21 +759,30 @@ class BasePhysioDataset(Dataset):
     def _night_window(self, spec: SubjectSpec) -> Optional[Tuple[float, float]]:
         """Seconds of the recording that make up the night, for the clean channels.
 
-        Lights-off/on where recorded; otherwise the scoring window (first to last
-        scored epoch, whatever the stage): it bounds the night without telling
-        the cleaning anything about the stages. None if neither is available.
+        Lights-off/on where recorded, otherwise the scoring window (first to last
+        scored epoch, whatever the stage); then cut to ``NIGHT_MARGIN_SEC`` before
+        the first and after the last sleep epoch, because many recordings score
+        hours of wake before lights-off and after waking (MrOS, DCSM, Sleep-EDF).
+        Only the bounds come from the stages: the cleaning inside the window is
+        the same for every night. None if no bound is available.
         """
         off, on = self._lights_off_on(spec)
         try:
-            scored = np.where(np.asarray(self._load_or_compute_labels(spec)) >= 0)[0]
+            labels = np.asarray(self._load_or_compute_labels(spec))
         except Exception:  # noqa: BLE001
-            scored = np.array([], dtype=int)
+            labels = np.array([], dtype=int)
+        scored, sleep = np.where(labels >= 0)[0], np.where(labels > 0)[0]
         ep = float(self.epoch_length_sec)
         if len(scored):
             off = scored[0] * ep if off is None else off
             on = (scored[-1] + 1) * ep if on is None else on
         if off is None or on is None or on <= off:
             return None
+        if len(sleep):
+            lo = sleep[0] * ep - self.NIGHT_MARGIN_SEC
+            hi = (sleep[-1] + 1) * ep + self.NIGHT_MARGIN_SEC
+            if min(on, hi) > max(off, lo):
+                off, on = max(off, lo), min(on, hi)
         return float(off), float(on)
 
     def get_clean_diagnostics(self, subject_id: str) -> Dict[str, Any]:

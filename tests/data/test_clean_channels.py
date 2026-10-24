@@ -94,7 +94,8 @@ def test_clean_channels(make):
     assert ds.get_subject_metadata("sub01")["clean_level"] == "poor"
     diag = ds.get_clean_diagnostics("sub01")
     assert diag["level"] == "poor" and diag["resolved"]["eog"] == "E1 - E2"
-    assert diag["window_s"] == [0.0, len(STAGES) * 30.0]  # scoring window: no lights markers
+    # no lights markers: scoring window cut to 30 min around the sleep (W epochs 0-3, sleep 4-19)
+    assert diag["window_s"] == [0.0, len(STAGES) * 30.0]
 
     # a second dataset on the same cache reads the cleaned night back, identical
     again = make(CleanFake, chans, pipelines=PIPES)
@@ -105,3 +106,10 @@ def test_no_recipe_zero_fills(make):
     ds = make(PlainFake, ["EEG_clean", "EEG"])
     x = _signals(ds)
     assert np.abs(x[:, 0]).sum() == 0 and np.abs(x[:, 1]).sum() > 0
+
+
+def test_night_window_cuts_long_wake(make):
+    """Hours of scored wake around the sleep are cut to NIGHT_MARGIN_SEC."""
+    ds = make(CleanFake, ["EEG_clean"])
+    ds.NIGHT_MARGIN_SEC = 60.0
+    assert ds._night_window(ds._subjects[0]) == (4 * 30.0 - 60.0, len(STAGES) * 30.0)
