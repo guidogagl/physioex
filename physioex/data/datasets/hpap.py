@@ -64,27 +64,38 @@ class HPAPDataset(_NSRRBaseDataset):
     DATASET_NAME = "hpap"
     DATASET_SUBDIR = "homepap"
 
-    #: Clean-channel recipe (physioex.data.cleaning). Lab-full files carry raw electrodes, lab-split
-    #: files pre-referenced derivations. EOG: E1 - E2 from the raw eyes; with only the opposite-mastoid
-    #: derivations, E1 - E2 = (E1-M2) - (E2-M1) - (M1-M2) is exact when M1-M2 is recorded.
+    #: Clean-channel recipe (physioex.data.cleaning). Lab-full files carry raw electrodes,
+    #: lab-split files pre-referenced derivations; some nights use A1/A2 instead of M1/M2.
+    #: EOG: E1 - E2 from the raw eyes; with only the opposite-mastoid derivations,
+    #: E1 - E2 = (E1-M2) - (E2-M1) - (M1-M2) is exact when M1-M2 is recorded.
     CLEAN_MONTAGE = CleanMontage(
-        eeg=[("C4", "M1"), "C4-M1", ("C3", "M2"), "C3-M2"],
+        eeg=[
+            ("C4", "M1"),
+            "C4-M1",
+            ("C4", "A1"),
+            "C4-A1",
+            ("C3", "M2"),
+            "C3-M2",
+            ("C3", "A2"),
+            "C3-A2",
+        ],
         eog=[
             ("E1", "E2"),
             ("E-1", "E-2"),
+            "E1-E2",
             {"E1-M2": 1, "E2-M1": -1, "M1-M2": -1},
             Fallback(("E1-M2", "E2-M1"), "poor", "opposite mastoids, contains M1-M2"),
         ],
         chin=[("Lchin", "Rchin"), ("Lchin", "Cchin"), "Lchin-Cchin", "Chin"],
         leg_l=[("Lleg1", "Lleg2"), "Lleg"],
         leg_r=[("Rleg1", "Rleg2"), "Rleg"],
-        ecg=[("ECG1", "ECG3"), "ECG1-ECG3", {"ECG3-ECG1": -1}, "ECG"],
+        ecg=[("ECG1", "ECG3"), "ECG1-ECG3", {"ECG3-ECG1": -1}, ("EKG1", "EKG3"), "ECG"],
         extra={
-            "C3": [("C3", "M2"), "C3-M2"],
-            "F3": [("F3", "M2"), "F3-M2"],
-            "F4": [("F4", "M1"), "F4-M1"],
-            "O1": [("O1", "M2"), "O1-M2"],
-            "O2": [("O2", "M1"), "O2-M1"],
+            "C3": [("C3", "M2"), "C3-M2", ("C3", "A2")],
+            "F3": [("F3", "M2"), "F3-M2", ("F3", "A2")],
+            "F4": [("F4", "M1"), "F4-M1", ("F4", "A1")],
+            "O1": [("O1", "M2"), "O1-M2", ("O1", "A2")],
+            "O2": [("O2", "M1"), "O2-M1", ("O2", "A1")],
             "FPz": [("FPz", "M2")],
         },
         extra_eeg=["C3", "F3", "F4", "O1", "O2", "FPz"],
