@@ -202,9 +202,12 @@ class NightCleaner:
                 lf_share=self.lf_share,
                 activity_ratio=self.activity_ratio,
             )
-            Xo, Xc = A[:, ocu] @ S[ocu], A[:, ~ocu] @ S[~ocu]
-            eog_c = Xo[keys.index("eog")]
-            eeg_c = {k: Xc[keys.index(k)] for k in eeg_x}
+            if ocu.any():
+                Xo, Xc = A[:, ocu] @ S[ocu], A[:, ~ocu] @ S[~ocu]
+                eog_c = Xo[keys.index("eog")]
+                eeg_c = {k: Xc[keys.index(k)] for k in eeg_x}
+            else:  # no ocular component: the EOG would be zero, keep the poor path
+                diag["sobi_note"] = "no ocular component: separation not applied"
             diag["sobi"] = {
                 "n_components": int(S.shape[0]),
                 "n_ocular": int(ocu.sum()),
@@ -217,6 +220,17 @@ class NightCleaner:
             eog_c = band_regression({"eog": eog_c}, eeg_c, quiet, self.fs)[0]["eog"]
         else:
             diag["eog_regression"] = "skipped: no N2/N3"
+        # brain-eye coupling before step 5 (step 5 subtracts the EOG from the EEG)
+        diag["r_eog_eeg_before_step5"] = {
+            name: float(
+                np.corrcoef(
+                    fft_band(eog_c, 0.3, 4.0, self.fs)[m],
+                    fft_band(eeg_c["eeg"], 0.3, 4.0, self.fs)[m],
+                )[0, 1]
+            )
+            for name, m in (("N2", epoch_mask(hyp, [N2], n, self.fs)), ("N3", epoch_mask(hyp, [N3], n, self.fs)))
+            if m.sum() > 10
+        }
         # 5. eyes left in the EEG
         if active.any():
             eeg_c["eeg"] = band_regression(
