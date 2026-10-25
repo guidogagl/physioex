@@ -168,3 +168,19 @@ def test_window_crops_and_realigns(night):
         a, b = int(240 * fs), int(960 * fs)
         assert not y[:a].any() and not y[b + 1 :].any() and y[a:b].any()
     assert win.diagnostics["window_s"] == [240.0, 960.0]
+
+
+@pytest.mark.parametrize("gain", [1.2, np.inf])
+def test_regression_guard_dead_eeg(night, gain):
+    """A dead EEG electrode (noise and heartbeat only) must not inflate the EOG or the EEG through steps 4-5."""
+    sig, _, _ = night
+    rng = np.random.default_rng(5)
+    sig = dict(sig, eeg=(0.3 * rng.standard_normal(len(sig["eeg"][0])), FS))
+    cl = NightCleaner(CleanMontage(eeg=["x"], eog=["x"], level="poor"), max_regression_gain=gain)
+    out = cl.clean(sig, {}, level="poor")
+    p = lambda x: float(np.mean(x**2))  # noqa: E731
+    ratio = {k: p(out.outputs[f"{k.upper()}_clean"][0]) / p(cl._prep(*sig[k], None)) for k in ("eog", "eeg")}
+    if gain == 1.2:
+        assert ratio["eog"] < 1.2 and ratio["eeg"] < 1.2, (ratio, out.diagnostics)
+    else:
+        print("no guard:", ratio)

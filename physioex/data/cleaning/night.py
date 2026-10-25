@@ -32,7 +32,7 @@ import hashlib
 import json
 from dataclasses import asdict, dataclass, field
 from fractions import Fraction
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 from scipy.signal import butter, hilbert, resample_poly, sosfiltfilt
@@ -103,6 +103,9 @@ class NightCleaner:
     quiet_index: str = "eye"
     # step 4: own coefficients for slow-wave epochs only if both fit sets last at least this long
     min_fit_s: float = 10.0
+    # a band of steps 4 and 5 is left as it was where the subtraction raises its power over the scored
+    # epochs above this ratio (near-flat regressor: dead electrode)
+    max_regression_gain: float = 1.2
     # step 4 also regresses on the Hilbert transform of every EEG (phase-shifted coupling)
     quadrature: bool = False
 
@@ -274,11 +277,19 @@ class NightCleaner:
             regs = dict(eeg_c)
             if self.quadrature:
                 regs.update({k + "_q": np.imag(hilbert(v)) for k, v in eeg_c.items()})
-            reg = lambda fit: band_regression({"eog": eog_c}, regs, fit, self.fs)[0]["eog"]  # noqa: E731
+            undone: List = []
+            reg = lambda fit, chk: band_regression(  # noqa: E731
+                {"eog": eog_c}, regs, fit, self.fs, check=chk, max_gain=self.max_regression_gain, undone=undone
+            )[0]["eog"]
             if fit_d.sum() > self.min_fit_s * self.fs and fit_o.sum() > self.min_fit_s * self.fs:
-                eog_c = np.where(deep, reg(fit_d), reg(fit_o))
+                new = np.where(deep, reg(fit_d, scored & deep), reg(fit_o, scored & ~deep))
             else:
-                eog_c = reg(quiet)
+                new = reg(quiet, scored)
+            # applied on the scored epochs only: in an artefact epoch the regressors are artefact, and
+            # subtracting them would copy it into the other channel
+            eog_c = np.where(scored, new, eog_c)
+            if undone:
+                diag["eog_regression"] = {"undone_bands": sorted({lo for _, lo in undone})}
         else:
             diag["eog_regression"] = "skipped: no epoch with still eyes"
         # brain-eye coupling before step 5 (step 5 subtracts the EOG from the EEG)
@@ -294,9 +305,14 @@ class NightCleaner:
         }
         # 5. eyes left in the EEG
         if active.any():
-            eeg_c["eeg"] = band_regression(
-                {"eeg": eeg_c["eeg"]}, {"eog": eog_c}, active, self.fs
+            undone = []
+            new = band_regression(
+                {"eeg": eeg_c["eeg"]}, {"eog": eog_c}, active, self.fs,
+                check=scored, max_gain=self.max_regression_gain, undone=undone,
             )[0]["eeg"]
+            eeg_c["eeg"] = np.where(scored, new, eeg_c["eeg"])  # scored epochs only, as in step 4
+            if undone:
+                diag["eeg_regression"] = {"undone_bands": sorted({lo for _, lo in undone})}
         else:
             diag["eeg_regression"] = "skipped: no epoch with moving eyes"
 

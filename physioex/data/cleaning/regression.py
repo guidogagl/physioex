@@ -1,6 +1,6 @@
 """Band-wise linear regression between channels of the same night."""
 
-from typing import Dict, Iterable, Sequence, Tuple
+from typing import Dict, Iterable, List, Optional, Sequence, Tuple
 
 import numpy as np
 
@@ -49,6 +49,9 @@ def band_regression(
     fit: np.ndarray,
     fs: float,
     bands: Sequence[Tuple[float, float]] = DEFAULT_BANDS,
+    check: Optional[np.ndarray] = None,
+    max_gain: float = np.inf,
+    undone: Optional[List[Tuple[str, float]]] = None,
 ) -> Tuple[Dict[str, np.ndarray], Dict[Tuple[str, float], np.ndarray]]:
     """Remove from each target channel its band-wise linear prediction from the regressors.
 
@@ -59,6 +62,14 @@ def band_regression(
 
     Typical use: target = EOG, regressors = EEG, fit = N2+N3 epochs, where the
     eyes are still and what the EOG shares with the EEG is brain.
+
+    A subtraction lowers the power of the band on the fit samples, but it can
+    raise it elsewhere when a regressor is near flat in the band (a dead
+    electrode gives huge coefficients). With ``check`` (a sample mask) a band
+    whose median squared amplitude over ``check`` grows above ``max_gain`` times
+    that of the input is left
+    as it was, its coefficients set to 0 and ``(name, lo)`` appended to
+    ``undone``.
 
     Returns ``(cleaned, coef)`` with ``coef[(name, lo)]`` the coefficients of
     the band starting at ``lo``, one per regressor in insertion order.
@@ -73,6 +84,12 @@ def band_regression(
         for k, v in target.items():
             y = fft_band(v, lo, hi, fs)
             b, *_ = np.linalg.lstsq(E[fit], y[fit], rcond=None)
-            out[k] += y - E @ b
+            r = y - E @ b
+            # median of the squares: a few huge artefacts must not hide a band that grows everywhere else
+            if check is not None and check.any() and np.median(r[check] ** 2) > max_gain * np.median(y[check] ** 2):
+                r, b = y, np.zeros_like(b)
+                if undone is not None:
+                    undone.append((k, lo))
+            out[k] += r
             coef[(k, lo)] = b
     return out, coef
