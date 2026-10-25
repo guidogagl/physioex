@@ -89,6 +89,8 @@ class CleanNight:
 @dataclass
 class NightCleaner:
     montage: CleanMontage
+    # enters spec(): a change of code alone would leave old outputs in cache under the same key
+    version: int = 2
     fs: float = 100.0
     band: Tuple[float, float] = (0.3, 35.0)
     sobi_lags: Tuple[int, ...] = tuple(range(1, 101, 5))
@@ -97,15 +99,18 @@ class NightCleaner:
     activity_ratio: float = 1.5
     muscle_autocorr_max: float = 0.6
     muscle_env_corr_min: float = 0.3
-    # step 6: "wideband" (native rate), "narrow" (at fs, first version) or "off"
-    muscle_mode: str = "narrow"
+    # step 6: "wideband" (native rate), "narrow" (at fs, first version) or "off". Off by default (v2): on real
+    # nights neither variant removes a component (hardware low-pass at 35-70 Hz in several datasets leaves no
+    # band where muscle and brain separate), and the EEG-chin correlation outside arousals is unchanged
+    muscle_mode: str = "off"
     # wideband: share of the component power above 20 Hz that marks muscle (brain sources in sleep: 1/f)
     muscle_hf_min: float = 0.5
     muscle_min_fs: float = 200.0
     spindle_corr_max: float = 0.1
     env_fs: float = 10.0
-    # step 1: template window after the R peak on EEG/EOG; 0.4 s covers the QRS, 0.7 s also the pulse wave
-    cardiac_post: float = 0.4
+    # step 1: template window after the R peak on EEG/EOG; 0.4 s covers the QRS, 0.7 s also the pulse wave, which
+    # with 0.4 s stayed 4-13x above the noise floor of the R-locked mean (v2)
+    cardiac_post: float = 0.7
     # state_masks quantiles. A calibration of the masks on the stages of training nights (best precision per
     # mask) gave 0.25 on eye_minus_reldelta, 0.9, 0.9, 0.3, but the cleaning got worse with it (less N3 delta
     # removed from the EOG, the SOBI activity criterion weaker): the masks feed fits, and broader masks fit better.
