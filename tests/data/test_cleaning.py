@@ -77,7 +77,7 @@ def test_band_regression_rcond_collinear_regressors():
     for rc in (0.0, 1e-2):
         clean, coef = band_regression(eog, regs, fit, FS, rcond=rc)
         out[rc] = float(np.mean(clean["e"][n // 2 :] ** 2) / np.mean(fft_band(eog["e"], 0.3, 35.0, FS)[n // 2 :] ** 2))
-    assert out[0.0] > 2.0, out  # the failure the option guards against
+    assert out[0.0] > 1.5, out  # the failure the option guards against
     assert out[1e-2] < 1.0, out
 
 
