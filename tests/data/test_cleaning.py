@@ -62,6 +62,24 @@ def test_band_regression_removes_known_leak_and_keeps_eyes():
     assert _corr(clean["e"][: n // 2 - 1000], brain["c3"][: n // 2 - 1000]) < 0.02
 
 
+def test_band_regression_rcond_collinear_regressors():
+    """Two electrodes that differ by little: plain least squares gives huge opposite coefficients that
+    blow up their difference outside the fit; the truncated solution keeps the residual in check."""
+    n = 30000
+    a = _ar(n, 0.95, 1)
+    d = 0.001 * _ar(n, 0.5, 2)
+    d[n // 2 :] *= 300  # the two electrodes drift apart in the second half
+    regs = {"t5": a, "t6": -a + d}
+    eog = {"e": 0.5 * a + _ar(n, 0.9, 3)}
+    fit = np.arange(n) < n // 2
+    out = {}
+    for rc in (0.0, 1e-2):
+        clean, coef = band_regression(eog, regs, fit, FS, rcond=rc)
+        out[rc] = float(np.mean(clean["e"][n // 2 :] ** 2) / np.mean(fft_band(eog["e"], 0.3, 35.0, FS)[n // 2 :] ** 2))
+    assert out[0.0] > 2.0, out  # the failure the option guards against
+    assert out[1e-2] < 1.0, out
+
+
 def test_band_regression_empty_fit_raises():
     with pytest.raises(ValueError):
         band_regression(

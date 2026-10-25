@@ -106,6 +106,8 @@ class NightCleaner:
     # a band of steps 4 and 5 is left as it was where the subtraction raises its power over the scored
     # epochs above this ratio (near-flat regressor: dead electrode)
     max_regression_gain: float = 1.2
+    # steps 4 and 5: singular values below this fraction of the largest (standardised regressors) are dropped
+    regression_rcond: float = 1e-2
     # step 4 also regresses on the Hilbert transform of every EEG (phase-shifted coupling)
     quadrature: bool = False
 
@@ -279,7 +281,8 @@ class NightCleaner:
                 regs.update({k + "_q": np.imag(hilbert(v)) for k, v in eeg_c.items()})
             undone: List = []
             reg = lambda fit, chk: band_regression(  # noqa: E731
-                {"eog": eog_c}, regs, fit, self.fs, check=chk, max_gain=self.max_regression_gain, undone=undone
+                {"eog": eog_c}, regs, fit, self.fs, check=chk, max_gain=self.max_regression_gain, undone=undone,
+                rcond=self.regression_rcond,
             )[0]["eog"]
             if fit_d.sum() > self.min_fit_s * self.fs and fit_o.sum() > self.min_fit_s * self.fs:
                 new = np.where(deep, reg(fit_d, scored & deep), reg(fit_o, scored & ~deep))
@@ -309,6 +312,7 @@ class NightCleaner:
             new = band_regression(
                 {"eeg": eeg_c["eeg"]}, {"eog": eog_c}, active, self.fs,
                 check=scored, max_gain=self.max_regression_gain, undone=undone,
+                rcond=self.regression_rcond,
             )[0]["eeg"]
             eeg_c["eeg"] = np.where(scored, new, eeg_c["eeg"])  # scored epochs only, as in step 4
             if undone:

@@ -52,6 +52,7 @@ def band_regression(
     check: Optional[np.ndarray] = None,
     max_gain: float = np.inf,
     undone: Optional[List[Tuple[str, float]]] = None,
+    rcond: float = 0.0,
 ) -> Tuple[Dict[str, np.ndarray], Dict[Tuple[str, float], np.ndarray]]:
     """Remove from each target channel its band-wise linear prediction from the regressors.
 
@@ -71,6 +72,12 @@ def band_regression(
     as it was, its coefficients set to 0 and ``(name, lo)`` appended to
     ``undone``.
 
+    Two nearly collinear regressors (two electrodes that differ by little) give
+    huge coefficients of opposite sign: they cancel on the fit samples and blow up
+    the small difference elsewhere. With ``rcond > 0`` the regressors are
+    standardised on the fit samples and the directions whose singular value is
+    below ``rcond`` times the largest are dropped from the solution.
+
     Returns ``(cleaned, coef)`` with ``coef[(name, lo)]`` the coefficients of
     the band starting at ``lo``, one per regressor in insertion order.
     """
@@ -83,7 +90,12 @@ def band_regression(
         E = np.stack([fft_band(v, lo, hi, fs) for v in regressors.values()], 1)
         for k, v in target.items():
             y = fft_band(v, lo, hi, fs)
-            b, *_ = np.linalg.lstsq(E[fit], y[fit], rcond=None)
+            if rcond > 0:
+                sd = E[fit].std(0)
+                sd[sd == 0] = 1.0
+                b = np.linalg.lstsq(E[fit] / sd, y[fit], rcond=rcond)[0] / sd
+            else:
+                b, *_ = np.linalg.lstsq(E[fit], y[fit], rcond=None)
             r = y - E @ b
             # median of the squares: a few huge artefacts must not hide a band that grows everywhere else
             if check is not None and check.any() and np.median(r[check] ** 2) > max_gain * np.median(y[check] ** 2):
