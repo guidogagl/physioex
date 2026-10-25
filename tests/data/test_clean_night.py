@@ -7,6 +7,7 @@ from physioex.data.cleaning import CleanMontage
 from physioex.data.cleaning.cardiac import (
     cardiac_residual,
     detect_r_peaks,
+    peak_aligned_mean,
     subtract_cardiac,
 )
 from physioex.data.cleaning.emg import clean_emg, rms_envelope
@@ -219,3 +220,25 @@ def test_muscle_wideband_removes_injected_muscle(night):
     assert _corr(lo(outs["wideband"]), delta, n3) > 0.9
     diff = lo(outs["wideband"]) - lo(outs["off"])  # only 16-35 Hz is subtracted: the slow band moves by resampling leakage only
     assert np.sqrt(np.mean(diff**2)) < 0.01 * np.sqrt(np.mean(lo(outs["off"]) ** 2))
+
+
+def test_cardiac_window_covers_pulse_wave():
+    """A pulse wave 0.5 s after the R peak stays with the 0.4 s window and goes with 0.7 s; the window stops before the next beat."""
+    rng = np.random.default_rng(3)
+    n = int(600 * FS)
+    t = np.arange(n) / FS
+    beats = np.cumsum(0.95 + 0.03 * rng.standard_normal(700))
+    beats = beats[beats < t[-1] - 1]
+    x = np.zeros(n)
+    for b in beats:
+        x += 10 * np.exp(-0.5 * ((t - b) / 0.012) ** 2) + 4 * np.exp(-0.5 * ((t - b - 0.5) / 0.08) ** 2)
+    x += 0.5 * rng.standard_normal(n)
+    pulse = lambda y: np.ptp(peak_aligned_mean(y, FS, beats, 0.2, 0.8)[int(0.5 * FS) : int(0.8 * FS)])  # noqa: E731
+    short, long = subtract_cardiac(x, FS, beats, post=0.4), subtract_cardiac(x, FS, beats, post=0.7)
+    assert pulse(long) < 0.2 * pulse(short)
+    # at 120 bpm the window is cut below the RR interval: no beat is subtracted twice
+    fast = np.arange(1.0, 590.0, 0.5)
+    y = np.zeros(n)
+    for b in fast:
+        y += 10 * np.exp(-0.5 * ((t - b) / 0.012) ** 2)
+    assert cardiac_residual(subtract_cardiac(y, FS, fast, post=0.7), FS, fast) < 0.05 * cardiac_residual(y, FS, fast)

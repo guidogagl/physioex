@@ -104,6 +104,8 @@ class NightCleaner:
     muscle_min_fs: float = 200.0
     spindle_corr_max: float = 0.1
     env_fs: float = 10.0
+    # step 1: template window after the R peak on EEG/EOG; 0.4 s covers the QRS, 0.7 s also the pulse wave
+    cardiac_post: float = 0.4
     # state_masks quantiles. A calibration of the masks on the stages of training nights (best precision per
     # mask) gave 0.25 on eye_minus_reldelta, 0.9, 0.9, 0.3, but the cleaning got worse with it (less N3 delta
     # removed from the EOG, the SOBI activity criterion weaker): the masks feed fits, and broader masks fit better.
@@ -172,7 +174,7 @@ class NightCleaner:
             butter(4, [self.band[0], hi], btype="band", fs=fs, output="sos"), x
         )
         if peaks is not None:
-            x = subtract_cardiac(x, fs, peaks)
+            x = subtract_cardiac(x, fs, peaks, post=self.cardiac_post)
         return resample(x, fs, self.fs)
 
     def clean(
@@ -416,7 +418,7 @@ class NightCleaner:
                 butter(4, [self.band[0], 0.45 * fw], btype="band", fs=fs, output="sos"), x
             )
             if peaks is not None:
-                x = subtract_cardiac(x, fs, peaks)
+                x = subtract_cardiac(x, fs, peaks, post=self.cardiac_post)
             wide[k] = resample(x, fs, fw)
         keys = list(wide)
         m = min(len(v) for v in wide.values())

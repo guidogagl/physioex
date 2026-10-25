@@ -99,11 +99,15 @@ def subtract_cardiac(
 ) -> np.ndarray:
     """Subtract from x, around every R peak, the mean of the peak-aligned segments
     within +-window_s/2 (moving template: amplitude and shape change with posture).
+    ``post`` covers the QRS (0.4 s) or also the pulse wave (0.7 s); it is cut so that
+    pre + post stays below 0.9 of the median RR interval.
 
     Segments that overlap at high heart rate are subtracted once per peak; the
     template is tapered (Tukey, 10%) so no step is introduced at its edges.
     """
     x = np.asarray(x, dtype=np.float64)
+    if len(peaks_s) > 2:  # the window never reaches the next beat (pre + post below 0.9 of the median RR)
+        post = min(post, 0.9 * float(np.median(np.diff(peaks_s))) - pre)
     a, b = int(round(pre * fs)), int(round(post * fs))
     idx = np.round(np.asarray(peaks_s) * fs).astype(int)
     idx = idx[(idx - a >= 0) & (idx + b < len(x))]
