@@ -12,8 +12,13 @@ Order (Croft & Barry: the EOG is cleaned of brain before it is used to clean the
    epochs with still eyes, separately for slow-wave and other epochs;
 5. eyes left in the EEG: band regression on the clean EOG, fitted on the
    epochs with moving eyes;
-6. muscle in the EEG (rich nights only): AMUSE components with low
-   autocorrelation whose 20-35 Hz envelope follows the chin envelope;
+6. muscle in the EEG (rich nights only): AMUSE components of the EEG at its
+   native rate (``muscle_mode="wideband"``: up to 0.45 fs, before the 35 Hz
+   low-pass, where muscle is broadband) with most of their power above 20 Hz
+   and a 20 Hz+ envelope that follows the chin; only their 16-35 Hz part is
+   subtracted, so delta and sigma are untouched. ``"narrow"`` is the first
+   version (components at ``fs`` after the low-pass, selected by an absolute
+   autocorrelation threshold: on real nights it never selected anything);
 7. EMG: bipolar chin and legs, 10-100 Hz, notch, cardiac template/blanking,
    spindle regression when the chin carries EEG sigma, RMS envelope.
 
@@ -91,6 +96,11 @@ class NightCleaner:
     activity_ratio: float = 1.5
     muscle_autocorr_max: float = 0.6
     muscle_env_corr_min: float = 0.3
+    # step 6: "wideband" (native rate), "narrow" (at fs, first version) or "off"
+    muscle_mode: str = "narrow"
+    # wideband: share of the component power above 20 Hz that marks muscle (brain sources in sleep: 1/f)
+    muscle_hf_min: float = 0.5
+    muscle_min_fs: float = 200.0
     spindle_corr_max: float = 0.1
     env_fs: float = 10.0
     # state_masks quantiles. A calibration of the masks on the stages of training nights (best precision per
@@ -369,13 +379,81 @@ class NightCleaner:
                     diag[k] = {"note": str(e)}
 
         # 6. muscle in the EEG (rich)
-        if level == "rich" and chin_env is not None:
+        if self.muscle_mode == "off":
+            diag["muscle"] = {"note": "off"}
+        elif level == "rich" and chin_env is not None and self.muscle_mode == "wideband":
+            eeg_c["eeg"], diag["muscle"] = self._muscle_wideband(
+                eeg_c["eeg"], signals, extra, peaks, chin_env, st["ok"]
+            )
+        elif level == "rich" and chin_env is not None:
             eeg_c["eeg"], diag["muscle"] = self._muscle(eeg_c, chin_env)
         else:
             diag["muscle"] = {"note": "not removed (poor night or no chin)"}
         out["EEG_clean"] = (eeg_c["eeg"], self.fs)
         diag["n_samples"] = n
         return CleanNight(out, level, diag)
+
+    def _muscle_wideband(
+        self,
+        eeg: np.ndarray,
+        signals: Dict[str, Signal],
+        extra: Dict[str, Signal],
+        peaks: Optional[np.ndarray],
+        chin_env: np.ndarray,
+        ok: np.ndarray,
+    ) -> Tuple[np.ndarray, Dict]:
+        """Step 6 at the native rate of the EEG: muscle components out of the 16-35 Hz band of ``eeg``."""
+        chans = {"eeg": signals["eeg"]}
+        chans.update({k: v for k, v in extra.items() if k in self.montage.extra_eeg})
+        fw = min(fs for _, fs in chans.values())
+        if fw < self.muscle_min_fs or len(chans) < 3:
+            return eeg, {"note": f"not removed ({len(chans)} EEG at {fw:g} Hz)"}
+        wide = {}
+        for k, (x, fs) in chans.items():
+            x = notch_mains(np.asarray(x, dtype=np.float64), fs, self.montage.mains)
+            x = sosfiltfilt(
+                butter(4, [self.band[0], 0.45 * fw], btype="band", fs=fs, output="sos"), x
+            )
+            if peaks is not None:
+                x = subtract_cardiac(x, fs, peaks)
+            wide[k] = resample(x, fs, fw)
+        keys = list(wide)
+        m = min(len(v) for v in wide.values())
+        X = np.stack([wide[k][:m] for k in keys])
+        X = X - X.mean(1, keepdims=True)
+        U, A, ac = amuse(X)
+        S = U @ X
+        hf = np.array(
+            [np.var(fft_band(s, 20.0, 0.45 * fw, fw)) / max(np.var(s), 1e-12) for s in S]
+        )
+        # 1 s RMS of the 20 Hz+ band against the chin envelope, on the epochs without artefacts
+        sec = int(round(fw))
+        n_s = min(len(chin_env), m // sec, len(ok) // int(self.fs))
+        good = ok[: n_s * int(self.fs) : int(self.fs)]
+        corr = np.zeros(len(S))
+        for i, s in enumerate(S):
+            hb = fft_band(s, 20.0, 0.45 * fw, fw)[: n_s * sec].reshape(n_s, sec)
+            env = np.sqrt((hb**2).mean(1))[good]
+            c = chin_env[:n_s][good]
+            corr[i] = np.corrcoef(env, c)[0, 1] if env.std() > 0 and c.std() > 0 else 0.0
+        drop = (hf >= self.muscle_hf_min) & (corr >= self.muscle_env_corr_min)
+        diag = {
+            "mode": "wideband",
+            "fs": fw,
+            "n_components": len(S),
+            "n_removed": int(drop.sum()),
+            "hf_share": hf.round(3).tolist(),
+            "env_corr": corr.round(3).tolist(),
+        }
+        if not drop.any():
+            return eeg, diag
+        part = A[keys.index("eeg"), drop] @ S[drop]
+        part = resample(fft_band(part, 16.0, min(self.band[1], 0.45 * fw), fw), fw, self.fs)
+        k = min(len(part), len(eeg))
+        out = eeg.copy()
+        out[:k] -= part[:k]
+        diag["removed_rms"] = float(np.sqrt(np.mean(part[:k] ** 2)))
+        return out, diag
 
     def _muscle(
         self, eeg_c: Dict[str, np.ndarray], chin_env: np.ndarray

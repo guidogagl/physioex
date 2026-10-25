@@ -184,3 +184,29 @@ def test_regression_guard_dead_eeg(night, gain):
         assert ratio["eog"] < 1.2 and ratio["eeg"] < 1.2, (ratio, out.diagnostics)
     else:
         print("no guard:", ratio)
+
+
+def test_muscle_wideband_removes_injected_muscle(night):
+    """Muscle leaked into every EEG channel (broadband, bursts that follow the chin) goes out of 16-35 Hz; delta stays."""
+    sig, extra, src = night
+    rng = np.random.default_rng(5)
+    burst = fft_band(src["muscle"], 20.0, 90.0, FS)  # same envelope as the chin muscle, its own noise
+    leak = lambda g: g * 8 * burst  # noqa: E731
+    sig = {**sig, "eeg": (sig["eeg"][0] + leak(1.0), FS)}
+    extra = {k: (x + leak(rng.uniform(0.5, 1.0)), fs) for k, (x, fs) in extra.items()}
+    m = CleanMontage(eeg=["x"], eog=["x"], extra_eeg=["C3", "F3", "O1"], level="rich")
+    outs = {mode: NightCleaner(m, muscle_mode=mode).clean(sig, extra, level="rich") for mode in ("off", "wideband")}
+    fs = 100.0
+    n = len(outs["off"].outputs["EEG_clean"][0])
+    mus = fft_band(resample(burst, FS, fs)[:n], 20.0, 35.0, fs)
+    delta = fft_band(resample(src["delta"], FS, fs)[:n], 0.3, 4, fs)
+    every = np.ones(n, bool)
+    hi = {k: fft_band(o.outputs["EEG_clean"][0][:n], 20.0, 35.0, fs) for k, o in outs.items()}
+    d = outs["wideband"].diagnostics["muscle"]
+    assert d["n_removed"] >= 1, d
+    assert np.var(hi["wideband"]) < 0.5 * np.var(hi["off"])
+    assert abs(_corr(hi["wideband"], mus, every)) < 0.5 * abs(_corr(hi["off"], mus, every))
+    lo = lambda o: fft_band(o.outputs["EEG_clean"][0][:n], 0.3, 4, fs)  # noqa: E731
+    n3 = epoch_mask(HYP, [3], n, fs)
+    assert _corr(lo(outs["wideband"]), delta, n3) > 0.9
+    np.testing.assert_allclose(lo(outs["wideband"]), lo(outs["off"]), atol=1e-6 * np.abs(lo(outs["off"])).max())
