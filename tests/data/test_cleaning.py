@@ -67,10 +67,11 @@ def test_band_regression_rcond_collinear_regressors():
     blow up their difference outside the fit; the truncated solution keeps the residual in check."""
     n = 30000
     a = _ar(n, 0.95, 1)
-    d = 0.001 * _ar(n, 0.5, 2)
+    src = _ar(n, 0.5, 2)  # a source the EOG shares with the small difference of the two electrodes
+    d = 0.001 * src
     d[n // 2 :] *= 300  # the two electrodes drift apart in the second half
     regs = {"t5": a, "t6": -a + d}
-    eog = {"e": 0.5 * a + _ar(n, 0.9, 3)}
+    eog = {"e": 0.5 * a + 0.3 * src + _ar(n, 0.9, 3)}
     fit = np.arange(n) < n // 2
     out = {}
     for rc in (0.0, 1e-2):
