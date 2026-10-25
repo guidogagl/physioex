@@ -93,11 +93,16 @@ class NightCleaner:
     muscle_env_corr_min: float = 0.3
     spindle_corr_max: float = 0.1
     env_fs: float = 10.0
-    # state_masks quantiles (calibrated on training nights)
-    quiet_q: float = 0.25
-    active_q: float = 0.9
-    deep_q: float = 0.9
-    sigma_q: float = 0.3
+    # state_masks quantiles. A calibration of the masks on the stages of training nights (best precision per
+    # mask) gave 0.25 on eye_minus_reldelta, 0.9, 0.9, 0.3, but the cleaning got worse with it (less N3 delta
+    # removed from the EOG, the SOBI activity criterion weaker): the masks feed fits, and broader masks fit better.
+    quiet_q: float = 0.4
+    active_q: float = 0.8
+    deep_q: float = 0.75
+    sigma_q: float = 0.7
+    quiet_index: str = "eye"
+    # step 4: own coefficients for slow-wave epochs only if both fit sets last at least this long
+    min_fit_s: float = 10.0
     # step 4 also regresses on the Hilbert transform of every EEG (phase-shifted coupling)
     quadrature: bool = False
 
@@ -270,7 +275,7 @@ class NightCleaner:
             if self.quadrature:
                 regs.update({k + "_q": np.imag(hilbert(v)) for k, v in eeg_c.items()})
             reg = lambda fit: band_regression({"eog": eog_c}, regs, fit, self.fs)[0]["eog"]  # noqa: E731
-            if fit_d.sum() > 10 * self.fs and fit_o.sum() > 10 * self.fs:
+            if fit_d.sum() > self.min_fit_s * self.fs and fit_o.sum() > self.min_fit_s * self.fs:
                 eog_c = np.where(deep, reg(fit_d), reg(fit_o))
             else:
                 eog_c = reg(quiet)
@@ -368,6 +373,7 @@ class NightCleaner:
             active_q=self.active_q,
             deep_q=self.deep_q,
             sigma_q=self.sigma_q,
+            quiet_index=self.quiet_index,
         )
 
     def _spindles(
