@@ -11,7 +11,10 @@ Order (Croft & Barry: the EOG is cleaned of brain before it is used to clean the
 4. brain left in the EOG: band regression on all clean EEG, fitted on the
    epochs with still eyes, separately for slow-wave and other epochs;
 5. eyes left in the EEG: band regression on the clean EOG, fitted on the
-   epochs with moving eyes;
+   epochs with moving eyes (mostly wake); then (v3) one more 0.3-8 Hz
+   coefficient fitted on the rapid eye deflections made at low chin tone
+   (REM saccades), applied also on the dense saccade bursts that the
+   artefact gate of the other steps drops;
 6. muscle in the EEG (rich nights only): AMUSE components of the EEG at its
    native rate (``muscle_mode="wideband"``: up to 0.45 fs, before the 35 Hz
    low-pass, where muscle is broadband; spatial filters that maximise the
@@ -90,7 +93,7 @@ class CleanNight:
 class NightCleaner:
     montage: CleanMontage
     # enters spec(): a change of code alone would leave old outputs in cache under the same key
-    version: int = 2
+    version: int = 3
     fs: float = 100.0
     band: Tuple[float, float] = (0.3, 35.0)
     sobi_lags: Tuple[int, ...] = tuple(range(1, 101, 5))
@@ -121,6 +124,19 @@ class NightCleaner:
     deep_within: str = "all"
     sigma_q: float = 0.7
     quiet_index: str = "eye"
+    # step 5b (v3, "lowtone"; "off" = v2): after the fit on the active epochs, one more coefficient at eye_fit_band
+    # fitted on +-eye_fit_halfwin s around the rapid eye deflections made while the chin tone
+    # (30 s moving median of the 1 s RMS) is below its eye_fit_tone_q quantile, one coefficient at
+    # eye_fit_band: the REM saccades, without the blinks of wake. The active epochs of 5a are mostly wake; with 5a
+    # alone the REM-saccade-locked EEG stayed above 2x its noise floor in 19 nights of 32 (median 3.3x); with 5b in
+    # 14 (median 1.6x). protosleepnet-v3 scripts/eye_residual_check.py, 26.10.2026
+    eye_fit: str = "lowtone"
+    eye_fit_tone_q: float = 0.3
+    eye_fit_halfwin: float = 0.5
+    eye_fit_band: Tuple[float, float] = (0.3, 8.0)
+    # step 5b fits and subtracts on the epochs whose EOG power is below this many times the night median (20x,
+    # the artefact gate of the other steps, drops the densest REM bursts: those were never cleaned in v2)
+    eye_artefact: float = 200.0
     # step 4: own coefficients for slow-wave epochs only if both fit sets last at least this long
     min_fit_s: float = 10.0
     # a band of steps 4 and 5 is left as it was where the subtraction raises its power over the scored
@@ -344,7 +360,14 @@ class NightCleaner:
             for name, m in (("quiet", quiet & ~st["deep"]), ("deep", quiet & st["deep"]))
             if m.sum() > 10
         }
-        # 5. eyes left in the EEG
+        # 7a. chin cleaned here: its tone picks the fit set of step 5
+        chin = None
+        if "chin" in signals and signals["chin"][1] >= 25:
+            chin = clean_emg(signals["chin"][0], signals["chin"][1], self.montage.mains, peaks)
+
+        # 5. eyes left in the EEG: (a) every band, fitted on the epochs with moving eyes (mostly wake: blinks);
+        # (b) "lowtone": what is left of the REM saccades, one more coefficient at eye_fit_band
+        diag["eeg_regression"] = {}
         if active.any():
             undone = []
             new = band_regression(
@@ -354,9 +377,27 @@ class NightCleaner:
             )[0]["eeg"]
             eeg_c["eeg"] = np.where(scored, new, eeg_c["eeg"])  # scored epochs only, as in step 4
             if undone:
-                diag["eeg_regression"] = {"undone_bands": sorted({lo for _, lo in undone})}
+                diag["eeg_regression"]["undone_bands"] = sorted({lo for _, lo in undone})
         else:
-            diag["eeg_regression"] = "skipped: no epoch with moving eyes"
+            diag["eeg_regression"]["active"] = "skipped: no epoch with moving eyes"
+        fit5 = None
+        if self.eye_fit == "lowtone" and chin is not None:
+            fit5 = self._eye_fit(eog_c, (chin[0], signals["chin"][1]), st["ok_eye"], n)
+        if fit5 is not None:
+            lo, hi = self.eye_fit_band
+            undone = []
+            part = fft_band(eeg_c["eeg"], lo, hi, self.fs)
+            res = band_regression(
+                {"eeg": eeg_c["eeg"]}, {"eog": eog_c}, fit5, self.fs, bands=(self.eye_fit_band,),
+                check=st["ok_eye"], max_gain=self.max_regression_gain, undone=undone, rcond=self.regression_rcond,
+            )[0]["eeg"]
+            # only the fit band changes; above it the EEG is left as it is
+            eeg_c["eeg"] = np.where(st["ok_eye"], eeg_c["eeg"] - part + res, eeg_c["eeg"])
+            diag["eeg_regression"]["lowtone_fit_s"] = round(float(fit5.sum() / self.fs), 1)
+            if undone:
+                diag["eeg_regression"]["lowtone_undone"] = True
+        else:
+            diag["eeg_regression"]["lowtone"] = "skipped: no chin or too few fit samples"
 
         out: Dict[str, Signal] = {"EOG_clean": (eog_c, self.fs)}
 
@@ -368,7 +409,7 @@ class NightCleaner:
                 out["EMG_ENV_clean"] = (np.asarray(x, dtype=np.float64), fs)
                 diag["chin"] = {"note": f"envelope at {fs} Hz, not cleaned"}
             else:
-                y, d = clean_emg(x, fs, self.montage.mains, peaks)
+                y, d = chin
                 y, d["spindle"] = self._spindles(y, fs, eeg_c["eeg"], st["sigma"])
                 out["EMG_clean"] = (y, fs)
                 out["EMG_ENV_clean"] = (
@@ -400,6 +441,41 @@ class NightCleaner:
         out["EEG_clean"] = (eeg_c["eeg"], self.fs)
         diag["n_samples"] = n
         return CleanNight(out, level, diag)
+
+    def _eye_fit(self, eog: np.ndarray, chin: Signal, scored: np.ndarray, n: int) -> Optional[np.ndarray]:
+        """Sample mask of step 5 ("lowtone") from the clean chin (signal, fs), or None (less than min_fit_s of fit samples).
+
+        Rapid deflections: peaks of |d/dt| of the 0.3-5 Hz EOG above 5x its median, >= 0.5 s apart, with an
+        amplitude (0.3 s across the peak) >= 4x the median candidate; low tone: the 30 s moving median of the
+        1 s chin RMS (log) below its eye_fit_tone_q quantile over the scored samples.
+        """
+        from scipy.ndimage import median_filter
+        from scipy.signal import find_peaks
+
+        if not scored.any():
+            return None
+        fs = self.fs
+        e = fft_band(eog, 0.3, 5.0, fs)
+        v = np.abs(np.gradient(e) * fs)
+        pk, _ = find_peaks(v, height=5 * np.median(v[scored]), distance=int(0.5 * fs))
+        if not len(pk):
+            return None
+        h = int(0.15 * fs)
+        amp = np.abs(e[np.minimum(pk + h, n - 1)] - e[np.maximum(pk - h, 0)])
+        pk = pk[amp >= 4 * np.median(amp)]
+        y, cfs = chin
+        tone = np.log10(rms_envelope(y, cfs, 1.0, 1.0) + 1e-9)
+        tone = median_filter(tone, size=30, mode="nearest")
+        tone_s = np.repeat(tone, int(fs))[:n]
+        tone_s = np.pad(tone_s, (0, n - len(tone_s)), mode="edge")
+        low = tone_s < np.quantile(tone_s[scored], self.eye_fit_tone_q)
+        w = int(self.eye_fit_halfwin * fs)
+        near = np.zeros(n + 2 * w + 1)
+        np.add.at(near, pk, 1)
+        np.add.at(near, pk + 2 * w + 1, -1)
+        near = np.cumsum(near)[w : n + w] > 0
+        fit = near & low & scored
+        return fit if fit.sum() > self.min_fit_s * fs else None
 
     def _muscle_wideband(
         self,
@@ -501,6 +577,7 @@ class NightCleaner:
             deep_within=self.deep_within,
             sigma_q=self.sigma_q,
             quiet_index=self.quiet_index,
+            artefact_eye=self.eye_artefact,
         )
 
     def _spindles(

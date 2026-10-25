@@ -19,7 +19,8 @@ quiet or active, and these come from the signals themselves, per 30 s epoch:
 * sigma index: share of 11-16 Hz in the 0.3-35 Hz EEG power; ``sigma`` = at or
   above ``sigma_q`` (spindle-rich epochs);
 * ``artefact``: EEG or EOG variance above ``artefact`` times the night median;
-  excluded from every mask.
+  excluded from every mask. ``ok_eye`` takes the EOG gate at ``artefact_eye``
+  instead (the epochs where eye movements may be subtracted from the EEG).
 
 Masks are per sample at ``fs``; samples after the last full epoch are in none.
 The default quantiles are the broad ones the regressions fit best on. Quantiles
@@ -29,7 +30,7 @@ on ``eye_minus_reldelta``, active 0.9, deep 0.9, sigma 0.3; precision 0.92, 0.97
 0.56, 0.51) made the cleaning worse on real nights, so they are not the default.
 """
 
-from typing import Dict
+from typing import Dict, Optional
 
 import numpy as np
 
@@ -53,11 +54,12 @@ def state_masks(
     artefact: float = 20.0,
     quiet_index: str = "eye",
     deep_within: str = "all",
+    artefact_eye: Optional[float] = None,
 ) -> Dict[str, np.ndarray]:
     ep = int(round(epoch_s * fs))
     n = min(len(eeg), len(eog))
     n_ep = n // ep
-    out = {k: np.zeros(n, bool) for k in ("ok", "quiet", "active", "deep", "sigma")}
+    out = {k: np.zeros(n, bool) for k in ("ok", "ok_eye", "quiet", "active", "deep", "sigma")}
     if n_ep < 2:
         return out
     tiny = 1e-12
@@ -71,7 +73,12 @@ def state_masks(
     delta = np.log(_epoch_power(eeg, 0.5, 2.0, fs, n_ep, ep) + tiny)
     still = eye - (delta - np.log(v_eeg + tiny))  # eye index minus log relative delta
     sigma = _epoch_power(eeg, 11.0, 16.0, fs, n_ep, ep) / (v_eeg + tiny)
-    ep_masks = {"ok": ok}
+    # ok_eye: the EOG gate at artefact_eye instead (bursts of REM saccades reach 20x the night median of a
+    # quiet EOG; only electrode pops reach artefact_eye)
+    ok_eye = ok if artefact_eye is None else (
+        (v_eeg < artefact * np.median(v_eeg)) & (v_eog < artefact_eye * np.median(v_eog)) & (v_eeg > tiny) & (v_eog > tiny)
+    )
+    ep_masks = {"ok": ok, "ok_eye": ok_eye}
     if ok.any():
         q = lambda v, p: np.quantile(v[ok], p)  # noqa: E731
         qi = {"eye": eye, "eye_minus_reldelta": still}[quiet_index]
