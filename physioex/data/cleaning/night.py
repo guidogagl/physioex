@@ -107,7 +107,9 @@ class NightCleaner:
     # epochs above this ratio (near-flat regressor: dead electrode)
     max_regression_gain: float = 1.2
     # steps 4 and 5: singular values below this fraction of the largest (standardised regressors) are dropped
-    regression_rcond: float = 1e-2
+    regression_rcond: float = 0.0
+    # step 3: share of the EEG delta (0.5-2 Hz, slow-wave state) the separation must leave in the EEG
+    min_delta_kept: float = 0.85
     # step 4 also regresses on the Hilbert transform of every EEG (phase-shifted coupling)
     quadrature: bool = False
 
@@ -259,7 +261,31 @@ class NightCleaner:
                 lf_share=self.lf_share,
                 activity_ratio=self.activity_ratio,
             )
-            if ocu.any():
+            # a component with brain delta can pass the ocular criteria; while the separation takes from
+            # the EEG more than this share of its delta in the slow-wave state, the least active ocular
+            # component goes back to the brain
+            deep = st["deep"] & scored
+            given_back = []
+            if ocu.any() and deep.sum() > self.min_fit_s * self.fs:
+                i_eeg = keys.index("eeg")
+                d_in = np.mean(fft_band(eeg_x["eeg"], 0.5, 2.0, self.fs)[deep] ** 2)
+                while ocu.any():
+                    kept = A[i_eeg, ~ocu] @ S[~ocu]
+                    if np.mean(fft_band(kept, 0.5, 2.0, self.fs)[deep] ** 2) >= self.min_delta_kept * d_in:
+                        break
+                    j = np.where(ocu)[0][np.argmin(crit["activity_ratio"][ocu])]
+                    ocu[j] = False
+                    given_back.append(int(j))
+            # the ocular projection must not carry more slow-wave delta than the EOG it comes from:
+            # where it does, the separation mixed brain into the ocular part, and it is not applied
+            blown = False
+            if ocu.any() and deep.sum() > self.min_fit_s * self.fs:
+                eog_o = A[keys.index("eog"), ocu] @ S[ocu]
+                d_o, d_e = (np.mean(fft_band(x, 0.5, 2.0, self.fs)[deep] ** 2) for x in (eog_o, ocu_x["eog"]))
+                blown = d_o > self.max_regression_gain * d_e
+            if blown:
+                diag["sobi_note"] = "ocular part with more delta than the EOG: separation not applied"
+            elif ocu.any():
                 Xo, Xc = A[:, ocu] @ S[ocu], A[:, ~ocu] @ S[~ocu]
                 eog_c = Xo[keys.index("eog")]
                 eeg_c = {k: Xc[keys.index(k)] for k in eeg_x}
@@ -268,6 +294,7 @@ class NightCleaner:
             diag["sobi"] = {
                 "n_components": int(S.shape[0]),
                 "n_ocular": int(ocu.sum()),
+                "given_back": given_back,
                 "lf_share": crit["lf_share"].round(3).tolist(),
                 "activity_ratio": np.round(crit["activity_ratio"], 3).tolist(),
             }
