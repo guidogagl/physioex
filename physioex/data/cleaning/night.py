@@ -14,7 +14,8 @@ Order (Croft & Barry: the EOG is cleaned of brain before it is used to clean the
    epochs with moving eyes;
 6. muscle in the EEG (rich nights only): AMUSE components of the EEG at its
    native rate (``muscle_mode="wideband"``: up to 0.45 fs, before the 35 Hz
-   low-pass, where muscle is broadband) with most of their power above 20 Hz
+   low-pass, where muscle is broadband; spatial filters that maximise the
+   power above 40 Hz against 0.3-16 Hz) with most of their power above 20 Hz
    and a 20 Hz+ envelope that follows the chin; only their 16-35 Hz part is
    subtracted, so delta and sigma are untouched. ``"narrow"`` is the first
    version (components at ``fs`` after the low-pass, selected by an absolute
@@ -42,7 +43,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
 from scipy.signal import butter, hilbert, resample_poly, sosfiltfilt
 
-from physioex.data.cleaning.bss import amuse, classify_ocular, sobi
+from physioex.data.cleaning.bss import amuse, band_contrast, classify_ocular, sobi
 from physioex.data.cleaning.cardiac import (
     cardiac_residual,
     detect_r_peaks,
@@ -421,7 +422,7 @@ class NightCleaner:
         m = min(len(v) for v in wide.values())
         X = np.stack([wide[k][:m] for k in keys])
         X = X - X.mean(1, keepdims=True)
-        U, A, ac = amuse(X)
+        U, A = band_contrast(X, fw, (40.0, 0.45 * fw), (self.band[0], 16.0))
         S = U @ X
         hf = np.array(
             [np.var(fft_band(s, 20.0, 0.45 * fw, fw)) / max(np.var(s), 1e-12) for s in S]

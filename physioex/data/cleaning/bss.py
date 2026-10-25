@@ -133,6 +133,28 @@ def amuse(X: np.ndarray, lag: int = 1) -> Tuple[np.ndarray, np.ndarray, np.ndarr
     return U, np.linalg.pinv(U), r[order]
 
 
+def band_contrast(
+    X: np.ndarray, fs: float, hi: Tuple[float, float], lo: Tuple[float, float]
+) -> Tuple[np.ndarray, np.ndarray]:
+    """Spatial filters sorted by the ratio of their power in band ``hi`` to band ``lo``
+    (generalised eigenvectors of the two band covariances). Muscle is broadband and
+    sleep EEG falls as 1/f, so with ``hi`` above 40 Hz the first filters isolate muscle.
+
+    Returns ``(U, A)``: sources ``U @ X``, mixing ``A`` (``X = A @ U @ X``).
+    """
+    from scipy.linalg import eigh
+
+    from physioex.data.cleaning.regression import fft_band
+
+    X = np.asarray(X, dtype=np.float64)
+    ch = lambda b: np.cov(np.stack([fft_band(x, b[0], b[1], fs) for x in X]))  # noqa: E731
+    C_hi, C_lo = ch(hi), ch(lo)
+    C_lo = C_lo + 1e-6 * np.trace(C_lo) / len(C_lo) * np.eye(len(C_lo))
+    r, V = eigh(C_hi, C_lo)
+    U = V[:, np.argsort(r)[::-1]].T
+    return U, np.linalg.pinv(U)
+
+
 def _is_front(k: str) -> bool:
     u = k.upper()
     return u.startswith(("FP", "F", "EOG", "E1", "E2"))
