@@ -12,7 +12,10 @@ quiet or active, and these come from the signals themselves, per 30 s epoch:
   is the eye index minus the log relative delta of the EEG (0.5-2 Hz over
   0.3-35 Hz), which prefers slow-wave epochs;
 * delta index: log power 0.5-2 Hz of the EEG; ``deep`` = at or above
-  ``deep_q`` (slow-wave epochs, where the brain-EOG coupling differs);
+  ``deep_q`` (slow-wave epochs, where the brain-EOG coupling differs). With
+  ``deep_within="quiet"`` the quantile is taken among the quiet epochs only:
+  on nights with little N3 the high-delta tail of the whole night is mostly
+  wake and movement, where the eye index is high;
 * sigma index: share of 11-16 Hz in the 0.3-35 Hz EEG power; ``sigma`` = at or
   above ``sigma_q`` (spindle-rich epochs);
 * ``artefact``: EEG or EOG variance above ``artefact`` times the night median;
@@ -49,6 +52,7 @@ def state_masks(
     sigma_q: float = 0.7,
     artefact: float = 20.0,
     quiet_index: str = "eye",
+    deep_within: str = "all",
 ) -> Dict[str, np.ndarray]:
     ep = int(round(epoch_s * fs))
     n = min(len(eeg), len(eog))
@@ -73,7 +77,11 @@ def state_masks(
         qi = {"eye": eye, "eye_minus_reldelta": still}[quiet_index]
         ep_masks["quiet"] = ok & (qi <= q(qi, quiet_q))
         ep_masks["active"] = ok & (eye >= q(eye, active_q))
-        ep_masks["deep"] = ok & (delta >= q(delta, deep_q))
+        if deep_within == "quiet" and ep_masks["quiet"].any():
+            dq = ep_masks["quiet"]
+            ep_masks["deep"] = dq & (delta >= np.quantile(delta[dq], deep_q))
+        else:
+            ep_masks["deep"] = ok & (delta >= q(delta, deep_q))
         ep_masks["sigma"] = ok & (sigma >= q(sigma, sigma_q))
     for k, m in ep_masks.items():
         out[k][: n_ep * ep] = np.repeat(m, ep)

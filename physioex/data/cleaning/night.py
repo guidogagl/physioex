@@ -99,6 +99,8 @@ class NightCleaner:
     quiet_q: float = 0.4
     active_q: float = 0.8
     deep_q: float = 0.75
+    # "quiet": deep_q among the still-eye epochs only (nights with little N3, see states.state_masks)
+    deep_within: str = "all"
     sigma_q: float = 0.7
     quiet_index: str = "eye"
     # step 4: own coefficients for slow-wave epochs only if both fit sets last at least this long
@@ -410,6 +412,7 @@ class NightCleaner:
             quiet_q=self.quiet_q,
             active_q=self.active_q,
             deep_q=self.deep_q,
+            deep_within=self.deep_within,
             sigma_q=self.sigma_q,
             quiet_index=self.quiet_index,
         )
