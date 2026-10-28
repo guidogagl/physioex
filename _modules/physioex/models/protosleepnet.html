@@ -1,0 +1,1116 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../../" data-theme="light">
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>physioex.models.protosleepnet &#8212; PhysioEx</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "light";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "light";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/custom.css?v=885a8570" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="../../../_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" />
+<link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" />
+
+    <script src="../../../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../../_static/design-tabs.js?v=f930bc37"></script>
+    <script type="module" src="https://cdn.jsdelivr.net/npm/mermaid@11.4.0/dist/mermaid.esm.min.mjs"></script>
+    <script type="module" src="https://cdn.jsdelivr.net/npm/@mermaid-js/layout-elk@0.1.4/dist/mermaid-layout-elk.esm.min.mjs"></script>
+    <script type="module">import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.4.0/dist/mermaid.esm.min.mjs";import elkLayouts from "https://cdn.jsdelivr.net/npm/@mermaid-js/layout-elk@0.1.4/dist/mermaid-layout-elk.esm.min.mjs";mermaid.registerLayoutLoaders(elkLayouts);mermaid.initialize({startOnLoad:false});</script>
+    <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
+    <script type="module">
+import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.4.0/dist/mermaid.esm.min.mjs";
+window.addEventListener("load", () => mermaid.run());
+</script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/physioex/models/protosleepnet';</script>
+    <link rel="icon" href="../../../_static/logo_bar.svg"/>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="light">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../../index.html">
+  
+  
+  
+  
+  
+    
+    
+    
+    <img src="../../../_static/logo_bar.svg" class="logo__image only-light" alt="PhysioEx - Home"/>
+    <img src="../../../_static/logo_bar.svg" class="logo__image only-dark pst-js-only" alt="PhysioEx - Home"/>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../pages/user_guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../related/index.html">
+    Related Works
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../api/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../pages/contribute.html">
+    Contributing to PhysioEx
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/guidogagl/physioex" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://guidogagl.github.io/" title="Website" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-globe fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Website</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar hide-on-wide">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../pages/user_guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../related/index.html">
+    Related Works
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../api/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../pages/contribute.html">
+    Contributing to PhysioEx
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/guidogagl/physioex" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://guidogagl.github.io/" title="Website" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-globe fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Website</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../../index.html" class="nav-link">Module code</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">physioex.models.protosleepnet</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for physioex.models.protosleepnet</h1><div class="highlight"><pre>
+<span></span><span class="sd">"""ProtoSleepNet — Template-based sleep staging model with residual connections.</span>
+
+<span class="sd">A modular architecture that wraps any epoch_encoder + sequence_encoder backbone</span>
+<span class="sd">with two key innovations:</span>
+
+<span class="sd">1. **Residual sequence encoder**: z = h + seq(h), making epoch embeddings</span>
+<span class="sd">   directly quantizable without accuracy loss.</span>
+
+<span class="sd">2. **Channel mixer** (optional, for multi-channel input): per-channel epoch</span>
+<span class="sd">   encoding → modality embeddings → accuracy-weighted dropout →</span>
+<span class="sd">   TransformerEncoder mixer (with residual) → attention pooling.</span>
+
+<span class="sd">Architecture (solution D — dual residual):</span>
+
+<span class="sd">    Input: (B, L, C, T, F)</span>
+
+<span class="sd">    [If C &gt; 1: per-channel processing]</span>
+<span class="sd">        epoch_encoder(x) per channel → x = (B*L, C, d_model)</span>
+<span class="sd">        + modality embeddings</span>
+<span class="sd">        → mcy classifier (for accuracy tracking + CE_channel loss)</span>
+<span class="sd">        → ZeroEmbeddingDropout (accuracy-weighted)</span>
+<span class="sd">        → x' = x + mixer(x)            ← RESIDUAL 1 (channel mixer)</span>
+<span class="sd">        → attention pooling → h = (B*L, d_model)</span>
+
+<span class="sd">    [If C == 1: direct processing]</span>
+<span class="sd">        epoch_encoder(x) → h = (B*L, d_model)</span>
+
+<span class="sd">    z = h + sequence_encoder(h)         ← RESIDUAL 2 (sequence encoder)</span>
+<span class="sd">    logits = classifier(z)              ← single classifier</span>
+
+<span class="sd">    Loss = CE_main(logits) + Σ CE_channel[c](mcy)</span>
+
+<span class="sd">Usage:</span>
+<span class="sd">    # With SleepTransformer backbone, single channel</span>
+<span class="sd">    model = ProtoSleepNet.from_sleep_transformer(n_channels=1)</span>
+
+<span class="sd">    # With SeqSleepNet backbone, 3 channels + mixer</span>
+<span class="sd">    model = ProtoSleepNet.from_seq_sleep_net(n_channels=3, use_channel_mixer=True)</span>
+
+<span class="sd">    # Custom backbone</span>
+<span class="sd">    model = ProtoSleepNet(epoch_encoder=my_enc, sequence_encoder=my_seq, classifier=my_clf)</span>
+<span class="sd">"""</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch.nn</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">nn</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch.nn.functional</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">F</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">physioex.train.trainer</span><span class="w"> </span><span class="kn">import</span> <span class="n">Trainer</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">physioex.train.metrics</span><span class="w"> </span><span class="kn">import</span> <span class="n">accuracy_score</span>
+
+
+<span class="c1"># ── ZeroEmbeddingDropout ─────────────────────────────────────────────</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">ZeroEmbeddingDropout</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Accuracy-weighted modality dropout.</span>
+
+<span class="sd">    Replaces the embeddings of selected channels with the encoder's</span>
+<span class="sd">    zero-input embedding. The drop probability of channel ``c`` is</span>
+<span class="sd">    proportional to its accuracy, ``p_c = a_c / sum_j a_j``, so the</span>
+<span class="sd">    channels the model relies on most are occluded most often and the</span>
+<span class="sd">    model must learn to stage from the secondary modalities.</span>
+
+<span class="sd">    For each sample, with probability ``p_apply`` a number ``n`` of</span>
+<span class="sd">    channels drawn uniformly in ``{1, ..., C-1}`` is sampled without</span>
+<span class="sd">    replacement according to ``{p_c}`` and replaced.</span>
+
+<span class="sd">    Only active during training.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        p_apply: probability of applying dropout to each sample.</span>
+<span class="sd">    """</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">p_apply</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.5</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">p_apply</span> <span class="o">=</span> <span class="n">p_apply</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">zero_emb</span><span class="p">,</span> <span class="n">channel_acc</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Args:</span>
+<span class="sd">            x: (batch, n_channels, d_model)</span>
+<span class="sd">            zero_emb: (1, d_model)</span>
+<span class="sd">            channel_acc: (n_channels,)</span>
+<span class="sd">        """</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">training</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">p_apply</span> <span class="o">==</span> <span class="mf">0.0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">x</span>
+
+        <span class="n">batch</span><span class="p">,</span> <span class="n">nchan</span><span class="p">,</span> <span class="n">hdim</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">shape</span>
+        <span class="n">device</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">device</span>
+
+        <span class="k">if</span> <span class="n">torch</span><span class="o">.</span><span class="n">is_tensor</span><span class="p">(</span><span class="n">channel_acc</span><span class="p">):</span>
+            <span class="n">acc</span> <span class="o">=</span> <span class="n">channel_acc</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">acc</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">channel_acc</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+
+        <span class="n">proba</span> <span class="o">=</span> <span class="n">acc</span><span class="o">.</span><span class="n">clamp</span><span class="p">(</span><span class="nb">min</span><span class="o">=</span><span class="mf">0.0</span><span class="p">)</span>
+        <span class="n">proba_sum</span> <span class="o">=</span> <span class="n">proba</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">proba_sum</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="c1"># No accuracy estimate yet: fall back to uniform sampling.</span>
+            <span class="n">proba</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">full</span><span class="p">((</span><span class="n">nchan</span><span class="p">,),</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="n">nchan</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">proba</span> <span class="o">=</span> <span class="n">proba</span> <span class="o">/</span> <span class="n">proba_sum</span>
+
+        <span class="n">apply_mask</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="n">batch</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">p_apply</span>
+        <span class="n">n_to_drop</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">nchan</span><span class="p">,</span> <span class="p">(</span><span class="n">batch</span><span class="p">,),</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
+
+        <span class="n">result</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">batch</span><span class="p">):</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">apply_mask</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span>
+                <span class="k">continue</span>
+            <span class="n">nd</span> <span class="o">=</span> <span class="n">n_to_drop</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">item</span><span class="p">()</span>
+            <span class="n">drop_idx</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">multinomial</span><span class="p">(</span><span class="n">proba</span><span class="p">,</span> <span class="n">nd</span><span class="p">,</span> <span class="n">replacement</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+            <span class="n">result</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">drop_idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">zero_emb</span>
+
+        <span class="k">return</span> <span class="n">result</span>
+
+
+<span class="c1"># ── ChannelMixer ─────────────────────────────────────────────────────</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">ChannelMixer</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Cross-channel mixing with modality embeddings, residual transformer,</span>
+<span class="sd">    and attention pooling.</span>
+
+<span class="sd">    Pipeline:</span>
+<span class="sd">        x (B*L, C, d) → + modality_emb → dropout → x + mixer(x) → attn_pool → (B*L, d)</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        n_channels: number of input channels</span>
+<span class="sd">        n_classes: number of output classes (for mcy)</span>
+<span class="sd">        d_model: embedding dimension</span>
+<span class="sd">        cdropout: channel dropout probability</span>
+<span class="sd">        n_heads: mixer transformer heads</span>
+<span class="sd">        d_ff: mixer transformer feedforward dim</span>
+<span class="sd">        n_layers: mixer transformer layers</span>
+<span class="sd">    """</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">n_channels</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span>
+        <span class="n">n_classes</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5</span><span class="p">,</span>
+        <span class="n">d_model</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">128</span><span class="p">,</span>
+        <span class="n">cdropout</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.5</span><span class="p">,</span>
+        <span class="n">n_heads</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">4</span><span class="p">,</span>
+        <span class="n">d_ff</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">256</span><span class="p">,</span>
+        <span class="n">n_layers</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_channels</span> <span class="o">=</span> <span class="n">n_channels</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_classes</span> <span class="o">=</span> <span class="n">n_classes</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">d_model</span> <span class="o">=</span> <span class="n">d_model</span>
+
+        <span class="c1"># Modality embeddings</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">modality_emb</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Embedding</span><span class="p">(</span><span class="n">n_channels</span><span class="p">,</span> <span class="n">d_model</span><span class="p">)</span>
+
+        <span class="c1"># Per-channel classifier (for accuracy tracking)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mcy</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">d_model</span><span class="p">,</span> <span class="n">n_classes</span><span class="p">)</span>
+
+        <span class="c1"># Accuracy-weighted dropout</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dropout</span> <span class="o">=</span> <span class="n">ZeroEmbeddingDropout</span><span class="p">(</span><span class="n">p_apply</span><span class="o">=</span><span class="n">cdropout</span><span class="p">)</span>
+
+        <span class="c1"># Transformer mixer</span>
+        <span class="n">mixer_layer</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">TransformerEncoderLayer</span><span class="p">(</span>
+            <span class="n">d_model</span><span class="o">=</span><span class="n">d_model</span><span class="p">,</span>
+            <span class="n">nhead</span><span class="o">=</span><span class="n">n_heads</span><span class="p">,</span>
+            <span class="n">dim_feedforward</span><span class="o">=</span><span class="n">d_ff</span><span class="p">,</span>
+            <span class="n">batch_first</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mixer</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">TransformerEncoder</span><span class="p">(</span><span class="n">mixer_layer</span><span class="p">,</span> <span class="n">num_layers</span><span class="o">=</span><span class="n">n_layers</span><span class="p">)</span>
+
+        <span class="c1"># Attention pooling</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">attn_pool</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">d_model</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+
+        <span class="c1"># Accuracy tracking buffers</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">register_buffer</span><span class="p">(</span><span class="s2">"channels_acc"</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">n_channels</span><span class="p">)</span> <span class="o">/</span> <span class="n">n_classes</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">channels_acc_list</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="c1"># Opt-in (default keeps the released behaviour): refresh the buffer from</span>
+        <span class="c1"># *training* batches too, smoothed with an EMA, so p_c follows the model.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">acc_momentum</span> <span class="o">=</span> <span class="mf">0.0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">track_train_acc</span> <span class="o">=</span> <span class="kc">False</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">update_channel_acc</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">acc_list</span><span class="p">):</span>
+        <span class="n">acc_tensor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">acc_list</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">channels_acc_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">acc_tensor</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">zero_emb</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Args:</span>
+<span class="sd">            x: (BL, C, d_model) — per-channel epoch embeddings</span>
+<span class="sd">            zero_emb: (1, d_model) — zero-input embedding</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            h: (BL, d_model) — pooled embedding</span>
+<span class="sd">            mcy_logits: (BL, C, n_classes) — per-channel logits</span>
+<span class="sd">        """</span>
+        <span class="n">BL</span><span class="p">,</span> <span class="n">C</span><span class="p">,</span> <span class="n">d</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">shape</span>
+
+        <span class="c1"># Add modality embeddings</span>
+        <span class="n">channel_ids</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">C</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">x</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">x</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">modality_emb</span><span class="p">(</span><span class="n">channel_ids</span><span class="p">)</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+        <span class="c1"># Per-channel classification</span>
+        <span class="n">mcy_logits</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mcy</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>  <span class="c1"># (BL, C, n_classes)</span>
+
+        <span class="c1"># Update accuracy buffer</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">training</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">channels_acc_list</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">mean_acc</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">channels_acc_list</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+            <span class="n">m</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">acc_momentum</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">channels_acc</span><span class="o">.</span><span class="n">copy_</span><span class="p">(</span>
+                <span class="n">m</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">channels_acc</span>
+                <span class="o">+</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">-</span> <span class="n">m</span><span class="p">)</span> <span class="o">*</span> <span class="n">mean_acc</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">channels_acc</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+            <span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">channels_acc_list</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+
+        <span class="c1"># Dropout</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dropout</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">zero_emb</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">channels_acc</span><span class="p">)</span>
+
+        <span class="c1"># Mixer with residual</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">x</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">mixer</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>  <span class="c1"># RESIDUAL 1</span>
+
+        <span class="c1"># Attention pooling</span>
+        <span class="n">weights</span> <span class="o">=</span> <span class="n">F</span><span class="o">.</span><span class="n">softmax</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">attn_pool</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>  <span class="c1"># (BL, C, 1)</span>
+        <span class="n">h</span> <span class="o">=</span> <span class="p">(</span><span class="n">x</span> <span class="o">*</span> <span class="n">weights</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>  <span class="c1"># (BL, d_model)</span>
+
+        <span class="k">return</span> <span class="n">h</span><span class="p">,</span> <span class="n">mcy_logits</span>
+
+
+<span class="c1"># ── ProtoSleepNet ────────────────────────────────────────────────────</span>
+
+
+<div class="viewcode-block" id="ProtoSleepNet">
+<a class="viewcode-back" href="../../../pages/train/networks/protosleepnet.html#physioex.models.protosleepnet.ProtoSleepNet">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">ProtoSleepNet</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Template-based sleep staging model with dual residual connections.</span>
+
+<span class="sd">    Wraps any epoch_encoder + sequence_encoder with:</span>
+<span class="sd">    - Optional channel mixer (for multi-channel input)</span>
+<span class="sd">    - Residual sequence encoder: z = h + seq(h)</span>
+<span class="sd">    - Single classifier</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        epoch_encoder: maps (N, 1, T, F) → (N, d_model) for per-channel,</span>
+<span class="sd">                       or (N, C, T, F) → (N, d_model) for single-channel</span>
+<span class="sd">        sequence_encoder: maps (B, L, d_model) → (B, L, d_model)</span>
+<span class="sd">        classifier: maps (N, d_model) → (N, n_classes)</span>
+<span class="sd">        n_channels: number of input channels (1 = no mixer)</span>
+<span class="sd">        n_classes: number of output classes</span>
+<span class="sd">        d_model: epoch encoder output dimension</span>
+<span class="sd">        use_channel_mixer: enable channel mixer (requires n_channels &gt; 1)</span>
+<span class="sd">        cdropout: channel dropout probability</span>
+<span class="sd">        cm_n_heads: mixer transformer heads</span>
+<span class="sd">        cm_d_ff: mixer transformer feedforward dim</span>
+<span class="sd">        cm_n_layers: mixer transformer layers</span>
+<span class="sd">    """</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">epoch_encoder</span><span class="p">:</span> <span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">,</span>
+        <span class="n">sequence_encoder</span><span class="p">:</span> <span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">,</span>
+        <span class="n">classifier</span><span class="p">:</span> <span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">,</span>
+        <span class="n">n_channels</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+        <span class="n">n_classes</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5</span><span class="p">,</span>
+        <span class="n">d_model</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">128</span><span class="p">,</span>
+        <span class="n">use_channel_mixer</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">cdropout</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.5</span><span class="p">,</span>
+        <span class="n">cm_n_heads</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">4</span><span class="p">,</span>
+        <span class="n">cm_d_ff</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">256</span><span class="p">,</span>
+        <span class="n">cm_n_layers</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">epoch_encoder</span> <span class="o">=</span> <span class="n">epoch_encoder</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sequence_encoder</span> <span class="o">=</span> <span class="n">sequence_encoder</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">classifier</span> <span class="o">=</span> <span class="n">classifier</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_channels</span> <span class="o">=</span> <span class="n">n_channels</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_classes</span> <span class="o">=</span> <span class="n">n_classes</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">d_model</span> <span class="o">=</span> <span class="n">d_model</span>
+
+        <span class="c1"># Channel mixer (only for multi-channel)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">channel_mixer</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="n">use_channel_mixer</span> <span class="ow">and</span> <span class="n">n_channels</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">channel_mixer</span> <span class="o">=</span> <span class="n">ChannelMixer</span><span class="p">(</span>
+                <span class="n">n_channels</span><span class="o">=</span><span class="n">n_channels</span><span class="p">,</span>
+                <span class="n">n_classes</span><span class="o">=</span><span class="n">n_classes</span><span class="p">,</span>
+                <span class="n">d_model</span><span class="o">=</span><span class="n">d_model</span><span class="p">,</span>
+                <span class="n">cdropout</span><span class="o">=</span><span class="n">cdropout</span><span class="p">,</span>
+                <span class="n">n_heads</span><span class="o">=</span><span class="n">cm_n_heads</span><span class="p">,</span>
+                <span class="n">d_ff</span><span class="o">=</span><span class="n">cm_d_ff</span><span class="p">,</span>
+                <span class="n">n_layers</span><span class="o">=</span><span class="n">cm_n_layers</span><span class="p">,</span>
+            <span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_last_mcy</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_epoch_logits</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="c1"># VQ codebook (optional, set via set_codebook())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">register_buffer</span><span class="p">(</span><span class="s2">"codebook"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+
+<div class="viewcode-block" id="ProtoSleepNet.set_codebook">
+<a class="viewcode-back" href="../../../pages/train/networks/protosleepnet.html#physioex.models.protosleepnet.ProtoSleepNet.set_codebook">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">set_codebook</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">codebook</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Set VQ codebook for prototype quantization.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            codebook: (M, d_model) numpy array or torch tensor.</span>
+<span class="sd">        """</span>
+        <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">codebook</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+            <span class="n">codebook</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">from_numpy</span><span class="p">(</span><span class="n">codebook</span><span class="p">)</span><span class="o">.</span><span class="n">float</span><span class="p">()</span>
+        <span class="c1"># Ensure codebook is on the same device as the model</span>
+        <span class="n">device</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">())</span><span class="o">.</span><span class="n">device</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">codebook</span> <span class="o">=</span> <span class="n">codebook</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span></div>
+
+
+    <span class="nd">@torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">()</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_quantize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">h</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Replace each embedding with its nearest codebook entry.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            h: (N, d_model) epoch embeddings.</span>
+<span class="sd">        Returns:</span>
+<span class="sd">            (N, d_model) quantized embeddings.</span>
+<span class="sd">        """</span>
+        <span class="n">dist</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cdist</span><span class="p">(</span><span class="n">h</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">codebook</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">idx</span> <span class="o">=</span> <span class="n">dist</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">codebook</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">update_channel_acc</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">acc_list</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">channel_mixer</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">channel_mixer</span><span class="o">.</span><span class="n">update_channel_acc</span><span class="p">(</span><span class="n">acc_list</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_metrics</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s2">"mcy"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_last_mcy</span><span class="p">,</span>             <span class="c1"># (B, L, C, n_classes) or None</span>
+            <span class="s2">"epoch_logits"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_epoch_logits</span><span class="p">,</span>  <span class="c1"># (B, L, n_classes)</span>
+        <span class="p">}</span>
+
+<div class="viewcode-block" id="ProtoSleepNet.epoch_encode">
+<a class="viewcode-back" href="../../../pages/train/networks/protosleepnet.html#physioex.models.protosleepnet.ProtoSleepNet.epoch_encode">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">epoch_encode</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">quantize</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Encode input spectrograms to per-epoch embeddings.</span>
+
+<span class="sd">        Pipeline: per-channel epoch encoding → [channel mixer] → [VQ] →</span>
+<span class="sd">        deep supervision (epoch_logits stored in metrics).</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            x: (B, L, C, T, F) spectrogram input.</span>
+<span class="sd">            quantize: if True, replace epoch embeddings with nearest</span>
+<span class="sd">                      codebook entry. Requires set_codebook() first.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            (B, L, d_model) epoch embeddings (pre-sequence).</span>
+<span class="sd">        """</span>
+        <span class="n">B</span><span class="p">,</span> <span class="n">L</span><span class="p">,</span> <span class="n">C</span><span class="p">,</span> <span class="n">T</span><span class="p">,</span> <span class="n">F_dim</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">shape</span>
+
+        <span class="c1"># ── Epoch encoding ───────────────────────────────────────</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">channel_mixer</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># Per-channel: (B*L*C, 1, T, F) → (B*L*C, d_model)</span>
+            <span class="n">x_flat</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">B</span> <span class="o">*</span> <span class="n">L</span> <span class="o">*</span> <span class="n">C</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">T</span><span class="p">,</span> <span class="n">F_dim</span><span class="p">)</span>
+
+            <span class="c1"># Append zero input for zero_emb computation</span>
+            <span class="n">zero_input</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">T</span><span class="p">,</span> <span class="n">F_dim</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">x</span><span class="o">.</span><span class="n">device</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">x</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+            <span class="n">x_with_zero</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">([</span><span class="n">x_flat</span><span class="p">,</span> <span class="n">zero_input</span><span class="p">],</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+            <span class="n">embs_with_zero</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">epoch_encoder</span><span class="p">(</span><span class="n">x_with_zero</span><span class="p">)</span>
+            <span class="n">embs</span> <span class="o">=</span> <span class="n">embs_with_zero</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>      <span class="c1"># (B*L*C, d_model)</span>
+            <span class="n">zero_emb</span> <span class="o">=</span> <span class="n">embs_with_zero</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">:]</span>   <span class="c1"># (1, d_model)</span>
+
+            <span class="n">embs</span> <span class="o">=</span> <span class="n">embs</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">B</span> <span class="o">*</span> <span class="n">L</span><span class="p">,</span> <span class="n">C</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">d_model</span><span class="p">)</span>
+
+            <span class="c1"># Channel mixer (RESIDUAL 1 inside)</span>
+            <span class="n">h</span><span class="p">,</span> <span class="n">mcy_logits</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">channel_mixer</span><span class="p">(</span><span class="n">embs</span><span class="p">,</span> <span class="n">zero_emb</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_last_mcy</span> <span class="o">=</span> <span class="n">mcy_logits</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">B</span><span class="p">,</span> <span class="n">L</span><span class="p">,</span> <span class="n">C</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_classes</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># Single/multi-channel without mixer</span>
+            <span class="n">x_flat</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">B</span> <span class="o">*</span> <span class="n">L</span><span class="p">,</span> <span class="n">C</span><span class="p">,</span> <span class="n">T</span><span class="p">,</span> <span class="n">F_dim</span><span class="p">)</span>
+            <span class="n">h</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">epoch_encoder</span><span class="p">(</span><span class="n">x_flat</span><span class="p">)</span>  <span class="c1"># (B*L, d_model)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_last_mcy</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="c1"># ── VQ quantization (optional, no grad) ─────────────────</span>
+        <span class="n">h</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">B</span><span class="p">,</span> <span class="n">L</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">quantize</span><span class="p">:</span>
+            <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">codebook</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">,</span> <span class="s2">"Call set_codebook() before quantize=True"</span>
+            <span class="n">h</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_quantize</span><span class="p">(</span><span class="n">h</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">B</span> <span class="o">*</span> <span class="n">L</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">B</span><span class="p">,</span> <span class="n">L</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="c1"># ── Epoch-level classification (deep supervision) ────────</span>
+        <span class="n">d</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_epoch_logits</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">classifier</span><span class="p">(</span><span class="n">h</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">B</span> <span class="o">*</span> <span class="n">L</span><span class="p">,</span> <span class="n">d</span><span class="p">))</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">B</span><span class="p">,</span> <span class="n">L</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">h</span></div>
+
+
+<div class="viewcode-block" id="ProtoSleepNet.sequence_encode">
+<a class="viewcode-back" href="../../../pages/train/networks/protosleepnet.html#physioex.models.protosleepnet.ProtoSleepNet.sequence_encode">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">sequence_encode</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">h</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Contextualize epoch embeddings with residual sequence encoding.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            h: (B, L, d_model) epoch embeddings.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            (B, L, d_model) contextualized embeddings: h + seq(h).</span>
+<span class="sd">        """</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sequence_encoder</span><span class="p">,</span> <span class="n">nn</span><span class="o">.</span><span class="n">GRU</span><span class="p">):</span>
+            <span class="n">seq_out</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sequence_encoder</span><span class="p">(</span><span class="n">h</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">seq_out</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sequence_encoder</span><span class="p">(</span><span class="n">h</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">h</span> <span class="o">+</span> <span class="n">seq_out</span>  <span class="c1"># RESIDUAL 2</span></div>
+
+
+<div class="viewcode-block" id="ProtoSleepNet.encode">
+<a class="viewcode-back" href="../../../pages/train/networks/protosleepnet.html#physioex.models.protosleepnet.ProtoSleepNet.encode">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">encode</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">quantize</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Encode input spectrograms to contextualized per-epoch embeddings.</span>
+
+<span class="sd">        Calls epoch_encode → sequence_encode.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            x: (B, L, C, T, F) spectrogram input.</span>
+<span class="sd">            quantize: if True, replace epoch embeddings with nearest</span>
+<span class="sd">                      codebook entry. Requires set_codebook() first.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            (B, L, d_model) contextualized epoch embeddings.</span>
+<span class="sd">        """</span>
+        <span class="n">h</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">epoch_encode</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">quantize</span><span class="o">=</span><span class="n">quantize</span><span class="p">)</span>
+        <span class="n">z</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sequence_encode</span><span class="p">(</span><span class="n">h</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">z</span></div>
+
+
+<div class="viewcode-block" id="ProtoSleepNet.forward">
+<a class="viewcode-back" href="../../../pages/train/networks/protosleepnet.html#physioex.models.protosleepnet.ProtoSleepNet.forward">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">quantize</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Forward pass: encode → classify.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            x: (B, L, C, T, F) spectrogram input.</span>
+<span class="sd">            quantize: if True, replace epoch embeddings with nearest</span>
+<span class="sd">                      codebook entry. Requires set_codebook() first.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            (B, L, n_classes) per-epoch logits.</span>
+<span class="sd">        """</span>
+        <span class="n">embeddings</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">quantize</span><span class="o">=</span><span class="n">quantize</span><span class="p">)</span>  <span class="c1"># (B, L, d_model)</span>
+
+        <span class="n">B</span><span class="p">,</span> <span class="n">L</span><span class="p">,</span> <span class="n">D</span> <span class="o">=</span> <span class="n">embeddings</span><span class="o">.</span><span class="n">shape</span>
+        <span class="n">logits</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">classifier</span><span class="p">(</span><span class="n">embeddings</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">B</span> <span class="o">*</span> <span class="n">L</span><span class="p">,</span> <span class="n">D</span><span class="p">))</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">B</span><span class="p">,</span> <span class="n">L</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">logits</span></div>
+
+
+    <span class="c1"># ── Factory methods ──────────────────────────────────────────</span>
+
+<div class="viewcode-block" id="ProtoSleepNet.from_sleep_transformer">
+<a class="viewcode-back" href="../../../pages/train/networks/protosleepnet.html#physioex.models.protosleepnet.ProtoSleepNet.from_sleep_transformer">[docs]</a>
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">from_sleep_transformer</span><span class="p">(</span>
+        <span class="bp">cls</span><span class="p">,</span>
+        <span class="n">n_channels</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+        <span class="n">n_classes</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5</span><span class="p">,</span>
+        <span class="n">d_model</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">128</span><span class="p">,</span>
+        <span class="n">n_heads</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">8</span><span class="p">,</span>
+        <span class="n">n_epoch_layers</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">4</span><span class="p">,</span>
+        <span class="n">n_seq_layers</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">4</span><span class="p">,</span>
+        <span class="n">d_ff</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1024</span><span class="p">,</span>
+        <span class="n">d_clf</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1024</span><span class="p">,</span>
+        <span class="n">dropout</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.1</span><span class="p">,</span>
+        <span class="n">attention_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">128</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">mixer_kwargs</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">"ProtoSleepNet"</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Build ProtoSleepNet with SleepTransformer backbone."""</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">physioex.models.sleeptransformer</span><span class="w"> </span><span class="kn">import</span> <span class="n">EpochTransformer</span><span class="p">,</span> <span class="n">SequenceTransformer</span>
+
+        <span class="n">epoch_encoder</span> <span class="o">=</span> <span class="n">EpochTransformer</span><span class="p">(</span>
+            <span class="n">d_model</span><span class="o">=</span><span class="n">d_model</span><span class="p">,</span> <span class="n">in_chan</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">n_heads</span><span class="o">=</span><span class="n">n_heads</span><span class="p">,</span>
+            <span class="n">n_layers</span><span class="o">=</span><span class="n">n_epoch_layers</span><span class="p">,</span> <span class="n">d_ff</span><span class="o">=</span><span class="n">d_ff</span><span class="p">,</span> <span class="n">dropout</span><span class="o">=</span><span class="n">dropout</span><span class="p">,</span>
+            <span class="n">attention_size</span><span class="o">=</span><span class="n">attention_size</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">sequence_encoder</span> <span class="o">=</span> <span class="n">SequenceTransformer</span><span class="p">(</span>
+            <span class="n">d_model</span><span class="o">=</span><span class="n">d_model</span><span class="p">,</span> <span class="n">n_heads</span><span class="o">=</span><span class="n">n_heads</span><span class="p">,</span> <span class="n">n_layers</span><span class="o">=</span><span class="n">n_seq_layers</span><span class="p">,</span>
+            <span class="n">d_ff</span><span class="o">=</span><span class="n">d_ff</span><span class="p">,</span> <span class="n">dropout</span><span class="o">=</span><span class="n">dropout</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">classifier</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Sequential</span><span class="p">(</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">d_model</span><span class="p">,</span> <span class="n">d_clf</span><span class="p">),</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">ReLU</span><span class="p">(</span><span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">Dropout</span><span class="p">(</span><span class="n">dropout</span><span class="p">),</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">d_clf</span><span class="p">,</span> <span class="n">d_clf</span><span class="p">),</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">ReLU</span><span class="p">(</span><span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">Dropout</span><span class="p">(</span><span class="n">dropout</span><span class="p">),</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">d_clf</span><span class="p">,</span> <span class="n">n_classes</span><span class="p">),</span>
+        <span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span>
+            <span class="n">epoch_encoder</span><span class="o">=</span><span class="n">epoch_encoder</span><span class="p">,</span>
+            <span class="n">sequence_encoder</span><span class="o">=</span><span class="n">sequence_encoder</span><span class="p">,</span>
+            <span class="n">classifier</span><span class="o">=</span><span class="n">classifier</span><span class="p">,</span>
+            <span class="n">n_channels</span><span class="o">=</span><span class="n">n_channels</span><span class="p">,</span>
+            <span class="n">n_classes</span><span class="o">=</span><span class="n">n_classes</span><span class="p">,</span>
+            <span class="n">d_model</span><span class="o">=</span><span class="n">d_model</span><span class="p">,</span>
+            <span class="o">**</span><span class="n">mixer_kwargs</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="ProtoSleepNet.from_seq_sleep_net">
+<a class="viewcode-back" href="../../../pages/train/networks/protosleepnet.html#physioex.models.protosleepnet.ProtoSleepNet.from_seq_sleep_net">[docs]</a>
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">from_seq_sleep_net</span><span class="p">(</span>
+        <span class="bp">cls</span><span class="p">,</span>
+        <span class="n">n_channels</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+        <span class="n">n_classes</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5</span><span class="p">,</span>
+        <span class="n">F</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">129</span><span class="p">,</span>
+        <span class="n">D</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">32</span><span class="p">,</span>
+        <span class="n">nfft</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">256</span><span class="p">,</span>
+        <span class="n">lowfreq</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+        <span class="n">highfreq</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">50</span><span class="p">,</span>
+        <span class="n">fs</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">100</span><span class="p">,</span>
+        <span class="n">seqnhidden1</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">64</span><span class="p">,</span>
+        <span class="n">seqnlayer1</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">4</span><span class="p">,</span>
+        <span class="n">attentionsize</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">32</span><span class="p">,</span>
+        <span class="n">seqnhidden2</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">64</span><span class="p">,</span>
+        <span class="n">seqnlayer2</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">4</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">mixer_kwargs</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">"ProtoSleepNet"</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Build ProtoSleepNet with SeqSleepNet backbone."""</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">physioex.models.seqsleepnet</span><span class="w"> </span><span class="kn">import</span> <span class="n">LearnableFilterbank</span><span class="p">,</span> <span class="n">AttentionLayer</span>
+
+        <span class="n">d_model</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">seqnhidden1</span>
+
+        <span class="k">class</span><span class="w"> </span><span class="nc">_SeqEpochEncoder</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+            <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+                <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">filterbank</span> <span class="o">=</span> <span class="n">LearnableFilterbank</span><span class="p">(</span>
+                    <span class="n">in_chan</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">F</span><span class="o">=</span><span class="n">F</span><span class="p">,</span> <span class="n">nfilt</span><span class="o">=</span><span class="n">D</span><span class="p">,</span> <span class="n">nfft</span><span class="o">=</span><span class="n">nfft</span><span class="p">,</span> <span class="n">sf</span><span class="o">=</span><span class="n">fs</span><span class="p">,</span>
+                    <span class="n">lowfreq</span><span class="o">=</span><span class="n">lowfreq</span><span class="p">,</span> <span class="n">highfreq</span><span class="o">=</span><span class="n">highfreq</span><span class="p">,</span>
+                <span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">lstm</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">LSTM</span><span class="p">(</span>
+                    <span class="n">D</span><span class="p">,</span> <span class="n">seqnhidden1</span><span class="p">,</span> <span class="n">num_layers</span><span class="o">=</span><span class="n">seqnlayer1</span><span class="p">,</span>
+                    <span class="n">batch_first</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">bidirectional</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                <span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">attention</span> <span class="o">=</span> <span class="n">AttentionLayer</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">seqnhidden1</span><span class="p">,</span> <span class="n">attentionsize</span><span class="p">)</span>
+
+            <span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+                <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">filterbank</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+                <span class="n">x</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+                <span class="n">x</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+                <span class="n">x</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">lstm</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+                <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">attention</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+                <span class="k">return</span> <span class="n">x</span>
+
+        <span class="n">epoch_encoder</span> <span class="o">=</span> <span class="n">_SeqEpochEncoder</span><span class="p">()</span>
+        <span class="n">sequence_encoder</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">GRU</span><span class="p">(</span>
+            <span class="n">d_model</span><span class="p">,</span> <span class="n">seqnhidden2</span><span class="p">,</span> <span class="n">num_layers</span><span class="o">=</span><span class="n">seqnlayer2</span><span class="p">,</span>
+            <span class="n">batch_first</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">bidirectional</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">d_seq</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">seqnhidden2</span>
+        <span class="n">classifier</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">d_seq</span><span class="p">,</span> <span class="n">n_classes</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span>
+            <span class="n">epoch_encoder</span><span class="o">=</span><span class="n">epoch_encoder</span><span class="p">,</span>
+            <span class="n">sequence_encoder</span><span class="o">=</span><span class="n">sequence_encoder</span><span class="p">,</span>
+            <span class="n">classifier</span><span class="o">=</span><span class="n">classifier</span><span class="p">,</span>
+            <span class="n">n_channels</span><span class="o">=</span><span class="n">n_channels</span><span class="p">,</span>
+            <span class="n">n_classes</span><span class="o">=</span><span class="n">n_classes</span><span class="p">,</span>
+            <span class="n">d_model</span><span class="o">=</span><span class="n">d_model</span><span class="p">,</span>
+            <span class="o">**</span><span class="n">mixer_kwargs</span><span class="p">,</span>
+        <span class="p">)</span></div>
+</div>
+
+
+
+<span class="c1"># ── ProtoSleepNetTrainer ─────────────────────────────────────────────</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">ProtoSleepNetTrainer</span><span class="p">(</span><span class="n">Trainer</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Trainer for ProtoSleepNet with optional per-channel auxiliary loss.</span>
+
+<span class="sd">    Adds CE loss on per-channel predictions (mcy) when channel mixer is active.</span>
+<span class="sd">    Also tracks per-channel accuracy during eval for dropout weighting.</span>
+<span class="sd">    """</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_step</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">batch</span><span class="p">,</span> <span class="n">loss_fn</span><span class="p">,</span> <span class="n">device</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">batch</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="ow">and</span> <span class="s2">"signals"</span> <span class="ow">in</span> <span class="n">batch</span><span class="p">:</span>
+            <span class="kn">from</span><span class="w"> </span><span class="nn">physioex.data.collate</span><span class="w"> </span><span class="kn">import</span> <span class="n">stack_channels</span>
+            <span class="n">inputs</span> <span class="o">=</span> <span class="n">stack_channels</span><span class="p">(</span><span class="n">batch</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+            <span class="n">targets</span> <span class="o">=</span> <span class="n">batch</span><span class="p">[</span><span class="s2">"labels"</span><span class="p">]</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">batch</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="ow">and</span> <span class="s2">"embeddings"</span> <span class="ow">in</span> <span class="n">batch</span><span class="p">:</span>
+            <span class="n">inputs</span> <span class="o">=</span> <span class="n">batch</span><span class="p">[</span><span class="s2">"embeddings"</span><span class="p">]</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+            <span class="n">targets</span> <span class="o">=</span> <span class="n">batch</span><span class="p">[</span><span class="s2">"labels"</span><span class="p">]</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">inputs</span><span class="p">,</span> <span class="n">targets</span> <span class="o">=</span> <span class="n">batch</span>
+            <span class="n">inputs</span> <span class="o">=</span> <span class="n">inputs</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+            <span class="n">targets</span> <span class="o">=</span> <span class="n">targets</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+
+        <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">autocast</span><span class="p">(</span><span class="n">device</span><span class="o">.</span><span class="n">type</span> <span class="k">if</span> <span class="s2">"cuda"</span> <span class="ow">in</span> <span class="n">device</span><span class="o">.</span><span class="n">type</span> <span class="k">else</span> <span class="s2">"cpu"</span><span class="p">):</span>
+            <span class="n">outputs</span> <span class="o">=</span> <span class="n">model</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span>
+
+        <span class="n">B</span><span class="p">,</span> <span class="n">L</span><span class="p">,</span> <span class="n">n_classes</span> <span class="o">=</span> <span class="n">outputs</span><span class="o">.</span><span class="n">shape</span>
+        <span class="n">outputs_flat</span> <span class="o">=</span> <span class="n">outputs</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">n_classes</span><span class="p">)</span>
+        <span class="n">targets_flat</span> <span class="o">=</span> <span class="n">targets</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="c1"># Main loss (post-residual 2)</span>
+        <span class="n">loss</span> <span class="o">=</span> <span class="n">loss_fn</span><span class="p">(</span><span class="n">outputs_flat</span><span class="p">,</span> <span class="n">targets_flat</span><span class="p">)</span>
+
+        <span class="c1"># Epoch-level loss (deep supervision on h, pre-sequence)</span>
+        <span class="n">metrics</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">get_metrics</span><span class="p">()</span>
+        <span class="n">epoch_logits</span> <span class="o">=</span> <span class="n">metrics</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"epoch_logits"</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">epoch_logits</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">epoch_flat</span> <span class="o">=</span> <span class="n">epoch_logits</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">n_classes</span><span class="p">)</span>
+            <span class="n">loss</span> <span class="o">=</span> <span class="n">loss</span> <span class="o">+</span> <span class="n">loss_fn</span><span class="p">(</span><span class="n">epoch_flat</span><span class="p">,</span> <span class="n">targets_flat</span><span class="p">)</span>
+
+        <span class="c1"># Per-channel auxiliary loss (if mixer active)</span>
+        <span class="n">mcy</span> <span class="o">=</span> <span class="n">metrics</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"mcy"</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">mcy</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">C</span> <span class="o">=</span> <span class="n">mcy</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+            <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">C</span><span class="p">):</span>
+                <span class="n">chan_out</span> <span class="o">=</span> <span class="n">mcy</span><span class="p">[:,</span> <span class="p">:,</span> <span class="n">c</span><span class="p">]</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">n_classes</span><span class="p">)</span>
+                <span class="n">loss</span> <span class="o">=</span> <span class="n">loss</span> <span class="o">+</span> <span class="n">loss_fn</span><span class="p">(</span><span class="n">chan_out</span><span class="p">,</span> <span class="n">targets_flat</span><span class="p">)</span>
+
+            <span class="c1"># Track per-channel accuracy during eval (and during training when</span>
+            <span class="c1"># the mixer opts in via ``track_train_acc``). ``mcy`` is computed</span>
+            <span class="c1"># before the dropout, so these are clean per-channel accuracies.</span>
+            <span class="n">_cm</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="s2">"channel_mixer"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">model</span><span class="o">.</span><span class="n">training</span> <span class="ow">or</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">_cm</span><span class="p">,</span> <span class="s2">"track_train_acc"</span><span class="p">,</span> <span class="kc">False</span><span class="p">):</span>
+                <span class="n">chan_accs</span> <span class="o">=</span> <span class="p">[]</span>
+                <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">C</span><span class="p">):</span>
+                    <span class="n">chan_out</span> <span class="o">=</span> <span class="n">mcy</span><span class="p">[:,</span> <span class="p">:,</span> <span class="n">c</span><span class="p">]</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">n_classes</span><span class="p">)</span>
+                    <span class="n">chan_acc</span> <span class="o">=</span> <span class="n">accuracy_score</span><span class="p">(</span>
+                        <span class="n">chan_out</span><span class="p">,</span> <span class="n">targets_flat</span><span class="p">,</span>
+                        <span class="n">ignore_index</span><span class="o">=</span><span class="nb">getattr</span><span class="p">(</span><span class="n">loss_fn</span><span class="p">,</span> <span class="s2">"ignore_index"</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
+                    <span class="p">)</span>
+                    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">chan_acc</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
+                        <span class="n">chan_acc</span> <span class="o">=</span> <span class="n">chan_acc</span><span class="o">.</span><span class="n">item</span><span class="p">()</span>
+                    <span class="n">chan_accs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">chan_acc</span><span class="p">)</span>
+                <span class="n">model</span><span class="o">.</span><span class="n">update_channel_acc</span><span class="p">(</span><span class="n">chan_accs</span><span class="p">)</span>
+
+        <span class="n">acc</span> <span class="o">=</span> <span class="n">accuracy_score</span><span class="p">(</span>
+            <span class="n">outputs_flat</span><span class="p">,</span> <span class="n">targets_flat</span><span class="p">,</span>
+            <span class="n">ignore_index</span><span class="o">=</span><span class="nb">getattr</span><span class="p">(</span><span class="n">loss_fn</span><span class="p">,</span> <span class="s2">"ignore_index"</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
+        <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">loss</span><span class="p">,</span> <span class="n">acc</span>
+</pre></div>
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer src="../../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2023, Guido Gagliardi.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 8.1.3.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.16.1.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

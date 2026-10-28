@@ -1,0 +1,1244 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../../" data-theme="light">
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>ProtoSleepNet and ProtoSleepTransformer &#8212; PhysioEx</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "light";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "light";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/custom.css?v=885a8570" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="../../../_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" />
+<link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" />
+
+    <script src="../../../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'pages/train/networks/protosleepnet';</script>
+    <link rel="icon" href="../../../_static/logo_bar.svg"/>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+    <link rel="next" title="Explain Module" href="../../explain/explain.html" />
+    <link rel="prev" title="Chambon2018" href="chambon2018.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="light">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../../index.html">
+  
+  
+  
+  
+  
+    
+    
+    
+    <img src="../../../_static/logo_bar.svg" class="logo__image only-light" alt="PhysioEx - Home"/>
+    <img src="../../../_static/logo_bar.svg" class="logo__image only-dark pst-js-only" alt="PhysioEx - Home"/>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="../../user_guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../related/index.html">
+    Related Works
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../api/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../contribute.html">
+    Contributing to PhysioEx
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/guidogagl/physioex" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://guidogagl.github.io/" title="Website" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-globe fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Website</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="../../user_guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../related/index.html">
+    Related Works
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../api/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../contribute.html">
+    Contributing to PhysioEx
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/guidogagl/physioex" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://guidogagl.github.io/" title="Website" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-globe fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Website</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../data.html">Data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../preprocess.html">Preprocessing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../train.html">Training (programmatic API)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cli.html">Command-line interface of the train module</a></li>
+<li class="toctree-l1 current active has-children"><a class="reference internal" href="../networks.html">Model architectures</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="chambon2018.html"><code class="docutils literal notranslate"><span class="pre">Chambon2018</span></code></a></li>
+<li class="toctree-l2 current active"><a class="current reference internal" href="#"><code class="docutils literal notranslate"><span class="pre">ProtoSleepNet</span></code> and <code class="docutils literal notranslate"><span class="pre">ProtoSleepTransformer</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../explain/explain.html">Explain Module</a></li>
+</ul>
+</div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../../user_guide.html" class="nav-link">User Guide</a></li>
+    
+    
+    <li class="breadcrumb-item"><a href="../networks.html" class="nav-link">Model architectures</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis"><code class="docutils literal notranslate"><span class="pre">ProtoSleepNet</span></code> and <code class="docutils literal notranslate"><span class="pre">ProtoSleepTransformer</span></code></span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section class="tex2jax_ignore mathjax_ignore" id="protosleepnet-and-protosleeptransformer">
+<h1><code class="docutils literal notranslate"><span class="pre">ProtoSleepNet</span></code> and <code class="docutils literal notranslate"><span class="pre">ProtoSleepTransformer</span></code><a class="headerlink" href="#protosleepnet-and-protosleeptransformer" title="Link to this heading">#</a></h1>
+<p>Two pretrained sleep stagers, trained on 28 sites from 12 public and clinical datasets and published on the Hugging Face Hub
+in <a class="reference external" href="https://huggingface.co/4rooms/physioex"><code class="docutils literal notranslate"><span class="pre">4rooms/physioex</span></code></a>:</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Hub name</p></th>
+<th class="head"><p>Epoch encoder</p></th>
+<th class="head text-right"><p>Sequence length <code class="docutils literal notranslate"><span class="pre">L</span></code></p></th>
+<th class="head text-right"><p>Parameters</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">protosleepnet-gagliardi</span></code> (PSN)</p></td>
+<td><p>SeqSleepNet</p></td>
+<td class="text-right"><p>20</p></td>
+<td class="text-right"><p>0.79 M</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">protosleeptransformer-gagliardi</span></code> (PST)</p></td>
+<td><p>SleepTransformer</p></td>
+<td class="text-right"><p>21</p></td>
+<td class="text-right"><p>3.98 M</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Both are <code class="docutils literal notranslate"><span class="pre">physioex.models.protosleepnet.ProtoSleepNet</span></code> networks: a per-channel epoch encoder, a channel mixer
+that learns how much to trust each modality, a residual sequence encoder and a linear classifier. They are the models of
+the paper <em>Prototype-based interpretable sleep staging with physiologically meaningful sub-stage pattern discovery</em>
+(npj Digital Medicine; code and analyses in <a class="reference external" href="https://github.com/guidogagl/protosleepnet">guidogagl/protosleepnet</a>),
+retrained on many sites at once. The weights of the paper itself (one dataset per model) are a separate archive.</p>
+<section id="quick-start">
+<h2>Quick start<a class="headerlink" href="#quick-start" title="Link to this heading">#</a></h2>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">physioex.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">load_from_pretrained</span>
+
+<span class="n">model</span> <span class="o">=</span> <span class="n">load_from_pretrained</span><span class="p">(</span><span class="s2">"protosleeptransformer-gagliardi"</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>   <span class="c1"># eval mode, CPU</span>
+
+<span class="c1"># (batch, L, channels, T, F): log-power STFT spectrograms of EEG, EOG, EMG (T=29, F=129)</span>
+<span class="n">x</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">21</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">29</span><span class="p">,</span> <span class="mi">129</span><span class="p">)</span>
+<span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">():</span>
+    <span class="n">logits</span> <span class="o">=</span> <span class="n">model</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>            <span class="c1"># (2, 21, 5): W, N1, N2, N3, REM</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">verbose=True</span></code> prints the per-site test metrics stored with the weights. The input is what the <code class="docutils literal notranslate"><span class="pre">seqsleepnet</span></code>
+<a class="reference internal" href="../../preprocess.html"><span class="std std-doc">pipeline preset</span></a> produces for the channels <code class="docutils literal notranslate"><span class="pre">[&quot;EEG&quot;,</span> <span class="pre">&quot;EOG&quot;,</span> <span class="pre">&quot;EMG&quot;]</span></code>, so the models can be fed
+directly from any physioex dataset:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">physioex.data</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_dataset</span>
+
+<span class="n">ds</span> <span class="o">=</span> <span class="n">get_dataset</span><span class="p">(</span><span class="s2">"hmc"</span><span class="p">)(</span><span class="n">channels</span><span class="o">=</span><span class="p">[</span><span class="s2">"EEG"</span><span class="p">,</span> <span class="s2">"EOG"</span><span class="p">,</span> <span class="s2">"EMG"</span><span class="p">],</span> <span class="n">pipelines</span><span class="o">=</span><span class="s2">"seqsleepnet"</span><span class="p">,</span> <span class="n">sequence_length</span><span class="o">=</span><span class="mi">21</span><span class="p">)</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">encode(x)</span></code> returns the contextualised epoch embeddings <code class="docutils literal notranslate"><span class="pre">(B,</span> <span class="pre">L,</span> <span class="pre">d_model)</span></code>. <code class="docutils literal notranslate"><span class="pre">forward(x,</span> <span class="pre">quantize=True)</span></code> replaces the epoch
+embeddings by their nearest prototype, but it needs a codebook (<code class="docutils literal notranslate"><span class="pre">set_codebook</span></code>) that is learned after training from the
+epoch embeddings; the checkpoints on the Hub contain no codebook, and <code class="docutils literal notranslate"><span class="pre">quantize=False</span></code> (the default) is the plain
+classifier. The prototype analyses of the paper are in its repository, and relevance maps for these models are in
+<a class="reference internal" href="../../explain/explain.html"><span class="std std-doc">Explainability</span></a> (LRP supports the default, non-quantised forward).</p>
+</section>
+<section id="training-data">
+<h2>Training data<a class="headerlink" href="#training-data" title="Link to this heading">#</a></h2>
+<p>Both models were trained jointly on the training subjects of 28 sites. The test and validation subjects of every site are
+disjoint from the training subjects (split by subject, per site).</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Dataset</p></th>
+<th class="head"><p>Sites</p></th>
+<th class="head"><p>Source</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Sleep-EDF</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">sleepedf</span></code></p></td>
+<td><p>PhysioNet</p></td>
+</tr>
+<tr class="row-odd"><td><p>HMC</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">hmc</span></code></p></td>
+<td><p>PhysioNet</p></td>
+</tr>
+<tr class="row-even"><td><p>DCSM</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">dcsm</span></code></p></td>
+<td><p>ERDA / University of Copenhagen</p></td>
+</tr>
+<tr class="row-odd"><td><p>MASS</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">mass_ss01</span></code> … <code class="docutils literal notranslate"><span class="pre">mass_ss05</span></code> (cohorts SS1-SS5)</p></td>
+<td><p>CEAMS</p></td>
+</tr>
+<tr class="row-even"><td><p>SHHS</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">shhs</span></code></p></td>
+<td><p>NSRR</p></td>
+</tr>
+<tr class="row-odd"><td><p>MESA</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">mesa</span></code></p></td>
+<td><p>NSRR</p></td>
+</tr>
+<tr class="row-even"><td><p>MrOS</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">mros</span></code></p></td>
+<td><p>NSRR</p></td>
+</tr>
+<tr class="row-odd"><td><p>HomePAP</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">hpap</span></code></p></td>
+<td><p>NSRR</p></td>
+</tr>
+<tr class="row-even"><td><p>WSC</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">wsc</span></code></p></td>
+<td><p>NSRR</p></td>
+</tr>
+<tr class="row-odd"><td><p>STAGES</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">stages_BOGN</span></code>, <code class="docutils literal notranslate"><span class="pre">stages_GSBB</span></code>, <code class="docutils literal notranslate"><span class="pre">stages_GSDV</span></code>, <code class="docutils literal notranslate"><span class="pre">stages_GSLH</span></code>, <code class="docutils literal notranslate"><span class="pre">stages_GSSA</span></code>, <code class="docutils literal notranslate"><span class="pre">stages_GSSW</span></code>, <code class="docutils literal notranslate"><span class="pre">stages_MSMI</span></code>, <code class="docutils literal notranslate"><span class="pre">stages_MSNF</span></code>, <code class="docutils literal notranslate"><span class="pre">stages_MSQW</span></code>, <code class="docutils literal notranslate"><span class="pre">stages_MSTH</span></code>, <code class="docutils literal notranslate"><span class="pre">stages_MSTR</span></code>, <code class="docutils literal notranslate"><span class="pre">stages_STLK</span></code>, <code class="docutils literal notranslate"><span class="pre">stages_STNF</span></code> (13 clinical sites)</p></td>
+<td><p>NSRR</p></td>
+</tr>
+<tr class="row-even"><td><p>Alzheimer’s disease study, healthy controls</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">alzheimers_hc</span></code></p></td>
+<td><p>UZ Leuven</p></td>
+</tr>
+<tr class="row-odd"><td><p>Parkinson’s disease study, healthy older adults, night recordings</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">parkinsons_night_hoa</span></code></p></td>
+<td><p>UZ Leuven</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Recipe (the same for both models): 3 channels (EEG, EOG, EMG), <code class="docutils literal notranslate"><span class="pre">seqsleepnet</span></code> pipeline, site-balanced sampling
+(<code class="docutils literal notranslate"><span class="pre">make_site_sampler</span></code>, every site gets the same probability mass, see <a class="reference internal" href="../../data.html"><span class="std std-doc">Data</span></a>), batch size 32, learning rate
+1e-4 with a reduce-on-plateau scheduler, no weight decay, 300,000 windows per epoch, at most 20 epochs, channel dropout 0.5
+in the channel mixer, seed 42. The released checkpoint is the one with the highest macro-averaged validation kappa among the
+evaluated checkpoints (up to 30 validation subjects per site): step 161,500 (epoch 17) for PSN and step 129,000 (epoch 13)
+for PST. Neighbouring checkpoints differ by about 0.001 kappa, so the choice is not critical.</p>
+</section>
+<section id="performance-by-training-site">
+<h2>Performance by training site<a class="headerlink" href="#performance-by-training-site" title="Link to this heading">#</a></h2>
+<p>Metrics are computed on the <strong>test subjects of each site</strong>, pooling the epochs of all of them (this is not a mean over
+nights), with full-night sliding-window voting (windows of <code class="docutils literal notranslate"><span class="pre">L</span></code> epochs at <code class="docutils literal notranslate"><span class="pre">L</span></code> different offsets, overlapping predictions averaged). Accuracy, Cohen’s kappa and macro F1 over the five AASM
+stages. Read the tables with these limits in mind:</p>
+<ul class="simple">
+<li><p>The sites were seen in training (other subjects of the same sites), so this is <strong>not</strong> external validation: a new site,
+montage or population can perform differently.</p></li>
+<li><p>Single training run (one seed), no confidence intervals. Several sites have 2-6 test subjects, so their values are noisy;
+SHHS is by far the largest test set (842 nights).</p></li>
+<li><p>Per-site values mix population, scoring protocol and recording hardware; do not read a difference between two sites as a
+difference in model quality without checking the labels.</p></li>
+</ul>
+<p>The two single-centre studies at the end of the training table (<code class="docutils literal notranslate"><span class="pre">alzheimers_hc</span></code>, <code class="docutils literal notranslate"><span class="pre">parkinsons_night_hoa</span></code>) were part of training but their per-site
+metrics are not published, so the tables below list 26 of the 28 sites.</p>
+<section id="protosleepnet-protosleepnet-gagliardi">
+<h3>ProtoSleepNet (<code class="docutils literal notranslate"><span class="pre">protosleepnet-gagliardi</span></code>)<a class="headerlink" href="#protosleepnet-protosleepnet-gagliardi" title="Link to this heading">#</a></h3>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Site</p></th>
+<th class="head text-right"><p>Test subjects</p></th>
+<th class="head text-right"><p>Accuracy</p></th>
+<th class="head text-right"><p>Cohen’s kappa</p></th>
+<th class="head text-right"><p>Macro F1</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">dcsm</span></code></p></td>
+<td class="text-right"><p>26</p></td>
+<td class="text-right"><p>0.867</p></td>
+<td class="text-right"><p>0.809</p></td>
+<td class="text-right"><p>0.774</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">hmc</span></code></p></td>
+<td class="text-right"><p>15</p></td>
+<td class="text-right"><p>0.814</p></td>
+<td class="text-right"><p>0.754</p></td>
+<td class="text-right"><p>0.784</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">hpap</span></code></p></td>
+<td class="text-right"><p>25</p></td>
+<td class="text-right"><p>0.847</p></td>
+<td class="text-right"><p>0.790</p></td>
+<td class="text-right"><p>0.801</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">mass_ss01</span></code></p></td>
+<td class="text-right"><p>5</p></td>
+<td class="text-right"><p>0.811</p></td>
+<td class="text-right"><p>0.724</p></td>
+<td class="text-right"><p>0.761</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">mass_ss02</span></code></p></td>
+<td class="text-right"><p>2</p></td>
+<td class="text-right"><p>0.910</p></td>
+<td class="text-right"><p>0.858</p></td>
+<td class="text-right"><p>0.837</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">mass_ss03</span></code></p></td>
+<td class="text-right"><p>6</p></td>
+<td class="text-right"><p>0.888</p></td>
+<td class="text-right"><p>0.835</p></td>
+<td class="text-right"><p>0.844</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">mass_ss04</span></code></p></td>
+<td class="text-right"><p>4</p></td>
+<td class="text-right"><p>0.871</p></td>
+<td class="text-right"><p>0.814</p></td>
+<td class="text-right"><p>0.834</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">mass_ss05</span></code></p></td>
+<td class="text-right"><p>3</p></td>
+<td class="text-right"><p>0.891</p></td>
+<td class="text-right"><p>0.841</p></td>
+<td class="text-right"><p>0.821</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">mesa</span></code></p></td>
+<td class="text-right"><p>206</p></td>
+<td class="text-right"><p>0.842</p></td>
+<td class="text-right"><p>0.776</p></td>
+<td class="text-right"><p>0.771</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">mros</span></code></p></td>
+<td class="text-right"><p>219</p></td>
+<td class="text-right"><p>0.859</p></td>
+<td class="text-right"><p>0.795</p></td>
+<td class="text-right"><p>0.757</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">shhs</span></code></p></td>
+<td class="text-right"><p>842</p></td>
+<td class="text-right"><p>0.872</p></td>
+<td class="text-right"><p>0.818</p></td>
+<td class="text-right"><p>0.780</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">sleepedf</span></code></p></td>
+<td class="text-right"><p>15</p></td>
+<td class="text-right"><p>0.842</p></td>
+<td class="text-right"><p>0.778</p></td>
+<td class="text-right"><p>0.794</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">stages_BOGN</span></code></p></td>
+<td class="text-right"><p>8</p></td>
+<td class="text-right"><p>0.865</p></td>
+<td class="text-right"><p>0.800</p></td>
+<td class="text-right"><p>0.806</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">stages_GSBB</span></code></p></td>
+<td class="text-right"><p>3</p></td>
+<td class="text-right"><p>0.814</p></td>
+<td class="text-right"><p>0.729</p></td>
+<td class="text-right"><p>0.691</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">stages_GSDV</span></code></p></td>
+<td class="text-right"><p>19</p></td>
+<td class="text-right"><p>0.804</p></td>
+<td class="text-right"><p>0.679</p></td>
+<td class="text-right"><p>0.697</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">stages_GSLH</span></code></p></td>
+<td class="text-right"><p>3</p></td>
+<td class="text-right"><p>0.812</p></td>
+<td class="text-right"><p>0.732</p></td>
+<td class="text-right"><p>0.740</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">stages_GSSA</span></code></p></td>
+<td class="text-right"><p>5</p></td>
+<td class="text-right"><p>0.826</p></td>
+<td class="text-right"><p>0.696</p></td>
+<td class="text-right"><p>0.673</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">stages_GSSW</span></code></p></td>
+<td class="text-right"><p>8</p></td>
+<td class="text-right"><p>0.836</p></td>
+<td class="text-right"><p>0.722</p></td>
+<td class="text-right"><p>0.711</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">stages_MSMI</span></code></p></td>
+<td class="text-right"><p>6</p></td>
+<td class="text-right"><p>0.840</p></td>
+<td class="text-right"><p>0.764</p></td>
+<td class="text-right"><p>0.787</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">stages_MSNF</span></code></p></td>
+<td class="text-right"><p>4</p></td>
+<td class="text-right"><p>0.854</p></td>
+<td class="text-right"><p>0.735</p></td>
+<td class="text-right"><p>0.742</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">stages_MSQW</span></code></p></td>
+<td class="text-right"><p>15</p></td>
+<td class="text-right"><p>0.805</p></td>
+<td class="text-right"><p>0.711</p></td>
+<td class="text-right"><p>0.734</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">stages_MSTH</span></code></p></td>
+<td class="text-right"><p>3</p></td>
+<td class="text-right"><p>0.823</p></td>
+<td class="text-right"><p>0.745</p></td>
+<td class="text-right"><p>0.771</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">stages_MSTR</span></code></p></td>
+<td class="text-right"><p>29</p></td>
+<td class="text-right"><p>0.849</p></td>
+<td class="text-right"><p>0.779</p></td>
+<td class="text-right"><p>0.800</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">stages_STLK</span></code></p></td>
+<td class="text-right"><p>16</p></td>
+<td class="text-right"><p>0.802</p></td>
+<td class="text-right"><p>0.708</p></td>
+<td class="text-right"><p>0.704</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">stages_STNF</span></code></p></td>
+<td class="text-right"><p>49</p></td>
+<td class="text-right"><p>0.691</p></td>
+<td class="text-right"><p>0.591</p></td>
+<td class="text-right"><p>0.630</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">wsc</span></code></p></td>
+<td class="text-right"><p>235</p></td>
+<td class="text-right"><p>0.833</p></td>
+<td class="text-right"><p>0.735</p></td>
+<td class="text-right"><p>0.729</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="protosleeptransformer-protosleeptransformer-gagliardi">
+<h3>ProtoSleepTransformer (<code class="docutils literal notranslate"><span class="pre">protosleeptransformer-gagliardi</span></code>)<a class="headerlink" href="#protosleeptransformer-protosleeptransformer-gagliardi" title="Link to this heading">#</a></h3>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Site</p></th>
+<th class="head text-right"><p>Test subjects</p></th>
+<th class="head text-right"><p>Accuracy</p></th>
+<th class="head text-right"><p>Cohen’s kappa</p></th>
+<th class="head text-right"><p>Macro F1</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">dcsm</span></code></p></td>
+<td class="text-right"><p>26</p></td>
+<td class="text-right"><p>0.870</p></td>
+<td class="text-right"><p>0.814</p></td>
+<td class="text-right"><p>0.781</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">hmc</span></code></p></td>
+<td class="text-right"><p>15</p></td>
+<td class="text-right"><p>0.815</p></td>
+<td class="text-right"><p>0.754</p></td>
+<td class="text-right"><p>0.789</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">hpap</span></code></p></td>
+<td class="text-right"><p>25</p></td>
+<td class="text-right"><p>0.857</p></td>
+<td class="text-right"><p>0.803</p></td>
+<td class="text-right"><p>0.812</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">mass_ss01</span></code></p></td>
+<td class="text-right"><p>5</p></td>
+<td class="text-right"><p>0.810</p></td>
+<td class="text-right"><p>0.723</p></td>
+<td class="text-right"><p>0.766</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">mass_ss02</span></code></p></td>
+<td class="text-right"><p>2</p></td>
+<td class="text-right"><p>0.899</p></td>
+<td class="text-right"><p>0.841</p></td>
+<td class="text-right"><p>0.833</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">mass_ss03</span></code></p></td>
+<td class="text-right"><p>6</p></td>
+<td class="text-right"><p>0.894</p></td>
+<td class="text-right"><p>0.843</p></td>
+<td class="text-right"><p>0.846</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">mass_ss04</span></code></p></td>
+<td class="text-right"><p>4</p></td>
+<td class="text-right"><p>0.870</p></td>
+<td class="text-right"><p>0.812</p></td>
+<td class="text-right"><p>0.829</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">mass_ss05</span></code></p></td>
+<td class="text-right"><p>3</p></td>
+<td class="text-right"><p>0.888</p></td>
+<td class="text-right"><p>0.838</p></td>
+<td class="text-right"><p>0.824</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">mesa</span></code></p></td>
+<td class="text-right"><p>206</p></td>
+<td class="text-right"><p>0.842</p></td>
+<td class="text-right"><p>0.778</p></td>
+<td class="text-right"><p>0.778</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">mros</span></code></p></td>
+<td class="text-right"><p>219</p></td>
+<td class="text-right"><p>0.872</p></td>
+<td class="text-right"><p>0.811</p></td>
+<td class="text-right"><p>0.765</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">shhs</span></code></p></td>
+<td class="text-right"><p>842</p></td>
+<td class="text-right"><p>0.880</p></td>
+<td class="text-right"><p>0.829</p></td>
+<td class="text-right"><p>0.797</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">sleepedf</span></code></p></td>
+<td class="text-right"><p>15</p></td>
+<td class="text-right"><p>0.842</p></td>
+<td class="text-right"><p>0.775</p></td>
+<td class="text-right"><p>0.780</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">stages_BOGN</span></code></p></td>
+<td class="text-right"><p>8</p></td>
+<td class="text-right"><p>0.873</p></td>
+<td class="text-right"><p>0.811</p></td>
+<td class="text-right"><p>0.817</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">stages_GSBB</span></code></p></td>
+<td class="text-right"><p>3</p></td>
+<td class="text-right"><p>0.828</p></td>
+<td class="text-right"><p>0.749</p></td>
+<td class="text-right"><p>0.708</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">stages_GSDV</span></code></p></td>
+<td class="text-right"><p>19</p></td>
+<td class="text-right"><p>0.777</p></td>
+<td class="text-right"><p>0.649</p></td>
+<td class="text-right"><p>0.688</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">stages_GSLH</span></code></p></td>
+<td class="text-right"><p>3</p></td>
+<td class="text-right"><p>0.790</p></td>
+<td class="text-right"><p>0.699</p></td>
+<td class="text-right"><p>0.698</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">stages_GSSA</span></code></p></td>
+<td class="text-right"><p>5</p></td>
+<td class="text-right"><p>0.821</p></td>
+<td class="text-right"><p>0.692</p></td>
+<td class="text-right"><p>0.676</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">stages_GSSW</span></code></p></td>
+<td class="text-right"><p>8</p></td>
+<td class="text-right"><p>0.812</p></td>
+<td class="text-right"><p>0.675</p></td>
+<td class="text-right"><p>0.674</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">stages_MSMI</span></code></p></td>
+<td class="text-right"><p>6</p></td>
+<td class="text-right"><p>0.834</p></td>
+<td class="text-right"><p>0.763</p></td>
+<td class="text-right"><p>0.794</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">stages_MSNF</span></code></p></td>
+<td class="text-right"><p>4</p></td>
+<td class="text-right"><p>0.853</p></td>
+<td class="text-right"><p>0.743</p></td>
+<td class="text-right"><p>0.757</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">stages_MSQW</span></code></p></td>
+<td class="text-right"><p>15</p></td>
+<td class="text-right"><p>0.819</p></td>
+<td class="text-right"><p>0.730</p></td>
+<td class="text-right"><p>0.749</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">stages_MSTH</span></code></p></td>
+<td class="text-right"><p>3</p></td>
+<td class="text-right"><p>0.823</p></td>
+<td class="text-right"><p>0.743</p></td>
+<td class="text-right"><p>0.763</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">stages_MSTR</span></code></p></td>
+<td class="text-right"><p>29</p></td>
+<td class="text-right"><p>0.844</p></td>
+<td class="text-right"><p>0.773</p></td>
+<td class="text-right"><p>0.796</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">stages_STLK</span></code></p></td>
+<td class="text-right"><p>16</p></td>
+<td class="text-right"><p>0.812</p></td>
+<td class="text-right"><p>0.724</p></td>
+<td class="text-right"><p>0.717</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">stages_STNF</span></code></p></td>
+<td class="text-right"><p>49</p></td>
+<td class="text-right"><p>0.720</p></td>
+<td class="text-right"><p>0.632</p></td>
+<td class="text-right"><p>0.672</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">wsc</span></code></p></td>
+<td class="text-right"><p>235</p></td>
+<td class="text-right"><p>0.845</p></td>
+<td class="text-right"><p>0.750</p></td>
+<td class="text-right"><p>0.739</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>The same numbers are stored with the weights (<code class="docutils literal notranslate"><span class="pre">metrics.json</span></code> in each model folder on the Hub).</p>
+</section>
+</section>
+<section id="intended-use-and-limits">
+<h2>Intended use and limits<a class="headerlink" href="#intended-use-and-limits" title="Link to this heading">#</a></h2>
+<p>For research on sleep staging and its interpretability; not a medical device, and not for clinical diagnosis. The models expect
+the spectrogram input described above: a different preprocessing, signal amplitude scale or montage changes the input
+distribution, so check the staging on a sample of your own data before relying on it. The channel set is fixed to EEG, EOG
+and EMG (the channel mixer was trained with random channel dropout, which makes the models tolerant to a missing channel, but
+this was not evaluated per site here).</p>
+</section>
+<section id="reproducibility">
+<h2>Reproducibility<a class="headerlink" href="#reproducibility" title="Link to this heading">#</a></h2>
+<p>Every model folder on the Hub has <code class="docutils literal notranslate"><span class="pre">config.json</span></code> with the factory call and the training summary, including the SHA-256 of
+<code class="docutils literal notranslate"><span class="pre">model.pt</span></code>:</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Hub name</p></th>
+<th class="head text-right"><p>Checkpoint step</p></th>
+<th class="head"><p>SHA-256 of <code class="docutils literal notranslate"><span class="pre">model.pt</span></code></p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">protosleepnet-gagliardi</span></code></p></td>
+<td class="text-right"><p>161,500</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">1156a3fe18d3bc8a83a775bcc8e1a1ba08c0c4624b3415a4fc07982e907136db</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">protosleeptransformer-gagliardi</span></code></p></td>
+<td class="text-right"><p>129,000</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">08d0fbc806fc08dc7d0167e1c2b81b0e2b4f5495bad2c1e5dda6bde14972e603</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">physioex/examples/pretrained/protosleepnet/export_release.py</span></code> builds the folder from a training checkpoint and its per-site
+evaluation; nothing is recomputed, and the metrics are copied unchanged.</p>
+</section>
+<section id="api">
+<h2>API<a class="headerlink" href="#api" title="Link to this heading">#</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">physioex.models.protosleepnet.</span></span><span class="sig-name descname"><span class="pre">ProtoSleepNet</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">epoch_encoder</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sequence_encoder</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">classifier</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_channels</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_classes</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">128</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_channel_mixer</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cdropout</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cm_n_heads</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">4</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cm_d_ff</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">256</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cm_n_layers</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/physioex/models/protosleepnet.html#ProtoSleepNet"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.pytorch.org/docs/stable/generated/torch.nn.Module.html#torch.nn.Module" title="(in PyTorch v2.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code></a></p>
+<p>Template-based sleep staging model with dual residual connections.</p>
+<p>Wraps any epoch_encoder + sequence_encoder with:
+- Optional channel mixer (for multi-channel input)
+- Residual sequence encoder: z = h + seq(h)
+- Single classifier</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>epoch_encoder</strong> (<a class="reference external" href="https://docs.pytorch.org/docs/stable/generated/torch.nn.Module.html#torch.nn.Module" title="(in PyTorch v2.14)"><em>Module</em></a>) – maps (N, 1, T, F) → (N, d_model) for per-channel,
+or (N, C, T, F) → (N, d_model) for single-channel</p></li>
+<li><p><strong>sequence_encoder</strong> (<a class="reference external" href="https://docs.pytorch.org/docs/stable/generated/torch.nn.Module.html#torch.nn.Module" title="(in PyTorch v2.14)"><em>Module</em></a>) – maps (B, L, d_model) → (B, L, d_model)</p></li>
+<li><p><strong>classifier</strong> (<a class="reference external" href="https://docs.pytorch.org/docs/stable/generated/torch.nn.Module.html#torch.nn.Module" title="(in PyTorch v2.14)"><em>Module</em></a>) – maps (N, d_model) → (N, n_classes)</p></li>
+<li><p><strong>n_channels</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><em>int</em></a>) – number of input channels (1 = no mixer)</p></li>
+<li><p><strong>n_classes</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><em>int</em></a>) – number of output classes</p></li>
+<li><p><strong>d_model</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><em>int</em></a>) – epoch encoder output dimension</p></li>
+<li><p><strong>use_channel_mixer</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><em>bool</em></a>) – enable channel mixer (requires n_channels &gt; 1)</p></li>
+<li><p><strong>cdropout</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><em>float</em></a>) – channel dropout probability</p></li>
+<li><p><strong>cm_n_heads</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><em>int</em></a>) – mixer transformer heads</p></li>
+<li><p><strong>cm_d_ff</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><em>int</em></a>) – mixer transformer feedforward dim</p></li>
+<li><p><strong>cm_n_layers</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><em>int</em></a>) – mixer transformer layers</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">encode</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">quantize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/physioex/models/protosleepnet.html#ProtoSleepNet.encode"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Encode input spectrograms to contextualized per-epoch embeddings.</p>
+<p>Calls epoch_encode → sequence_encode.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> – (B, L, C, T, F) spectrogram input.</p></li>
+<li><p><strong>quantize</strong> – if True, replace epoch embeddings with nearest
+codebook entry. Requires set_codebook() first.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>(B, L, d_model) contextualized epoch embeddings.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">epoch_encode</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">quantize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/physioex/models/protosleepnet.html#ProtoSleepNet.epoch_encode"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Encode input spectrograms to per-epoch embeddings.</p>
+<p>Pipeline: per-channel epoch encoding → [channel mixer] → [VQ] →
+deep supervision (epoch_logits stored in metrics).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> – (B, L, C, T, F) spectrogram input.</p></li>
+<li><p><strong>quantize</strong> – if True, replace epoch embeddings with nearest
+codebook entry. Requires set_codebook() first.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>(B, L, d_model) epoch embeddings (pre-sequence).</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">forward</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">quantize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/physioex/models/protosleepnet.html#ProtoSleepNet.forward"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Forward pass: encode → classify.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> – (B, L, C, T, F) spectrogram input.</p></li>
+<li><p><strong>quantize</strong> – if True, replace epoch embeddings with nearest
+codebook entry. Requires set_codebook() first.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>(B, L, n_classes) per-epoch logits.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">from_seq_sleep_net</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n_channels</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_classes</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">F</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">129</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">D</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">32</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nfft</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">256</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lowfreq</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">highfreq</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">50</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">100</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">seqnhidden1</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">64</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">seqnlayer1</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">4</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">attentionsize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">32</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">seqnhidden2</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">64</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">seqnlayer2</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">4</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">mixer_kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/physioex/models/protosleepnet.html#ProtoSleepNet.from_seq_sleep_net"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Build ProtoSleepNet with SeqSleepNet backbone.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>n_channels</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><em>int</em></a>)</p></li>
+<li><p><strong>n_classes</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><em>int</em></a>)</p></li>
+<li><p><strong>F</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><em>int</em></a>)</p></li>
+<li><p><strong>D</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><em>int</em></a>)</p></li>
+<li><p><strong>nfft</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><em>int</em></a>)</p></li>
+<li><p><strong>lowfreq</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><em>int</em></a>)</p></li>
+<li><p><strong>highfreq</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><em>int</em></a>)</p></li>
+<li><p><strong>fs</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><em>int</em></a>)</p></li>
+<li><p><strong>seqnhidden1</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><em>int</em></a>)</p></li>
+<li><p><strong>seqnlayer1</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><em>int</em></a>)</p></li>
+<li><p><strong>attentionsize</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><em>int</em></a>)</p></li>
+<li><p><strong>seqnhidden2</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><em>int</em></a>)</p></li>
+<li><p><strong>seqnlayer2</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><em>int</em></a>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><em>ProtoSleepNet</em></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">from_sleep_transformer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n_channels</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_classes</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">128</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_heads</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">8</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_epoch_layers</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">4</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_seq_layers</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">4</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_ff</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1024</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_clf</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1024</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dropout</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">attention_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">128</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">mixer_kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/physioex/models/protosleepnet.html#ProtoSleepNet.from_sleep_transformer"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Build ProtoSleepNet with SleepTransformer backbone.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>n_channels</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><em>int</em></a>)</p></li>
+<li><p><strong>n_classes</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><em>int</em></a>)</p></li>
+<li><p><strong>d_model</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><em>int</em></a>)</p></li>
+<li><p><strong>n_heads</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><em>int</em></a>)</p></li>
+<li><p><strong>n_epoch_layers</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><em>int</em></a>)</p></li>
+<li><p><strong>n_seq_layers</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><em>int</em></a>)</p></li>
+<li><p><strong>d_ff</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><em>int</em></a>)</p></li>
+<li><p><strong>d_clf</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><em>int</em></a>)</p></li>
+<li><p><strong>dropout</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><em>float</em></a>)</p></li>
+<li><p><strong>attention_size</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><em>int</em></a>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><em>ProtoSleepNet</em></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">sequence_encode</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">h</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/physioex/models/protosleepnet.html#ProtoSleepNet.sequence_encode"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Contextualize epoch embeddings with residual sequence encoding.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>h</strong> – (B, L, d_model) epoch embeddings.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>h + seq(h).</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>(B, L, d_model) contextualized embeddings</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">set_codebook</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">codebook</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/physioex/models/protosleepnet.html#ProtoSleepNet.set_codebook"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Set VQ codebook for prototype quantization.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>codebook</strong> – (M, d_model) numpy array or torch tensor.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="chambon2018.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title"><code class="docutils literal notranslate"><span class="pre">Chambon2018</span></code></p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="../../explain/explain.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Explain Module</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#quick-start">Quick start</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#training-data">Training data</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#performance-by-training-site">Performance by training site</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#protosleepnet-protosleepnet-gagliardi">ProtoSleepNet (<code class="docutils literal notranslate"><span class="pre">protosleepnet-gagliardi</span></code>)</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#protosleeptransformer-protosleeptransformer-gagliardi">ProtoSleepTransformer (<code class="docutils literal notranslate"><span class="pre">protosleeptransformer-gagliardi</span></code>)</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#intended-use-and-limits">Intended use and limits</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#reproducibility">Reproducibility</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#api">API</a></li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../../../_sources/pages/train/networks/protosleepnet.md.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer src="../../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2023, Guido Gagliardi.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 8.1.3.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.16.1.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

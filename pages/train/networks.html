@@ -353,6 +353,7 @@
 <li class="toctree-l1"><a class="reference internal" href="cli.html">Command-line interface of the train module</a></li>
 <li class="toctree-l1 current active has-children"><a class="current reference internal" href="#">Model architectures</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="networks/chambon2018.html"><code class="docutils literal notranslate"><span class="pre">Chambon2018</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="networks/protosleepnet.html"><code class="docutils literal notranslate"><span class="pre">ProtoSleepNet</span></code> and <code class="docutils literal notranslate"><span class="pre">ProtoSleepTransformer</span></code></a></li>
 </ul>
 </details></li>
 <li class="toctree-l1"><a class="reference internal" href="../explain/explain.html">Explain Module</a></li>
@@ -474,7 +475,10 @@ their own modules and referenced by dotted <code class="docutils literal notrans
 </table>
 </div>
 <p><code class="docutils literal notranslate"><span class="pre">ProtoSleepNet</span></code> additionally provides prototype quantization and factory
-constructors from a <code class="docutils literal notranslate"><span class="pre">SleepTransformer</span></code>/<code class="docutils literal notranslate"><span class="pre">SeqSleepNet</span></code> epoch encoder.</p>
+constructors from a <code class="docutils literal notranslate"><span class="pre">SleepTransformer</span></code>/<code class="docutils literal notranslate"><span class="pre">SeqSleepNet</span></code> epoch encoder. Two pretrained
+multi-dataset checkpoints (<code class="docutils literal notranslate"><span class="pre">protosleepnet-gagliardi</span></code>, <code class="docutils literal notranslate"><span class="pre">protosleeptransformer-gagliardi</span></code>) are
+described, with their performance on every training site, in
+<a class="reference internal" href="networks/protosleepnet.html"><span class="std std-doc">ProtoSleepNet and ProtoSleepTransformer</span></a>.</p>
 </section>
 <section id="foundation-encoders">
 <h2>Foundation encoders<a class="headerlink" href="#foundation-encoders" title="Link to this heading">#</a></h2>
