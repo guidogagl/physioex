@@ -33,6 +33,39 @@ def _resolve_class(spec: str):
     return getattr(importlib.import_module(module_path), class_name)
 
 
+# (key in metrics.json, column header, width). A column is printed only if at
+# least one dataset reports it, so a metrics.json without precision/recall does
+# not show made-up zeros.
+_METRIC_COLUMNS = (
+    ("accuracy", "Acc", 7),
+    ("f1_score", "F1", 7),
+    ("cohen_kappa", "Kappa", 7),
+    ("precision", "Prec", 7),
+    ("recall", "Rec", 7),
+    ("n_subjects", "N", 5),
+)
+
+
+def _format_dataset_metrics(metrics: dict) -> list:
+    """Table lines for a per-dataset ``metrics.json`` (``{dataset: {metric: value}}``)."""
+    cols = [c for c in _METRIC_COLUMNS if any(c[0] in m for m in metrics.values())]
+    name_w = max([15] + [len(k) for k in metrics])
+    header = f"{'Dataset':{name_w}s}" + "".join(f" {h:>{w}s}" for _, h, w in cols)
+    lines = [header, "-" * max(60, len(header))]
+    for name, m in sorted(metrics.items()):
+        cells = []
+        for key, _, w in cols:
+            v = m.get(key)
+            if v is None:
+                cells.append(f" {'-':>{w}s}")
+            elif key == "n_subjects":
+                cells.append(f" {int(v):>{w}d}")
+            else:
+                cells.append(f" {v:{w}.4f}")
+        lines.append(f"{name:{name_w}s}" + "".join(cells))
+    return lines
+
+
 def load_from_pretrained(
     name: str, device: str = "cpu", verbose: bool = False,
     repo_id: str = None,
@@ -120,20 +153,7 @@ def load_from_pretrained(
             first_val = next(iter(metrics.values()), None)
             if isinstance(first_val, dict):
                 # Per-dataset format
-                print(
-                    f"\n{'Dataset':15s} {'Acc':>7s} {'F1':>7s} "
-                    f"{'Kappa':>7s} {'Prec':>7s} {'Rec':>7s}"
-                )
-                print("-" * 60)
-                for ds_name, ds_metrics in sorted(metrics.items()):
-                    print(
-                        f"{ds_name:15s} "
-                        f"{ds_metrics.get('accuracy', 0):7.4f} "
-                        f"{ds_metrics.get('f1_score', 0):7.4f} "
-                        f"{ds_metrics.get('cohen_kappa', 0):7.4f} "
-                        f"{ds_metrics.get('precision', 0):7.4f} "
-                        f"{ds_metrics.get('recall', 0):7.4f}"
-                    )
+                print("\n" + "\n".join(_format_dataset_metrics(metrics)))
             else:
                 # Legacy flat format
                 print(

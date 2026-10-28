@@ -4,6 +4,21 @@ All notable changes to PhysioEx are documented here. Versions follow the
 `physioex.__version__` string (read dynamically by the build) and the `v*` git tags
 that publish to PyPI.
 
+## Unreleased
+
+### Added
+- **Pretrained ProtoSleepNet and ProtoSleepTransformer** (multi-dataset, 28 training sites) on the Hub as `protosleepnet-gagliardi` and
+  `protosleeptransformer-gagliardi` in `4rooms/physioex`. A documentation page lists their training data, recipe and per-site test
+  performance (User Guide → Model architectures), and `examples/pretrained/protosleepnet/export_release.py` builds the Hub folder from a
+  training checkpoint and its per-site evaluation without recomputing any metric.
+
+### Changed
+- `load_from_pretrained(..., verbose=True)` prints only the metric columns that `metrics.json` provides (and `n_subjects`) instead of
+  `0.0000` for missing ones, and widens the first column for long site names.
+
+### Fixed
+- The ProtoSleepNet example and the README pointed to a model name and a private repository that external users cannot load.
+
 ## 2.0.4 — 2026-10-16
 
 Data-layer fixes found by an audit of what physioex reads against the raw files of every dataset. Label caches of

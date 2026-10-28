@@ -104,7 +104,8 @@ classDiagram
 Common contract: `__init__(n_classes, in_chan, ...)`, `forward(x)` and (most)
 `encode(x)`. `ProtoSleepNet` adds prototype quantization and factory
 constructors from `SleepTransformer`/`SeqSleepNet` epoch encoders; its training
-uses `ProtoSleepNetTrainer(Trainer)`.
+uses `ProtoSleepNetTrainer(Trainer)`. The two released multi-dataset checkpoints are documented in
+[ProtoSleepNet and ProtoSleepTransformer](../../train/networks/protosleepnet.md).
 
 ## Sleep tokenizer & helpers
 

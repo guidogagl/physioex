@@ -159,7 +159,7 @@ Load a pretrained model or extract foundation-model embeddings:
 from physioex.models import load_from_pretrained, extract_embeddings, linear_probe
 from physioex.models import CBraModEncoder
 
-model = load_from_pretrained("protosleepnet")           # from the HF model zoo
+model = load_from_pretrained("protosleepnet-gagliardi")  # from the HF model zoo
 encoder = CBraModEncoder()
 ds = encoder.get_dataset("hmc")                          # matched preprocessing
 emb = extract_embeddings(encoder, ds)

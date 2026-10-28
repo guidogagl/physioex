@@ -36,7 +36,10 @@ their own modules and referenced by dotted `module:Class` spec in the CLIs:
 | ProtoSleepNet | `physioex.models.protosleepnet:ProtoSleepNet` |
 
 `ProtoSleepNet` additionally provides prototype quantization and factory
-constructors from a `SleepTransformer`/`SeqSleepNet` epoch encoder.
+constructors from a `SleepTransformer`/`SeqSleepNet` epoch encoder. Two pretrained
+multi-dataset checkpoints (`protosleepnet-gagliardi`, `protosleeptransformer-gagliardi`) are
+described, with their performance on every training site, in
+[ProtoSleepNet and ProtoSleepTransformer](networks/protosleepnet.md).
 
 ## Foundation encoders
 
@@ -76,4 +79,5 @@ compatible with `Trainer` and the CLIs — pass it as a `module:Class` spec to
 :hidden:
 
 networks/chambon2018
+networks/protosleepnet
 ```

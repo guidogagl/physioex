@@ -112,7 +112,9 @@ to attend* (query/key path) receive zero relevance by design; full AttnLRP
 are signed (`z + ε·sign z`), as in Arras et al. Not supported (raise): attention
 masks, `batch_first=False` transformers, explicit RNN initial states, `proj_size`;
 ProtoSleepNet's VQ path (`quantize=True`) runs under `no_grad`, so no relevance can
-flow through it — `ModelLRP` explains the default `quantize=False` forward.
+flow through it — `ModelLRP` explains the default `quantize=False` forward. The pretrained
+ProtoSleepNet / ProtoSleepTransformer checkpoints are described in
+[ProtoSleepNet and ProtoSleepTransformer](../train/networks/protosleepnet.md).
 
 **Choosing ε.** The stabiliser must be scaled to the activations: on the
 pretrained SeqSleepNet (dB-scale spectrograms, 4-layer BiLSTM/BiGRU) ε = 1e-6
