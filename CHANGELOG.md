@@ -4,7 +4,7 @@ All notable changes to PhysioEx are documented here. Versions follow the
 `physioex.__version__` string (read dynamically by the build) and the `v*` git tags
 that publish to PyPI.
 
-## Unreleased
+## 2.0.5 — 2026-10-28
 
 ### Added
 - **Pretrained ProtoSleepNet and ProtoSleepTransformer** (multi-dataset, 28 training sites) on the Hub as `protosleepnet-gagliardi` and
