@@ -67,6 +67,7 @@ def main():
     ap.add_argument("--ce-weight", type=float, default=0.0, help="weight of the auxiliary cluster CE (0 = off)")
     ap.add_argument("--batch", type=int, default=64)
     ap.add_argument("--lr", type=float, default=3e-4)
+    ap.add_argument("--grad-clip", type=float, default=0.0, help="max gradient norm (0 = no clipping)")
     ap.add_argument("--epochs", type=int, default=20)
     ap.add_argument("--patience", type=int, default=3)
     ap.add_argument("--max-train", type=int, default=0, help="cap on training windows per epoch (0 = all; smoke tests)")
@@ -129,7 +130,8 @@ def main():
                           lr=a.lr, weight_decay=1e-4, valid_interval_ratio=a.valid_ratio,
                           log_confusion_matrix=False, early_stopping_patience=a.patience,
                           logger="tensorboard", run_name=a.model, seed=a.fold,
-                          gpu_id=0 if torch.cuda.is_available() else None, **opt_kw)
+                          gpu_id=0 if torch.cuda.is_available() else None, grad_clip=a.grad_clip or None,
+                          **opt_kw)
     torch.save(model.state_dict(), os.path.join(a.out, "model.pt"))
 
     # validation metrics of the final model, for the K sweep

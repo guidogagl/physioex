@@ -652,6 +652,7 @@ class Trainer:
         log_device: bool = True,
         seed: int = 42,
         accumulate_grad_batches: int = 1,
+        grad_clip: float = None,  # max gradient norm before the optimizer step (None = no clipping)
         early_stopping_patience: int = None,
         logger: typing.Union[str, Logger] = "tensorboard",
         log_dir: str = None,
@@ -838,6 +839,7 @@ class Trainer:
             "train_batch_size": train_batch_size,
             "eval_batch_size": eval_batch_size,
             "accumulate_grad_batches": accumulate_grad_batches,
+            "grad_clip": grad_clip,
             "seed": seed,
             "fold": fold,
         }
@@ -882,6 +884,7 @@ class Trainer:
                 progress=progress,
                 logger=logger,
                 accumulate_grad_batches=accumulate_grad_batches,
+                grad_clip=grad_clip,
                 eval_sequence_length=_eval_seq_len,
                 log_hist_every=log_hist_every,
                 log_confusion_matrix=log_confusion_matrix,
@@ -925,6 +928,7 @@ class Trainer:
         progress: PhysioExTrainProgressBar = None,
         logger: typing.Optional[Logger] = None,
         accumulate_grad_batches: int = 1,
+        grad_clip: float = None,
         eval_sequence_length : int = None,
         log_hist_every: int = 0,
         log_confusion_matrix: bool = True,
@@ -957,6 +961,7 @@ class Trainer:
                 device=device,
                 step=step,
                 accumulate_grad_batches=accumulate_grad_batches,
+                grad_clip=grad_clip,
             )
 
             step_time_ms = (perf_counter() - t0) * 1000
@@ -1155,6 +1160,7 @@ class Trainer:
         device: torch.device,
         step: int = 0,
         accumulate_grad_batches: int = 1,
+        grad_clip: float = None,
     ) -> tuple[float, float, float | None, dict | None]:
 
         # Only zero_grad at start of accumulation cycle
@@ -1180,6 +1186,8 @@ class Trainer:
 
         # Only step at end of accumulation cycle
         if (step + 1) % accumulate_grad_batches == 0:
+            if grad_clip:
+                torch.nn.utils.clip_grad_norm_(model.parameters(), grad_clip)
             optimizer.step()
 
         loss_value = (
