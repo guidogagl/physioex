@@ -52,6 +52,7 @@ def main():
     ap.add_argument("--codes", type=int, nargs=3, default=(32, 128, 256), metavar=("N", "E", "P"))
     ap.add_argument("--targets", type=int, nargs=2, default=(64, 64), metavar=("E", "P"))
     ap.add_argument("--no-vq", action="store_true", help="continuous latents (upper bound)")
+    ap.add_argument("--restart-after", type=int, default=30, help="steps a code may stay unused before restart")
     ap.add_argument("--ce-weight", type=float, default=0.0, help="weight of the auxiliary cluster CE (0 = off)")
     ap.add_argument("--batch", type=int, default=64)
     ap.add_argument("--lr", type=float, default=3e-4)
@@ -96,7 +97,8 @@ def main():
     print(f"[msvq] windows: train {n_tr}, valid {n_va}", flush=True)
 
     n_te, n_tp = (a.targets if targets is not None else (0, 0))
-    model = MSVQ(a.seq, a.dim, *a.codes, quantize=not a.no_vq, n_targets_e=n_te, n_targets_p=n_tp)
+    model = MSVQ(a.seq, a.dim, *a.codes, quantize=not a.no_vq, n_targets_e=n_te, n_targets_p=n_tp,
+                 restart_after=a.restart_after)
     model.targets, model.ce_weight = targets, a.ce_weight
     fit_msvq_norms(model, tr)
     model = MSVQTrainer.train(model, (tr, va), checkpoint_path=os.path.join(a.out, "ckpt"), max_epochs=a.epochs,

@@ -55,7 +55,7 @@ class EMAVQ(VQBottleneck):
     """
 
     def __init__(self, n_codes: int, dim: int, commitment_weight: float = 0.25,
-                 decay: float = 0.99, restart_after: int = 200):
+                 decay: float = 0.99, restart_after: int = 30):
         super().__init__(np.zeros((n_codes, dim), np.float32), commitment_weight)
         self.codebook.requires_grad_(False)
         self.decay = decay
@@ -179,7 +179,8 @@ class MSVQ(nn.Module):
     def __init__(self, sequence_length: int = 41, dim: int = 64,
                  n_codes_n: int = 32, n_codes_e: int = 128, n_codes_p: int = 256,
                  quantize: bool = True, n_targets_e: int = 0, n_targets_p: int = 0,
-                 commitment_weight: float = 0.25, n_psd_bins: int = 139):
+                 commitment_weight: float = 0.25, n_psd_bins: int = 139,
+                 restart_after: int = 30):
         super().__init__()
         assert sequence_length % 2 == 1, "sequence_length must be odd"
         self.L, self.c, self.dim = sequence_length, sequence_length // 2, dim
@@ -200,9 +201,9 @@ class MSVQ(nn.Module):
         self.pre_n, self.pre_e, self.pre_p = nn.Linear(dim, dim), nn.Linear(dim, dim), nn.Linear(dim, dim)
         # what the coarser prefix already explains, subtracted before the next VQ
         self.from_n, self.from_ne = nn.Linear(dim, dim), nn.Linear(dim, dim)
-        self.vq_n = EMAVQ(n_codes_n, dim, commitment_weight)
-        self.vq_e = EMAVQ(n_codes_e, dim, commitment_weight)
-        self.vq_p = EMAVQ(n_codes_p, dim, commitment_weight)
+        self.vq_n = EMAVQ(n_codes_n, dim, commitment_weight, restart_after=restart_after)
+        self.vq_e = EMAVQ(n_codes_e, dim, commitment_weight, restart_after=restart_after)
+        self.vq_p = EMAVQ(n_codes_p, dim, commitment_weight, restart_after=restart_after)
 
         # decoder
         self.n_rfft = PATCH // 2 + 1
