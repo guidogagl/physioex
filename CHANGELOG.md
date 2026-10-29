@@ -10,6 +10,13 @@ that publish to PyPI.
 - **MSVQ** (`physioex.models.msvq`): self-supervised encoder of clean EEG with three residual VQ dictionaries
   (context N, epoch E, 1 s patch P), trained together with a decoder that redraws the epoch spectrum (N, N+E) and
   each 1 s waveform (N+E+P). Training script `python -m physioex.train.bin.msvq` (`--no-vq`: continuous upper bound).
+- **MSAE** (`physioex.models.msae`): continuous hierarchical autoencoder of clean EEG. N comes from the 40 neighbours,
+  E is coded given N and P (1 s or 0.5 s tokens) given N and E. E and P pass an 8-bit channel. One SEANet decoder is
+  called on the three prefixes, with one loss each. `tokens(x)` gives a `(B, 2 + T_p, 128)` sequence for downstream
+  readers. Trained with `python -m physioex.train.bin.msvq --model msae`.
+- **`physioex.models.recon_eval`**: reconstruction audit with R² per band (with phase and amplitude only), gain per
+  prefix, latent bit rounding, and PCA / k-means baselines at equal budget. It writes `recon_eval.json` at the end of
+  every MSVQ/MSAE run.
 - **`trim_mode="main_period"`** on every dataset: keeps the main sleep period (`_main_sleep_period`) and drops windows
   centred outside it. Meant for recordings with naps or long wake (DCSM).
 - **`NanToZero`, `RobustScale`, `clean_pipelines()`** in `physioex.data.steps`. The specs match those of protosleepnet-v3,

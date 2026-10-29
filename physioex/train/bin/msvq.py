@@ -1,6 +1,8 @@
-"""Train MSVQ (multi-scale residual VQ) and its decoder on one dataset, clean EEG only.
+"""Train MSVQ (multi-scale residual VQ) or MSAE (continuous hierarchical autoencoder)
+and its decoder on one dataset, clean EEG only.
 
     python -m physioex.train.bin.msvq --dataset dcsm --out <run dir> [--cache-dir ...] [--root ...]
+    python -m physioex.train.bin.msvq --model msae --d-p 8 --token-sec 1.0 --out <run dir> ...
 
 Encoder, dictionaries and decoder are trained together (``MSVQTrainer``); ``--no-vq``
 trains the same network with continuous latents (the upper bound used to size the
@@ -8,7 +10,9 @@ dictionaries), ``--ce-weight`` adds the label-free cluster targets as auxiliary 
 Windows are restricted to the main sleep period (``trim_mode="main_period"``);
 validation uses windows of the validation subjects (not whole recordings).
 Writes the best checkpoint in ``ckpt/``, the final weights ``model.pt``, the
-validation metrics ``eval.json`` (R^2 per prefix, code usage) and ``run.json``.
+validation metrics ``eval.json`` (R^2 per prefix, code usage), the reconstruction
+audit of the test nights ``recon_eval.json`` (:mod:`physioex.models.recon_eval`)
+and ``run.json``. MSAE runs use a cosine learning rate over the whole training.
 """
 import argparse
 import json
@@ -24,9 +28,11 @@ from torch.utils.data import DataLoader, Subset
 from physioex.data.collate import dict_collate_fn
 from physioex.data.datasets import get_dataset
 from physioex.data.steps import clean_pipelines
+from physioex.models.msae import MSAE, MSAETrainer
 from physioex.models.msvq import (
     MSVQ, MSVQTrainer, compute_msvq_targets, fit_msvq_norms,
 )
+from physioex.models.recon_eval import evaluate as recon_evaluate
 
 
 def _loader(ds, ids, n_max, batch, workers, shuffle, seed):
@@ -48,7 +54,12 @@ def main():
     ap.add_argument("--out", required=True)
     ap.add_argument("--fold", type=int, default=0)
     ap.add_argument("--seq", type=int, default=41)
-    ap.add_argument("--dim", type=int, default=64)
+    ap.add_argument("--model", choices=("msvq", "msae"), default="msvq")
+    ap.add_argument("--dim", type=int, default=None, help="latent width (default: 64 msvq, 128 msae)")
+    ap.add_argument("--width", type=int, default=32, help="msae: channels of the first SEANet stage")
+    ap.add_argument("--d-p", type=int, default=8, help="msae: numbers per P token")
+    ap.add_argument("--token-sec", type=float, default=1.0, choices=(1.0, 0.5), help="msae: P token length (s)")
+    ap.add_argument("--latent-bits", type=int, default=8, help="msae: bit channel of E and P (0 = tanh only)")
     ap.add_argument("--codes", type=int, nargs=3, default=(32, 128, 256), metavar=("N", "E", "P"))
     ap.add_argument("--targets", type=int, nargs=2, default=(64, 64), metavar=("E", "P"))
     ap.add_argument("--no-vq", action="store_true", help="continuous latents (upper bound)")
@@ -63,7 +74,9 @@ def main():
     ap.add_argument("--valid-ratio", type=float, default=0.25, help="validations per training epoch = 1/ratio")
     ap.add_argument("--workers", type=int, default=8)
     ap.add_argument("--max-subjects", type=int, default=0, help="use only the first N subjects (smoke tests)")
+    ap.add_argument("--recon-per-night", type=int, default=250, help="test epochs per night in recon_eval (0 = skip)")
     a = ap.parse_args()
+    a.dim = a.dim or (128 if a.model == "msae" else 64)
 
     os.makedirs(a.out, exist_ok=True)
     torch.manual_seed(a.fold)
@@ -96,16 +109,27 @@ def main():
     va, n_va = _loader(ds, valid_ids, a.max_valid, a.batch, a.workers, False, a.fold)
     print(f"[msvq] windows: train {n_tr}, valid {n_va}", flush=True)
 
-    n_te, n_tp = (a.targets if targets is not None else (0, 0))
-    model = MSVQ(a.seq, a.dim, *a.codes, quantize=not a.no_vq, n_targets_e=n_te, n_targets_p=n_tp,
-                 restart_after=a.restart_after)
-    model.targets, model.ce_weight = targets, a.ce_weight
+    opt_kw = {}
+    if a.model == "msae":
+        trainer = MSAETrainer
+        model = MSAE(a.seq, width=a.width, dim=a.dim, d_p=a.d_p, token_sec=a.token_sec, latent_bits=a.latent_bits)
+        opt = torch.optim.AdamW(model.parameters(), lr=a.lr, weight_decay=1e-4)
+        n_val = a.epochs * max(1, round(1 / a.valid_ratio))  # the Trainer steps the scheduler at each validation
+        opt_kw = dict(optimizer=opt, scheduler=torch.optim.lr_scheduler.CosineAnnealingLR(opt, n_val, eta_min=a.lr / 20))
+        print(f"[msae] {sum(p.numel() for p in model.parameters()) / 1e6:.2f} M parameters, "
+              f"{model.bits_per_epoch()} bits per epoch", flush=True)
+    else:
+        trainer = MSVQTrainer
+        n_te, n_tp = (a.targets if targets is not None else (0, 0))
+        model = MSVQ(a.seq, a.dim, *a.codes, quantize=not a.no_vq, n_targets_e=n_te, n_targets_p=n_tp,
+                     restart_after=a.restart_after)
+        model.targets, model.ce_weight = targets, a.ce_weight
     fit_msvq_norms(model, tr)
-    model = MSVQTrainer.train(model, (tr, va), checkpoint_path=os.path.join(a.out, "ckpt"), max_epochs=a.epochs,
-                              lr=a.lr, weight_decay=1e-4, valid_interval_ratio=a.valid_ratio,
-                              log_confusion_matrix=False, early_stopping_patience=a.patience,
-                              logger="tensorboard", run_name="msvq", seed=a.fold,
-                              gpu_id=0 if torch.cuda.is_available() else None)
+    model = trainer.train(model, (tr, va), checkpoint_path=os.path.join(a.out, "ckpt"), max_epochs=a.epochs,
+                          lr=a.lr, weight_decay=1e-4, valid_interval_ratio=a.valid_ratio,
+                          log_confusion_matrix=False, early_stopping_patience=a.patience,
+                          logger="tensorboard", run_name=a.model, seed=a.fold,
+                          gpu_id=0 if torch.cuda.is_available() else None, **opt_kw)
     torch.save(model.state_dict(), os.path.join(a.out, "model.pt"))
 
     # validation metrics of the final model, for the K sweep
@@ -114,16 +138,16 @@ def main():
     acc, codes = {}, {"N": [], "E": [], "P": []}
     with torch.no_grad():
         for batch in va:
-            _, _, extra = MSVQTrainer._step(model, batch, None, device)
+            _, _, extra = trainer._step(model, batch, None, device)
             for k, v in extra.items():
                 acc.setdefault(k, []).append(v)
-            if model.quantize_codes:
+            if getattr(model, "quantize_codes", False):
                 from physioex.data.collate import stack_channels
                 q = model.quantize(stack_channels(batch).to(device))
                 for s_, k_ in (("N", "k_n"), ("E", "k_e"), ("P", "k_p")):
                     codes[s_].append(q[k_].reshape(-1).cpu())
     ev = {k: float(np.mean(v)) for k, v in acc.items() if not k.startswith(("perplexity", "used"))}
-    if model.quantize_codes:
+    if getattr(model, "quantize_codes", False):
         from physioex.models.msvq import code_stats
         for s_ in codes:
             perp, used = code_stats(torch.cat(codes[s_]), model.n_codes[s_])
@@ -131,6 +155,12 @@ def main():
     with open(os.path.join(a.out, "eval.json"), "w") as f:
         json.dump(ev, f, indent=1)
     print("[msvq] valid " + " ".join(f"{k}={v:.3f}" for k, v in ev.items()), flush=True)
+
+    if a.recon_per_night:
+        rec = recon_evaluate(model, ds, test_ids, train_ids, per_night=a.recon_per_night, seed=a.fold)
+        with open(os.path.join(a.out, "recon_eval.json"), "w") as f:
+            json.dump(rec, f, indent=1)
+        print(f"[msvq] recon_eval: {rec['n_test_epochs']} test epochs written", flush=True)
 
     def _git(*cmd):
         try:
