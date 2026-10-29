@@ -4,6 +4,20 @@ All notable changes to PhysioEx are documented here. Versions follow the
 `physioex.__version__` string (read dynamically by the build) and the `v*` git tags
 that publish to PyPI.
 
+## Unreleased
+
+### Added
+- **MSVQ** (`physioex.models.msvq`): self-supervised encoder of clean EEG with three residual VQ dictionaries
+  (context N, epoch E, 1 s patch P), trained together with a decoder that redraws the epoch spectrum (N, N+E) and
+  each 1 s waveform (N+E+P). Training script `python -m physioex.train.bin.msvq` (`--no-vq`: continuous upper bound).
+- **`trim_mode="main_period"`** on every dataset: keeps the main sleep period (`_main_sleep_period`) and drops windows
+  centred outside it. Meant for recordings with naps or long wake (DCSM).
+- **`NanToZero`, `RobustScale`, `clean_pipelines()`** in `physioex.data.steps`. The specs match those of protosleepnet-v3,
+  so the clean-channel caches written there are reused (same pipeline hash).
+
+### Fixed
+- The cache reads `float16` signals (clean-channel caches v2/v3).
+
 ## 2.0.4 — 2026-10-16
 
 Data-layer fixes found by an audit of what physioex reads against the raw files of every dataset. Label caches of

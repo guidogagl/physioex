@@ -141,6 +141,7 @@ class BasePhysioDataset(Dataset):
         skip_subjects_without_channels: bool = True,
         stage_map: Optional[Dict] = None,
         trim_excess_wake: bool = True,
+        trim_mode: str = "excess_wake",
         memmap_cache_size: int = 1000,
     ):
         super().__init__()
@@ -168,6 +169,15 @@ class BasePhysioDataset(Dataset):
         # If True (default), excess pre-/post-sleep wake epochs are marked as -1
         # so they are ignored by the loss without being dropped from the index.
         self.trim_excess_wake = bool(trim_excess_wake)
+        # "excess_wake" (default): only the rule above. "main_period": keep the
+        # main sleep period (``_main_sleep_period``): labels outside it become -1
+        # and sequence windows whose centre falls outside it leave the index.
+        # Meant for recordings with naps or 18-20 h of wake (DCSM).
+        if trim_mode not in ("excess_wake", "main_period"):
+            raise ValueError(f"trim_mode must be 'excess_wake' or 'main_period'; got {trim_mode!r}")
+        self.trim_mode = trim_mode
+        self._main_period: Dict[str, Tuple[int, int]] = {}
+        self._window_offset: Dict[str, int] = {}
         # When False, all disk I/O for headers, labels, and signals is bypassed.
         # Data is computed on-the-fly and returned in-memory without reading or
         # writing to the cache directory.
@@ -462,6 +472,39 @@ class BasePhysioDataset(Dataset):
 
         return labels
 
+    @staticmethod
+    def _main_sleep_period(
+        labels: np.ndarray,
+        max_gap: int = 120,
+        margin: int = 60,
+        wake_value: int = 0,
+    ) -> Tuple[int, int]:
+        """Epoch range ``[lo, hi)`` of the main sleep period.
+
+        Sleep epochs (scored, not wake) are grouped into blocks split by runs
+        of more than *max_gap* epochs without sleep; the block with the most
+        sleep epochs is kept and widened by *margin* epochs on each side.
+        Naps and long wake stretches far from the night fall outside.
+
+        Args:
+            labels: 1D integer array with values in ``{-1, 0, 1, 2, 3, 4}``.
+            max_gap: largest run of non-sleep epochs inside one block (default
+                120 = 1 h).
+            margin: epochs kept before and after the block (default 60 = 30 min).
+            wake_value: the label integer for Wake (default ``0``).
+        Returns:
+            ``(lo, hi)``; ``(0, len(labels))`` when nothing is scored as sleep.
+        """
+        labels = np.asarray(labels)
+        n = int(labels.shape[0])
+        sleep = np.where((labels != wake_value) & (labels >= 0))[0]
+        if len(sleep) == 0:
+            return 0, n
+        cuts = np.where(np.diff(sleep) > max_gap)[0]
+        blocks = np.split(sleep, cuts + 1)
+        best = max(blocks, key=len)
+        return max(0, int(best[0]) - margin), min(n, int(best[-1]) + 1 + margin)
+
     def _get_labels(self, spec: SubjectSpec) -> np.ndarray:
         """Return labels for a subject with all runtime transforms applied.
 
@@ -471,6 +514,12 @@ class BasePhysioDataset(Dataset):
         if spec.subject_id in self._labels_cache:
             return self._labels_cache[spec.subject_id]
         labels = self._load_or_compute_labels(spec)
+        if self.trim_mode == "main_period":
+            lo, hi = self._main_sleep_period(labels)
+            self._main_period[spec.subject_id] = (lo, hi)
+            labels = np.asarray(labels, dtype=np.int16).copy()
+            labels[:lo] = -1
+            labels[hi:] = -1
         if self.trim_excess_wake:
             labels = self._trim_excess_wake(labels)
         self._labels_cache[spec.subject_id] = labels
@@ -1299,7 +1348,15 @@ class BasePhysioDataset(Dataset):
         running = 0
         for spec in self._subjects:
             n = self._n_epochs[spec.subject_id]
-            if self.sequence_length > 0:
+            if self.sequence_length > 0 and spec.subject_id in self._main_period:
+                # Windows whose centre lies in the main sleep period only.
+                lo, hi = self._main_period[spec.subject_id]
+                half = self.sequence_length // 2
+                first = min(max(0, lo - half), n - self.sequence_length)
+                last = max(first, min(n - self.sequence_length, hi - 1 - half))
+                self._window_offset[spec.subject_id] = first
+                count = last - first + 1
+            elif self.sequence_length > 0:
                 count = n - self.sequence_length + 1
             else:
                 count = 1  # one recording per subject
@@ -1312,7 +1369,7 @@ class BasePhysioDataset(Dataset):
         for sid, start, end in self._subject_ranges:
             if start <= idx < end:
                 spec = next(s for s in self._subjects if s.subject_id == sid)
-                return spec, idx - start
+                return spec, idx - start + self._window_offset.get(sid, 0)
         raise IndexError(f"Flat index {idx} not in any subject range")
 
     def _subject_ids_to_flat_indices(self, ids: List[str]) -> List[int]:

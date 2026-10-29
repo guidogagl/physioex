@@ -4,7 +4,7 @@ from physioex.data.steps.bandpass import BandpassFilter
 from physioex.data.steps.highpass import HighPassFilter
 from physioex.data.steps.notch import NotchFilter
 from physioex.data.steps.resample import Resample
-from physioex.data.steps.normalize import ZScoreNormalize
+from physioex.data.steps.normalize import NanToZero, RobustScale, ZScoreNormalize, clean_pipelines
 from physioex.data.steps.spectrogram import XSleepNetSpectrogram
 
 __all__ = [
@@ -14,5 +14,8 @@ __all__ = [
     "NotchFilter",
     "Resample",
     "ZScoreNormalize",
+    "NanToZero",
+    "RobustScale",
+    "clean_pipelines",
     "XSleepNetSpectrogram",
 ]

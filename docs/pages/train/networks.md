@@ -35,6 +35,9 @@ their own modules and referenced by dotted `module:Class` spec in the CLIs:
 | CoRe-Sleep | `physioex.models.coresleep:CoReSleep` |
 | ProtoSleepNet | `physioex.models.protosleepnet:ProtoSleepNet` |
 
+`MSVQ` (`physioex.models.msvq:MSVQ`) is a self-supervised multi-scale residual VQ
+encoder trained with its own script; see {doc}`networks/msvq`.
+
 `ProtoSleepNet` additionally provides prototype quantization and factory
 constructors from a `SleepTransformer`/`SeqSleepNet` epoch encoder.
 
@@ -76,4 +79,5 @@ compatible with `Trainer` and the CLIs — pass it as a `module:Class` spec to
 :hidden:
 
 networks/chambon2018
+networks/msvq
 ```

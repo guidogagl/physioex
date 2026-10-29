@@ -44,6 +44,7 @@ SCHEMA_VERSION = "v1"
 
 
 DTYPE_MAP: Dict[str, object] = {
+    "float16": np.float16,  # clean-channel caches v2/v3 (protosleepnet-v3 cachefill)
     "float32": np.float32,
     "float64": np.float64,
     "int16": np.int16,
