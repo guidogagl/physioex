@@ -40,7 +40,7 @@ python -m physioex.train.bin.msvq --model msae --d-p 8 --token-sec 1.0 --dataset
 At the end the script writes `recon_eval.json`, the reconstruction audit of the
 test nights (`physioex.models.recon_eval`). It reports:
 
-- R² per band, with phase and of the amplitude only;
+- R² per band: with phase, of the amplitude per bin, and of the log band power per second;
 - the gain of E and P per band;
 - the cost of rounding the latents to 8, 6 and 4 bits;
 - a PCA with as many components as the model's numbers, and a k-means on raw 1 s segments.

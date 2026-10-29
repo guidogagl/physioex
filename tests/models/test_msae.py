@@ -99,6 +99,7 @@ def test_band_r2_known_values():
     b = band_r2(lp, y)
     assert b["phase"]["2-4"] > 0.99 and b["amp"]["2-4"] > 0.99
     assert b["phase"]["9-12"] < 0.1
+    assert b["logpow"]["2-4"] > 0.99 and b["logpow"]["9-12"] < 0
     # a phase shift keeps the amplitude and loses the phase
     sh = np.roll(y, 5, axis=1)
     b = band_r2(sh, y)

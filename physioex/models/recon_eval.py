@@ -4,7 +4,10 @@ The overall R^2 of the waveform is dominated by the slow frequencies (with 1/f E
 ~78% of the variance of a 1 s segment lies below 4 Hz), so it is reported per band:
 
 * **R^2 with phase** per band: on the complex rfft of every 1 s segment;
-* **R^2 of the amplitude** per band: on ``|rfft|`` (phase ignored).
+* **R^2 of the amplitude** per band: on ``|rfft|`` per bin (phase ignored). Strict on
+  noise-like EEG: above 5 Hz even a PCA at equal budget scores below 0;
+* **R^2 of the band power** per 1 s segment: on ``log10`` of the power summed over the
+  band's bins. It is the amplitude gate (envelope of every band, second by second).
 
 Reference baselines at equal budget (numbers per epoch), fitted on training nights:
 PCA of the 30 s epoch with as many components as the model's latent numbers, and
@@ -37,16 +40,18 @@ def r2(pred: np.ndarray, y: np.ndarray) -> float:
 
 
 def band_r2(pred: np.ndarray, target: np.ndarray) -> Dict[str, Dict[str, float]]:
-    """R^2 per band (Hz, 1 s rfft bins) with phase and of the amplitude only.
+    """R^2 per band (Hz, 1 s rfft bins): with phase, of the amplitude, of the log band power.
     ``pred``, ``target``: ``(M, 3000)`` epochs at 100 Hz."""
     fp = np.fft.rfft(pred.reshape(-1, FS), axis=1)
     ft = np.fft.rfft(target.reshape(-1, FS), axis=1)
-    out = {"phase": {}, "amp": {}}
+    out = {"phase": {}, "amp": {}, "logpow": {}}
     for a, b, name in BANDS:
         p, t = fp[:, a:b], ft[:, a:b]
         out["phase"][name] = float(1 - (np.abs(p - t) ** 2).sum() / (np.abs(t - t.mean(0)) ** 2).sum())
         ap, at = np.abs(p), np.abs(t)
         out["amp"][name] = float(1 - ((ap - at) ** 2).sum() / ((at - at.mean(0)) ** 2).sum())
+        lp, lt = np.log10((ap ** 2).sum(1) + 1e-6), np.log10((at ** 2).sum(1) + 1e-6)
+        out["logpow"][name] = r2(lp, lt)
     return out
 
 
@@ -154,7 +159,7 @@ def evaluate(model, ds, test_ids, train_ids, per_night: int = 250, per_train_nig
             rep = {k: _report(v, target) for k, v in waves.items()}
             for hi, lo in (("NE", "N"), ("NEP", "NE")):
                 rep[f"gain_{hi[-1]}"] = {kind: {band: rep[hi][kind][band] - rep[lo][kind][band] for band in rep[hi][kind]}
-                                         for kind in ("phase", "amp")}
+                                         for kind in ("phase", "amp", "logpow")}
                 rep[f"gain_{hi[-1]}"]["r2"] = rep[hi]["r2"] - rep[lo]["r2"]
             res["model"][f"bits_{b}"] = rep
         model.latent_bits = b0
