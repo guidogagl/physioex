@@ -115,3 +115,36 @@ def test_baselines_pca_full_rank_is_exact():
     out = baselines(tr, te, n_numbers=4, k_means=(8,))
     assert out["pca_4"]["r2"] > 0.999
     assert "kmeans_8_1s" in out
+
+
+def test_tf_stft_istft_roundtrip():
+    from physioex.models.msae import TF_BINS, TF_FRAMES, tf_istft, tf_stft
+
+    x = torch.randn(3, 3000)
+    s = tf_stft(x)
+    assert s.shape == (3, TF_FRAMES, TF_BINS)
+    assert torch.allclose(tf_istft(s), x, atol=1e-4)
+
+
+def test_istft_decoder_shapes_and_mean_init():
+    from physioex.models.msae import TF_BINS, TF_FRAMES
+
+    model = _model(decoder="istft").eval()
+    assert not hasattr(model, "up")
+    model.lm_mean.fill_(-1.0)
+    out = model(torch.randn(2, L, 1, 3000))
+    for k in ("tf_n", "tf_ne", "tf"):
+        assert out[k].shape == (2, TF_FRAMES, TF_BINS)
+        assert torch.equal(out[k], torch.zeros_like(out[k]))  # mean log-spectrum at init
+    assert out["phase"].shape == (2, TF_FRAMES, TF_BINS, 2) and out["wave"].shape == (2, 3000)
+    assert "wave_n" not in out
+
+
+def test_istft_trainer_step_finite_and_backward():
+    from physioex.models.msae import MSAETrainer
+
+    model = _model(decoder="istft").train()
+    loss, acc, extra = MSAETrainer._step(model, _batch(), None, torch.device("cpu"))
+    assert torch.isfinite(loss) and all(np.isfinite(v) for v in extra.values())
+    loss.backward()
+    assert model.mag_head.weight.grad.abs().sum() > 0 and model.phase_head.weight.grad is not None

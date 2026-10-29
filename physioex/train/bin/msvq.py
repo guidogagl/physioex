@@ -28,7 +28,7 @@ from torch.utils.data import DataLoader, Subset
 from physioex.data.collate import dict_collate_fn
 from physioex.data.datasets import get_dataset
 from physioex.data.steps import clean_pipelines
-from physioex.models.msae import MSAE, MSAETrainer
+from physioex.models.msae import MSAE, MSAETrainer, fit_msae_norms
 from physioex.models.msvq import (
     MSVQ, MSVQTrainer, compute_msvq_targets, fit_msvq_norms,
 )
@@ -59,6 +59,10 @@ def main():
     ap.add_argument("--width", type=int, default=32, help="msae: channels of the first SEANet stage")
     ap.add_argument("--d-p", type=int, default=8, help="msae: numbers per P token")
     ap.add_argument("--token-sec", type=float, default=1.0, choices=(1.0, 0.5), help="msae: P token length (s)")
+    ap.add_argument("--decoder", choices=("time", "istft"), default="time",
+                    help="msae: SEANet decoder in time, or spectral decoder (N, N+E: spectrogram; P: phase) + iSTFT")
+    ap.add_argument("--tf-consistency", type=float, default=0.0,
+                    help="msae istft: weight of the log-spectrogram loss re-measured on the iSTFT output")
     ap.add_argument("--latent-bits", type=int, default=8, help="msae: bit channel of E and P (0 = tanh only)")
     ap.add_argument("--codes", type=int, nargs=3, default=(32, 128, 256), metavar=("N", "E", "P"))
     ap.add_argument("--targets", type=int, nargs=2, default=(64, 64), metavar=("E", "P"))
@@ -113,7 +117,8 @@ def main():
     opt_kw = {}
     if a.model == "msae":
         trainer = MSAETrainer
-        model = MSAE(a.seq, width=a.width, dim=a.dim, d_p=a.d_p, token_sec=a.token_sec, latent_bits=a.latent_bits)
+        model = MSAE(a.seq, width=a.width, dim=a.dim, d_p=a.d_p, token_sec=a.token_sec, latent_bits=a.latent_bits,
+                     decoder=a.decoder, tf_consistency=a.tf_consistency)
         opt = torch.optim.AdamW(model.parameters(), lr=a.lr, weight_decay=1e-4)
         n_val = a.epochs * max(1, round(1 / a.valid_ratio))  # the Trainer steps the scheduler at each validation
         opt_kw = dict(optimizer=opt, scheduler=torch.optim.lr_scheduler.CosineAnnealingLR(opt, n_val, eta_min=a.lr / 20))
@@ -125,7 +130,7 @@ def main():
         model = MSVQ(a.seq, a.dim, *a.codes, quantize=not a.no_vq, n_targets_e=n_te, n_targets_p=n_tp,
                      restart_after=a.restart_after)
         model.targets, model.ce_weight = targets, a.ce_weight
-    fit_msvq_norms(model, tr)
+    (fit_msae_norms if a.model == "msae" else fit_msvq_norms)(model, tr)
     model = trainer.train(model, (tr, va), checkpoint_path=os.path.join(a.out, "ckpt"), max_epochs=a.epochs,
                           lr=a.lr, weight_decay=1e-4, valid_interval_ratio=a.valid_ratio,
                           log_confusion_matrix=False, early_stopping_patience=a.patience,

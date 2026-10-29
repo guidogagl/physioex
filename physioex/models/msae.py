@@ -52,6 +52,24 @@ from physioex.train.trainer import Trainer
 
 STRIDES = {1.0: (2, 5, 10), 0.5: (2, 5, 5)}
 STFT_WINDOWS = (25, 50, 100, 200, 400)
+TF_WIN, TF_HOP = 100, 50  # spectrogram of the "istft" decoder: 1 s Hann, 0.5 s hop (COLA), 51 bins x 61 frames
+TF_BINS, TF_FRAMES = TF_WIN // 2 + 1, EPOCH // TF_HOP + 1
+
+
+def tf_stft(x: torch.Tensor) -> torch.Tensor:
+    """``(B, 3000) -> (B, TF_FRAMES, TF_BINS)`` complex spectrogram of the "istft" decoder."""
+    w = torch.hann_window(TF_WIN, device=x.device, dtype=x.dtype)
+    return torch.stft(x, TF_WIN, TF_HOP, window=w, return_complex=True).transpose(1, 2)
+
+
+def tf_istft(s: torch.Tensor) -> torch.Tensor:
+    """Inverse of :func:`tf_stft`: ``(B, TF_FRAMES, TF_BINS)`` complex -> ``(B, 3000)``."""
+    w = torch.hann_window(TF_WIN, device=s.device)
+    return torch.istft(s.transpose(1, 2), TF_WIN, TF_HOP, window=w, length=EPOCH)
+
+
+def tf_logmag(s: torch.Tensor) -> torch.Tensor:
+    return torch.log(s.abs() + 1e-5)
 
 
 class _ResUnit(nn.Module):
@@ -103,13 +121,16 @@ class MSAE(nn.Module):
 
     def __init__(self, sequence_length: int = 41, width: int = 32, dim: int = 128, d_p: int = 8,
                  token_sec: float = 1.0, latent_bits: int = 8, n_psd_bins: int = 139,
-                 stft_weight: float = 0.1):
+                 stft_weight: float = 0.1, decoder: str = "time", tf_consistency: float = 0.0):
         super().__init__()
         self.L, self.c, self.dim, self.d_p = sequence_length, sequence_length // 2, dim, d_p
         self.strides = STRIDES[token_sec]
         self.n_tok = EPOCH // (self.strides[0] * self.strides[1] * self.strides[2])
         self.latent_bits = latent_bits
         self.stft_weight = stft_weight
+        assert decoder in ("time", "istft"), decoder
+        self.decoder = decoder
+        self.tf_consistency = tf_consistency
 
         # encoder: multi-scale stem + SEANet downsampling -> (B, dim, T_p)
         ch = [width * 2 ** i for i in range(len(self.strides) + 1)]
@@ -135,9 +156,20 @@ class MSAE(nn.Module):
         self.dec_p, self.dec_e, self.dec_n = nn.Linear(d_p, dim), nn.Linear(dim, dim), nn.Linear(dim, dim)
         self.pos_dec = nn.Parameter(torch.zeros(1, self.n_tok, dim))
         self.dec_tok = _transformer(dim, 2)
-        self.up = nn.Sequential(nn.Conv1d(dim, ch[-1], 3, padding=1),
-                                *[_up(ch[i + 1], ch[i], s) for i, s in reversed(list(enumerate(self.strides)))],
-                                nn.ELU(), nn.Conv1d(ch[0], 1, 7, padding=3))
+        if decoder == "time":
+            self.up = nn.Sequential(nn.Conv1d(dim, ch[-1], 3, padding=1),
+                                    *[_up(ch[i + 1], ch[i], s) for i, s in reversed(list(enumerate(self.strides)))],
+                                    nn.ELU(), nn.Conv1d(ch[0], 1, 7, padding=3))
+        else:
+            # spectral decoder: one token per STFT frame; z-scored log|S| for every prefix, phase only with P.
+            # The magnitude head starts at zero, i.e. at the dataset mean log-spectrum (lm_mean).
+            self.pos_frame = nn.Parameter(torch.zeros(1, TF_FRAMES, dim))
+            self.mag_head = nn.Linear(dim, TF_BINS)
+            nn.init.zeros_(self.mag_head.weight); nn.init.zeros_(self.mag_head.bias)
+            self.phase_head = nn.Linear(dim, 2 * TF_BINS)
+            self.register_buffer("lm_mean", torch.zeros(TF_BINS))
+            self.register_buffer("lm_std", torch.ones(TF_BINS))
+            nn.init.normal_(self.pos_frame, std=0.02)
         # epoch spectrum from N (prediction) and from N+E
         self.spec_n, self.spec_ne = _mlp(dim, n_psd_bins), _mlp(2 * dim, n_psd_bins)
         self.register_buffer("psd_mean", torch.zeros(n_psd_bins))
@@ -205,13 +237,41 @@ class MSAE(nn.Module):
             z = z + self.dec_e.bias[None, None]
         return self.up(self.dec_tok(z).transpose(1, 2))[:, 0]
 
+    def decode_tf(self, n, e=None, p=None):
+        """Spectral decoder (``decoder="istft"``): z-scored log|S| ``(B, TF_FRAMES, TF_BINS)`` for
+        every prefix, plus the unit phase vector ``(B, TF_FRAMES, TF_BINS, 2)`` when P is given.
+        Missing latents count as zero; P tokens are interpolated onto the frames."""
+        z = self.dec_n(n) + (self.dec_e(e) if e is not None else self.dec_e.bias)
+        z = z[:, None] + self.pos_frame
+        if p is not None:
+            pf = F.interpolate(p.transpose(1, 2), size=TF_FRAMES, mode="linear", align_corners=True).transpose(1, 2)
+            z = z + self.dec_p(pf)
+        else:
+            z = z + self.dec_p.bias
+        h = self.dec_tok(z)
+        mz = self.mag_head(h)
+        if p is None:
+            return mz, None
+        ph = self.phase_head(h).float().reshape(*h.shape[:2], TF_BINS, 2)
+        return mz, ph / (ph.norm(dim=-1, keepdim=True) + 1e-6)
+
+    def tf_to_wave(self, mz: torch.Tensor, ph: torch.Tensor) -> torch.Tensor:
+        mag = torch.exp(mz.float() * self.lm_std + self.lm_mean)
+        return tf_istft(torch.complex(mag * ph[..., 0], mag * ph[..., 1]))
+
     def forward(self, x: torch.Tensor) -> Dict[str, torch.Tensor]:
         z = self.encode(x)
+        z["spec_n"] = self.spec_n(z["N"])
+        z["spec_ne"] = self.spec_ne(torch.cat([z["N"], z["E"]], -1))
+        if self.decoder == "istft":
+            z["tf_n"], _ = self.decode_tf(z["N"])
+            z["tf_ne"], _ = self.decode_tf(z["N"], z["E"])
+            z["tf"], z["phase"] = self.decode_tf(z["N"], z["E"], z["P"])
+            z["wave"] = self.tf_to_wave(z["tf"], z["phase"])
+            return z
         z["wave_n"] = self.decode(z["N"])
         z["wave_ne"] = self.decode(z["N"], z["E"])
         z["wave"] = self.decode(z["N"], z["E"], z["P"])
-        z["spec_n"] = self.spec_n(z["N"])
-        z["spec_ne"] = self.spec_ne(torch.cat([z["N"], z["E"]], -1))
         return z
 
     def bits_per_epoch(self) -> int:
@@ -244,9 +304,34 @@ def stft_losses(pred: torch.Tensor, target: torch.Tensor, windows=STFT_WINDOWS, 
     return mag, phase
 
 
+def fit_msae_norms(model: MSAE, loader, max_batches: int = 50) -> None:
+    """:func:`physioex.models.msvq.fit_msvq_norms` plus, for the "istft" decoder, the per-bin
+    mean / std of the log spectrogram (train set): the magnitude head starts at this mean."""
+    from physioex.data.collate import stack_channels
+    from physioex.models.msvq import fit_msvq_norms
+
+    fit_msvq_norms(model, loader, max_batches)
+    if model.decoder != "istft":
+        return
+    lm = []
+    for i, batch in enumerate(loader):
+        if i >= max_batches:
+            break
+        x = stack_channels(batch)[:, :, 0].float()
+        lm.append(tf_logmag(tf_stft(x[:, x.shape[1] // 2])).reshape(-1, TF_BINS))
+    lm = torch.cat(lm)
+    model.lm_mean.copy_(lm.mean(0)); model.lm_std.copy_(lm.std(0) + 1e-6)
+
+
 class MSAETrainer(Trainer):
     """Trainer for :class:`MSAE`. ``acc`` reports R^2 of the full waveform ``x_NEP``.
-    Call :func:`physioex.models.msvq.fit_msvq_norms` first; use ``log_confusion_matrix=False``."""
+    Call :func:`fit_msae_norms` first; use ``log_confusion_matrix=False``.
+
+    ``decoder="time"``: MSE in time on ``x_NEP`` + ``stft_weight`` x STFT on every prefix.
+    ``decoder="istft"``: MSE of the z-scored log spectrogram for N, N+E and N+E+P (each band
+    weighs the same) + for N+E+P the MSE in time and a magnitude-weighted phase loss ``1 - cos``
+    (+ ``tf_consistency`` x the same log-spectrogram MSE re-measured on the iSTFT output).
+    """
 
     @staticmethod
     def _step(model, batch, loss_fn, device):
@@ -257,6 +342,8 @@ class MSAETrainer(Trainer):
         psd = (epoch_logpsd(xc) - model.psd_mean) / model.psd_std
         with _autocast(device):
             out = model(x)
+        if model.decoder == "istft":
+            return MSAETrainer._step_tf(model, out, xc, psd)
         w_n, w_ne, w = out["wave_n"].float(), out["wave_ne"].float(), out["wave"].float()
         sw = model.stft_weight
         l_n, _ = stft_losses(w_n, xc, windows=(200, 400), phase_win=0)
@@ -273,4 +360,30 @@ class MSAETrainer(Trainer):
                  "r2_spec_n": _r2(out["spec_n"].float(), psd).item(),
                  "r2_spec_ne": _r2(out["spec_ne"].float(), psd).item(),
                  "r2_wave_n": _r2(w_n, xc).item(), "r2_wave_ne": _r2(w_ne, xc).item(), "r2_wave": r2w.item()}
+        return loss, r2w, extra
+
+    @staticmethod
+    def _step_tf(model, out, xc, psd):
+        st = tf_stft(xc)
+        zt = (tf_logmag(st) - model.lm_mean) / model.lm_std
+        tf_n, tf_ne, tf = out["tf_n"].float(), out["tf_ne"].float(), out["tf"].float()
+        l_n, l_ne, l_nep = F.mse_loss(tf_n, zt), F.mse_loss(tf_ne, zt), F.mse_loss(tf, zt)
+        w = out["wave"].float()
+        mse = (w - xc).pow(2).mean()
+        ph, at = out["phase"], st.abs()
+        cos = (ph[..., 0] * st.real + ph[..., 1] * st.imag) / (at + 1e-6)
+        phase = ((1 - cos) * at / at.mean((1, 2), keepdim=True)).mean()
+        l_sn = F.mse_loss(out["spec_n"].float(), psd)
+        l_sne = F.mse_loss(out["spec_ne"].float(), psd)
+        loss = l_n + l_ne + l_nep + mse + phase + l_sn + l_sne
+        cons = torch.zeros(())
+        if model.tf_consistency:  # the power must survive the iSTFT (overlapping frames with clashing phases cancel)
+            cons = F.mse_loss((tf_logmag(tf_stft(w)) - model.lm_mean) / model.lm_std, zt)
+            loss = loss + model.tf_consistency * cons
+        r2w = _r2(w, xc)
+        extra = {"mse_tf_n": l_n.item(), "mse_tf_ne": l_ne.item(), "mse_tf": l_nep.item(), "mse": mse.item(),
+                 "phase": phase.item(), "consistency": cons.item(), "mse_spec_n": l_sn.item(), "mse_spec_ne": l_sne.item(),
+                 "r2_tf_n": _r2(tf_n, zt).item(), "r2_tf_ne": _r2(tf_ne, zt).item(), "r2_tf": _r2(tf, zt).item(),
+                 "r2_spec_n": _r2(out["spec_n"].float(), psd).item(),
+                 "r2_spec_ne": _r2(out["spec_ne"].float(), psd).item(), "r2_wave": r2w.item()}
         return loss, r2w, extra

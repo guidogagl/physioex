@@ -12,7 +12,8 @@ The overall R^2 of the waveform is dominated by the slow frequencies (with 1/f E
 Reference baselines at equal budget (numbers per epoch), fitted on training nights:
 PCA of the 30 s epoch with as many components as the model's latent numbers, and
 a k-means on raw 1 s segments. For MSAE every prefix is reported (``N``, ``N+E``,
-``N+E+P``, with the gain of each scale per band) and the latents are rounded to
+``N+E+P``, with the gain of each scale per band; with the "istft" decoder the
+prefixes are compared on the log spectrogram, the waveform only for ``N+E+P``) and the latents are rounded to
 8, 6 and 4 bits (``0`` = continuous ``tanh`` latents) to measure the cost of the bit channel.
 
     python -m physioex.models.recon_eval --run <run dir> [--cache-dir ...] [--root ...]
@@ -44,7 +45,7 @@ def band_r2(pred: np.ndarray, target: np.ndarray) -> Dict[str, Dict[str, float]]
     ``pred``, ``target``: ``(M, 3000)`` epochs at 100 Hz."""
     fp = np.fft.rfft(pred.reshape(-1, FS), axis=1)
     ft = np.fft.rfft(target.reshape(-1, FS), axis=1)
-    out = {"phase": {}, "amp": {}, "logpow": {}}
+    out = {"phase": {}, "amp": {}, "logpow": {}, "logpow_bias": {}}
     for a, b, name in BANDS:
         p, t = fp[:, a:b], ft[:, a:b]
         out["phase"][name] = float(1 - (np.abs(p - t) ** 2).sum() / (np.abs(t - t.mean(0)) ** 2).sum())
@@ -52,6 +53,7 @@ def band_r2(pred: np.ndarray, target: np.ndarray) -> Dict[str, Dict[str, float]]
         out["amp"][name] = float(1 - ((ap - at) ** 2).sum() / ((at - at.mean(0)) ** 2).sum())
         lp, lt = np.log10((ap ** 2).sum(1) + 1e-6), np.log10((at ** 2).sum(1) + 1e-6)
         out["logpow"][name] = r2(lp, lt)
+        out["logpow_bias"][name] = float((lp - lt).mean())  # log10: < 0 = reconstruction too weak in the band
     return out
 
 
@@ -99,14 +101,33 @@ def model_waves(model, windows: np.ndarray, batch: int = 64) -> Dict[str, np.nda
 
     device = next(model.parameters()).device
     model.eval()
-    keys = {"wave_n": "N", "wave_ne": "NE", "wave": "NEP"} if isinstance(model, MSAE) else {"wave": "NEP"}
+    tf = isinstance(model, MSAE) and model.decoder == "istft"
+    if tf:  # waves only from N+E+P; the N and N+E prefixes give log spectrograms (true units)
+        keys = {"wave": "NEP", "tf_n": "tf_N", "tf_ne": "tf_NE", "tf": "tf_NEP"}
+    elif isinstance(model, MSAE):
+        keys = {"wave_n": "N", "wave_ne": "NE", "wave": "NEP"}
+    else:
+        keys = {"wave": "NEP"}
     acc = {k: [] for k in keys.values()}
     for i in range(0, len(windows), batch):
         xb = torch.from_numpy(windows[i:i + batch])[:, :, None].to(device)
         out = model(xb)
         for src, dst in keys.items():
-            acc[dst].append(out[src].float().reshape(len(xb), -1).cpu().numpy())
+            v = out[src].float()
+            if src.startswith("tf"):
+                v = v * model.lm_std + model.lm_mean
+            else:
+                v = v.reshape(len(xb), -1)
+            acc[dst].append(v.cpu().numpy())
     return {k: np.concatenate(v) for k, v in acc.items()}
+
+
+def tf_band_r2(pred: np.ndarray, target: np.ndarray) -> Dict[str, float]:
+    """R^2 per band of the log spectrogram ``(M, frames, bins)`` (1 Hz bins), plus ``"all"``."""
+    out = {"all": r2(pred, target)}
+    for a, b, name in BANDS:
+        out[name] = r2(pred[..., a:b], target[..., a:b])
+    return out
 
 
 def baselines(train_epochs: np.ndarray, test_epochs: np.ndarray, n_numbers: int, k_means: Sequence[int] = (256,),
@@ -153,9 +174,23 @@ def evaluate(model, ds, test_ids, train_ids, per_night: int = 250, per_train_nig
         res["compression_numbers"] = 3000 / n_num
         res["compression_bits"] = 3000 * 16 / model.bits_per_epoch()
         b0 = model.latent_bits
+        tf_target = None
+        if model.decoder == "istft":
+            from physioex.models.msae import tf_logmag, tf_stft
+
+            tf_target = tf_logmag(tf_stft(torch.from_numpy(target))).numpy()
         for b in bits:
             model.latent_bits = b
             waves = model_waves(model, windows)
+            if tf_target is not None:
+                rep = {"NEP": _report(waves["NEP"], target)}
+                for k in ("N", "NE", "NEP"):
+                    rep[f"tf_{k}"] = tf_band_r2(waves[f"tf_{k}"], tf_target)
+                for hi, lo in (("NE", "N"), ("NEP", "NE")):
+                    rep[f"gain_{hi[-1]}"] = {band: rep[f"tf_{hi}"][band] - rep[f"tf_{lo}"][band]
+                                             for band in rep[f"tf_{hi}"]}
+                res["model"][f"bits_{b}"] = rep
+                continue
             rep = {k: _report(v, target) for k, v in waves.items()}
             for hi, lo in (("NE", "N"), ("NEP", "NE")):
                 rep[f"gain_{hi[-1]}"] = {kind: {band: rep[hi][kind][band] - rep[lo][kind][band] for band in rep[hi][kind]}
@@ -186,7 +221,7 @@ def _load_run(run_dir: str, cache_dir=None, root=None):
         from physioex.models.msae import MSAE
 
         model = MSAE(a["seq"], width=a["width"], dim=a["dim"] or 128, d_p=a["d_p"], token_sec=a["token_sec"],
-                     latent_bits=a["latent_bits"])
+                     latent_bits=a["latent_bits"], decoder=a.get("decoder", "time"))
     else:
         from physioex.models.msvq import MSVQ
 
