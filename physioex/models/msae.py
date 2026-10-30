@@ -125,7 +125,8 @@ class MSAE(nn.Module):
     def __init__(self, sequence_length: int = 41, width: int = 32, dim: int = 128, d_p: int = 8,
                  token_sec: float = 1.0, latent_bits: int = 8, n_psd_bins: int = 139,
                  stft_weight: float = 0.1, decoder: str = "time", tf_consistency: float = 0.0,
-                 loss: str = "mse", band_weight: float = 1.0, low_hz: float = LOW_HZ):
+                 loss: str = "mse", band_weight: float = 1.0, low_hz: float = LOW_HZ,
+                 low_weight: float = 1.0):
         super().__init__()
         self.L, self.c, self.dim, self.d_p = sequence_length, sequence_length // 2, dim, d_p
         self.strides = STRIDES[token_sec]
@@ -136,7 +137,7 @@ class MSAE(nn.Module):
         self.decoder = decoder
         self.tf_consistency = tf_consistency
         assert loss in ("mse", "band"), loss
-        self.loss, self.band_weight, self.low_hz = loss, band_weight, low_hz
+        self.loss, self.band_weight, self.low_hz, self.low_weight = loss, band_weight, low_hz, low_weight
 
         # encoder: multi-scale stem + SEANet downsampling -> (B, dim, T_p)
         ch = [width * 2 ** i for i in range(len(self.strides) + 1)]
@@ -402,7 +403,7 @@ class MSAETrainer(Trainer):
         low = lowpass_mse(w, xc, model.low_hz).mean()
         l_sn = F.mse_loss(out["spec_n"].float(), psd)
         l_sne = F.mse_loss(out["spec_ne"].float(), psd)
-        loss = bw * (l_n + l_ne + l_nep) + low + l_sn + l_sne
+        loss = bw * (l_n + l_ne + l_nep) + model.low_weight * low + l_sn + l_sne
         r2w = _r2(w, xc)
         extra = {"pow_n": l_n.item(), "pow_ne": l_ne.item(), "pow_nep": l_nep.item(), "mse_low": low.item(),
                  "mse_spec_n": l_sn.item(), "mse_spec_ne": l_sne.item(),
