@@ -235,3 +235,22 @@ def test_band_r2_logpow5_forgives_random_phase():
     pr = np.stack([e * noise() for e in envs])  # same envelope, independent phase
     b = band_r2(pr, y)
     assert b["phase"]["9-12"] < 0.1 and b["logpow5"]["9-12"] > 0.85 and b["logpow5"]["9-12"] > b["logpow"]["9-12"] + 0.1
+
+
+def test_latent_probe_helpers():
+    from physioex.models.latent_probe import _per_second, sigma_bursts, staging_probe
+
+    rng = np.random.default_rng(0)
+    t = np.arange(3000) / 100
+    x = 0.1 * rng.standard_normal((4, 3000))
+    x[1, 500:600] += np.sin(2 * np.pi * 13 * t[500:600])  # one sigma burst in second 5 of epoch 1
+    b = sigma_bursts(x, np.zeros(4, int), q=99)
+    assert b[1, 5] and b.sum() <= 2
+    z = {"E": rng.standard_normal((3, 8)), "P": rng.standard_normal((3, 60, 4))}
+    ps = _per_second(z)
+    assert ps["E"].shape == (90, 8) and ps["EP"].shape == (90, 16)
+    assert np.allclose(ps["EP"][31, 8:], z["P"][1, 2:4].reshape(-1))  # second 1 of epoch 1 = tokens 2, 3
+    y = rng.integers(0, 3, 300)
+    f = {"good": np.eye(3)[y] + 0.01 * rng.standard_normal((300, 3)), "bad": rng.standard_normal((300, 3))}
+    r = staging_probe(f, y, f, y, np.repeat([0, 1, 2], 100))
+    assert r["good"]["kappa_night_mean"] > 0.95 and r["bad"]["kappa_night_mean"] < 0.3
