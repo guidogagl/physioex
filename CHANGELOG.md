@@ -14,9 +14,23 @@ that publish to PyPI.
   E is coded given N and P (1 s or 0.5 s tokens) given N and E. E and P pass an 8-bit channel. One SEANet decoder is
   called on the three prefixes, with one loss each. `tokens(x)` gives a `(B, 2 + T_p, 128)` sequence for downstream
   readers. Trained with `python -m physioex.train.bin.msvq --model msae`.
+  - Losses: `--loss mse` (default, MSE + 0.1 x multi-resolution STFT) and `--loss band` (phase-exact MSE up to
+    `--low-hz`, log band power per 1 s segment above `--pow-hz`, on a 1 s grid moved at random every step).
+  - `--texture`: noise texture head. Band-passed white noise times an amplitude per token and band above `--pow-hz`,
+    trained only by the band power loss. The deterministic wave keeps the MSE alone; `forward` returns `wave_det`,
+    `texture` and `wave = wave_det + texture`.
+  - Recommended on DCSM (30 epochs, 39 test nights): `--token-sec 0.5 --d-p 16 --texture --pow-hz 4.5 --band-weight 3
+    --grad-clip 1`, i.e. 1088 numbers per epoch (8 bit: 5.5x). It gets wave R² 0.963 against 0.945 for a PCA with the
+    same numbers, and band power over 5 s of 0.96-0.98 on 5-30 Hz (MSE alone: 0.62 on 17-30 Hz).
+- **`physioex.models.latent_probe`**: downstream checks of MSAE latents. A linear staging probe gives Cohen's kappa
+  per test night on [N; E], with log-PSD and PCA as references. A label-free spindle proxy (sigma bursts per second)
+  is predicted from E, from E + P (linear and MLP) and from the reconstruction. Writes `probe.json`.
+- `Trainer.train(..., grad_clip=...)`: clips the gradient norm before every optimiser step.
 - **`physioex.models.recon_eval`**: reconstruction audit with R² per band (with phase and amplitude only), gain per
   prefix, latent bit rounding, and PCA / k-means baselines at equal budget. It writes `recon_eval.json` at the end of
-  every MSVQ/MSAE run.
+  every MSVQ/MSAE run. The log band power is reported per 1 s segment, on the grid shifted by 0.5 s (`logpow_shift`)
+  and per 5 s (`logpow5`). Per 1 s, even a random-phase signal with the true power per second reaches only
+  R² 0.28-0.71. `--weights best|final` chooses the checkpoint.
 - **`trim_mode="main_period"`** on every dataset: keeps the main sleep period (`_main_sleep_period`) and drops windows
   centred outside it. Meant for recordings with naps or long wake (DCSM).
 - **`NanToZero`, `RobustScale`, `clean_pipelines()`** in `physioex.data.steps`. The specs match those of protosleepnet-v3,
@@ -24,6 +38,8 @@ that publish to PyPI.
 
 ### Fixed
 - The cache reads `float16` signals (clean-channel caches v2/v3).
+- `physioex.train.bin.msvq` evaluates the best validation checkpoint, not the final weights. A run that diverged late
+  had been scored on the diverged weights.
 
 ## 2.0.4 — 2026-10-16
 

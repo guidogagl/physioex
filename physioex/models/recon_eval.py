@@ -234,6 +234,19 @@ def load_best(model, run_dir: str):
     return path
 
 
+def model_from_args(a: dict):
+    """Untrained MSAE / MSVQ built from the ``args`` of a run's ``run.json``."""
+    if a.get("model", "msvq") == "msae":
+        from physioex.models.msae import MSAE
+
+        return MSAE(a["seq"], width=a["width"], dim=a["dim"] or 128, d_p=a["d_p"], token_sec=a["token_sec"],
+                    latent_bits=a["latent_bits"], decoder=a.get("decoder", "time"),
+                    pow_hz=a.get("pow_hz") or a.get("low_hz", 4.0), texture=a.get("texture", False))
+    from physioex.models.msvq import MSVQ
+
+    return MSVQ(a["seq"], a["dim"] or 64, *a["codes"], quantize=not a["no_vq"])
+
+
 def _load_run(run_dir: str, cache_dir=None, root=None, weights="best"):
     from physioex.data.datasets import get_dataset
     from physioex.data.steps import clean_pipelines
@@ -245,16 +258,7 @@ def _load_run(run_dir: str, cache_dir=None, root=None, weights="best"):
     if root or a.get("root"):
         kw["root"] = root or a["root"]
     ds = get_dataset(a["dataset"])(**kw)
-    if a.get("model", "msvq") == "msae":
-        from physioex.models.msae import MSAE
-
-        model = MSAE(a["seq"], width=a["width"], dim=a["dim"] or 128, d_p=a["d_p"], token_sec=a["token_sec"],
-                     latent_bits=a["latent_bits"], decoder=a.get("decoder", "time"),
-                     pow_hz=a.get("pow_hz") or a.get("low_hz", 4.0), texture=a.get("texture", False))
-    else:
-        from physioex.models.msvq import MSVQ
-
-        model = MSVQ(a["seq"], a["dim"] or 64, *a["codes"], quantize=not a["no_vq"])
+    model = model_from_args(a)
     if weights != "best" or load_best(model, run_dir) is None:
         model.load_state_dict(torch.load(os.path.join(run_dir, "model.pt"), map_location="cpu"), strict=False)
     return run, ds, model

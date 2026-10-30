@@ -31,11 +31,48 @@ sit on top of these latents.
 `tokens(x)` gives the sequence a downstream reader such as a Q-Former consumes:
 `(B, 2 + T_p, 128)` = `[N, E, P_1 … P_T]`.
 
-Training uses the MSVQ script:
+## Losses and the high bands
+
+Above about 5 Hz the phase cannot be predicted from a small budget. MSE, like a PCA,
+answers with the mean, so those bands come out 3 to 50 times too weak. Three options
+are available:
+
+| option | N+E+P loss | effect |
+|---|---|---|
+| `--loss mse` (default) | MSE + 0.1 × multi-resolution STFT | best wave R², high bands too weak |
+| `--loss band --low-hz f` | MSE of the wave low-passed at `f`; log band power per 1 s segment above `f` | exact power, phase above `f` invented |
+| `--texture --pow-hz f` | MSE on the deterministic wave; band power on wave + texture | MSE wave plus a noise texture with the right power |
+
+The band losses move their 1 s grid at random at every step. On a fixed grid the
+model learnt the segment edges: R² 1.00 on the training grid and 0.67–0.86 on the
+grid shifted by 0.5 s.
+
+The texture is band-passed white noise times an amplitude per token and band. Its
+gradient reaches the latents but never the deterministic path, so `wave_det` stays
+the MSE estimate.
+
+## Recommended configuration
+
+On DCSM (30 epochs, 39 test nights), the recommended configuration is:
 
 ```bash
-python -m physioex.train.bin.msvq --model msae --d-p 8 --token-sec 1.0 --dataset dcsm --out outputs/msae_dcsm/run0
+python -m physioex.train.bin.msvq --model msae --dataset dcsm --width 32 --token-sec 0.5 --d-p 16 \
+    --texture --pow-hz 4.5 --band-weight 3 --grad-clip 1.0 --epochs 30 --out outputs/msae_dcsm/tex1088
 ```
+
+It costs 1088 numbers per epoch (8,704 bits, 5.5× against 16-bit samples). Its scores:
+
+- wave R² 0.963 (`wave_det`), against 0.945 for a PCA with the same numbers;
+- phase R² 1.00 below 4 Hz;
+- log band power over 5 s of 0.98 / 0.98 / 0.96 / 0.98 on 5–8 / 9–12 / 13–16 / 17–30 Hz.
+  MSE alone gets 0.62 on 17–30 Hz, with half the power missing;
+- staging κ 0.72 per night from a linear probe on [N; E] (log-PSD: 0.62);
+- spindle proxy AUC 0.98 from the reconstruction.
+
+At 608 numbers per epoch MSE alone still beats the PCA (0.907 against 0.879), but the
+texture costs it its margin. At 368 numbers or fewer no variant clearly beats the PCA.
+
+## Evaluation
 
 At the end the script writes `recon_eval.json`, the reconstruction audit of the
 test nights (`physioex.models.recon_eval`). It reports:
@@ -44,6 +81,15 @@ test nights (`physioex.models.recon_eval`). It reports:
 - the gain of E and P per band;
 - the cost of rounding the latents to 8, 6 and 4 bits;
 - a PCA with as many components as the model's numbers, and a k-means on raw 1 s segments.
+
+Per 1 s, even a random-phase signal with the true power of each second reaches only
+R² 0.28–0.71 on the log band power, because a 1 s segment holds only 4 to 14
+frequency bins. The envelope metric is therefore `logpow5`, computed over 5 s.
+`logpow_shift` repeats the 1 s metric on the grid shifted by 0.5 s.
+
+`python -m physioex.models.latent_probe --run <dir>` writes `probe.json`. It holds
+a staging probe (κ per test night) and a label-free spindle proxy. Sleep stages are
+used only there, for evaluation.
 
 ```{eval-rst}
 .. autoclass:: physioex.models.msae.MSAE
@@ -55,5 +101,8 @@ test nights (`physioex.models.recon_eval`). It reports:
    :no-index:
 
 .. autofunction:: physioex.models.recon_eval.evaluate
+   :no-index:
+
+.. autofunction:: physioex.models.latent_probe.evaluate
    :no-index:
 ```
