@@ -254,3 +254,13 @@ def test_latent_probe_helpers():
     f = {"good": np.eye(3)[y] + 0.01 * rng.standard_normal((300, 3)), "bad": rng.standard_normal((300, 3))}
     r = staging_probe(f, y, f, y, np.repeat([0, 1, 2], 100))
     assert r["good"]["kappa_night_mean"] > 0.95 and r["bad"]["kappa_night_mean"] < 0.3
+
+
+def test_grid_shift_moves_only_in_training():
+    from physioex.models.msae import band_logpow, grid_shift
+
+    x = torch.randn(2, 3000)
+    assert grid_shift(False, x)[0] is x
+    torch.manual_seed(1)
+    (g,) = grid_shift(True, x)
+    assert g.shape == (2, 2900) and band_logpow(g).shape == (2, 29, 7)

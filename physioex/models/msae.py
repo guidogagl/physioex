@@ -363,6 +363,17 @@ def fit_msae_norms(model: MSAE, loader, max_batches: int = 50) -> None:
     model.lm_mean.copy_(lm.mean(0)); model.lm_std.copy_(lm.std(0) + 1e-6)
 
 
+def grid_shift(training: bool, *xs: torch.Tensor):
+    """In training, crop every ``(B, 3000)`` wave to ``[o, o + 2900)`` with one random ``o`` in
+    [0, 100): the 1 s segments of :func:`band_logpow` then move at every step. On a fixed grid
+    the band loss reached R^2 1.00 per second on that grid but 0.67-0.86 on the grid shifted
+    by 0.5 s (job 1548648, 608 numbers per epoch)."""
+    if not training:
+        return xs
+    o = int(torch.randint(0, 100, ()))
+    return tuple(x[:, o:o + EPOCH - 100] for x in xs)
+
+
 def band_logpow(x: torch.Tensor) -> torch.Tensor:
     """``(B, 3000) -> (B, 30, len(POW_BANDS))`` log10 power per 1 s segment and band."""
     p = torch.fft.rfft(x.reshape(len(x), -1, 100), dim=-1).abs().pow(2)
@@ -414,8 +425,8 @@ class MSAETrainer(Trainer):
         if model.texture:
             # the band power reaches only the texture (and through it the latents), never the MSE wave
             hi = model.tex_bands
-            bt = band_logpow(xc)[..., hi]
-            l_tex = (band_logpow(w.detach() + out["texture"].float())[..., hi] - bt).abs().mean()
+            xg, tg = grid_shift(model.training, xc, w.detach() + out["texture"].float())
+            l_tex = (band_logpow(tg)[..., hi] - band_logpow(xg)[..., hi]).abs().mean()
             loss = loss + model.band_weight * l_tex
             tex = {"pow_tex": l_tex.item(), "r2_wave_tex": _r2(out["wave"].float(), xc).item()}
         r2w = _r2(w, xc)
@@ -436,14 +447,15 @@ class MSAETrainer(Trainer):
         phase is kept wherever the budget allows, plus band power against the muting.
         Plain MSE drives the unpredictable bands (> 5 Hz) to zero power: 3-50x too weak
         on DCSM at 368 numbers per epoch, PCA included (job 1548628)."""
-        bt = band_logpow(xc)
         w_n, w_ne, w = out["wave_n"].float(), out["wave_ne"].float(), out["wave"].float()
+        xg, gn, gne, gw = grid_shift(model.training, xc, w_n, w_ne, w)
+        bt = band_logpow(xg)
         bw = model.band_weight
-        l_n, l_ne = [(band_logpow(v) - bt).abs().mean() for v in (w_n, w_ne)]
+        l_n, l_ne = [(band_logpow(v) - bt).abs().mean() for v in (gn, gne)]
         # N+E+P: the spectrum is split, phase-exact MSE up to low_hz and band power only above it
         # (band power on the low bands too pushes energy in with an uncertain phase: 2-4 Hz phase R^2 0.91 -> 0.7)
         hi = [i for i, (a, _) in enumerate(POW_BANDS) if a > model.pow_hz]
-        l_nep = (band_logpow(w)[..., hi] - bt[..., hi]).abs().mean()
+        l_nep = (band_logpow(gw)[..., hi] - bt[..., hi]).abs().mean()
         low = lowpass_mse(w, xc, model.low_hz).mean()
         l_sn = F.mse_loss(out["spec_n"].float(), psd)
         l_sne = F.mse_loss(out["spec_ne"].float(), psd)
@@ -453,8 +465,8 @@ class MSAETrainer(Trainer):
                  "mse_spec_n": l_sn.item(), "mse_spec_ne": l_sne.item(),
                  "r2_spec_n": _r2(out["spec_n"].float(), psd).item(),
                  "r2_spec_ne": _r2(out["spec_ne"].float(), psd).item(),
-                 "r2_pow_n": _r2(band_logpow(w_n), bt).item(), "r2_pow_ne": _r2(band_logpow(w_ne), bt).item(),
-                 "r2_pow": _r2(band_logpow(w), bt).item(), "r2_wave": r2w.item()}
+                 "r2_pow_n": _r2(band_logpow(gn), bt).item(), "r2_pow_ne": _r2(band_logpow(gne), bt).item(),
+                 "r2_pow": _r2(band_logpow(gw), bt).item(), "r2_wave": r2w.item()}
         return loss, r2w, extra
 
     @staticmethod
