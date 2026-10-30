@@ -7,7 +7,8 @@
    (``pca``).
 2. **Spindle proxy (label-free).** Per 1 s segment, sigma (11-16 Hz) power over 4-30 Hz power;
    a segment is a "sigma burst" above the 95th percentile of its night. Logistic regression
-   per second from E alone and from [E; P tokens of that second]: test AUC. P should add.
+   per second from E alone and from [E; P tokens of that second] (linear and MLP), and from the
+   sigma ratio of the reconstruction itself: test AUC. P should add.
 
 ``python -m physioex.models.latent_probe --run <dir>`` writes ``<run>/probe.json``.
 """
@@ -64,8 +65,7 @@ def latents(model, windows: np.ndarray, batch: int = 128) -> Dict[str, np.ndarra
 def sigma_bursts(centres: np.ndarray, night: np.ndarray, q: float = 95.0) -> np.ndarray:
     """``(M, 3000)`` -> ``(M, 30)`` bool: sigma / (4-30 Hz) power ratio per second above the
     ``q``-th percentile of its night (label-free spindle proxy)."""
-    p = np.abs(np.fft.rfft(centres.reshape(len(centres), 30, FS), axis=-1)) ** 2
-    ratio = p[..., 11:17].sum(-1) / (p[..., 4:31].sum(-1) + 1e-12)
+    ratio = sigma_ratio(centres).reshape(len(centres), 30)
     out = np.zeros_like(ratio, dtype=bool)
     for g in np.unique(night):
         m = night == g
@@ -104,7 +104,26 @@ def _per_second(z: Dict[str, np.ndarray]) -> Dict[str, np.ndarray]:
     return {"E": e, "EP": np.concatenate([e, p], 1)}
 
 
-def spindle_probe(z_tr, c_tr, g_tr, z_te, c_te, g_te, max_train: int = 200000, seed: int = 0) -> dict:
+def sigma_ratio(centres: np.ndarray) -> np.ndarray:
+    """``(M, 3000)`` -> ``(M * 30,)`` sigma / (4-30 Hz) power ratio per second."""
+    p = np.abs(np.fft.rfft(centres.reshape(len(centres), 30, FS), axis=-1)) ** 2
+    return (p[..., 11:17].sum(-1) / (p[..., 4:31].sum(-1) + 1e-12)).reshape(-1)
+
+
+def _fit_mlp(xtr, ytr, xte, seed=0):
+    from sklearn.neural_network import MLPClassifier
+    from sklearn.pipeline import make_pipeline
+    from sklearn.preprocessing import StandardScaler
+
+    clf = make_pipeline(StandardScaler(), MLPClassifier((256,), early_stopping=True, max_iter=200, random_state=seed))
+    return clf.fit(xtr, ytr).predict_proba(xte)[:, 1]
+
+
+def spindle_probe(z_tr, c_tr, g_tr, z_te, c_te, g_te, max_train: int = 200000, seed: int = 0,
+                  decoded: Dict[str, np.ndarray] = None) -> dict:
+    """AUC of the sigma bursts from E and from E + P: linear (``auc_*``) and one-hidden-layer MLP
+    (``auc_*_mlp``; a burst is a power, i.e. quadratic in the waveform that P codes). ``decoded``:
+    reconstructed test centres per prefix, scored by their own sigma ratio (no training)."""
     from sklearn.metrics import roc_auc_score
 
     ytr, yte = sigma_bursts(c_tr, g_tr).reshape(-1), sigma_bursts(c_te, g_te).reshape(-1)
@@ -114,11 +133,15 @@ def spindle_probe(z_tr, c_tr, g_tr, z_te, c_te, g_te, max_train: int = 200000, s
     out = {"positive_rate": float(yte.mean())}
     for k in ftr:
         out[f"auc_{k}"] = float(roc_auc_score(yte, _fit_predict(ftr[k][idx], ytr[idx], fte[k], proba=True)))
+        out[f"auc_{k}_mlp"] = float(roc_auc_score(yte, _fit_mlp(ftr[k][idx], ytr[idx], fte[k], seed)))
+    for k, w in (decoded or {}).items():
+        out[f"auc_decoded_{k}"] = float(roc_auc_score(yte, sigma_ratio(w)))
     return out
 
 
 def evaluate(model, ds, test_ids, train_ids, per_night: int = 250, max_train_nights: int = 40, seed: int = 0) -> dict:
     from physioex.models.msvq import epoch_logpsd
+    from physioex.models.recon_eval import model_waves
 
     wtr, ytr, gtr = night_samples(ds, list(train_ids)[:max_train_nights], per_night, seed + 1)
     wte, yte, gte = night_samples(ds, list(test_ids), per_night, seed)
@@ -142,7 +165,7 @@ def evaluate(model, ds, test_ids, train_ids, per_night: int = 250, max_train_nig
     res = {"n_train_epochs": int(keep.sum()), "n_test_epochs": int(keep_te.sum()), "numbers_per_epoch": n_num,
            "staging": staging_probe({k: f[keep] for k, f in ftr.items()}, ytr[keep],
                                     {k: f[keep_te] for k, f in fte.items()}, yte[keep_te], gte[keep_te]),
-           "spindle_proxy": spindle_probe(ztr, ctr, gtr, zte, cte, gte, seed=seed)}
+           "spindle_proxy": spindle_probe(ztr, ctr, gtr, zte, cte, gte, seed=seed, decoded=model_waves(model, wte))}
     return res
 
 
