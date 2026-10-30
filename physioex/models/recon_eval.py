@@ -66,8 +66,46 @@ def band_r2(pred: np.ndarray, target: np.ndarray) -> Dict[str, Dict[str, float]]
     return out
 
 
-def _report(pred: np.ndarray, target: np.ndarray) -> dict:
-    return {"r2": r2(pred, target), **band_r2(pred, target)}
+def _report(pred: np.ndarray, target: np.ndarray, night: np.ndarray = None) -> dict:
+    out = {"r2": r2(pred, target), **band_r2(pred, target)}
+    if night is not None:
+        out["per_night"] = night_metrics(pred, target, night)
+    return out
+
+
+def night_metrics(pred: np.ndarray, target: np.ndarray, night: np.ndarray) -> dict:
+    """Wave R^2 and log band power over 5 s per test night (paired units of the
+    non-inferiority test, :mod:`physioex.models.noninferiority`)."""
+    out = {"night": [], "r2": [], "logpow5": {}}
+    for g in np.unique(night):
+        m = night == g
+        out["night"].append(int(g)); out["r2"].append(r2(pred[m], target[m]))
+        for band, v in band_r2(pred[m], target[m])["logpow5"].items():
+            out["logpow5"].setdefault(band, []).append(v)
+    return out
+
+
+@torch.no_grad()
+def spec_r2_per_night(model, windows: np.ndarray, night: np.ndarray, batch: int = 64) -> dict:
+    """R^2 of the epoch log-PSD predicted from N (``spec_n``) and from N+E (``spec_ne``), pooled and per night."""
+    from physioex.models.msvq import epoch_logpsd
+
+    device = next(model.parameters()).device
+    model.eval()
+    acc = {"spec_n": [], "spec_ne": [], "target": []}
+    for i in range(0, len(windows), batch):
+        xb = torch.from_numpy(windows[i:i + batch])[:, :, None].to(device)
+        out = model(xb)
+        acc["spec_n"].append(out["spec_n"].float().cpu().numpy()); acc["spec_ne"].append(out["spec_ne"].float().cpu().numpy())
+        t = (epoch_logpsd(xb[:, xb.shape[1] // 2, 0].float()) - model.psd_mean) / model.psd_std
+        acc["target"].append(t.cpu().numpy())
+    a = {k: np.concatenate(v) for k, v in acc.items()}
+    res = {}
+    for k in ("spec_n", "spec_ne"):
+        res[k] = {"r2": r2(a[k], a["target"]),
+                  "per_night": {"night": [int(g) for g in np.unique(night)],
+                                "r2": [r2(a[k][night == g], a["target"][night == g]) for g in np.unique(night)]}}
+    return res
 
 
 # ----------------------------------------------------------------------------
@@ -75,14 +113,16 @@ def _report(pred: np.ndarray, target: np.ndarray) -> dict:
 # ----------------------------------------------------------------------------
 
 
-def sample_windows(ds, subject_ids: Sequence[str], per_night: int, seed: int = 0, centres_only: bool = False):
+def sample_windows(ds, subject_ids: Sequence[str], per_night: int, seed: int = 0, centres_only: bool = False,
+                   return_night: bool = False):
     """Random windows centred inside the main sleep period of each night.
-    Returns ``(windows (M, L, 3000) or None, centres (M, 3000))``."""
+    Returns ``(windows (M, L, 3000) or None, centres (M, 3000))``, plus the night index of every
+    window ``(M,)`` (position in ``subject_ids``) with ``return_night``."""
     rng = np.random.default_rng(seed)
     have = {s.subject_id: s for s in ds._subjects}
     half = ds.sequence_length // 2
-    W, C = [], []
-    for sid in subject_ids:
+    W, C, G = [], [], []
+    for i, sid in enumerate(subject_ids):
         if sid not in have:
             continue
         n = ds._n_epochs[sid]
@@ -92,10 +132,11 @@ def sample_windows(ds, subject_ids: Sequence[str], per_night: int, seed: int = 0
             continue
         x = next(iter(ds._build_item(have[sid], 0, n)["signals"].values())).numpy().reshape(n, -1).astype(np.float32)
         ts = np.sort(rng.choice(np.arange(lo, hi), min(per_night, hi - lo), replace=False))
-        C.append(x[ts])
+        C.append(x[ts]); G.append(np.full(len(ts), i))
         if not centres_only:
             W.append(np.stack([x[t - half:t + half + 1] for t in ts]))
-    return (np.concatenate(W) if W else None), np.concatenate(C)
+    out = (np.concatenate(W) if W else None), np.concatenate(C)
+    return (*out, np.concatenate(G)) if return_night else out
 
 
 # ----------------------------------------------------------------------------
@@ -174,7 +215,7 @@ def evaluate(model, ds, test_ids, train_ids, per_night: int = 250, per_train_nig
     """Full audit (see module docstring). Returns the dict written to ``recon_eval.json``."""
     from physioex.models.msae import MSAE
 
-    windows, target = sample_windows(ds, test_ids, per_night, seed)
+    windows, target, night = sample_windows(ds, test_ids, per_night, seed, return_night=True)
     _, train_epochs = sample_windows(ds, list(train_ids)[:max_train_nights], per_train_night, seed + 1, centres_only=True)
     res = {"n_test_epochs": int(len(target)), "n_train_epochs": int(len(train_epochs)),
            "bands_hz": [b[2] for b in BANDS], "model": {}}
@@ -202,7 +243,9 @@ def evaluate(model, ds, test_ids, train_ids, per_night: int = 250, per_train_nig
                                              for band in rep[f"tf_{hi}"]}
                 res["model"][f"bits_{b}"] = rep
                 continue
-            rep = {k: _report(v, target) for k, v in waves.items()}
+            rep = {k: _report(v, target, night) for k, v in waves.items()}
+            if model.decoder == "time":
+                rep.update(spec_r2_per_night(model, windows, night))
             for hi, lo in (("NE", "N"), ("NEP", "NE")):
                 rep[f"gain_{hi[-1]}"] = {kind: {band: rep[hi][kind][band] - rep[lo][kind][band] for band in rep[hi][kind]}
                                          for kind in ("phase", "amp", "logpow")}

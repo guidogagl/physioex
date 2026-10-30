@@ -264,3 +264,26 @@ def test_grid_shift_moves_only_in_training():
     torch.manual_seed(1)
     (g,) = grid_shift(True, x)
     assert g.shape == (2, 2900) and band_logpow(g).shape == (2, 29, 7)
+
+
+def test_noninferiority_paired():
+    from physioex.models.noninferiority import noninferiority
+
+    rng = np.random.default_rng(0)
+    ref = rng.uniform(0.9, 0.99, 39)
+    same = noninferiority(ref, ref + rng.normal(0, 0.002, 39), margin=0.01)
+    assert same["pass"] and same["p"] < 0.001 and same["lower_t"] > -0.01
+    worse = noninferiority(ref, ref - 0.02 + rng.normal(0, 0.002, 39), margin=0.01)
+    assert not worse["pass"] and worse["p"] > 0.5
+    # few noisy nights: no significant difference, but non-inferiority not shown either
+    noisy = noninferiority(ref[:5], ref[:5] + np.array([0.03, -0.03, 0.03, -0.03, 0.0]), margin=0.01)
+    assert not noisy["pass"]
+
+
+def test_night_metrics_and_sample_windows_night():
+    from physioex.models.recon_eval import night_metrics
+
+    rng = np.random.default_rng(0)
+    y = rng.standard_normal((6, 3000)); night = np.array([0, 0, 0, 2, 2, 2])
+    m = night_metrics(y, y, night)
+    assert m["night"] == [0, 2] and m["r2"] == [1.0, 1.0] and len(m["logpow5"]["9-12"]) == 2
