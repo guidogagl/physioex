@@ -305,7 +305,8 @@ def model_from_args(a: dict):
         if a["model"] == "msae":
             return MSAE(a["seq"], **kw)
         return MSAEVQ(a["seq"], codes=a["vq_codes"], codes_n=a["vq_codes_n"], levels=a["vq_levels"],
-                      q_dropout=a["q_dropout"], factor_dim_n=a.get("vq_factor_dim_n", 0), **kw)
+                      q_dropout=a["q_dropout"], factor_dim_n=a.get("vq_factor_dim_n", 0),
+                      whiten_n=a.get("vq_whiten_n", False), **kw)
     from physioex.models.msvq import MSVQ
 
     return MSVQ(a["seq"], a["dim"] or 64, *a["codes"], quantize=not a["no_vq"])

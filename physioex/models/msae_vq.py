@@ -55,13 +55,23 @@ class ResidualVQ(nn.Module):
     projects the residual to ``factor_dim``, normalizes it, looks it up among unit codewords and
     projects back; the projections are initialised by PCA in :meth:`kmeans_init`, ``proj_in``
     is trained by the commitment loss and ``proj_out`` by the loss on ``z_q``.
+
+    ``whiten``: quantize in a fixed PCA-whitened space (estimated in :meth:`kmeans_init`, with a
+    floor of ``0.01`` x the mean eigenvalue) so that k-means also spends codes on the
+    low-variance directions; the magnitude is kept and the output is mapped back.
     """
 
     def __init__(self, n_levels: int, n_codes: int, dim: int, commitment_weight: float = 0.25,
-                 restart_after: int = 30, factor_dim: int = 0):
+                 restart_after: int = 30, factor_dim: int = 0, whiten: bool = False):
         super().__init__()
         self.n_levels, self.n_codes, self.dim, self.restart_base = n_levels, n_codes, dim, restart_after
         self.factor_dim = factor_dim
+        self.whiten = whiten
+        if whiten:
+            self.register_buffer("w_mean", torch.zeros(dim))
+            self.register_buffer("w_in", torch.eye(dim))
+            self.register_buffer("w_out", torch.eye(dim))
+            self.register_buffer("w_scale", torch.ones(()))  # mean eigenvalue: commitment in data units
         d = factor_dim or dim
         self.levels = nn.ModuleList([EMAVQ(n_codes, d, commitment_weight, restart_after=restart_after)
                                      for _ in range(n_levels)])
@@ -71,7 +81,14 @@ class ResidualVQ(nn.Module):
 
     def forward(self, z: torch.Tensor, k: Optional[int] = None):
         with torch.autocast(z.device.type, enabled=False):  # distances and argmin in float32
-            return self._forward(z.float(), self.n_levels if k is None else k)
+            z = z.float()
+            k = self.n_levels if k is None else k
+            if not self.whiten:
+                return self._forward(z, k)
+            zw = (z - self.w_mean) @ self.w_in
+            zq, codes, loss = self._forward(zw, k)
+            zq = zq - (zw - zw.detach())  # one straight-through only, the one on z below
+            return z - z.detach() + zq @ self.w_out + self.w_mean, codes, loss * self.w_scale
 
     def _forward(self, z: torch.Tensor, k: int):
         r, q_sum, loss, codes = z, torch.zeros_like(z), z.new_zeros(()), []
@@ -99,13 +116,23 @@ class ResidualVQ(nn.Module):
 
     def lookup(self, codes: torch.Tensor) -> torch.Tensor:
         """``(M, k)`` indices -> ``(M, dim)`` sum of the first ``k`` (projected) codewords."""
-        return sum(self._out(l, codes[:, l]) for l in range(codes.shape[1]))
+        q = sum(self._out(l, codes[:, l]) for l in range(codes.shape[1]))
+        return q @ self.w_out + self.w_mean if self.whiten else q
 
     @torch.no_grad()
     def kmeans_init(self, z: torch.Tensor, seed: int = 0) -> None:
         """k-means on ``z``, then on each residual, level by level (factorized: PCA projections,
         k-means on the normalized projections)."""
         r = z.detach().float()
+        if self.whiten:
+            mu = r.mean(0)
+            ev, V = torch.linalg.eigh(torch.cov((r - mu).T))
+            ev = ev.clamp_min(0) + 0.01 * ev.clamp_min(0).mean()
+            self.w_mean.copy_(mu)
+            self.w_in.copy_(V / ev.sqrt())
+            self.w_out.copy_((V * ev.sqrt()).T)
+            self.w_scale.fill_(float(ev.mean()))
+            r = (r - mu) @ self.w_in
         for l, vq in enumerate(self.levels):
             u = r
             if self.factor_dim:
@@ -132,7 +159,8 @@ class MSAEVQ(MSAE):
     """:class:`MSAE` with a :class:`ResidualVQ` on N, E and P (see module docstring)."""
 
     def __init__(self, *args, codes: int = 1024, codes_n: int = 256, levels: Sequence[int] = (4, 8, 8),
-                 q_dropout: float = 0.5, restart_after: int = 30, factor_dim_n: int = 0, **kw):
+                 q_dropout: float = 0.5, restart_after: int = 30, factor_dim_n: int = 0,
+                 whiten_n: bool = False, **kw):
         kw["latent_bits"] = 0  # tanh only: the RVQ is the channel
         super().__init__(*args, **kw)
         self.n_codes = {"N": codes_n, "E": codes, "P": codes}
@@ -140,7 +168,8 @@ class MSAEVQ(MSAE):
         self.vq_levels = dict(self.max_levels)  # prefix used in eval
         self.q_dropout = q_dropout
         self.rvq = nn.ModuleDict({
-            "N": ResidualVQ(levels[0], codes_n, self.dim, restart_after=restart_after, factor_dim=factor_dim_n),
+            "N": ResidualVQ(levels[0], codes_n, self.dim, restart_after=restart_after, factor_dim=factor_dim_n,
+                              whiten=whiten_n),
             "E": ResidualVQ(levels[1], codes, self.dim, restart_after=restart_after),
             "P": ResidualVQ(levels[2], codes, self.d_p, restart_after=restart_after)})
         self.bypass_vq = False  # continuous latents (for fit_vq_codebooks)

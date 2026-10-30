@@ -72,6 +72,23 @@ def test_factorized_rvq_prefix_lookup_and_gradients():
     assert zg.grad is not None
 
 
+def test_whitened_rvq_prefix_lookup_and_low_variance_directions():
+    from physioex.models.msae_vq import ResidualVQ
+
+    torch.manual_seed(0)
+    z = torch.randn(600, 8) * torch.tensor([10.0, 5, 2, 1, 0.5, 0.3, 0.2, 0.1])
+    plain, white = ResidualVQ(2, 32, 8).eval(), ResidualVQ(2, 32, 8, whiten=True).eval()
+    plain.kmeans_init(z)
+    white.kmeans_init(z)
+    zq, codes, _ = white(z)
+    assert torch.allclose(zq, white.lookup(codes), atol=1e-4)
+    err = lambda m: (m(z)[0] - z)[:, -3:].pow(2).mean() / z[:, -3:].pow(2).mean()
+    assert err(white) < err(plain)  # codes spent on the small directions too
+    zg = z.clone().requires_grad_(True)
+    white.train()(zg)[0].sum().backward()
+    assert torch.allclose(zg.grad, torch.ones_like(z))
+
+
 def test_residual_vq_ema_and_dead_code_restart():
     from physioex.models.msae_vq import ResidualVQ
 
@@ -135,6 +152,15 @@ def test_factorized_n_decode_from_codes():
     z = model.embed(model.codes(x))
     assert torch.allclose(z["N"], out["N"], atol=1e-5)
     assert torch.allclose(model.decode(z["N"], z["E"], z["P"]), out["wave"], atol=1e-4)
+
+
+def test_whitened_n_decode_from_codes():
+    model = _model(whiten_n=True).eval()
+    _init_codebooks(model)
+    x = torch.randn(2, L, 1, 3000)
+    out = model(x)
+    z = model.embed(model.codes(x))
+    assert torch.allclose(z["N"], out["N"], atol=1e-4)
 
 
 def test_n_does_not_depend_on_centre_epoch():

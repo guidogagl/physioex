@@ -87,6 +87,8 @@ def main():
     ap.add_argument("--vq-codes-n", type=int, default=256, help="msae_vq: codes per level of N")
     ap.add_argument("--vq-factor-dim-n", type=int, default=0,
                     help="msae_vq: factorized L2-normalized codes of this dimension on N (0 = plain)")
+    ap.add_argument("--vq-whiten-n", action="store_true",
+                    help="msae_vq: RVQ of N in a fixed PCA-whitened space")
     ap.add_argument("--vq-levels", type=int, nargs=3, default=(4, 8, 8), metavar=("N", "E", "P"),
                     help="msae_vq: RVQ levels per scale")
     ap.add_argument("--q-dropout", type=float, default=0.5, help="msae_vq: probability of a random prefix of levels")
@@ -159,7 +161,7 @@ def main():
             trainer = MSAEVQTrainer
             model = MSAEVQ(a.seq, codes=a.vq_codes, codes_n=a.vq_codes_n, levels=a.vq_levels,
                            q_dropout=a.q_dropout, restart_after=a.restart_after,
-                           factor_dim_n=a.vq_factor_dim_n, **arch)
+                           factor_dim_n=a.vq_factor_dim_n, whiten_n=a.vq_whiten_n, **arch)
             if a.init:
                 print(f"[msae_vq] weights from {load_best(model, a.init)}", flush=True)
         opt = torch.optim.AdamW(model.parameters(), lr=a.lr, weight_decay=1e-4)
