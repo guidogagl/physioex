@@ -9,7 +9,8 @@ trains the same network with continuous latents (the upper bound used to size th
 dictionaries), ``--ce-weight`` adds the label-free cluster targets as auxiliary CE.
 Windows are restricted to the main sleep period (``trim_mode="main_period"``);
 validation uses windows of the validation subjects (not whole recordings).
-Writes the best checkpoint in ``ckpt/``, the final weights ``model.pt``, the
+Writes the best checkpoint in ``ckpt/``, the final weights ``model.pt``, then
+reloads the best checkpoint and writes for it the
 validation metrics ``eval.json`` (R^2 per prefix, code usage), the reconstruction
 audit of the test nights ``recon_eval.json`` (:mod:`physioex.models.recon_eval`)
 and ``run.json``. MSAE runs use a cosine learning rate over the whole training.
@@ -32,7 +33,7 @@ from physioex.models.msae import MSAE, MSAETrainer, fit_msae_norms
 from physioex.models.msvq import (
     MSVQ, MSVQTrainer, compute_msvq_targets, fit_msvq_norms,
 )
-from physioex.models.recon_eval import evaluate as recon_evaluate
+from physioex.models.recon_eval import evaluate as recon_evaluate, load_best
 
 
 def _loader(ds, ids, n_max, batch, workers, shuffle, seed):
@@ -145,6 +146,9 @@ def main():
                           gpu_id=0 if torch.cuda.is_available() else None, grad_clip=a.grad_clip or None,
                           **opt_kw)
     torch.save(model.state_dict(), os.path.join(a.out, "model.pt"))
+    # evaluate the best validation checkpoint, not the last weights (a late divergence would hide it)
+    best = load_best(model, a.out)
+    print(f"[msvq] evaluating {best or 'final weights'}", flush=True)
 
     # validation metrics of the final model, for the K sweep
     device = next(model.parameters()).device

@@ -206,7 +206,24 @@ def evaluate(model, ds, test_ids, train_ids, per_night: int = 250, per_train_nig
     return res
 
 
-def _load_run(run_dir: str, cache_dir=None, root=None):
+def best_checkpoint(run_dir: str):
+    """Newest ``ckpt/*.pt`` of a run (the Trainer writes one on every validation improvement), or None."""
+    import glob
+
+    files = glob.glob(os.path.join(run_dir, "ckpt", "*.pt"))
+    return max(files, key=os.path.getmtime) if files else None
+
+
+def load_best(model, run_dir: str):
+    """Load the best validation checkpoint into ``model`` in place; return its path (None = kept as is)."""
+    path = best_checkpoint(run_dir)
+    if path is not None:
+        sd = torch.load(path, map_location="cpu")
+        model.load_state_dict(sd.get("model_state_dict", sd), strict=False)
+    return path
+
+
+def _load_run(run_dir: str, cache_dir=None, root=None, weights="best"):
     from physioex.data.datasets import get_dataset
     from physioex.data.steps import clean_pipelines
 
@@ -226,7 +243,8 @@ def _load_run(run_dir: str, cache_dir=None, root=None):
         from physioex.models.msvq import MSVQ
 
         model = MSVQ(a["seq"], a["dim"] or 64, *a["codes"], quantize=not a["no_vq"])
-    model.load_state_dict(torch.load(os.path.join(run_dir, "model.pt"), map_location="cpu"), strict=False)
+    if weights != "best" or load_best(model, run_dir) is None:
+        model.load_state_dict(torch.load(os.path.join(run_dir, "model.pt"), map_location="cpu"), strict=False)
     return run, ds, model
 
 
@@ -237,8 +255,10 @@ def main():
     ap.add_argument("--root", default=None)
     ap.add_argument("--per-night", type=int, default=250)
     ap.add_argument("--out", default=None, help="default: <run>/recon_eval.json")
+    ap.add_argument("--weights", choices=("best", "final"), default="best",
+                    help="best = newest ckpt/*.pt (best validation), final = model.pt")
     a = ap.parse_args()
-    run, ds, model = _load_run(a.run, a.cache_dir, a.root)
+    run, ds, model = _load_run(a.run, a.cache_dir, a.root, a.weights)
     if torch.cuda.is_available():
         model = model.cuda()
     res = evaluate(model, ds, run["splits"]["test"], run["splits"]["train"], per_night=a.per_night)

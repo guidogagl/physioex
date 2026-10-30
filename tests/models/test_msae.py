@@ -165,3 +165,21 @@ def test_band_loss_helpers_and_step():
     loss, acc, extra = MSAETrainer._step(model, _batch(), None, torch.device("cpu"))
     assert torch.isfinite(loss) and all(np.isfinite(v) for v in extra.values())
     loss.backward()
+
+
+def test_load_best_takes_newest_checkpoint(tmp_path):
+    import os
+
+    from physioex.models.recon_eval import best_checkpoint, load_best
+    from physioex.train.trainer import Trainer
+
+    assert best_checkpoint(str(tmp_path)) is None
+    (tmp_path / "ckpt").mkdir()
+    old, new = _model(), _model()
+    torch.nn.init.zeros_(new.dec_p.weight)
+    Trainer.save_checkpoint(old, str(tmp_path / "ckpt" / "a.pt"))
+    Trainer.save_checkpoint(new, str(tmp_path / "ckpt" / "b.pt"))
+    os.utime(tmp_path / "ckpt" / "a.pt", (1, 1))
+    m = _model()
+    assert load_best(m, str(tmp_path)).endswith("b.pt")
+    assert torch.equal(m.dec_p.weight, new.dec_p.weight)
