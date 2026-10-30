@@ -148,3 +148,20 @@ def test_istft_trainer_step_finite_and_backward():
     assert torch.isfinite(loss) and all(np.isfinite(v) for v in extra.values())
     loss.backward()
     assert model.mag_head.weight.grad.abs().sum() > 0 and model.phase_head.weight.grad is not None
+
+
+def test_band_loss_helpers_and_step():
+    from physioex.models.msae import MSAETrainer, band_logpow, lowpass_mse
+
+    t = torch.arange(3000) / 100
+    x = torch.stack([torch.sin(2 * np.pi * 2 * t), torch.sin(2 * np.pi * 11 * t)])
+    bp = band_logpow(x)
+    assert bp.shape == (2, 30, 7)
+    assert bp[0, :, 1].min() > bp[0, :, 3].max() and bp[1, :, 3].min() > bp[1, :, 1].max()
+    # low-pass MSE sees the 2 Hz error (= time MSE of a pure 2 Hz signal) and ignores 11 Hz
+    assert torch.allclose(lowpass_mse(x[:1] * 0, x[:1]), x[:1].pow(2).mean(), rtol=1e-3)
+    assert lowpass_mse(x[1:] * 0, x[1:]).item() < 1e-6
+    model = _model(loss="band").train()
+    loss, acc, extra = MSAETrainer._step(model, _batch(), None, torch.device("cpu"))
+    assert torch.isfinite(loss) and all(np.isfinite(v) for v in extra.values())
+    loss.backward()

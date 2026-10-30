@@ -52,6 +52,9 @@ from physioex.train.trainer import Trainer
 
 STRIDES = {1.0: (2, 5, 10), 0.5: (2, 5, 5)}
 STFT_WINDOWS = (25, 50, 100, 200, 400)
+# bands (Hz, 1 s rfft bins) of the "band" loss: log10 power per 1 s segment
+POW_BANDS = ((1, 2), (2, 5), (5, 9), (9, 13), (13, 17), (17, 31), (31, 51))
+LOW_HZ = 4  # "band" loss: phase-exact MSE only up to here
 TF_WIN, TF_HOP = 100, 50  # spectrogram of the "istft" decoder: 1 s Hann, 0.5 s hop (COLA), 51 bins x 61 frames
 TF_BINS, TF_FRAMES = TF_WIN // 2 + 1, EPOCH // TF_HOP + 1
 
@@ -121,7 +124,8 @@ class MSAE(nn.Module):
 
     def __init__(self, sequence_length: int = 41, width: int = 32, dim: int = 128, d_p: int = 8,
                  token_sec: float = 1.0, latent_bits: int = 8, n_psd_bins: int = 139,
-                 stft_weight: float = 0.1, decoder: str = "time", tf_consistency: float = 0.0):
+                 stft_weight: float = 0.1, decoder: str = "time", tf_consistency: float = 0.0,
+                 loss: str = "mse", band_weight: float = 1.0):
         super().__init__()
         self.L, self.c, self.dim, self.d_p = sequence_length, sequence_length // 2, dim, d_p
         self.strides = STRIDES[token_sec]
@@ -131,6 +135,8 @@ class MSAE(nn.Module):
         assert decoder in ("time", "istft"), decoder
         self.decoder = decoder
         self.tf_consistency = tf_consistency
+        assert loss in ("mse", "band"), loss
+        self.loss, self.band_weight = loss, band_weight
 
         # encoder: multi-scale stem + SEANet downsampling -> (B, dim, T_p)
         ch = [width * 2 ** i for i in range(len(self.strides) + 1)]
@@ -323,6 +329,20 @@ def fit_msae_norms(model: MSAE, loader, max_batches: int = 50) -> None:
     model.lm_mean.copy_(lm.mean(0)); model.lm_std.copy_(lm.std(0) + 1e-6)
 
 
+def band_logpow(x: torch.Tensor) -> torch.Tensor:
+    """``(B, 3000) -> (B, 30, len(POW_BANDS))`` log10 power per 1 s segment and band."""
+    p = torch.fft.rfft(x.reshape(len(x), -1, 100), dim=-1).abs().pow(2)
+    return torch.stack([torch.log10(p[..., a:b].sum(-1) + 1e-4) for a, b in POW_BANDS], -1)
+
+
+def lowpass_mse(pred: torch.Tensor, target: torch.Tensor, hz: float = LOW_HZ) -> torch.Tensor:
+    """Per-sample MSE of the epochs low-passed at ``hz`` (rfft of the whole 30 s epoch)."""
+    k = int(hz * EPOCH / 100) + 1
+    d = torch.fft.rfft(pred - target, dim=-1)[:, :k]
+    d[:, 1:] *= 2 ** 0.5  # one-sided spectrum: count the negative frequencies too
+    return d.abs().pow(2).sum(-1) / EPOCH ** 2
+
+
 class MSAETrainer(Trainer):
     """Trainer for :class:`MSAE`. ``acc`` reports R^2 of the full waveform ``x_NEP``.
     Call :func:`fit_msae_norms` first; use ``log_confusion_matrix=False``.
@@ -344,6 +364,8 @@ class MSAETrainer(Trainer):
             out = model(x)
         if model.decoder == "istft":
             return MSAETrainer._step_tf(model, out, xc, psd)
+        if model.loss == "band":
+            return MSAETrainer._step_band(model, out, xc, psd)
         w_n, w_ne, w = out["wave_n"].float(), out["wave_ne"].float(), out["wave"].float()
         sw = model.stft_weight
         l_n, _ = stft_losses(w_n, xc, windows=(200, 400), phase_win=0)
@@ -360,6 +382,29 @@ class MSAETrainer(Trainer):
                  "r2_spec_n": _r2(out["spec_n"].float(), psd).item(),
                  "r2_spec_ne": _r2(out["spec_ne"].float(), psd).item(),
                  "r2_wave_n": _r2(w_n, xc).item(), "r2_wave_ne": _r2(w_ne, xc).item(), "r2_wave": r2w.item()}
+        return loss, r2w, extra
+
+    @staticmethod
+    def _step_band(model, out, xc, psd):
+        """Perception-oriented loss: every prefix matches the log band power per second
+        (N, N+E: envelope only); N+E+P adds the phase-exact MSE below ``LOW_HZ``.
+        Plain MSE drives the unpredictable bands (> 5 Hz) to zero power: 3-50x too weak
+        on DCSM at 368 numbers per epoch, PCA included (job 1548628)."""
+        bt = band_logpow(xc)
+        w_n, w_ne, w = out["wave_n"].float(), out["wave_ne"].float(), out["wave"].float()
+        bw = model.band_weight
+        l_n, l_ne, l_nep = [(band_logpow(v) - bt).abs().mean() for v in (w_n, w_ne, w)]
+        low = lowpass_mse(w, xc).mean()
+        l_sn = F.mse_loss(out["spec_n"].float(), psd)
+        l_sne = F.mse_loss(out["spec_ne"].float(), psd)
+        loss = bw * (l_n + l_ne + l_nep) + low + l_sn + l_sne
+        r2w = _r2(w, xc)
+        extra = {"pow_n": l_n.item(), "pow_ne": l_ne.item(), "pow_nep": l_nep.item(), "mse_low": low.item(),
+                 "mse_spec_n": l_sn.item(), "mse_spec_ne": l_sne.item(),
+                 "r2_spec_n": _r2(out["spec_n"].float(), psd).item(),
+                 "r2_spec_ne": _r2(out["spec_ne"].float(), psd).item(),
+                 "r2_pow_n": _r2(band_logpow(w_n), bt).item(), "r2_pow_ne": _r2(band_logpow(w_ne), bt).item(),
+                 "r2_pow": _r2(band_logpow(w), bt).item(), "r2_wave": r2w.item()}
         return loss, r2w, extra
 
     @staticmethod
