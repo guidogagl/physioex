@@ -386,14 +386,19 @@ class MSAETrainer(Trainer):
 
     @staticmethod
     def _step_band(model, out, xc, psd):
-        """Perception-oriented loss: every prefix matches the log band power per second
-        (N, N+E: envelope only); N+E+P adds the phase-exact MSE below ``model.low_hz``.
+        """Perception-oriented loss: N and N+E match the log band power per second on every
+        band (envelope only); N+E+P is phase-exact (MSE) up to ``model.low_hz`` and matches
+        the band power above it.
         Plain MSE drives the unpredictable bands (> 5 Hz) to zero power: 3-50x too weak
         on DCSM at 368 numbers per epoch, PCA included (job 1548628)."""
         bt = band_logpow(xc)
         w_n, w_ne, w = out["wave_n"].float(), out["wave_ne"].float(), out["wave"].float()
         bw = model.band_weight
-        l_n, l_ne, l_nep = [(band_logpow(v) - bt).abs().mean() for v in (w_n, w_ne, w)]
+        l_n, l_ne = [(band_logpow(v) - bt).abs().mean() for v in (w_n, w_ne)]
+        # N+E+P: the spectrum is split, phase-exact MSE up to low_hz and band power only above it
+        # (band power on the low bands too pushes energy in with an uncertain phase: 2-4 Hz phase R^2 0.91 -> 0.7)
+        hi = [i for i, (a, _) in enumerate(POW_BANDS) if a > model.low_hz]
+        l_nep = (band_logpow(w)[..., hi] - bt[..., hi]).abs().mean()
         low = lowpass_mse(w, xc, model.low_hz).mean()
         l_sn = F.mse_loss(out["spec_n"].float(), psd)
         l_sne = F.mse_loss(out["spec_ne"].float(), psd)
