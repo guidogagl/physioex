@@ -183,3 +183,15 @@ def test_load_best_takes_newest_checkpoint(tmp_path):
     m = _model()
     assert load_best(m, str(tmp_path)).endswith("b.pt")
     assert torch.equal(m.dec_p.weight, new.dec_p.weight)
+
+
+def test_band_loss_hybrid_full_mse():
+    from physioex.models.msae import MSAETrainer
+
+    model = _model(loss="band", low_hz=50, pow_hz=4.5).train()
+    loss, _, extra = MSAETrainer._step(model, _batch(), None, torch.device("cpu"))
+    assert torch.isfinite(loss) and np.isfinite(extra["pow_nep"])
+    # low_hz=50 keeps every rfft bin: the low-pass MSE is the plain MSE
+    from physioex.models.msae import lowpass_mse
+    x, y = torch.randn(2, 3000), torch.randn(2, 3000)
+    assert torch.allclose(lowpass_mse(x, y, 50), (x - y).pow(2).mean(-1), rtol=1e-3)

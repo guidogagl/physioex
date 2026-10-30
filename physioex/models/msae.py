@@ -126,7 +126,7 @@ class MSAE(nn.Module):
                  token_sec: float = 1.0, latent_bits: int = 8, n_psd_bins: int = 139,
                  stft_weight: float = 0.1, decoder: str = "time", tf_consistency: float = 0.0,
                  loss: str = "mse", band_weight: float = 1.0, low_hz: float = LOW_HZ,
-                 low_weight: float = 1.0):
+                 low_weight: float = 1.0, pow_hz: float = None):
         super().__init__()
         self.L, self.c, self.dim, self.d_p = sequence_length, sequence_length // 2, dim, d_p
         self.strides = STRIDES[token_sec]
@@ -138,6 +138,7 @@ class MSAE(nn.Module):
         self.tf_consistency = tf_consistency
         assert loss in ("mse", "band"), loss
         self.loss, self.band_weight, self.low_hz, self.low_weight = loss, band_weight, low_hz, low_weight
+        self.pow_hz = low_hz if pow_hz is None else pow_hz  # band power on bands starting above pow_hz
 
         # encoder: multi-scale stem + SEANet downsampling -> (B, dim, T_p)
         ch = [width * 2 ** i for i in range(len(self.strides) + 1)]
@@ -389,7 +390,9 @@ class MSAETrainer(Trainer):
     def _step_band(model, out, xc, psd):
         """Perception-oriented loss: N and N+E match the log band power per second on every
         band (envelope only); N+E+P is phase-exact (MSE) up to ``model.low_hz`` and matches
-        the band power above it.
+        the band power of the bands starting above ``model.pow_hz`` (default ``low_hz``: split
+        spectrum). ``low_hz=50`` with ``pow_hz=4.5`` is the hybrid: MSE on the whole wave, so the
+        phase is kept wherever the budget allows, plus band power against the muting.
         Plain MSE drives the unpredictable bands (> 5 Hz) to zero power: 3-50x too weak
         on DCSM at 368 numbers per epoch, PCA included (job 1548628)."""
         bt = band_logpow(xc)
@@ -398,7 +401,7 @@ class MSAETrainer(Trainer):
         l_n, l_ne = [(band_logpow(v) - bt).abs().mean() for v in (w_n, w_ne)]
         # N+E+P: the spectrum is split, phase-exact MSE up to low_hz and band power only above it
         # (band power on the low bands too pushes energy in with an uncertain phase: 2-4 Hz phase R^2 0.91 -> 0.7)
-        hi = [i for i, (a, _) in enumerate(POW_BANDS) if a > model.low_hz]
+        hi = [i for i, (a, _) in enumerate(POW_BANDS) if a > model.pow_hz]
         l_nep = (band_logpow(w)[..., hi] - bt[..., hi]).abs().mean()
         low = lowpass_mse(w, xc, model.low_hz).mean()
         l_sn = F.mse_loss(out["spec_n"].float(), psd)

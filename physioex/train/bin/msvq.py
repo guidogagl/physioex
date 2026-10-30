@@ -67,6 +67,9 @@ def main():
     ap.add_argument("--loss", choices=("mse", "band"), default="mse",
                     help="msae time decoder: MSE (+0.1 STFT), or log band power per second + MSE below 4 Hz")
     ap.add_argument("--low-hz", type=float, default=4.0, help="msae --loss band: phase-exact MSE up to this frequency")
+    ap.add_argument("--pow-hz", type=float, default=None,
+                    help="msae --loss band: band power on the bands above this frequency (default --low-hz; "
+                         "--low-hz 50 --pow-hz 4.5 = MSE on the whole wave + band power above 4.5 Hz)")
     ap.add_argument("--low-weight", type=float, default=1.0, help="msae --loss band: weight of the MSE up to --low-hz")
     ap.add_argument("--band-weight", type=float, default=1.0, help="msae --loss band: weight of the band-power terms")
     ap.add_argument("--latent-bits", type=int, default=8, help="msae: bit channel of E and P (0 = tanh only)")
@@ -126,7 +129,7 @@ def main():
         model = MSAE(a.seq, width=a.width, dim=a.dim, d_p=a.d_p, token_sec=a.token_sec, latent_bits=a.latent_bits,
                      decoder=a.decoder, tf_consistency=a.tf_consistency,
                      loss=a.loss, band_weight=a.band_weight, low_hz=a.low_hz,
-                     low_weight=a.low_weight)
+                     low_weight=a.low_weight, pow_hz=a.pow_hz)
         opt = torch.optim.AdamW(model.parameters(), lr=a.lr, weight_decay=1e-4)
         n_val = a.epochs * max(1, round(1 / a.valid_ratio))  # the Trainer steps the scheduler at each validation
         opt_kw = dict(optimizer=opt, scheduler=torch.optim.lr_scheduler.CosineAnnealingLR(opt, n_val, eta_min=a.lr / 20))
