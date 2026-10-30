@@ -14,7 +14,7 @@ PCA of the 30 s epoch with as many components as the model's latent numbers, and
 a k-means on raw 1 s segments. For MSAE every prefix is reported (``N``, ``N+E``,
 ``N+E+P``, with the gain of each scale per band; with the "istft" decoder the
 prefixes are compared on the log spectrogram, the waveform only for ``N+E+P``) and the latents are rounded to
-8, 6 and 4 bits (``0`` = continuous ``tanh`` latents) to measure the cost of the bit channel.
+8 down to 2 bits (``0`` = continuous ``tanh`` latents) to measure the cost of the bit channel.
 
     python -m physioex.models.recon_eval --run <run dir> [--cache-dir ...] [--root ...]
 
@@ -211,7 +211,7 @@ def latent_numbers(model) -> int:
 
 
 def evaluate(model, ds, test_ids, train_ids, per_night: int = 250, per_train_night: int = 120,
-             max_train_nights: int = 40, bits: Sequence[int] = (8, 6, 4, 0), seed: int = 0) -> dict:
+             max_train_nights: int = 40, bits: Sequence[int] = (8, 6, 5, 4, 3, 2, 0), seed: int = 0) -> dict:
     """Full audit (see module docstring). Returns the dict written to ``recon_eval.json``."""
     from physioex.models.msae import MSAE
 
