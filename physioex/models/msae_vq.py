@@ -28,6 +28,7 @@ from typing import Dict, Optional, Sequence
 import numpy as np
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 from physioex.models.msae import MSAE, MSAETrainer
 from physioex.models.msvq import EMAVQ, code_stats
@@ -49,14 +50,24 @@ class ResidualVQ(nn.Module):
 
     ``forward(z, k)`` quantizes ``(M, dim)`` with the first ``k`` levels and returns
     ``(z_q, codes (M, k), commitment loss)``; ``z_q`` carries the straight-through gradient.
+
+    ``factor_dim > 0``: factorized, L2-normalized codes (DAC, Kumar et al. 2023). Each level
+    projects the residual to ``factor_dim``, normalizes it, looks it up among unit codewords and
+    projects back; the projections are initialised by PCA in :meth:`kmeans_init`, ``proj_in``
+    is trained by the commitment loss and ``proj_out`` by the loss on ``z_q``.
     """
 
     def __init__(self, n_levels: int, n_codes: int, dim: int, commitment_weight: float = 0.25,
-                 restart_after: int = 30):
+                 restart_after: int = 30, factor_dim: int = 0):
         super().__init__()
         self.n_levels, self.n_codes, self.dim, self.restart_base = n_levels, n_codes, dim, restart_after
-        self.levels = nn.ModuleList([EMAVQ(n_codes, dim, commitment_weight, restart_after=restart_after)
+        self.factor_dim = factor_dim
+        d = factor_dim or dim
+        self.levels = nn.ModuleList([EMAVQ(n_codes, d, commitment_weight, restart_after=restart_after)
                                      for _ in range(n_levels)])
+        if factor_dim:
+            self.proj_in = nn.ModuleList([nn.Linear(dim, d) for _ in range(n_levels)])
+            self.proj_out = nn.ModuleList([nn.Linear(d, dim) for _ in range(n_levels)])
 
     def forward(self, z: torch.Tensor, k: Optional[int] = None):
         with torch.autocast(z.device.type, enabled=False):  # distances and argmin in float32
@@ -64,40 +75,64 @@ class ResidualVQ(nn.Module):
 
     def _forward(self, z: torch.Tensor, k: int):
         r, q_sum, loss, codes = z, torch.zeros_like(z), z.new_zeros(()), []
-        for vq in self.levels[:k]:
+        for l, vq in enumerate(self.levels[:k]):
             # a code is dead after ~4 expected uses without a hit (K / vectors per step grows with K)
             vq.restart_after = max(self.restart_base, int(4 * self.n_codes / max(1, len(z))))
-            q, l_ = vq(r)
-            q = q.detach()  # value of the code (EMAVQ returns r + (q - r).detach())
+            if self.factor_dim:
+                _, l_ = vq(F.normalize(self.proj_in[l](r), dim=1))
+                if self.training:
+                    with torch.no_grad():
+                        vq.codebook.copy_(F.normalize(vq.codebook, dim=1))
+                q = self._out(l, vq.last_idx)  # gradient to proj_out only
+            else:
+                q, l_ = vq(r)
+                q = q.detach()  # value of the code (EMAVQ returns r + (q - r).detach())
             loss = loss + l_
             codes.append(vq.last_idx)
             q_sum = q_sum + q
-            r = r - q
-        return z + (q_sum - z).detach(), torch.stack(codes, 1), loss
+            r = r - q.detach()
+        return z - z.detach() + q_sum, torch.stack(codes, 1), loss
+
+    def _out(self, l: int, idx: torch.Tensor) -> torch.Tensor:
+        c = self.levels[l].codebook[idx]
+        return self.proj_out[l](F.normalize(c, dim=1)) if self.factor_dim else c
 
     def lookup(self, codes: torch.Tensor) -> torch.Tensor:
-        """``(M, k)`` indices -> ``(M, dim)`` sum of the first ``k`` codewords."""
-        return sum(self.levels[l].codebook[codes[:, l]] for l in range(codes.shape[1]))
+        """``(M, k)`` indices -> ``(M, dim)`` sum of the first ``k`` (projected) codewords."""
+        return sum(self._out(l, codes[:, l]) for l in range(codes.shape[1]))
 
     @torch.no_grad()
     def kmeans_init(self, z: torch.Tensor, seed: int = 0) -> None:
-        """k-means on ``z``, then on each residual, level by level."""
+        """k-means on ``z``, then on each residual, level by level (factorized: PCA projections,
+        k-means on the normalized projections)."""
         r = z.detach().float()
         for l, vq in enumerate(self.levels):
-            cb = torch.from_numpy(_kmeans(r.cpu().numpy(), self.n_codes, seed + l)).to(r.device)
+            u = r
+            if self.factor_dim:
+                mu = r.mean(0)
+                basis = torch.linalg.svd(r - mu, full_matrices=False)[2][: self.factor_dim]
+                p = (r - mu) @ basis.T
+                self.proj_in[l].weight.copy_(basis)
+                self.proj_in[l].bias.copy_(-basis @ mu)
+                self.proj_out[l].weight.copy_(basis.T * p.norm(dim=1).median())
+                self.proj_out[l].bias.copy_(mu)
+                u = F.normalize(p, dim=1)
+            cb = torch.from_numpy(_kmeans(u.cpu().numpy(), self.n_codes, seed + l)).to(r.device)
+            if self.factor_dim:
+                cb = F.normalize(cb, dim=1)
             vq.codebook.copy_(cb)
             vq.ema_sum.copy_(cb)
             vq.ema_count.fill_(1.0)
             vq.initialised.fill_(True)
-            d = r.pow(2).sum(1, keepdim=True) + cb.pow(2).sum(1)[None] - 2 * r @ cb.T
-            r = r - cb[d.argmin(1)]
+            d = u.pow(2).sum(1, keepdim=True) + cb.pow(2).sum(1)[None] - 2 * u @ cb.T
+            r = r - self._out(l, d.argmin(1))
 
 
 class MSAEVQ(MSAE):
     """:class:`MSAE` with a :class:`ResidualVQ` on N, E and P (see module docstring)."""
 
     def __init__(self, *args, codes: int = 1024, codes_n: int = 256, levels: Sequence[int] = (4, 8, 8),
-                 q_dropout: float = 0.5, restart_after: int = 30, **kw):
+                 q_dropout: float = 0.5, restart_after: int = 30, factor_dim_n: int = 0, **kw):
         kw["latent_bits"] = 0  # tanh only: the RVQ is the channel
         super().__init__(*args, **kw)
         self.n_codes = {"N": codes_n, "E": codes, "P": codes}
@@ -105,7 +140,7 @@ class MSAEVQ(MSAE):
         self.vq_levels = dict(self.max_levels)  # prefix used in eval
         self.q_dropout = q_dropout
         self.rvq = nn.ModuleDict({
-            "N": ResidualVQ(levels[0], codes_n, self.dim, restart_after=restart_after),
+            "N": ResidualVQ(levels[0], codes_n, self.dim, restart_after=restart_after, factor_dim=factor_dim_n),
             "E": ResidualVQ(levels[1], codes, self.dim, restart_after=restart_after),
             "P": ResidualVQ(levels[2], codes, self.d_p, restart_after=restart_after)})
         self.bypass_vq = False  # continuous latents (for fit_vq_codebooks)

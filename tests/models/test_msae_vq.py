@@ -52,6 +52,26 @@ def test_residual_vq_error_decreases_and_prefix_is_sum():
     assert torch.allclose(zq, rvq.lookup(codes), atol=1e-5)
 
 
+def test_factorized_rvq_prefix_lookup_and_gradients():
+    from physioex.models.msae_vq import ResidualVQ
+
+    torch.manual_seed(0)
+    rvq = ResidualVQ(3, 32, 16, factor_dim=4).eval()
+    z = torch.randn(400, 16)
+    rvq.kmeans_init(z)
+    errs = [(rvq(z, k)[0] - z).pow(2).mean().item() for k in range(1, 4)]
+    assert all(a > b for a, b in zip(errs, errs[1:])), errs
+    zq, codes, _ = rvq(z, 3)
+    assert torch.allclose(zq, rvq.lookup(codes), atol=1e-5)
+    assert torch.allclose(rvq.levels[0].codebook.norm(dim=1), torch.ones(32), atol=1e-5)
+    rvq.train()
+    zg = z.clone().requires_grad_(True)
+    zq, _, loss = rvq(zg)
+    (zq.pow(2).sum() + loss).backward()
+    assert rvq.proj_out[0].weight.grad.abs().sum() > 0 and rvq.proj_in[0].weight.grad.abs().sum() > 0
+    assert zg.grad is not None
+
+
 def test_residual_vq_ema_and_dead_code_restart():
     from physioex.models.msae_vq import ResidualVQ
 
@@ -104,6 +124,16 @@ def test_decode_from_codes_equals_forward():
     x = torch.randn(2, L, 1, 3000)
     out = model(x)
     z = model.embed(model.codes(x))
+    assert torch.allclose(model.decode(z["N"], z["E"], z["P"]), out["wave"], atol=1e-4)
+
+
+def test_factorized_n_decode_from_codes():
+    model = _model(factor_dim_n=4).eval()
+    _init_codebooks(model)
+    x = torch.randn(2, L, 1, 3000)
+    out = model(x)
+    z = model.embed(model.codes(x))
+    assert torch.allclose(z["N"], out["N"], atol=1e-5)
     assert torch.allclose(model.decode(z["N"], z["E"], z["P"]), out["wave"], atol=1e-4)
 
 
