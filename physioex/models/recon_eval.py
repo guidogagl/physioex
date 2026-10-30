@@ -42,13 +42,16 @@ def r2(pred: np.ndarray, y: np.ndarray) -> float:
 
 def band_r2(pred: np.ndarray, target: np.ndarray) -> Dict[str, Dict[str, float]]:
     """R^2 per band (Hz, 1 s rfft bins): with phase, of the amplitude, of the log band power
-    per 1 s segment and per 5 s (``logpow5``). A random-phase signal with the true power per
+    per 1 s segment, per 1 s segment shifted by 0.5 s (``logpow_shift``) and per 5 s (``logpow5``). A random-phase signal with the true power per
     second (oracle) reaches only 0.28 / 0.51 / 0.53 / 0.71 on 5-8 / 9-12 / 13-16 / 17-30 Hz
     per 1 s (chi-square fluctuation of 4-14 bins): ``logpow5`` is the band envelope metric.
     ``pred``, ``target``: ``(M, 3000)`` epochs at 100 Hz."""
     fp = np.fft.rfft(pred.reshape(-1, FS), axis=1)
     ft = np.fft.rfft(target.reshape(-1, FS), axis=1)
-    out = {"phase": {}, "amp": {}, "logpow": {}, "logpow5": {}, "logpow_bias": {}}
+    # the same 1 s segments shifted by 0.5 s: a model trained on the 1 s grid must not fit only that grid
+    fps = np.abs(np.fft.rfft(pred[:, 50:-50].reshape(-1, FS), axis=1)) ** 2
+    fts = np.abs(np.fft.rfft(target[:, 50:-50].reshape(-1, FS), axis=1)) ** 2
+    out = {"phase": {}, "amp": {}, "logpow": {}, "logpow_shift": {}, "logpow5": {}, "logpow_bias": {}}
     for a, b, name in BANDS:
         p, t = fp[:, a:b], ft[:, a:b]
         out["phase"][name] = float(1 - (np.abs(p - t) ** 2).sum() / (np.abs(t - t.mean(0)) ** 2).sum())
@@ -56,6 +59,7 @@ def band_r2(pred: np.ndarray, target: np.ndarray) -> Dict[str, Dict[str, float]]
         out["amp"][name] = float(1 - ((ap - at) ** 2).sum() / ((at - at.mean(0)) ** 2).sum())
         lp, lt = np.log10((ap ** 2).sum(1) + 1e-6), np.log10((at ** 2).sum(1) + 1e-6)
         out["logpow"][name] = r2(lp, lt)
+        out["logpow_shift"][name] = r2(np.log10(fps[:, a:b].sum(1) + 1e-6), np.log10(fts[:, a:b].sum(1) + 1e-6))
         p5, t5 = [np.log10((v ** 2).sum(1).reshape(-1, 6, 5).sum(-1) + 1e-6) for v in (ap, at)]
         out["logpow5"][name] = r2(p5, t5)
         out["logpow_bias"][name] = float((lp - lt).mean())  # log10: < 0 = reconstruction too weak in the band
