@@ -126,7 +126,7 @@ class MSAE(nn.Module):
                  token_sec: float = 1.0, latent_bits: int = 8, n_psd_bins: int = 139,
                  stft_weight: float = 0.1, decoder: str = "time", tf_consistency: float = 0.0,
                  loss: str = "mse", band_weight: float = 1.0, low_hz: float = LOW_HZ,
-                 low_weight: float = 1.0, pow_hz: float = None):
+                 low_weight: float = 1.0, pow_hz: float = None, texture: bool = False):
         super().__init__()
         self.L, self.c, self.dim, self.d_p = sequence_length, sequence_length // 2, dim, d_p
         self.strides = STRIDES[token_sec]
@@ -139,6 +139,7 @@ class MSAE(nn.Module):
         assert loss in ("mse", "band"), loss
         self.loss, self.band_weight, self.low_hz, self.low_weight = loss, band_weight, low_hz, low_weight
         self.pow_hz = low_hz if pow_hz is None else pow_hz  # band power on bands starting above pow_hz
+        self.texture = texture
 
         # encoder: multi-scale stem + SEANet downsampling -> (B, dim, T_p)
         ch = [width * 2 ** i for i in range(len(self.strides) + 1)]
@@ -178,6 +179,13 @@ class MSAE(nn.Module):
             self.register_buffer("lm_mean", torch.zeros(TF_BINS))
             self.register_buffer("lm_std", torch.ones(TF_BINS))
             nn.init.normal_(self.pos_frame, std=0.02)
+        if texture:
+            # noise-excited texture: band-passed white noise x per-token log10 amplitude per band above pow_hz.
+            # Starts nearly silent (gain 10^-3); trained only by the band power loss (see MSAETrainer).
+            assert decoder == "time" and loss == "mse", "texture needs the time decoder and loss=\"mse\""
+            self.tex_bands = [i for i, (a, _) in enumerate(POW_BANDS) if a > self.pow_hz]
+            self.tex_head = nn.Linear(dim, len(self.tex_bands))
+            nn.init.zeros_(self.tex_head.weight); nn.init.constant_(self.tex_head.bias, -3.0)
         # epoch spectrum from N (prediction) and from N+E
         self.spec_n, self.spec_ne = _mlp(dim, n_psd_bins), _mlp(2 * dim, n_psd_bins)
         self.register_buffer("psd_mean", torch.zeros(n_psd_bins))
@@ -230,9 +238,10 @@ class MSAE(nn.Module):
         return torch.cat([z["N"][:, None], z["E"][:, None], self.dec_p(z["P"]) + self.pos_dec], 1)
 
     # --- decoder -----------------------------------------------------------
-    def decode(self, n, e=None, p=None) -> torch.Tensor:
+    def decode(self, n, e=None, p=None, texture: bool = False):
         """One decoder for every prefix: ``D(N)``, ``D(N, E)``, ``D(N, E, P)`` -> ``(B, 3000)``.
-        Missing latents count as zero."""
+        Missing latents count as zero. ``texture=True`` (model built with ``texture``) returns
+        ``(deterministic wave, noise texture)``."""
         z = self.dec_n(n)
         if e is not None:
             z = z + self.dec_e(e)
@@ -243,7 +252,26 @@ class MSAE(nn.Module):
             z = z + self.dec_p.bias
         if e is None:
             z = z + self.dec_e.bias[None, None]
-        return self.up(self.dec_tok(z).transpose(1, 2))[:, 0]
+        h = self.dec_tok(z)
+        wave = self.up(h.transpose(1, 2))[:, 0]
+        if not texture:
+            return wave
+        return wave, self.noise_texture(h)
+
+    def noise_texture(self, h: torch.Tensor) -> torch.Tensor:
+        """``(B, T_p, dim)`` decoder tokens -> ``(B, 3000)`` sum over the bands above ``pow_hz`` of
+        unit-RMS band-passed white noise x the amplitude predicted per token (linear in time).
+        The phase is random: this restores the band power that the MSE path mutes."""
+        g = 10 ** self.tex_head(h).float().clamp(-6, 2)  # (B, T_p, n_bands)
+        g = F.interpolate(g.transpose(1, 2), size=EPOCH, mode="linear", align_corners=True)
+        spec = torch.fft.rfft(torch.randn(len(h), EPOCH, device=h.device), dim=-1)
+        f = torch.fft.rfftfreq(EPOCH, d=0.01, device=h.device)
+        bands = []
+        for i in self.tex_bands:
+            a, b = POW_BANDS[i]
+            nb = torch.fft.irfft(spec * ((f >= a) & (f < b)), n=EPOCH, dim=-1)
+            bands.append(nb / (nb.pow(2).mean(-1, keepdim=True).sqrt() + 1e-8))
+        return (g * torch.stack(bands, 1)).sum(1)
 
     def decode_tf(self, n, e=None, p=None):
         """Spectral decoder (``decoder="istft"``): z-scored log|S| ``(B, TF_FRAMES, TF_BINS)`` for
@@ -279,7 +307,11 @@ class MSAE(nn.Module):
             return z
         z["wave_n"] = self.decode(z["N"])
         z["wave_ne"] = self.decode(z["N"], z["E"])
-        z["wave"] = self.decode(z["N"], z["E"], z["P"])
+        if self.texture:
+            z["wave_det"], z["texture"] = self.decode(z["N"], z["E"], z["P"], texture=True)
+            z["wave"] = z["wave_det"] + z["texture"]
+        else:
+            z["wave"] = self.decode(z["N"], z["E"], z["P"])
         return z
 
     def bits_per_epoch(self) -> int:
@@ -368,7 +400,8 @@ class MSAETrainer(Trainer):
             return MSAETrainer._step_tf(model, out, xc, psd)
         if model.loss == "band":
             return MSAETrainer._step_band(model, out, xc, psd)
-        w_n, w_ne, w = out["wave_n"].float(), out["wave_ne"].float(), out["wave"].float()
+        w_n, w_ne = out["wave_n"].float(), out["wave_ne"].float()
+        w = out["wave_det" if model.texture else "wave"].float()
         sw = model.stft_weight
         l_n, _ = stft_losses(w_n, xc, windows=(200, 400), phase_win=0)
         l_ne, _ = stft_losses(w_ne, xc, windows=(100, 200, 400), phase_win=0)
@@ -377,13 +410,21 @@ class MSAETrainer(Trainer):
         l_sn = F.mse_loss(out["spec_n"].float(), psd)
         l_sne = F.mse_loss(out["spec_ne"].float(), psd)
         loss = (mse + sw * (l_n + l_ne + mag)).mean() + l_sn + l_sne
+        tex = {}
+        if model.texture:
+            # the band power reaches only the texture (and through it the latents), never the MSE wave
+            hi = model.tex_bands
+            bt = band_logpow(xc)[..., hi]
+            l_tex = (band_logpow(w.detach() + out["texture"].float())[..., hi] - bt).abs().mean()
+            loss = loss + model.band_weight * l_tex
+            tex = {"pow_tex": l_tex.item(), "r2_wave_tex": _r2(out["wave"].float(), xc).item()}
         r2w = _r2(w, xc)
         extra = {"env_n": l_n.mean().item(), "spec_ne_stft": l_ne.mean().item(), "mse": mse.mean().item(),
                  "stft": mag.mean().item(), "phase": phase.mean().item(),
                  "mse_spec_n": l_sn.item(), "mse_spec_ne": l_sne.item(),
                  "r2_spec_n": _r2(out["spec_n"].float(), psd).item(),
                  "r2_spec_ne": _r2(out["spec_ne"].float(), psd).item(),
-                 "r2_wave_n": _r2(w_n, xc).item(), "r2_wave_ne": _r2(w_ne, xc).item(), "r2_wave": r2w.item()}
+                 "r2_wave_n": _r2(w_n, xc).item(), "r2_wave_ne": _r2(w_ne, xc).item(), "r2_wave": r2w.item(), **tex}
         return loss, r2w, extra
 
     @staticmethod

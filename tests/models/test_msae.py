@@ -195,3 +195,28 @@ def test_band_loss_hybrid_full_mse():
     from physioex.models.msae import lowpass_mse
     x, y = torch.randn(2, 3000), torch.randn(2, 3000)
     assert torch.allclose(lowpass_mse(x, y, 50), (x - y).pow(2).mean(-1), rtol=1e-3)
+
+
+def test_texture_head_power_and_gradient_isolation():
+    from physioex.models.msae import MSAETrainer, band_logpow
+
+    model = _model(texture=True, pow_hz=4.5).eval()
+    assert model.tex_bands == [2, 3, 4, 5, 6]
+    out = model(torch.randn(2, L, 1, 3000))
+    assert torch.allclose(out["wave"], out["wave_det"] + out["texture"])
+    # gain 10^-3 at init: the texture is nearly silent; 9-13 Hz band of a 10^0 gain carries that band only
+    assert out["texture"].abs().max() < 0.05
+    with torch.no_grad():
+        model.tex_head.bias.copy_(torch.tensor([-6.0, 0.0, -6.0, -6.0, -6.0]))
+        bp = band_logpow(model(torch.randn(2, L, 1, 3000))["texture"])
+    # 1 s rectangular segments leak across the 9 and 13 Hz edges: one decade of margin, on average
+    assert bp[..., 3].mean() > bp[..., 2].mean() + 1 and bp[..., 3].mean() > bp[..., 4].mean() + 0.5
+    # the band power loss never reaches the deterministic decoder path (up)
+    model.train()
+    loss, _, extra = MSAETrainer._step(model, _batch(), None, torch.device("cpu"))
+    assert "pow_tex" in extra and torch.isfinite(loss)
+    model.zero_grad()
+    out = model(torch.stack([b for b in _batch()["signals"]["EEG_0"]])[:, :, None])
+    (band_logpow(out["wave_det"].detach() + out["texture"])[..., model.tex_bands]).mean().backward()
+    assert model.up[0].weight.grad is None or model.up[0].weight.grad.abs().sum() == 0
+    assert model.tex_head.weight.grad.abs().sum() > 0

@@ -106,6 +106,8 @@ def model_waves(model, windows: np.ndarray, batch: int = 64) -> Dict[str, np.nda
         keys = {"wave": "NEP", "tf_n": "tf_N", "tf_ne": "tf_NE", "tf": "tf_NEP"}
     elif isinstance(model, MSAE):
         keys = {"wave_n": "N", "wave_ne": "NE", "wave": "NEP"}
+        if model.texture:  # NEP = deterministic + noise texture; NEP_det = the MSE wave alone
+            keys["wave_det"] = "NEP_det"
     else:
         keys = {"wave": "NEP"}
     acc = {k: [] for k in keys.values()}
@@ -238,7 +240,8 @@ def _load_run(run_dir: str, cache_dir=None, root=None, weights="best"):
         from physioex.models.msae import MSAE
 
         model = MSAE(a["seq"], width=a["width"], dim=a["dim"] or 128, d_p=a["d_p"], token_sec=a["token_sec"],
-                     latent_bits=a["latent_bits"], decoder=a.get("decoder", "time"))
+                     latent_bits=a["latent_bits"], decoder=a.get("decoder", "time"),
+                     pow_hz=a.get("pow_hz") or a.get("low_hz", 4.0), texture=a.get("texture", False))
     else:
         from physioex.models.msvq import MSVQ
 
