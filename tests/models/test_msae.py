@@ -220,3 +220,18 @@ def test_texture_head_power_and_gradient_isolation():
     (band_logpow(out["wave_det"].detach() + out["texture"])[..., model.tex_bands]).mean().backward()
     assert model.up[0].weight.grad is None or model.up[0].weight.grad.abs().sum() == 0
     assert model.tex_head.weight.grad.abs().sum() > 0
+
+
+def test_band_r2_logpow5_forgives_random_phase():
+    from physioex.models.recon_eval import band_r2
+
+    rng = np.random.default_rng(0)
+    t = np.arange(3000) / 100
+    env = lambda: np.repeat(10 ** rng.uniform(-0.4, 0.4, 6), 500)  # band envelope per 5 s
+    noise = lambda: np.fft.irfft(np.where((np.arange(1501) >= 270) & (np.arange(1501) < 390),
+                                          np.fft.rfft(rng.standard_normal(3000)), 0), n=3000)
+    envs = [env() for _ in range(40)]
+    y = np.stack([e * noise() for e in envs])
+    pr = np.stack([e * noise() for e in envs])  # same envelope, independent phase
+    b = band_r2(pr, y)
+    assert b["phase"]["9-12"] < 0.1 and b["logpow5"]["9-12"] > 0.85 and b["logpow5"]["9-12"] > b["logpow"]["9-12"] + 0.1
