@@ -15,7 +15,10 @@ is not evidence of equality; only the margin makes the claim.
 Metrics come from ``recon_eval.json`` (``per_night``) and ``probe.json`` / ``probe_b<bits>.json``
 (:mod:`physioex.models.latent_probe`)::
 
-    python -m physioex.models.noninferiority --ref RUN@8 --cand RUN@4 [--cand OTHER_RUN@8]
+    python -m physioex.models.noninferiority --ref RUN@8 --cand RUN@4 [--cand OTHER_RUN@vq_N4E8P6]
+
+``RUN@<bits>`` reads the bit depth of an MSAE, ``RUN@vq_N{a}E{b}P{c}`` a prefix of RVQ levels of an
+MSAE-VQ; ``--split valid`` reads the ``*_valid.json`` files (selection on the validation nights).
 """
 from __future__ import annotations
 
@@ -60,10 +63,12 @@ def _pair(a: Tuple[List[int], List[float]], b: Tuple[List[int], List[float]]):
     return [va[g] for g in common], [vb[g] for g in common]
 
 
-def arm_metrics(spec: str) -> Dict[str, Tuple[List[int], List[float]]]:
-    """``RUN_DIR@BITS`` -> {metric: (nights, values)} from the run's JSON files."""
+def arm_metrics(spec: str, split: str = "test") -> Dict[str, Tuple[List[int], List[float]]]:
+    """``RUN_DIR@BITS`` or ``RUN_DIR@vq_N..E..P..`` -> {metric: (nights, values)} from the run's JSON files."""
     run, bits = spec.rsplit("@", 1)
-    rec = json.load(open(os.path.join(run, "recon_eval.json")))["model"][f"bits_{bits}"]
+    sfx = "" if split == "test" else "_valid"
+    key = bits if bits.startswith("vq_") else f"bits_{bits}"
+    rec = json.load(open(os.path.join(run, f"recon_eval{sfx}.json")))["model"][key]
     wave = rec.get("NEP_det", rec["NEP"])  # texture models: the deterministic wave carries the phase
     out = {"wave_r2": (wave["per_night"]["night"], wave["per_night"]["r2"])}
     pn = rec["NEP"]["per_night"]  # band power on the full output (with the texture, if any)
@@ -71,12 +76,13 @@ def arm_metrics(spec: str) -> Dict[str, Tuple[List[int], List[float]]]:
         out[f"logpow5_{b}"] = (pn["night"], pn["logpow5"][b])
     if "spec_n" in rec:
         out["spec_n_r2"] = (rec["spec_n"]["per_night"]["night"], rec["spec_n"]["per_night"]["r2"])
-    for name in (f"probe_b{bits}.json", "probe.json"):
+    names = [f"probe_{key}{sfx}.json"] if key.startswith("vq_") else [f"probe_b{bits}{sfx}.json", f"probe{sfx}.json"]
+    for name in names:
         path = os.path.join(run, name)
         if not os.path.exists(path):
             continue
         pr = json.load(open(path))
-        if name == "probe.json" and int(pr.get("latent_bits", 8)) != int(bits):
+        if name == f"probe{sfx}.json" and int(pr.get("latent_bits", 8)) != int(bits):
             continue
         st = pr["staging"]["NE"]
         out["kappa_NE"] = (st["nights"], st["kappa_per_night"])
@@ -86,10 +92,10 @@ def arm_metrics(spec: str) -> Dict[str, Tuple[List[int], List[float]]]:
     return out
 
 
-def compare(ref: str, cand: str, margins: Dict[str, float] = None, alpha: float = 0.05) -> dict:
+def compare(ref: str, cand: str, margins: Dict[str, float] = None, alpha: float = 0.05, split: str = "test") -> dict:
     margins = margins or MARGINS
-    mr, mc = arm_metrics(ref), arm_metrics(cand)
-    res = {"ref": ref, "cand": cand, "alpha": alpha, "metrics": {}}
+    mr, mc = arm_metrics(ref, split), arm_metrics(cand, split)
+    res = {"ref": ref, "cand": cand, "alpha": alpha, "split": split, "metrics": {}}
     for k, m in margins.items():
         if k in mr and k in mc:
             r, c = _pair(mr[k], mc[k])
@@ -105,11 +111,12 @@ def main():
     ap.add_argument("--ref", required=True, help="RUN_DIR@BITS")
     ap.add_argument("--cand", required=True, action="append", help="RUN_DIR@BITS (repeatable)")
     ap.add_argument("--alpha", type=float, default=0.05)
+    ap.add_argument("--split", choices=("test", "valid"), default="test")
     ap.add_argument("--out", default=None, help="JSON with every comparison")
     a = ap.parse_args()
     allres = []
     for c in a.cand:
-        r = compare(a.ref, c, alpha=a.alpha)
+        r = compare(a.ref, c, alpha=a.alpha, split=a.split)
         allres.append(r)
         print(f"\n{c}  vs  {a.ref}:  {'NON-INFERIOR' if r['noninferior'] else 'not shown'}  (IUT p = {r['p_iut']:.4f})"
               + (f"  missing: {r['missing']}" if r["missing"] else ""))

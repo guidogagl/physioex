@@ -211,9 +211,13 @@ def latent_numbers(model) -> int:
 
 
 def evaluate(model, ds, test_ids, train_ids, per_night: int = 250, per_train_night: int = 120,
-             max_train_nights: int = 40, bits: Sequence[int] = (8, 6, 5, 4, 3, 2, 0), seed: int = 0) -> dict:
-    """Full audit (see module docstring). Returns the dict written to ``recon_eval.json``."""
+             max_train_nights: int = 40, bits: Sequence[int] = (8, 6, 5, 4, 3, 2, 0), seed: int = 0,
+             vq_grid: Sequence[dict] = None) -> dict:
+    """Full audit (see module docstring). Returns the dict written to ``recon_eval.json``.
+    MSAE-VQ: one entry per prefix of RVQ levels in ``vq_grid`` (default
+    :func:`~physioex.models.msae_vq.default_vq_grid`), keyed ``vq_N{a}E{b}P{c}``, instead of ``bits``."""
     from physioex.models.msae import MSAE
+    from physioex.models.msae_vq import MSAEVQ, default_vq_grid, vq_key
 
     windows, target, night = sample_windows(ds, test_ids, per_night, seed, return_night=True)
     _, train_epochs = sample_windows(ds, list(train_ids)[:max_train_nights], per_train_night, seed + 1, centres_only=True)
@@ -226,13 +230,23 @@ def evaluate(model, ds, test_ids, train_ids, per_night: int = 250, per_train_nig
         res["compression_numbers"] = 3000 / n_num
         res["compression_bits"] = 3000 * 16 / model.bits_per_epoch()
         b0 = model.latent_bits
+        if isinstance(model, MSAEVQ):  # (setting, key) pairs: RVQ prefixes instead of bit depths
+            lv0 = dict(model.vq_levels)
+            settings = [(g, vq_key(g)) for g in (vq_grid or default_vq_grid(model.max_levels))]
+            res["bits_per_epoch"] = {k: model.bits_per_epoch(g) for g, k in settings}
+            res["compression_bits"] = {k: 3000 * 16 / v for k, v in res["bits_per_epoch"].items()}
+        else:
+            settings = [(b, f"bits_{b}") for b in bits]
         tf_target = None
         if model.decoder == "istft":
             from physioex.models.msae import tf_logmag, tf_stft
 
             tf_target = tf_logmag(tf_stft(torch.from_numpy(target))).numpy()
-        for b in bits:
-            model.latent_bits = b
+        for b, key in settings:
+            if isinstance(model, MSAEVQ):
+                model.vq_levels = b
+            else:
+                model.latent_bits = b
             waves = model_waves(model, windows)
             if tf_target is not None:
                 rep = {"NEP": _report(waves["NEP"], target)}
@@ -241,7 +255,7 @@ def evaluate(model, ds, test_ids, train_ids, per_night: int = 250, per_train_nig
                 for hi, lo in (("NE", "N"), ("NEP", "NE")):
                     rep[f"gain_{hi[-1]}"] = {band: rep[f"tf_{hi}"][band] - rep[f"tf_{lo}"][band]
                                              for band in rep[f"tf_{hi}"]}
-                res["model"][f"bits_{b}"] = rep
+                res["model"][key] = rep
                 continue
             rep = {k: _report(v, target, night) for k, v in waves.items()}
             if model.decoder == "time":
@@ -250,9 +264,11 @@ def evaluate(model, ds, test_ids, train_ids, per_night: int = 250, per_train_nig
                 rep[f"gain_{hi[-1]}"] = {kind: {band: rep[hi][kind][band] - rep[lo][kind][band] for band in rep[hi][kind]}
                                          for kind in ("phase", "amp", "logpow")}
                 rep[f"gain_{hi[-1]}"]["r2"] = rep[hi]["r2"] - rep[lo]["r2"]
-            res["model"][f"bits_{b}"] = rep
+            res["model"][key] = rep
         model.latent_bits = b0
-        if 0 in bits and b0 in bits:
+        if isinstance(model, MSAEVQ):
+            model.vq_levels = lv0
+        if not isinstance(model, MSAEVQ) and 0 in bits and b0 in bits:
             res["drop_r2_rounding"] = res["model"]["bits_0"]["NEP"]["r2"] - res["model"][f"bits_{b0}"]["NEP"]["r2"]
     else:
         res["model"]["default"] = {k: _report(v, target) for k, v in model_waves(model, windows).items()}
@@ -279,12 +295,17 @@ def load_best(model, run_dir: str):
 
 def model_from_args(a: dict):
     """Untrained MSAE / MSVQ built from the ``args`` of a run's ``run.json``."""
-    if a.get("model", "msvq") == "msae":
+    if a.get("model", "msvq") in ("msae", "msae_vq"):
         from physioex.models.msae import MSAE
+        from physioex.models.msae_vq import MSAEVQ
 
-        return MSAE(a["seq"], width=a["width"], dim=a["dim"] or 128, d_p=a["d_p"], token_sec=a["token_sec"],
-                    latent_bits=a["latent_bits"], decoder=a.get("decoder", "time"),
-                    pow_hz=a.get("pow_hz") or a.get("low_hz", 4.0), texture=a.get("texture", False))
+        kw = dict(width=a["width"], dim=a["dim"] or 128, d_p=a["d_p"], token_sec=a["token_sec"],
+                  latent_bits=a["latent_bits"], decoder=a.get("decoder", "time"),
+                  pow_hz=a.get("pow_hz") or a.get("low_hz", 4.0), texture=a.get("texture", False))
+        if a["model"] == "msae":
+            return MSAE(a["seq"], **kw)
+        return MSAEVQ(a["seq"], codes=a["vq_codes"], codes_n=a["vq_codes_n"], levels=a["vq_levels"],
+                      q_dropout=a["q_dropout"], **kw)
     from physioex.models.msvq import MSVQ
 
     return MSVQ(a["seq"], a["dim"] or 64, *a["codes"], quantize=not a["no_vq"])
@@ -316,12 +337,20 @@ def main():
     ap.add_argument("--out", default=None, help="default: <run>/recon_eval.json")
     ap.add_argument("--weights", choices=("best", "final"), default="best",
                     help="best = newest ckpt/*.pt (best validation), final = model.pt")
+    ap.add_argument("--split", choices=("test", "valid"), default="test",
+                    help="nights evaluated (valid: selection, writes recon_eval_valid.json)")
+    ap.add_argument("--vq", nargs="*", default=None, help="msae_vq: prefixes like N4E8P6 (default: axis grid)")
     a = ap.parse_args()
     run, ds, model = _load_run(a.run, a.cache_dir, a.root, a.weights)
     if torch.cuda.is_available():
         model = model.cuda()
-    res = evaluate(model, ds, run["splits"]["test"], run["splits"]["train"], per_night=a.per_night)
-    with open(a.out or os.path.join(a.run, "recon_eval.json"), "w") as f:
+    from physioex.models.msae_vq import parse_vq_key
+
+    grid = [parse_vq_key(k) for k in a.vq] if a.vq else None
+    res = evaluate(model, ds, run["splits"][a.split], run["splits"]["train"], per_night=a.per_night, vq_grid=grid)
+    res["split"] = a.split
+    name = "recon_eval.json" if a.split == "test" else "recon_eval_valid.json"
+    with open(a.out or os.path.join(a.run, name), "w") as f:
         json.dump(res, f, indent=1)
     print(json.dumps({k: v for k, v in res.items() if k not in ("model", "baselines")}), flush=True)
 

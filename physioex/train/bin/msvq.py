@@ -30,10 +30,16 @@ from physioex.data.collate import dict_collate_fn
 from physioex.data.datasets import get_dataset
 from physioex.data.steps import clean_pipelines
 from physioex.models.msae import MSAE, MSAETrainer, fit_msae_norms
+from physioex.models.msae_vq import MSAEVQ, MSAEVQTrainer, fit_vq_codebooks
 from physioex.models.msvq import (
     MSVQ, MSVQTrainer, compute_msvq_targets, fit_msvq_norms,
 )
 from physioex.models.recon_eval import evaluate as recon_evaluate, load_best
+
+
+# MSAE architecture args copied from the --init run (msae_vq)
+MSAE_ARCH = ("seq", "width", "dim", "d_p", "token_sec", "decoder", "tf_consistency", "loss", "band_weight",
+             "low_hz", "low_weight", "pow_hz", "texture")
 
 
 def _loader(ds, ids, n_max, batch, workers, shuffle, seed):
@@ -55,7 +61,7 @@ def main():
     ap.add_argument("--out", required=True)
     ap.add_argument("--fold", type=int, default=0)
     ap.add_argument("--seq", type=int, default=41)
-    ap.add_argument("--model", choices=("msvq", "msae"), default="msvq")
+    ap.add_argument("--model", choices=("msvq", "msae", "msae_vq"), default="msvq")
     ap.add_argument("--dim", type=int, default=None, help="latent width (default: 64 msvq, 128 msae)")
     ap.add_argument("--width", type=int, default=32, help="msae: channels of the first SEANet stage")
     ap.add_argument("--d-p", type=int, default=8, help="msae: numbers per P token")
@@ -77,6 +83,15 @@ def main():
     ap.add_argument("--band-weight", type=float, default=1.0, help="msae --loss band: weight of the band-power terms")
     ap.add_argument("--latent-bits", type=int, default=8, help="msae: bit channel of E and P (0 = tanh only)")
     ap.add_argument("--codes", type=int, nargs=3, default=(32, 128, 256), metavar=("N", "E", "P"))
+    ap.add_argument("--vq-codes", type=int, default=1024, help="msae_vq: codes per level of E and P")
+    ap.add_argument("--vq-codes-n", type=int, default=256, help="msae_vq: codes per level of N")
+    ap.add_argument("--vq-levels", type=int, nargs=3, default=(4, 8, 8), metavar=("N", "E", "P"),
+                    help="msae_vq: RVQ levels per scale")
+    ap.add_argument("--q-dropout", type=float, default=0.5, help="msae_vq: probability of a random prefix of levels")
+    ap.add_argument("--init", default=None,
+                    help="msae_vq: MSAE run dir; its architecture args and best weights are used")
+    ap.add_argument("--posthoc", action="store_true",
+                    help="msae_vq: k-means codebooks on the frozen --init model, no training")
     ap.add_argument("--targets", type=int, nargs=2, default=(64, 64), metavar=("E", "P"))
     ap.add_argument("--no-vq", action="store_true", help="continuous latents (upper bound)")
     ap.add_argument("--restart-after", type=int, default=30, help="steps a code may stay unused before restart")
@@ -93,7 +108,11 @@ def main():
     ap.add_argument("--max-subjects", type=int, default=0, help="use only the first N subjects (smoke tests)")
     ap.add_argument("--recon-per-night", type=int, default=250, help="test epochs per night in recon_eval (0 = skip)")
     a = ap.parse_args()
-    a.dim = a.dim or (128 if a.model == "msae" else 64)
+    if a.init:  # the MSAE architecture comes from the run being quantized
+        for k, v in json.load(open(os.path.join(a.init, "run.json")))["args"].items():
+            if k in MSAE_ARCH:
+                setattr(a, k, v)
+    a.dim = a.dim or (128 if a.model in ("msae", "msae_vq") else 64)
 
     os.makedirs(a.out, exist_ok=True)
     torch.manual_seed(a.fold)
@@ -127,13 +146,19 @@ def main():
     print(f"[msvq] windows: train {n_tr}, valid {n_va}", flush=True)
 
     opt_kw = {}
-    if a.model == "msae":
+    if a.model in ("msae", "msae_vq"):
         trainer = MSAETrainer
-        model = MSAE(a.seq, width=a.width, dim=a.dim, d_p=a.d_p, token_sec=a.token_sec, latent_bits=a.latent_bits,
-                     decoder=a.decoder, tf_consistency=a.tf_consistency,
-                     loss=a.loss, band_weight=a.band_weight, low_hz=a.low_hz,
-                     low_weight=a.low_weight, pow_hz=a.pow_hz,
-                     texture=a.texture)
+        arch = dict(width=a.width, dim=a.dim, d_p=a.d_p, token_sec=a.token_sec, latent_bits=a.latent_bits,
+                    decoder=a.decoder, tf_consistency=a.tf_consistency, loss=a.loss, band_weight=a.band_weight,
+                    low_hz=a.low_hz, low_weight=a.low_weight, pow_hz=a.pow_hz, texture=a.texture)
+        if a.model == "msae":
+            model = MSAE(a.seq, **arch)
+        else:
+            trainer = MSAEVQTrainer
+            model = MSAEVQ(a.seq, codes=a.vq_codes, codes_n=a.vq_codes_n, levels=a.vq_levels,
+                           q_dropout=a.q_dropout, restart_after=a.restart_after, **arch)
+            if a.init:
+                print(f"[msae_vq] weights from {load_best(model, a.init)}", flush=True)
         opt = torch.optim.AdamW(model.parameters(), lr=a.lr, weight_decay=1e-4)
         n_val = a.epochs * max(1, round(1 / a.valid_ratio))  # the Trainer steps the scheduler at each validation
         opt_kw = dict(optimizer=opt, scheduler=torch.optim.lr_scheduler.CosineAnnealingLR(opt, n_val, eta_min=a.lr / 20))
@@ -145,13 +170,25 @@ def main():
         model = MSVQ(a.seq, a.dim, *a.codes, quantize=not a.no_vq, n_targets_e=n_te, n_targets_p=n_tp,
                      restart_after=a.restart_after)
         model.targets, model.ce_weight = targets, a.ce_weight
-    (fit_msae_norms if a.model == "msae" else fit_msvq_norms)(model, tr)
-    model = trainer.train(model, (tr, va), checkpoint_path=os.path.join(a.out, "ckpt"), max_epochs=a.epochs,
-                          lr=a.lr, weight_decay=1e-4, valid_interval_ratio=a.valid_ratio,
-                          log_confusion_matrix=False, early_stopping_patience=a.patience,
-                          logger="tensorboard", run_name=a.model, seed=a.fold,
-                          gpu_id=0 if torch.cuda.is_available() else None, grad_clip=a.grad_clip or None,
-                          **opt_kw)
+    if not (a.model == "msae_vq" and a.init):  # the norms come with the MSAE weights
+        (fit_msae_norms if a.model in ("msae", "msae_vq") else fit_msvq_norms)(model, tr)
+    if a.model == "msae_vq":
+        if torch.cuda.is_available():
+            model = model.cuda()
+        t1 = time.time()
+        used = fit_vq_codebooks(model, tr, seed=a.fold)
+        print(f"[msae_vq] k-means codebooks on {used} vectors in {time.time() - t1:.0f}s, "
+              f"{model.bits_per_epoch()} bits per epoch at full depth", flush=True)
+    if a.posthoc:
+        os.makedirs(os.path.join(a.out, "ckpt"), exist_ok=True)
+        torch.save(model.state_dict(), os.path.join(a.out, "ckpt", "posthoc.pt"))
+    else:
+        model = trainer.train(model, (tr, va), checkpoint_path=os.path.join(a.out, "ckpt"), max_epochs=a.epochs,
+                              lr=a.lr, weight_decay=1e-4, valid_interval_ratio=a.valid_ratio,
+                              log_confusion_matrix=False, early_stopping_patience=a.patience,
+                              logger="tensorboard", run_name=a.model, seed=a.fold,
+                              gpu_id=0 if torch.cuda.is_available() else None, grad_clip=a.grad_clip or None,
+                              **opt_kw)
     torch.save(model.state_dict(), os.path.join(a.out, "model.pt"))
     # evaluate the best validation checkpoint, not the last weights (a late divergence would hide it)
     best = load_best(model, a.out)
@@ -166,7 +203,11 @@ def main():
             _, _, extra = trainer._step(model, batch, None, device)
             for k, v in extra.items():
                 acc.setdefault(k, []).append(v)
-            if getattr(model, "quantize_codes", False):
+            if isinstance(model, MSAEVQ):
+                for s_, c_ in model.last_codes.items():
+                    for l_ in range(c_.shape[-1]):
+                        codes.setdefault(f"{s_}{l_ + 1}", []).append(c_[..., l_].reshape(-1).cpu())
+            elif getattr(model, "quantize_codes", False):
                 from physioex.data.collate import stack_channels
                 q = model.quantize(stack_channels(batch).to(device))
                 for s_, k_ in (("N", "k_n"), ("E", "k_e"), ("P", "k_p")):
@@ -177,13 +218,23 @@ def main():
         for s_ in codes:
             perp, used = code_stats(torch.cat(codes[s_]), model.n_codes[s_])
             ev[f"perplexity_{s_}"], ev[f"used_{s_}"] = perp, used
+    if isinstance(model, MSAEVQ):
+        from physioex.models.msvq import code_stats
+        for k_, v_ in codes.items():
+            if v_:
+                ev[f"perplexity_{k_}"], ev[f"used_{k_}"] = code_stats(torch.cat(v_), model.n_codes[k_[0]])
+        ev["bits_per_epoch"] = model.bits_per_epoch()
     with open(os.path.join(a.out, "eval.json"), "w") as f:
         json.dump(ev, f, indent=1)
     print("[msvq] valid " + " ".join(f"{k}={v:.3f}" for k, v in ev.items()), flush=True)
 
     if a.recon_per_night:
-        rec = recon_evaluate(model, ds, test_ids, train_ids, per_night=a.recon_per_night, seed=a.fold)
-        with open(os.path.join(a.out, "recon_eval.json"), "w") as f:
+        # msae_vq: the prefix of levels is chosen on the validation nights; the test nights are scored once, later
+        split = "valid" if a.model == "msae_vq" else "test"
+        rec = recon_evaluate(model, ds, valid_ids if split == "valid" else test_ids, train_ids,
+                             per_night=a.recon_per_night, seed=a.fold)
+        rec["split"] = split
+        with open(os.path.join(a.out, "recon_eval.json" if split == "test" else "recon_eval_valid.json"), "w") as f:
             json.dump(rec, f, indent=1)
         print(f"[msvq] recon_eval: {rec['n_test_epochs']} test epochs written", flush=True)
 

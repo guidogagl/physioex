@@ -146,10 +146,13 @@ def spindle_probe(z_tr, c_tr, g_tr, z_te, c_te, g_te, max_train: int = 200000, s
 
 
 def evaluate(model, ds, test_ids, train_ids, per_night: int = 250, max_train_nights: int = 40, seed: int = 0,
-             bits: int = None) -> dict:
-    """``bits``: round E and P to this many bits for the whole probe (default: the model's)."""
+             bits: int = None, vq: dict = None) -> dict:
+    """``bits``: round E and P to this many bits for the whole probe (default: the model's).
+    ``vq``: MSAE-VQ prefix of RVQ levels ``{"N": a, "E": b, "P": c}`` (default: the model's)."""
     if bits is not None:
         model.latent_bits = bits
+    if vq is not None:
+        model.vq_levels = dict(vq)
     from physioex.models.msvq import epoch_logpsd
     from physioex.models.recon_eval import model_waves
 
@@ -172,7 +175,7 @@ def evaluate(model, ds, test_ids, train_ids, per_night: int = 250, max_train_nig
     ftr["pca"], fte["pca"] = (ctr - mu) @ v.T, (cte - mu) @ v.T
     keep = ytr >= 0  # unscored epochs out
     keep_te = yte >= 0
-    res = {"latent_bits": int(model.latent_bits), "n_train_epochs": int(keep.sum()), "n_test_epochs": int(keep_te.sum()), "numbers_per_epoch": n_num,
+    res = {"latent_bits": int(model.latent_bits), "vq_levels": getattr(model, "vq_levels", None), "n_train_epochs": int(keep.sum()), "n_test_epochs": int(keep_te.sum()), "numbers_per_epoch": n_num,
            "staging": staging_probe({k: f[keep] for k, f in ftr.items()}, ytr[keep],
                                     {k: f[keep_te] for k, f in fte.items()}, yte[keep_te], gte[keep_te]),
            "spindle_proxy": spindle_probe(ztr, ctr, gtr, zte, cte, gte, seed=seed, decoded=model_waves(model, wte))}
@@ -189,12 +192,19 @@ def main():
     ap.add_argument("--per-night", type=int, default=250)
     ap.add_argument("--weights", choices=("best", "final"), default="best")
     ap.add_argument("--bits", type=int, default=None, help="round E and P to this many bits (writes probe_b<bits>.json)")
+    ap.add_argument("--vq", default=None, help="msae_vq prefix, e.g. N4E8P6 (writes probe_vq_N4E8P6.json)")
+    ap.add_argument("--split", choices=("test", "valid"), default="test", help="valid: adds _valid to the file name")
     a = ap.parse_args()
     run, ds, model = _load_run(a.run, a.cache_dir, a.root, a.weights)
     if torch.cuda.is_available():
         model = model.cuda()
-    res = evaluate(model, ds, run["splits"]["test"], run["splits"]["train"], per_night=a.per_night, bits=a.bits)
-    with open(os.path.join(a.run, "probe.json" if a.bits is None else f"probe_b{a.bits}.json"), "w") as f:
+    from physioex.models.msae_vq import parse_vq_key, vq_key
+
+    vq = parse_vq_key(a.vq) if a.vq else None
+    res = evaluate(model, ds, run["splits"][a.split], run["splits"]["train"], per_night=a.per_night, bits=a.bits, vq=vq)
+    res["split"] = a.split
+    name = "probe" if a.bits is None and vq is None else (f"probe_{vq_key(vq)}" if vq else f"probe_b{a.bits}")
+    with open(os.path.join(a.run, name + ("_valid" if a.split == "valid" else "") + ".json"), "w") as f:
         json.dump(res, f, indent=1)
     print(json.dumps({k: {m: round(v["kappa_night_mean"], 3) for m, v in res["staging"].items()} if k == "staging" else v
                       for k, v in res.items()}), flush=True)
