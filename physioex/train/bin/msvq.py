@@ -65,6 +65,7 @@ def main():
                     help="msae istft: weight of the log-spectrogram loss re-measured on the iSTFT output")
     ap.add_argument("--loss", choices=("mse", "band"), default="mse",
                     help="msae time decoder: MSE (+0.1 STFT), or log band power per second + MSE below 4 Hz")
+    ap.add_argument("--low-hz", type=float, default=4.0, help="msae --loss band: phase-exact MSE up to this frequency")
     ap.add_argument("--band-weight", type=float, default=1.0, help="msae --loss band: weight of the band-power terms")
     ap.add_argument("--latent-bits", type=int, default=8, help="msae: bit channel of E and P (0 = tanh only)")
     ap.add_argument("--codes", type=int, nargs=3, default=(32, 128, 256), metavar=("N", "E", "P"))
@@ -122,7 +123,7 @@ def main():
         trainer = MSAETrainer
         model = MSAE(a.seq, width=a.width, dim=a.dim, d_p=a.d_p, token_sec=a.token_sec, latent_bits=a.latent_bits,
                      decoder=a.decoder, tf_consistency=a.tf_consistency,
-                     loss=a.loss, band_weight=a.band_weight)
+                     loss=a.loss, band_weight=a.band_weight, low_hz=a.low_hz)
         opt = torch.optim.AdamW(model.parameters(), lr=a.lr, weight_decay=1e-4)
         n_val = a.epochs * max(1, round(1 / a.valid_ratio))  # the Trainer steps the scheduler at each validation
         opt_kw = dict(optimizer=opt, scheduler=torch.optim.lr_scheduler.CosineAnnealingLR(opt, n_val, eta_min=a.lr / 20))

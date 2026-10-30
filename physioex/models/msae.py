@@ -125,7 +125,7 @@ class MSAE(nn.Module):
     def __init__(self, sequence_length: int = 41, width: int = 32, dim: int = 128, d_p: int = 8,
                  token_sec: float = 1.0, latent_bits: int = 8, n_psd_bins: int = 139,
                  stft_weight: float = 0.1, decoder: str = "time", tf_consistency: float = 0.0,
-                 loss: str = "mse", band_weight: float = 1.0):
+                 loss: str = "mse", band_weight: float = 1.0, low_hz: float = LOW_HZ):
         super().__init__()
         self.L, self.c, self.dim, self.d_p = sequence_length, sequence_length // 2, dim, d_p
         self.strides = STRIDES[token_sec]
@@ -136,7 +136,7 @@ class MSAE(nn.Module):
         self.decoder = decoder
         self.tf_consistency = tf_consistency
         assert loss in ("mse", "band"), loss
-        self.loss, self.band_weight = loss, band_weight
+        self.loss, self.band_weight, self.low_hz = loss, band_weight, low_hz
 
         # encoder: multi-scale stem + SEANet downsampling -> (B, dim, T_p)
         ch = [width * 2 ** i for i in range(len(self.strides) + 1)]
@@ -387,14 +387,14 @@ class MSAETrainer(Trainer):
     @staticmethod
     def _step_band(model, out, xc, psd):
         """Perception-oriented loss: every prefix matches the log band power per second
-        (N, N+E: envelope only); N+E+P adds the phase-exact MSE below ``LOW_HZ``.
+        (N, N+E: envelope only); N+E+P adds the phase-exact MSE below ``model.low_hz``.
         Plain MSE drives the unpredictable bands (> 5 Hz) to zero power: 3-50x too weak
         on DCSM at 368 numbers per epoch, PCA included (job 1548628)."""
         bt = band_logpow(xc)
         w_n, w_ne, w = out["wave_n"].float(), out["wave_ne"].float(), out["wave"].float()
         bw = model.band_weight
         l_n, l_ne, l_nep = [(band_logpow(v) - bt).abs().mean() for v in (w_n, w_ne, w)]
-        low = lowpass_mse(w, xc).mean()
+        low = lowpass_mse(w, xc, model.low_hz).mean()
         l_sn = F.mse_loss(out["spec_n"].float(), psd)
         l_sne = F.mse_loss(out["spec_ne"].float(), psd)
         loss = bw * (l_n + l_ne + l_nep) + low + l_sn + l_sne
