@@ -198,20 +198,34 @@ def attention_by_stage(attn: torch.Tensor, y: np.ndarray) -> dict:
 
 
 def train(model, data, epochs: int = 30, lr: float = 3e-4, batch: int = 512, weight_decay: float = 0.05,
-          patience: int = 6, device="cpu", seed: int = 0, log=print):
-    """AdamW + cosine; best state on the mean per-night kappa of ``data["valid"]``."""
+          patience: int = 6, device="cpu", seed: int = 0, sched: str = "onecycle", evals_per_epoch: int = 1,
+          log=print):
+    """AdamW; best state on the mean per-night kappa of ``data["valid"]``, evaluated
+    ``evals_per_epoch`` times per epoch. ``sched``: ``"onecycle"`` (peak at 5%) or ``"cosine"``
+    (2% linear warm-up, then cosine to 0 over all ``epochs``). ``patience`` counts evaluations
+    without improvement (0 = no early stopping)."""
+    import math
+
     torch.manual_seed(seed)
     model.to(device)
     tr = data["train"]
     opt = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=weight_decay)
-    steps = epochs * ((len(tr["y"]) + batch - 1) // batch)
-    sched = torch.optim.lr_scheduler.OneCycleLR(opt, lr, total_steps=steps, pct_start=0.05)
+    per_epoch = (len(tr["y"]) + batch - 1) // batch
+    steps = epochs * per_epoch
+    if sched == "onecycle":
+        sch = torch.optim.lr_scheduler.OneCycleLR(opt, lr, total_steps=steps, pct_start=0.05)
+    else:
+        warm = max(1, int(0.02 * steps))
+        sch = torch.optim.lr_scheduler.LambdaLR(
+            opt, lambda t: (t + 1) / warm if t < warm else 0.5 * (1 + math.cos(math.pi * (t - warm) / max(1, steps - warm))))
+    eval_at = {round(per_epoch * (q + 1) / evals_per_epoch) for q in range(evals_per_epoch)}
     best, best_state, wait, hist = -1.0, None, 0, []
     g = torch.Generator().manual_seed(seed)
+    va = data["valid"]
     for ep in range(epochs):
         model.train()
-        perm, tot = torch.randperm(len(tr["y"]), generator=g), 0.0
-        for i in range(0, len(perm), batch):
+        perm, tot, seen = torch.randperm(len(tr["y"]), generator=g), 0.0, 0
+        for b, i in enumerate(range(0, len(perm), batch), 1):
             idx = perm[i:i + batch]
             logits = model(tr["N"][idx].to(device), tr["E"][idx].to(device), tr["P"][idx].to(device))
             loss = F.cross_entropy(logits, tr["y"][idx].to(device))
@@ -219,19 +233,22 @@ def train(model, data, epochs: int = 30, lr: float = 3e-4, batch: int = 512, wei
             loss.backward()
             nn.utils.clip_grad_norm_(model.parameters(), 1.0)
             opt.step()
-            sched.step()
-            tot += loss.item() * len(idx)
-        va = data["valid"]
-        k = metrics(predict(model, va, device=device)[0].argmax(1).numpy(), va["y"].numpy(), va["night"])["kappa_night_mean"]
-        hist.append({"epoch": ep + 1, "train_loss": tot / len(perm), "valid_kappa": k})
-        log(f"[qformer_stager] epoch {ep + 1}/{epochs} loss {tot / len(perm):.4f} valid kappa {k:.4f}")
-        if k > best:
-            best, wait = k, 0
-            best_state = {n: v.detach().cpu().clone() for n, v in model.state_dict().items()}
-        else:
-            wait += 1
-            if wait >= patience:
-                break
+            sch.step()
+            tot, seen = tot + loss.item() * len(idx), seen + len(idx)
+            if b not in eval_at:
+                continue
+            k = metrics(predict(model, va, device=device)[0].argmax(1).numpy(), va["y"].numpy(), va["night"])["kappa_night_mean"]
+            model.train()
+            at = round(ep + b / per_epoch, 3)
+            hist.append({"epoch": at, "train_loss": tot / seen, "valid_kappa": k, "lr": opt.param_groups[0]["lr"]})
+            log(f"[qformer_stager] epoch {at}/{epochs} loss {tot / seen:.4f} valid kappa {k:.4f}")
+            if k > best:
+                best, wait = k, 0
+                best_state = {n: v.detach().cpu().clone() for n, v in model.state_dict().items()}
+            else:
+                wait += 1
+        if patience and wait >= patience:
+            break
     model.load_state_dict(best_state)
     return hist
 
@@ -269,7 +286,8 @@ def _train(a):
     model = ARCHS[a.arch](dim=tr["N"].shape[-1], d_p=tr["P"].shape[-1], n_tok=tr["P"].shape[1], d=a.d, k=a.k,
                           layers=a.layers, heads=a.heads, dropout=a.dropout)
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    hist = train(model, data, epochs=a.epochs, lr=a.lr, batch=a.batch, patience=a.patience, device=device, seed=a.seed)
+    hist = train(model, data, epochs=a.epochs, lr=a.lr, batch=a.batch, patience=a.patience, device=device, seed=a.seed,
+                 sched=a.sched, evals_per_epoch=a.evals_per_epoch)
     res = {"args": vars(a), "params": sum(p.numel() for p in model.parameters()), "history": hist}
     for s in ("valid", "test"):  # test read once, with the checkpoint chosen on valid
         logits, attn = predict(model, data[s], device=device)
@@ -304,7 +322,9 @@ def main():
     t.add_argument("--heads", type=int, default=4)
     t.add_argument("--dropout", type=float, default=0.1)
     t.add_argument("--epochs", type=int, default=30)
-    t.add_argument("--patience", type=int, default=6)
+    t.add_argument("--patience", type=int, default=6, help="evaluations without improvement (0 = off)")
+    t.add_argument("--sched", choices=("onecycle", "cosine"), default="onecycle")
+    t.add_argument("--evals-per-epoch", type=int, default=1)
     t.add_argument("--lr", type=float, default=3e-4)
     t.add_argument("--batch", type=int, default=512)
     t.add_argument("--seed", type=int, default=0)

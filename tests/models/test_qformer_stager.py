@@ -27,9 +27,10 @@ def test_shapes_and_attention():
 def test_training_learns_stage_from_p():
     from physioex.models.qformer_stager import QFormerStager, standardize, train, predict, metrics
 
+    torch.manual_seed(0)
     data = standardize({"train": _fake(1200, 0), "valid": _fake(300, 1), "test": _fake(300, 2)})
     m = QFormerStager(dim=16, d_p=4, n_tok=6, d=32, k=4, layers=1, heads=2, dropout=0.0)
-    train(m, data, epochs=25, lr=3e-3, batch=128, patience=25, log=lambda *_: None)
+    train(m, data, epochs=25, lr=3e-3, batch=128, patience=0, sched="cosine", evals_per_epoch=2, log=lambda *_: None)
     r = metrics(predict(m, data["test"])[0].argmax(1).numpy(), data["test"]["y"].numpy(), data["test"]["night"])
     assert r["kappa_pooled"] > 0.8, r["kappa_pooled"]
 
