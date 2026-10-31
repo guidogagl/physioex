@@ -60,6 +60,10 @@ def main():
     ap.add_argument("--cache-dir", default=None, help="cache root (the folder that contains v1/)")
     ap.add_argument("--out", required=True)
     ap.add_argument("--fold", type=int, default=0)
+    ap.add_argument("--split", choices=("default", "grouped"), default="default",
+                    help="default: BaseDataset.get_splits (random 70/15/15); grouped: subject-grouped 80/10/10 "
+                         "per site (physioex.data.splits, the ProtoSleepNet release split)")
+    ap.add_argument("--splits", default=None, help="--split grouped: read the ids from this splits JSON")
     ap.add_argument("--seq", type=int, default=41)
     ap.add_argument("--model", choices=("msvq", "msae", "msae_vq"), default="msvq")
     ap.add_argument("--dim", type=int, default=None, help="latent width (default: 64 msvq, 128 msae)")
@@ -130,7 +134,19 @@ def main():
         keep = {s.subject_id for s in ds._subjects[: a.max_subjects]}
         ds._subjects = [s for s in ds._subjects if s.subject_id in keep]
         ds._build_index()
-    train_ids, valid_ids, test_ids = ds.get_splits(fold=a.fold)
+    if a.split == "grouped":  # subject-grouped 80/10/10 of the ProtoSleepNet release
+        from physioex.data.splits import grouped_splits, load_site_splits
+
+        have = [s.subject_id for s in ds._subjects]
+        if a.splits:
+            sp = load_site_splits(a.splits, a.dataset)
+            missing = sum(len(set(x) - set(have)) for x in sp)
+            train_ids, valid_ids, test_ids = ([s for s in x if s in set(have)] for x in sp)
+            print(f"[msvq] splits from {a.splits} ({missing} subjects not in the dataset)", flush=True)
+        else:
+            train_ids, valid_ids, test_ids = grouped_splits(have, a.dataset)
+    else:
+        train_ids, valid_ids, test_ids = ds.get_splits(fold=a.fold)
     print(f"[msvq] {a.dataset}: {len(ds._subjects)} subjects, {len(ds)} windows "
           f"(train/valid/test subjects {len(train_ids)}/{len(valid_ids)}/{len(test_ids)})", flush=True)
 
