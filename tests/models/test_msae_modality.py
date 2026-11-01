@@ -76,3 +76,20 @@ def test_vq_without_n_codes_and_bits():
     assert m.bits_per_epoch() == 2 * 4 + 60 * 2 * 4
     e = m.embed(z["codes"])
     assert torch.equal(e["N"], torch.zeros(2, m.dim)) and torch.allclose(e["E"], z["E"], atol=1e-5)
+
+
+def test_modality_metrics_shapes_and_perfect_reconstruction():
+    import numpy as np
+    from physioex.models.msae import MSAE
+    from physioex.models.recon_eval_modality import metrics
+
+    rng = np.random.default_rng(0)
+    night = np.repeat(np.arange(3), 20)
+    for kw, n in ((dict(fs=200, recon="texture", pow_bands=EMG_BANDS, psd_band=(10, 90), seg_sec=0.5), 6000),
+                  (dict(texture=True, pow_bands=EOG_BANDS, pow_hz=4.0), 3000)):
+        m = MSAE(5, width=8, token_sec=0.5, d_p=4, **kw)
+        x = rng.standard_normal((60, n)) * (1 + 3 * (rng.random((60, 1)) > 0.5))
+        r = metrics(m, x, x, night)
+        assert all(abs(v - 1) < 1e-6 for v in r["logpow5"].values()) and r["event_auc"] > 0.99
+        assert len(r["per_night"]["event_auc"]) == 3
+        assert ("env" in r) == (kw.get("recon") == "texture") and ("wave_low" in r) != ("env" in r)

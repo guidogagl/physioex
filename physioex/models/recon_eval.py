@@ -97,7 +97,8 @@ def spec_r2_per_night(model, windows: np.ndarray, night: np.ndarray, batch: int 
         xb = torch.from_numpy(windows[i:i + batch])[:, :, None].to(device)
         out = model(xb)
         acc["spec_n"].append(out["spec_n"].float().cpu().numpy()); acc["spec_ne"].append(out["spec_ne"].float().cpu().numpy())
-        t = (epoch_logpsd(xb[:, xb.shape[1] // 2, 0].float()) - model.psd_mean) / model.psd_std
+        xc = xb[:, xb.shape[1] // 2, 0].float()
+        t = ((model.logpsd(xc) if hasattr(model, "logpsd") else epoch_logpsd(xc)) - model.psd_mean) / model.psd_std
         acc["target"].append(t.cpu().numpy())
     a = {k: np.concatenate(v) for k, v in acc.items()}
     res = {}
