@@ -478,14 +478,14 @@ def fit_msvq_norms(model: MSVQ, loader, max_batches: int = 50) -> None:
 # ----------------------------------------------------------------------------
 
 
-def epoch_logpsd(x: torch.Tensor, fs: int = FS, seg: int = 400, fmax: float = 35.0) -> torch.Tensor:
-    """Welch log-PSD of 30 s epochs, 4 s Hann segments, 50% overlap, bins 0.5-35 Hz
-    (0.25 Hz resolution): ``(..., 3000) -> (..., n_bins)``."""
+def epoch_logpsd(x: torch.Tensor, fs: int = FS, seg: int = 400, fmax: float = 35.0, fmin: float = 0.5) -> torch.Tensor:
+    """Welch log-PSD of 30 s epochs, 4 s Hann segments, 50% overlap, bins ``fmin``-``fmax``
+    (default 0.5-35 Hz, 0.25 Hz resolution): ``(..., 3000) -> (..., n_bins)``."""
     w = torch.hann_window(seg, device=x.device, dtype=x.dtype)
     s = x.unfold(-1, seg, seg // 2)
     p = torch.fft.rfft(s * w, dim=-1).abs().pow(2).mean(-2)
     f = torch.fft.rfftfreq(seg, 1 / fs)
-    return torch.log(p[..., (f >= 0.5) & (f <= fmax)] + 1e-6)
+    return torch.log(p[..., (f >= fmin) & (f <= fmax)] + 1e-6)
 
 
 def patch_spectrum(x: torch.Tensor):

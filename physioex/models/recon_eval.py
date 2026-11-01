@@ -293,6 +293,32 @@ def load_best(model, run_dir: str):
     return path
 
 
+def modality_kwargs(a: dict) -> dict:
+    """MSAE keyword arguments of the modality (EOG / EMG, 01.11.2026) from run args; empty for
+    the EEG runs before them, so their models are rebuilt exactly as trained."""
+    kw = {}
+    for k in ("fs", "pow_bands", "psd_band", "recon", "seg_sec"):
+        if a.get(k) is not None:
+            kw[k] = a[k]
+    if a.get("no_n"):
+        kw["use_n"] = False
+    return kw
+
+
+def channel_pipelines(a: dict) -> dict:
+    """Pipelines of the clean channels; ``resample`` (EMG: 200 Hz) adds a Resample step to the
+    run's channel (and changes its cache hash, so the native-rate cache stays as it is)."""
+    from physioex.data.pipeline import PreprocessingPipeline
+    from physioex.data.steps import clean_pipelines
+    from physioex.data.steps.normalize import NanToZero, RobustScale
+    from physioex.data.steps.resample import Resample
+
+    p = clean_pipelines()
+    if a.get("resample"):
+        p[a.get("channel", "EEG_clean")] = PreprocessingPipeline([NanToZero(), Resample(a["resample"]), RobustScale()])
+    return p
+
+
 def model_from_args(a: dict):
     """Untrained MSAE / MSVQ built from the ``args`` of a run's ``run.json``."""
     if a.get("model", "msvq") in ("msae", "msae_vq"):
@@ -301,7 +327,7 @@ def model_from_args(a: dict):
 
         kw = dict(width=a["width"], dim=a["dim"] or 128, d_p=a["d_p"], token_sec=a["token_sec"],
                   latent_bits=a["latent_bits"], decoder=a.get("decoder", "time"),
-                  pow_hz=a.get("pow_hz") or a.get("low_hz", 4.0), texture=a.get("texture", False))
+                  pow_hz=a.get("pow_hz") or a.get("low_hz", 4.0), texture=a.get("texture", False), **modality_kwargs(a))
         if a["model"] == "msae":
             return MSAE(a["seq"], **kw)
         return MSAEVQ(a["seq"], codes=a["vq_codes"], codes_n=a["vq_codes_n"], levels=a["vq_levels"],
@@ -318,7 +344,7 @@ def _load_run(run_dir: str, cache_dir=None, root=None, weights="best"):
 
     run = json.load(open(os.path.join(run_dir, "run.json")))
     a = run["args"]
-    kw = dict(channels=["EEG_clean"], pipelines=clean_pipelines(), sequence_length=a["seq"],
+    kw = dict(channels=[a.get("channel", "EEG_clean")], pipelines=channel_pipelines(a), sequence_length=a["seq"],
               cache_dir=cache_dir or a.get("cache_dir"), trim_mode="main_period")
     if root or a.get("root"):
         kw["root"] = root or a["root"]

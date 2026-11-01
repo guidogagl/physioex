@@ -38,9 +38,19 @@ SEANet blocks re-implemented after EnCodec (Defossez et al. 2022, MIT licence,
 https://github.com/facebookresearch/encodec).
 
 Input: ``(B, L, 1, 3000)`` clean EEG at 100 Hz, L odd (centre = epoch ``t``).
+
+Other modalities (01.11.2026): ``fs`` (100 or 200 Hz; at 200 Hz one more stride-2
+stage keeps the same tokens), ``pow_bands`` (bands of the band-power terms and of the
+texture), ``psd_band`` (bins of the epoch log-PSD heads) and ``recon``:
+``"wave"`` (default, as above) or ``"texture"`` (EMG: amplitude-modulated noise, the
+waveform has no meaning; every prefix is decoded as noise texture only and trained on
+the log band power per ``seg_sec`` segment). ``use_n=False`` drops N (ablation: the
+FiLM layers get zeros, the decoder only the bias of N). The defaults reproduce the
+EEG model exactly.
 """
 from __future__ import annotations
 
+import math
 from typing import Dict, Sequence
 
 import torch
@@ -57,6 +67,18 @@ POW_BANDS = ((1, 2), (2, 5), (5, 9), (9, 13), (13, 17), (17, 31), (31, 51))
 LOW_HZ = 4  # "band" loss: phase-exact MSE only up to here
 TF_WIN, TF_HOP = 100, 50  # spectrogram of the "istft" decoder: 1 s Hann, 0.5 s hop (COLA), 51 bins x 61 frames
 TF_BINS, TF_FRAMES = TF_WIN // 2 + 1, EPOCH // TF_HOP + 1
+
+
+def stem_kernels(fs: int) -> tuple:
+    """Kernels of :class:`MultiScaleStem` (0.5 s ... 50 ms) at ``fs``, odd."""
+    return tuple(int(round(k * fs / 100)) | 1 for k in (51, 25, 11, 5))
+
+
+def psd_bins(fs: int, band=(0.5, 35.0), seg_sec: float = 4.0) -> int:
+    """Number of Welch bins of :func:`physioex.models.msvq.epoch_logpsd` in ``band``."""
+    seg = int(seg_sec * fs)
+    f = torch.fft.rfftfreq(seg, 1 / fs)
+    return int(((f >= band[0]) & (f <= band[1])).sum())
 
 
 def tf_stft(x: torch.Tensor) -> torch.Tensor:
@@ -123,17 +145,29 @@ class MSAE(nn.Module):
     """Hierarchical continuous autoencoder N + E + P (see module docstring)."""
 
     def __init__(self, sequence_length: int = 41, width: int = 32, dim: int = 128, d_p: int = 8,
-                 token_sec: float = 1.0, latent_bits: int = 8, n_psd_bins: int = 139,
+                 token_sec: float = 1.0, latent_bits: int = 8, n_psd_bins: int = None,
                  stft_weight: float = 0.1, decoder: str = "time", tf_consistency: float = 0.0,
                  loss: str = "mse", band_weight: float = 1.0, low_hz: float = LOW_HZ,
-                 low_weight: float = 1.0, pow_hz: float = None, texture: bool = False):
+                 low_weight: float = 1.0, pow_hz: float = None, texture: bool = False, fs: int = 100,
+                 pow_bands: Sequence[Sequence[float]] = None, psd_band: Sequence[float] = (0.5, 35.0),
+                 recon: str = "wave", seg_sec: float = 1.0, use_n: bool = True):
         super().__init__()
+        assert fs in (100, 200), fs
+        assert recon in ("wave", "texture"), recon
         self.L, self.c, self.dim, self.d_p = sequence_length, sequence_length // 2, dim, d_p
-        self.strides = STRIDES[token_sec]
-        self.n_tok = EPOCH // (self.strides[0] * self.strides[1] * self.strides[2])
+        self.fs, self.epoch = fs, 30 * fs
+        self.pow_bands = tuple(tuple(b) for b in (pow_bands or POW_BANDS))
+        self.psd_band = tuple(psd_band)
+        self.recon, self.seg_sec, self.use_n = recon, seg_sec, use_n
+        if n_psd_bins is None or (fs, tuple(psd_band)) != (100, (0.5, 35.0)):
+            n_psd_bins = psd_bins(fs, psd_band)
+        # at 200 Hz one more stride-2 stage: the same tokens as at 100 Hz
+        self.strides = (2,) * (fs // 100 - 1) + STRIDES[token_sec]
+        self.n_tok = self.epoch // math.prod(self.strides)
         self.latent_bits = latent_bits
         self.stft_weight = stft_weight
         assert decoder in ("time", "istft"), decoder
+        assert decoder == "time" or fs == 100, "the istft decoder is 100 Hz only"
         self.decoder = decoder
         self.tf_consistency = tf_consistency
         assert loss in ("mse", "band"), loss
@@ -142,8 +176,8 @@ class MSAE(nn.Module):
         self.texture = texture
 
         # encoder: multi-scale stem + SEANet downsampling -> (B, dim, T_p)
-        ch = [width * 2 ** i for i in range(len(self.strides) + 1)]
-        self.stem = MultiScaleStem(width)
+        ch = [width * 2 ** min(i, 3) for i in range(len(self.strides) + 1)]  # capped at 8x width (EEG: 3 stages)
+        self.stem = MultiScaleStem(width, stem_kernels(fs))
         self.down = nn.Sequential(*[_down(ch[i], ch[i + 1], s) for i, s in enumerate(self.strides)],
                                   nn.ELU(), nn.Conv1d(ch[-1], dim, 3, padding=1))
         self.pos_tok = nn.Parameter(torch.zeros(1, self.n_tok, dim))
@@ -165,7 +199,9 @@ class MSAE(nn.Module):
         self.dec_p, self.dec_e, self.dec_n = nn.Linear(d_p, dim), nn.Linear(dim, dim), nn.Linear(dim, dim)
         self.pos_dec = nn.Parameter(torch.zeros(1, self.n_tok, dim))
         self.dec_tok = _transformer(dim, 2)
-        if decoder == "time":
+        if recon == "texture":
+            pass  # no waveform decoder: every prefix is noise texture (see noise_texture)
+        elif decoder == "time":
             self.up = nn.Sequential(nn.Conv1d(dim, ch[-1], 3, padding=1),
                                     *[_up(ch[i + 1], ch[i], s) for i, s in reversed(list(enumerate(self.strides)))],
                                     nn.ELU(), nn.Conv1d(ch[0], 1, 7, padding=3))
@@ -179,11 +215,14 @@ class MSAE(nn.Module):
             self.register_buffer("lm_mean", torch.zeros(TF_BINS))
             self.register_buffer("lm_std", torch.ones(TF_BINS))
             nn.init.normal_(self.pos_frame, std=0.02)
+        if recon == "texture":
+            self.texture = texture = True
+            self.pow_hz = -1.0  # every band is texture
         if texture:
             # noise-excited texture: band-passed white noise x per-token log10 amplitude per band above pow_hz.
             # Starts nearly silent (gain 10^-3); trained only by the band power loss (see MSAETrainer).
             assert decoder == "time" and loss == "mse", "texture needs the time decoder and loss=\"mse\""
-            self.tex_bands = [i for i, (a, _) in enumerate(POW_BANDS) if a > self.pow_hz]
+            self.tex_bands = [i for i, (a, _) in enumerate(self.pow_bands) if a > self.pow_hz]
             self.tex_head = nn.Linear(dim, len(self.tex_bands))
             nn.init.zeros_(self.tex_head.weight); nn.init.constant_(self.tex_head.bias, -3.0)
         # epoch spectrum from N (prediction) and from N+E
@@ -198,16 +237,18 @@ class MSAE(nn.Module):
 
     # --- encoder -----------------------------------------------------------
     def features(self, x: torch.Tensor) -> torch.Tensor:
-        """``(B, 3000) -> (B, T_p, dim)`` token features (stem, SEANet, transformer)."""
+        """``(B, epoch) -> (B, T_p, dim)`` token features (stem, SEANet, transformer)."""
         h = self.down(self.stem(x[:, None])).transpose(1, 2)
         return self.enc_tok(h + self.pos_tok)
 
     def encode_context(self, x: torch.Tensor) -> torch.Tensor:
         """N from the neighbours' mean token features (no gradient into the encoder); t masked."""
         B, L = x.shape[:2]
+        if not self.use_n:  # ablation: no context
+            return x.new_zeros(B, self.dim)
         idx = [i for i in range(L) if i != self.c]
         with torch.no_grad():
-            f = self.features(x[:, idx].reshape(-1, EPOCH)).mean(1)
+            f = self.features(x[:, idx].reshape(-1, self.epoch)).mean(1)
         z = self.n_in(f).reshape(B, L - 1, -1)
         z = torch.cat([z[:, :self.c], self.mask_token.expand(B, 1, -1), z[:, self.c:]], 1)
         return self.enc_n(z + self.pos_epoch)[:, self.c]
@@ -253,6 +294,9 @@ class MSAE(nn.Module):
         if e is None:
             z = z + self.dec_e.bias[None, None]
         h = self.dec_tok(z)
+        if self.recon == "texture":
+            tex = self.noise_texture(h)
+            return (torch.zeros_like(tex), tex) if texture else tex
         wave = self.up(h.transpose(1, 2))[:, 0]
         if not texture:
             return wave
@@ -263,13 +307,13 @@ class MSAE(nn.Module):
         unit-RMS band-passed white noise x the amplitude predicted per token (linear in time).
         The phase is random: this restores the band power that the MSE path mutes."""
         g = 10 ** self.tex_head(h).float().clamp(-6, 2)  # (B, T_p, n_bands)
-        g = F.interpolate(g.transpose(1, 2), size=EPOCH, mode="linear", align_corners=True)
-        spec = torch.fft.rfft(torch.randn(len(h), EPOCH, device=h.device), dim=-1)
-        f = torch.fft.rfftfreq(EPOCH, d=0.01, device=h.device)
+        g = F.interpolate(g.transpose(1, 2), size=self.epoch, mode="linear", align_corners=True)
+        spec = torch.fft.rfft(torch.randn(len(h), self.epoch, device=h.device), dim=-1)
+        f = torch.fft.rfftfreq(self.epoch, d=1 / self.fs, device=h.device)
         bands = []
         for i in self.tex_bands:
-            a, b = POW_BANDS[i]
-            nb = torch.fft.irfft(spec * ((f >= a) & (f < b)), n=EPOCH, dim=-1)
+            a, b = self.pow_bands[i]
+            nb = torch.fft.irfft(spec * ((f >= a) & (f < b)), n=self.epoch, dim=-1)
             bands.append(nb / (nb.pow(2).mean(-1, keepdim=True).sqrt() + 1e-8))
         return (g * torch.stack(bands, 1)).sum(1)
 
@@ -294,6 +338,16 @@ class MSAE(nn.Module):
     def tf_to_wave(self, mz: torch.Tensor, ph: torch.Tensor) -> torch.Tensor:
         mag = torch.exp(mz.float() * self.lm_std + self.lm_mean)
         return tf_istft(torch.complex(mag * ph[..., 0], mag * ph[..., 1]))
+
+    def logpsd(self, x: torch.Tensor) -> torch.Tensor:
+        """Epoch log-PSD of the spectral heads at this model's ``fs`` and ``psd_band``."""
+        return epoch_logpsd(x, fs=self.fs, seg=4 * self.fs, fmin=self.psd_band[0], fmax=self.psd_band[1])
+
+    def band_logpow(self, x: torch.Tensor) -> torch.Tensor:
+        return band_logpow(x, self.fs, self.pow_bands, self.seg_sec)
+
+    def grid_shift(self, *xs: torch.Tensor):
+        return grid_shift(self.training, *xs, seg=int(self.seg_sec * self.fs))
 
     def forward(self, x: torch.Tensor) -> Dict[str, torch.Tensor]:
         z = self.encode(x)
@@ -350,7 +404,17 @@ def fit_msae_norms(model: MSAE, loader, max_batches: int = 50) -> None:
     from physioex.data.collate import stack_channels
     from physioex.models.msvq import fit_msvq_norms
 
-    fit_msvq_norms(model, loader, max_batches)
+    if model.fs != 100 or model.psd_band != (0.5, 35.0):
+        ps = []  # the patch-spectrum norms of MSVQ are unused by MSAE and 100 Hz only
+        for i, batch in enumerate(loader):
+            if i >= max_batches:
+                break
+            x = stack_channels(batch)[:, :, 0].float()
+            ps.append(model.logpsd(x[:, x.shape[1] // 2]))
+        ps = torch.cat(ps)
+        model.psd_mean.copy_(ps.mean(0)); model.psd_std.copy_(ps.std(0) + 1e-6)
+    else:
+        fit_msvq_norms(model, loader, max_batches)
     if model.decoder != "istft":
         return
     lm = []
@@ -363,29 +427,34 @@ def fit_msae_norms(model: MSAE, loader, max_batches: int = 50) -> None:
     model.lm_mean.copy_(lm.mean(0)); model.lm_std.copy_(lm.std(0) + 1e-6)
 
 
-def grid_shift(training: bool, *xs: torch.Tensor):
+def grid_shift(training: bool, *xs: torch.Tensor, seg: int = 100):
     """In training, crop every ``(B, 3000)`` wave to ``[o, o + 2900)`` with one random ``o`` in
     [0, 100): the 1 s segments of :func:`band_logpow` then move at every step. On a fixed grid
     the band loss reached R^2 1.00 per second on that grid but 0.67-0.86 on the grid shifted
     by 0.5 s (job 1548648, 608 numbers per epoch)."""
     if not training:
         return xs
-    o = int(torch.randint(0, 100, ()))
-    return tuple(x[:, o:o + EPOCH - 100] for x in xs)
+    o = int(torch.randint(0, seg, ()))
+    n = xs[0].shape[-1]
+    return tuple(x[:, o:o + n - seg] for x in xs)
 
 
-def band_logpow(x: torch.Tensor) -> torch.Tensor:
-    """``(B, 3000) -> (B, 30, len(POW_BANDS))`` log10 power per 1 s segment and band."""
-    p = torch.fft.rfft(x.reshape(len(x), -1, 100), dim=-1).abs().pow(2)
-    return torch.stack([torch.log10(p[..., a:b].sum(-1) + 1e-4) for a, b in POW_BANDS], -1)
+def band_logpow(x: torch.Tensor, fs: int = 100, bands=POW_BANDS, seg_sec: float = 1.0) -> torch.Tensor:
+    """``(B, n) -> (B, n_seg, len(bands))`` log10 power per ``seg_sec`` segment and band
+    (band edges in Hz; rfft bin = Hz x ``seg_sec``). Defaults: EEG, 1 s at 100 Hz."""
+    seg = int(seg_sec * fs)
+    n = x.shape[-1] // seg * seg
+    p = torch.fft.rfft(x[:, :n].reshape(len(x), -1, seg), dim=-1).abs().pow(2)
+    return torch.stack([torch.log10(p[..., int(a * seg_sec):int(b * seg_sec)].sum(-1) + 1e-4) for a, b in bands], -1)
 
 
-def lowpass_mse(pred: torch.Tensor, target: torch.Tensor, hz: float = LOW_HZ) -> torch.Tensor:
+def lowpass_mse(pred: torch.Tensor, target: torch.Tensor, hz: float = LOW_HZ, fs: int = 100) -> torch.Tensor:
     """Per-sample MSE of the epochs low-passed at ``hz`` (rfft of the whole 30 s epoch)."""
-    k = int(hz * EPOCH / 100) + 1
+    n = pred.shape[-1]
+    k = int(hz * n / fs) + 1
     d = torch.fft.rfft(pred - target, dim=-1)[:, :k]
     d[:, 1:] *= 2 ** 0.5  # one-sided spectrum: count the negative frequencies too
-    return d.abs().pow(2).sum(-1) / EPOCH ** 2
+    return d.abs().pow(2).sum(-1) / n ** 2
 
 
 class MSAETrainer(Trainer):
@@ -404,9 +473,11 @@ class MSAETrainer(Trainer):
 
         x = stack_channels(batch).to(device)
         xc = x[:, x.shape[1] // 2, 0].float()
-        psd = (epoch_logpsd(xc) - model.psd_mean) / model.psd_std
+        psd = (model.logpsd(xc) - model.psd_mean) / model.psd_std
         with _autocast(device):
             out = model(x)
+        if model.recon == "texture":
+            return MSAETrainer._step_texture(model, out, xc, psd)
         if model.decoder == "istft":
             return MSAETrainer._step_tf(model, out, xc, psd)
         if model.loss == "band":
@@ -425,8 +496,8 @@ class MSAETrainer(Trainer):
         if model.texture:
             # the band power reaches only the texture (and through it the latents), never the MSE wave
             hi = model.tex_bands
-            xg, tg = grid_shift(model.training, xc, w.detach() + out["texture"].float())
-            l_tex = (band_logpow(tg)[..., hi] - band_logpow(xg)[..., hi]).abs().mean()
+            xg, tg = model.grid_shift(xc, w.detach() + out["texture"].float())
+            l_tex = (model.band_logpow(tg)[..., hi] - model.band_logpow(xg)[..., hi]).abs().mean()
             loss = loss + model.band_weight * l_tex
             tex = {"pow_tex": l_tex.item(), "r2_wave_tex": _r2(out["wave"].float(), xc).item()}
         r2w = _r2(w, xc)
@@ -439,6 +510,27 @@ class MSAETrainer(Trainer):
         return loss, r2w, extra
 
     @staticmethod
+    def _step_texture(model, out, xc, psd):
+        """``recon="texture"`` (EMG): every prefix matches the log band power per ``seg_sec``
+        segment (L1, grid shifted in training); spectral heads as usual. ``acc`` = R^2 of the
+        band power of N+E+P."""
+        w_n, w_ne, w = out["wave_n"].float(), out["wave_ne"].float(), out["texture"].float()
+        xg, gn, gne, gw = model.grid_shift(xc, w_n, w_ne, w)
+        bt = model.band_logpow(xg)
+        bn, bne, bw = (model.band_logpow(v) for v in (gn, gne, gw))
+        l_n, l_ne, l_nep = [(v - bt).abs().mean() for v in (bn, bne, bw)]
+        l_sn = F.mse_loss(out["spec_n"].float(), psd)
+        l_sne = F.mse_loss(out["spec_ne"].float(), psd)
+        loss = model.band_weight * (l_n + l_ne + l_nep) + l_sn + l_sne
+        r2 = _r2(bw, bt)
+        extra = {"pow_n": l_n.item(), "pow_ne": l_ne.item(), "pow_nep": l_nep.item(),
+                 "mse_spec_n": l_sn.item(), "mse_spec_ne": l_sne.item(),
+                 "r2_spec_n": _r2(out["spec_n"].float(), psd).item(),
+                 "r2_spec_ne": _r2(out["spec_ne"].float(), psd).item(),
+                 "r2_pow_n": _r2(bn, bt).item(), "r2_pow_ne": _r2(bne, bt).item(), "r2_pow": r2.item()}
+        return loss, r2, extra
+
+    @staticmethod
     def _step_band(model, out, xc, psd):
         """Perception-oriented loss: N and N+E match the log band power per second on every
         band (envelope only); N+E+P is phase-exact (MSE) up to ``model.low_hz`` and matches
@@ -448,15 +540,15 @@ class MSAETrainer(Trainer):
         Plain MSE drives the unpredictable bands (> 5 Hz) to zero power: 3-50x too weak
         on DCSM at 368 numbers per epoch, PCA included (job 1548628)."""
         w_n, w_ne, w = out["wave_n"].float(), out["wave_ne"].float(), out["wave"].float()
-        xg, gn, gne, gw = grid_shift(model.training, xc, w_n, w_ne, w)
-        bt = band_logpow(xg)
+        xg, gn, gne, gw = model.grid_shift(xc, w_n, w_ne, w)
+        bt = model.band_logpow(xg)
         bw = model.band_weight
-        l_n, l_ne = [(band_logpow(v) - bt).abs().mean() for v in (gn, gne)]
+        l_n, l_ne = [(model.band_logpow(v) - bt).abs().mean() for v in (gn, gne)]
         # N+E+P: the spectrum is split, phase-exact MSE up to low_hz and band power only above it
         # (band power on the low bands too pushes energy in with an uncertain phase: 2-4 Hz phase R^2 0.91 -> 0.7)
-        hi = [i for i, (a, _) in enumerate(POW_BANDS) if a > model.pow_hz]
-        l_nep = (band_logpow(gw)[..., hi] - bt[..., hi]).abs().mean()
-        low = lowpass_mse(w, xc, model.low_hz).mean()
+        hi = [i for i, (a, _) in enumerate(model.pow_bands) if a > model.pow_hz]
+        l_nep = (model.band_logpow(gw)[..., hi] - bt[..., hi]).abs().mean()
+        low = lowpass_mse(w, xc, model.low_hz, model.fs).mean()
         l_sn = F.mse_loss(out["spec_n"].float(), psd)
         l_sne = F.mse_loss(out["spec_ne"].float(), psd)
         loss = bw * (l_n + l_ne + l_nep) + model.low_weight * low + l_sn + l_sne
@@ -465,8 +557,8 @@ class MSAETrainer(Trainer):
                  "mse_spec_n": l_sn.item(), "mse_spec_ne": l_sne.item(),
                  "r2_spec_n": _r2(out["spec_n"].float(), psd).item(),
                  "r2_spec_ne": _r2(out["spec_ne"].float(), psd).item(),
-                 "r2_pow_n": _r2(band_logpow(gn), bt).item(), "r2_pow_ne": _r2(band_logpow(gne), bt).item(),
-                 "r2_pow": _r2(band_logpow(gw), bt).item(), "r2_wave": r2w.item()}
+                 "r2_pow_n": _r2(model.band_logpow(gn), bt).item(), "r2_pow_ne": _r2(model.band_logpow(gne), bt).item(),
+                 "r2_pow": _r2(model.band_logpow(gw), bt).item(), "r2_wave": r2w.item()}
         return loss, r2w, extra
 
     @staticmethod

@@ -34,12 +34,13 @@ from physioex.models.msae_vq import MSAEVQ, MSAEVQTrainer, fit_vq_codebooks
 from physioex.models.msvq import (
     MSVQ, MSVQTrainer, compute_msvq_targets, fit_msvq_norms,
 )
-from physioex.models.recon_eval import evaluate as recon_evaluate, load_best
+from physioex.models.recon_eval import channel_pipelines, evaluate as recon_evaluate, load_best, modality_kwargs
 
 
 # MSAE architecture args copied from the --init run (msae_vq)
 MSAE_ARCH = ("seq", "width", "dim", "d_p", "token_sec", "decoder", "tf_consistency", "loss", "band_weight",
-             "low_hz", "low_weight", "pow_hz", "texture")
+             "low_hz", "low_weight", "pow_hz", "texture", "channel", "resample", "fs", "pow_bands", "psd_band",
+             "recon", "seg_sec", "no_n")
 
 
 def _loader(ds, ids, n_max, batch, workers, shuffle, seed):
@@ -65,6 +66,15 @@ def main():
                          "per site (physioex.data.splits, the ProtoSleepNet release split)")
     ap.add_argument("--splits", default=None, help="--split grouped: read the ids from this splits JSON")
     ap.add_argument("--seq", type=int, default=41)
+    ap.add_argument("--channel", default="EEG_clean", choices=("EEG_clean", "EOG_clean", "EMG_clean"))
+    ap.add_argument("--resample", type=int, default=None, help="resample the channel to this rate (EMG: 200)")
+    ap.add_argument("--fs", type=int, default=None, help="msae: sampling rate of the model (100 or 200)")
+    ap.add_argument("--pow-bands", type=float, nargs="+", default=None,
+                    help="msae: band edges in Hz, pairs lo hi lo hi ... (default: the EEG bands)")
+    ap.add_argument("--psd-band", type=float, nargs=2, default=None, help="msae: Hz range of the epoch log-PSD heads")
+    ap.add_argument("--recon", choices=("wave", "texture"), default=None, help="msae: texture = noise only (EMG)")
+    ap.add_argument("--seg-sec", type=float, default=None, help="msae: segment of the band-power terms (s)")
+    ap.add_argument("--no-n", action="store_true", help="msae: no N (ablation)")
     ap.add_argument("--model", choices=("msvq", "msae", "msae_vq"), default="msvq")
     ap.add_argument("--dim", type=int, default=None, help="latent width (default: 64 msvq, 128 msae)")
     ap.add_argument("--width", type=int, default=32, help="msae: channels of the first SEANet stage")
@@ -121,11 +131,17 @@ def main():
             if k in MSAE_ARCH:
                 setattr(a, k, v)
     a.dim = a.dim or (128 if a.model in ("msae", "msae_vq") else 64)
+    if a.pow_bands and not isinstance(a.pow_bands[0], (list, tuple)):
+        assert len(a.pow_bands) % 2 == 0, "--pow-bands takes pairs"
+        a.pow_bands = [a.pow_bands[i:i + 2] for i in range(0, len(a.pow_bands), 2)]
+    if a.channel != "EEG_clean" and a.recon_per_night:
+        print("[msvq] recon_eval is EEG only: skipped (modality metrics: physioex.models.recon_eval_modality)", flush=True)
+        a.recon_per_night = 0
 
     os.makedirs(a.out, exist_ok=True)
     torch.manual_seed(a.fold)
     cls = get_dataset(a.dataset)
-    kw = dict(channels=["EEG_clean"], pipelines=clean_pipelines(), sequence_length=a.seq,
+    kw = dict(channels=[a.channel], pipelines=channel_pipelines(vars(a)), sequence_length=a.seq,
               cache_dir=a.cache_dir, trim_mode="main_period")
     if a.root:
         kw["root"] = a.root
@@ -170,7 +186,8 @@ def main():
         trainer = MSAETrainer
         arch = dict(width=a.width, dim=a.dim, d_p=a.d_p, token_sec=a.token_sec, latent_bits=a.latent_bits,
                     decoder=a.decoder, tf_consistency=a.tf_consistency, loss=a.loss, band_weight=a.band_weight,
-                    low_hz=a.low_hz, low_weight=a.low_weight, pow_hz=a.pow_hz, texture=a.texture)
+                    low_hz=a.low_hz, low_weight=a.low_weight, pow_hz=a.pow_hz, texture=a.texture,
+                    **modality_kwargs(vars(a)))
         if a.model == "msae":
             model = MSAE(a.seq, **arch)
         else:

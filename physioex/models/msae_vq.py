@@ -193,7 +193,10 @@ class MSAEVQ(MSAE):
         """``(B, L, 1, 3000) -> {"N", "E", "P"}`` quantized latents (MSAE shapes) and ``"codes"``:
         ``{"N": (B, k_N), "E": (B, k_E), "P": (B, T_p, k_P)}``."""
         x = x[:, :, 0].float()
-        n, cn, ln = self._q("N", self.encode_context(x))
+        if self.use_n:
+            n, cn, ln = self._q("N", self.encode_context(x))
+        else:  # ablation: no context, nothing to code
+            n, cn, ln = self.encode_context(x), None, x.new_zeros(())
         h = self.features(x[:, self.c])
         g, b = self.e_film(n).chunk(2, -1)
         he = h * (1 + g[:, None]) + b[:, None]
@@ -217,7 +220,9 @@ class MSAEVQ(MSAE):
 
     def embed(self, codes: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         """Codes (any prefix of levels) -> quantized latents ``{"N", "E", "P"}``."""
-        out = {s: self.rvq[s].lookup(codes[s]) for s in ("N", "E")}
+        out = {s: self.rvq[s].lookup(codes[s]) for s in ("N", "E") if codes.get(s) is not None}
+        if codes.get("N") is None:
+            out["N"] = out["E"].new_zeros(len(out["E"]), self.dim)
         cp = codes["P"]
         out["P"] = self.rvq["P"].lookup(cp.reshape(-1, cp.shape[-1])).reshape(*cp.shape[:-1], self.d_p)
         return out
@@ -225,7 +230,7 @@ class MSAEVQ(MSAE):
     def bits_per_epoch(self, levels: Optional[Dict[str, int]] = None) -> int:
         lv = levels or self.vq_levels
         b = {s: math.log2(self.n_codes[s]) for s in SCALES}
-        return int(round(lv["N"] * b["N"] + lv["E"] * b["E"] + self.n_tok * lv["P"] * b["P"]))
+        return int(round(lv["N"] * b["N"] * self.use_n + lv["E"] * b["E"] + self.n_tok * lv["P"] * b["P"]))
 
 
 def vq_key(levels: Dict[str, int]) -> str:
@@ -267,6 +272,8 @@ def fit_vq_codebooks(model: MSAEVQ, loader, min_per_code: int = 10, min_windows:
     need = min_per_code * max(model.n_codes.values())
     used = {}
     for s in SCALES:
+        if s == "N" and not model.use_n:
+            continue
         acc, n = [], 0
         # scales already fitted are quantized (all levels), the current one is continuous
         for i, batch in enumerate(loader):
@@ -291,7 +298,8 @@ def _encode_partial(model: MSAEVQ, x: torch.Tensor, scale: str) -> torch.Tensor:
     n = model.encode_context(xs)
     if scale == "N":
         return n
-    n = model.rvq["N"](n)[0]
+    if model.use_n:
+        n = model.rvq["N"](n)[0]
     h = model.features(xs[:, model.c])
     g, b = model.e_film(n).chunk(2, -1)
     he = h * (1 + g[:, None]) + b[:, None]
