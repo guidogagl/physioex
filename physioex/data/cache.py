@@ -207,8 +207,9 @@ class ChannelCache:
         meta_full.setdefault("shape", list(data.shape))
         meta_full.setdefault("dtype", _dtype_name(data.dtype))
         meta_full.setdefault("schema_version", self.SCHEMA_VERSION)
-        with open(meta_path, "w") as f:
-            json.dump(meta_full, f, indent=2)
+        # atomic: another process (DataLoader worker, concurrent job) may build the same subject
+        # and read the sidecar as soon as the .npy exists; a plain open("w") exposes an empty file
+        self.save_json(meta_path, meta_full)
 
     def save_json(self, path: Union[str, Path], obj: Dict) -> None:
         """Atomic JSON write."""
