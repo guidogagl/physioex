@@ -184,6 +184,90 @@ class SeqStager(nn.Module):
         return self.head(self.ln(self.temporal(h + self.pos_t[:L])))
 
 
+class MultiSeqStager(nn.Module):
+    """:class:`SeqStager` over several modalities (EEG, EOG, EMG). Every modality has its own
+    per-epoch embedding (``epoch="qformer"`` or ``"linear"``) plus a learned modality embedding;
+    the modality embeddings of an epoch are concatenated and projected to ``d``, then the
+    temporal transformer and the head as in :class:`SeqStager`.
+
+    Inputs are the packed tensors of :func:`pack_modalities`: ``N``, ``E`` ``(B, L, sum dim_m)``
+    and ``P`` ``(B, L, sum T_m, max d_p)``; ``spec`` gives ``(name, dim, d_p, n_tok)`` per modality."""
+
+    def __init__(self, spec, epoch: str = "qformer", seq_len: int = 21, seq_layers: int = 2, d: int = 128,
+                 heads: int = 4, n_classes: int = 5, dropout: float = 0.1, k: int = 8, layers: int = 2, **_):
+        super().__init__()
+        self.spec, self.seq_len = [tuple(s) for s in spec], seq_len
+        encs = []
+        for _, dim, d_p, n_tok in self.spec:
+            if epoch == "qformer":
+                enc = QFormerStager(dim=dim, d_p=d_p, n_tok=n_tok, d=d, k=k, layers=layers, heads=heads, dropout=dropout)
+                del enc.head, enc.ln
+            else:
+                enc = _LinearEmbed(dim=dim, d=d)
+            encs.append(enc)
+        self.encs = nn.ModuleList(encs)
+        self.mod_emb = nn.Parameter(torch.randn(len(self.spec), d) * 0.02)
+        self.fuse = nn.Linear(len(self.spec) * d, d)
+        self.pos_t = nn.Parameter(torch.randn(seq_len, d) * 0.02)
+        layer = nn.TransformerEncoderLayer(d, heads, 4 * d, dropout, activation="gelu", batch_first=True, norm_first=True)
+        self.temporal = nn.TransformerEncoder(layer, seq_layers, enable_nested_tensor=False)
+        self.ln = nn.LayerNorm(d)
+        self.head = nn.Linear(d, n_classes)
+        self.last_attn = None
+
+    def forward(self, n, e, p):
+        B, L = n.shape[:2]
+        n, e, p = n.flatten(0, 1), e.flatten(0, 1), p.flatten(0, 1)
+        hs, a, t = [], 0, 0
+        for i, (enc, (_, dim, d_p, n_tok)) in enumerate(zip(self.encs, self.spec)):
+            h = enc.embed(n[:, a:a + dim], e[:, a:a + dim], p[:, t:t + n_tok, :d_p])
+            hs.append(h + self.mod_emb[i])
+            a, t = a + dim, t + n_tok
+        h = self.fuse(torch.cat(hs, -1)).view(B, L, -1)
+        return self.head(self.ln(self.temporal(h + self.pos_t[:L])))
+
+
+def pack_modalities(splits_by_mod: Dict[str, Dict[str, Dict[str, np.ndarray]]], drop: Sequence[str] = ()):
+    """Standardize every modality on its own training statistics (:func:`standardize`), align
+    them on ``(night, epoch)`` of the first modality (the reference: EEG) and pack them for
+    :class:`MultiSeqStager`. An epoch missing in a modality (e.g. a night without EMG) gets zeros,
+    i.e. the training mean. ``drop``: levels removed from the input, ``"eog:N"``, ``"emg:P"``...
+    (set to zero in every split). Returns ``(data, spec, missing)``; ``missing[split][mod]`` counts
+    the zero-filled epochs."""
+    mods = list(splits_by_mod)
+    std = {m: standardize(splits_by_mod[m]) for m in mods}
+    ref = std[mods[0]]
+    dpmax = max(std[m]["train"]["P"].shape[-1] for m in mods)
+    spec = [(m, std[m]["train"]["N"].shape[-1], std[m]["train"]["P"].shape[-1], std[m]["train"]["P"].shape[1])
+            for m in mods]
+    gone = {tuple(x.split(":")) for x in drop}
+    unknown = gone - {(m, lv) for m in mods for lv in ("N", "E", "P")}
+    assert not unknown, f"unknown levels to drop: {sorted(unknown)}"
+    data, missing = {}, {}
+    for s in ref:
+        key = ref[s]["night"] * 10 ** 6 + ref[s]["epoch"]
+        M = len(key)
+        cols = {"N": [], "E": [], "P": []}
+        missing[s] = {}
+        for m, dim, d_p, n_tok in spec:
+            d = std[m][s]
+            row = dict(zip((d["night"] * 10 ** 6 + d["epoch"]).tolist(), range(len(d["night"]))))
+            idx = torch.tensor([row.get(k, -1) for k in key.tolist()])
+            ok = idx >= 0
+            missing[s][m] = int((~ok).sum())
+            for lv in ("N", "E", "P"):
+                src = d[lv]
+                out = torch.zeros((M,) + tuple(src.shape[1:]))
+                if (m, lv) not in gone:
+                    out[ok] = src[idx[ok]]
+                if lv == "P" and d_p < dpmax:
+                    out = F.pad(out, (0, dpmax - d_p))
+                cols[lv].append(out)
+        data[s] = {"N": torch.cat(cols["N"], -1), "E": torch.cat(cols["E"], -1), "P": torch.cat(cols["P"], 1),
+                   "y": ref[s]["y"], "night": ref[s]["night"], "epoch": ref[s]["epoch"]}
+    return data, spec, missing
+
+
 def _seq(epoch):
     return lambda **kw: SeqStager(epoch=epoch, **kw)
 
@@ -383,18 +467,33 @@ def _extract(a):
     json.dump(meta, open(os.path.join(a.out, "latents.json"), "w"), indent=1)
 
 
+def _load(d):
+    return {s: dict(np.load(os.path.join(d, f"latents_{s}.npz"))) for s in SPLITS}
+
+
 def _train(a):
-    raw = {s: dict(np.load(os.path.join(a.data, f"latents_{s}.npz"))) for s in SPLITS}
-    data = standardize(raw)
-    tr = raw["train"]
-    torch.manual_seed(a.seed)  # the seed fixes the initial weights too
     extra = {"seq_len": a.seq_len, "seq_layers": a.seq_layers} if a.arch.startswith("seq") else {}
-    model = ARCHS[a.arch](dim=tr["N"].shape[-1], d_p=tr["P"].shape[-1], n_tok=tr["P"].shape[1], d=a.d, k=a.k,
-                          layers=a.layers, heads=a.heads, dropout=a.dropout, **extra)
+    info = {}
+    if a.mods:  # multimodal: one latents directory per modality, the first is the reference
+        assert a.arch.startswith("seq"), "multimodal stager: seqqformer or seqlinear"
+        dirs = dict(x.split("=", 1) for x in a.mods)
+        data, spec, missing = pack_modalities({m: _load(d) for m, d in dirs.items()}, a.drop)
+        info = {"spec": spec, "missing": missing, "drop": a.drop}
+        print(f"[qformer_stager] modalities {spec}, zero-filled epochs {missing}", flush=True)
+        torch.manual_seed(a.seed)  # the seed fixes the initial weights too
+        model = MultiSeqStager(spec, epoch=a.arch[3:], d=a.d, k=a.k, layers=a.layers, heads=a.heads,
+                               dropout=a.dropout, **extra)
+    else:
+        raw = _load(a.data)
+        data = standardize(raw)
+        tr = raw["train"]
+        torch.manual_seed(a.seed)  # the seed fixes the initial weights too
+        model = ARCHS[a.arch](dim=tr["N"].shape[-1], d_p=tr["P"].shape[-1], n_tok=tr["P"].shape[1], d=a.d, k=a.k,
+                              layers=a.layers, heads=a.heads, dropout=a.dropout, **extra)
     device = "cuda" if torch.cuda.is_available() else "cpu"
     hist = train(model, data, epochs=a.epochs, lr=a.lr, batch=a.batch, patience=a.patience, device=device, seed=a.seed,
                  sched=a.sched, evals_per_epoch=a.evals_per_epoch)
-    res = {"args": vars(a), "params": sum(p.numel() for p in model.parameters()), "history": hist}
+    res = {"args": vars(a), "params": sum(p.numel() for p in model.parameters()), "history": hist, **info}
     for s in ("valid", "test"):  # test read once, with the checkpoint chosen on valid
         logits, attn = predict(model, data[s], device=device)
         y = data[s]["y"].numpy()
@@ -420,7 +519,10 @@ def main():
     e.add_argument("--batch", type=int, default=128)
     e.add_argument("--out", required=True)
     t = sub.add_parser("train")
-    t.add_argument("--data", required=True)
+    t.add_argument("--data", default=None, help="latents directory (one modality)")
+    t.add_argument("--mods", nargs="*", default=None,
+                   help="multimodal: name=latents_dir per modality, the first is the reference (eeg=... eog=... emg=...)")
+    t.add_argument("--drop", nargs="*", default=(), help="multimodal ablation: levels set to zero, e.g. eog:N emg:P")
     t.add_argument("--arch", choices=sorted(ARCHS), default="qformer")
     t.add_argument("--d", type=int, default=128)
     t.add_argument("--k", type=int, default=8, help="learned queries")
@@ -438,6 +540,8 @@ def main():
     t.add_argument("--seed", type=int, default=0)
     t.add_argument("--out", required=True)
     a = ap.parse_args()
+    if a.cmd == "train" and not (a.data or a.mods):
+        ap.error("train: --data or --mods")
     (_extract if a.cmd == "extract" else _train)(a)
 
 

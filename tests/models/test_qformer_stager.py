@@ -101,3 +101,49 @@ def test_seq_linear_reads_the_previous_epoch():
 def test_seq_qformer_trains_and_votes():
     k, attn = _fit_seq("seqqformer", "p_same")
     assert k > 0.8 and attn.shape == (300, 8), k
+
+
+def _fake_mods(where_b="e_prev", drop_rows=0):
+    """Two modalities on the same epochs: ``a`` noise (d_p 4), ``b`` carries the stage (d_p 2,
+    other dims); ``drop_rows`` epochs of ``b`` missing in every split."""
+    out = {"a": {}, "b": {}}
+    for i, (s, M) in enumerate((("train", 3000), ("valid", 300), ("test", 300))):
+        b = _fake_seq(M, i, where_b)
+        rng = np.random.default_rng(10 + i)
+        a = {k: v for k, v in b.items() if k in ("y", "night", "epoch")}
+        a.update(N=rng.standard_normal((M, 16)).astype(np.float16), E=rng.standard_normal((M, 16)).astype(np.float16),
+                 P=rng.standard_normal((M, 6, 4)).astype(np.float16))
+        b = dict(b, N=b["N"][:, :8], E=b["E"], P=b["P"][:, :5, :2] if where_b == "e_prev" else b["P"])
+        keep = np.arange(M) >= drop_rows
+        out["a"][s], out["b"][s] = a, {k: v[keep] for k, v in b.items()}
+    return out
+
+
+def _fit_multi(drop=(), drop_rows=0):
+    from physioex.models.qformer_stager import MultiSeqStager, metrics, pack_modalities, predict, train
+
+    data, spec, missing = pack_modalities(_fake_mods(drop_rows=drop_rows), drop)
+    torch.manual_seed(0)
+    m = MultiSeqStager(spec, epoch="linear", d=32, heads=2, dropout=0.0, seq_len=5, seq_layers=1)
+    train(m, data, epochs=30, lr=3e-3, batch=160, patience=0, sched="cosine", log=lambda *_: None)
+    logits, _ = predict(m, data["test"])
+    return metrics(logits.argmax(1).numpy(), data["test"]["y"].numpy(), data["test"]["night"])["kappa_pooled"], data, spec, missing
+
+
+def test_pack_modalities_shapes_alignment_and_missing():
+    from physioex.models.qformer_stager import pack_modalities
+
+    data, spec, missing = pack_modalities(_fake_mods(drop_rows=7), ("a:P",))
+    assert spec == [("a", 16, 4, 6), ("b", 8, 2, 5)]
+    t = data["test"]
+    assert t["N"].shape == (300, 24) and t["E"].shape == (300, 32) and t["P"].shape == (300, 11, 4)
+    assert missing["test"] == {"a": 0, "b": 7}
+    assert (t["E"][:7, 16:] == 0).all() and (t["E"][7:, 16:] != 0).any()  # missing epochs of b: zeros
+    assert (t["P"][:, :6] == 0).all() and (t["P"][:, 6:, 2:] == 0).all()  # a:P dropped, b padded to d_p 4
+
+
+def test_multi_stager_reads_the_right_modality_and_drop_removes_it():
+    k, *_ = _fit_multi()
+    assert k > 0.8, k
+    k_drop, *_ = _fit_multi(drop=("b:E",))
+    assert k_drop < 0.2, k_drop
