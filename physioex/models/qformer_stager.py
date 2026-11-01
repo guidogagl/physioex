@@ -22,7 +22,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
-from typing import Dict, Sequence
+from typing import Dict, List, Sequence
 
 import numpy as np
 import torch
@@ -102,7 +102,7 @@ class QFormerStager(nn.Module):
     """``k`` learned queries read the N, E and P tokens of one epoch; attention pooling -> stage."""
 
     def __init__(self, dim: int = 128, d_p: int = 16, n_tok: int = 60, d: int = 128, k: int = 8,
-                 layers: int = 2, heads: int = 4, n_classes: int = 5, dropout: float = 0.1):
+                 layers: int = 2, heads: int = 4, n_classes: int = 5, dropout: float = 0.1, **_):
         super().__init__()
         self.proj_n, self.proj_e, self.proj_p = nn.Linear(dim, d), nn.Linear(dim, d), nn.Linear(d_p, d)
         self.type_emb = nn.Parameter(torch.randn(3, d) * 0.02)
@@ -119,14 +119,17 @@ class QFormerStager(nn.Module):
         return torch.cat([(self.proj_n(n) + self.type_emb[0])[:, None], (self.proj_e(e) + self.type_emb[1])[:, None],
                           self.proj_p(p) + self.type_emb[2] + self.pos], 1)
 
-    def forward(self, n, e, p):
+    def embed(self, n, e, p):
+        """Pooled vector of one epoch, ``(B, d)``; sets ``last_attn``."""
         kv = self.tokens(n, e, p)
         q = self.queries.expand(len(kv), -1, -1)
         for blk in self.blocks:
             q, w = blk(q, kv)
         self.last_attn = w.detach().mean(1)  # last cross-attention, mean over queries: (B, 2 + T_p)
-        pooled = self.pool(self.pool_query.expand(len(q), -1, -1), q, q, need_weights=False)[0][:, 0]
-        return self.head(self.ln(pooled))
+        return self.pool(self.pool_query.expand(len(q), -1, -1), q, q, need_weights=False)[0][:, 0]
+
+    def forward(self, n, e, p):
+        return self.head(self.ln(self.embed(n, e, p)))
 
 
 class LinearStager(nn.Module):
@@ -141,7 +144,51 @@ class LinearStager(nn.Module):
         return self.head(torch.cat([n, e], -1))
 
 
-ARCHS = {"qformer": QFormerStager, "linear": LinearStager}
+class _LinearEmbed(nn.Module):
+    """Per-epoch embedding of ``[N; E]`` (P unused) for :class:`SeqStager`."""
+
+    def __init__(self, dim: int = 128, d: int = 128, **_):
+        super().__init__()
+        self.proj = nn.Linear(2 * dim, d)
+        self.last_attn = None
+
+    def embed(self, n, e, p):
+        return self.proj(torch.cat([n, e], -1))
+
+
+class SeqStager(nn.Module):
+    """Sequence of ``seq_len`` consecutive epochs, as ProtoSleepNet: a per-epoch embedding
+    (``epoch="qformer"``: the Q-Former above without its head; ``"linear"``: ``[N; E]``),
+    a temporal transformer over the sequence, a stage for every epoch. Input ``(B, L, ...)``,
+    output ``(B, L, n_classes)``."""
+
+    def __init__(self, epoch: str = "qformer", seq_len: int = 21, seq_layers: int = 2, d: int = 128,
+                 heads: int = 4, n_classes: int = 5, dropout: float = 0.1, **kw):
+        super().__init__()
+        self.seq_len = seq_len
+        enc = QFormerStager if epoch == "qformer" else _LinearEmbed
+        self.enc = enc(d=d, heads=heads, n_classes=n_classes, dropout=dropout, **kw)
+        if epoch == "qformer":  # head of the per-epoch model unused
+            del self.enc.head, self.enc.ln
+        self.pos_t = nn.Parameter(torch.randn(seq_len, d) * 0.02)
+        layer = nn.TransformerEncoderLayer(d, heads, 4 * d, dropout, activation="gelu", batch_first=True, norm_first=True)
+        self.temporal = nn.TransformerEncoder(layer, seq_layers, enable_nested_tensor=False)
+        self.ln = nn.LayerNorm(d)
+        self.head = nn.Linear(d, n_classes)
+        self.last_attn = None
+
+    def forward(self, n, e, p):
+        B, L = n.shape[:2]
+        h = self.enc.embed(n.flatten(0, 1), e.flatten(0, 1), p.flatten(0, 1)).view(B, L, -1)
+        self.last_attn = self.enc.last_attn  # (B * L, 2 + T_p) or None
+        return self.head(self.ln(self.temporal(h + self.pos_t[:L])))
+
+
+def _seq(epoch):
+    return lambda **kw: SeqStager(epoch=epoch, **kw)
+
+
+ARCHS = {"qformer": QFormerStager, "linear": LinearStager, "seqqformer": _seq("qformer"), "seqlinear": _seq("linear")}
 
 
 # ----------------------------------------------------------------------------
@@ -161,11 +208,39 @@ def standardize(splits: Dict[str, Dict[str, np.ndarray]]) -> Dict[str, Dict[str,
         out[s] = {k: torch.from_numpy((d[k].astype(np.float32) - stats[k][0]) / stats[k][1]) for k in ("N", "E", "P")}
         out[s]["y"] = torch.from_numpy(d["y"].astype(np.int64))
         out[s]["night"] = d["night"].astype(np.int64)
+        if "epoch" in d:
+            out[s]["epoch"] = d["epoch"].astype(np.int64)
     return out
+
+
+def night_groups(d) -> List[np.ndarray]:
+    """Sample indices of every night, in epoch order (the extracted epochs of a night; unscored
+    epochs inside the main period are skipped, so a sequence is consecutive *scored* epochs)."""
+    ep = d["epoch"] if "epoch" in d else np.arange(len(d["night"]))
+    order = np.lexsort((ep, d["night"]))
+    return np.split(order, np.flatnonzero(np.diff(d["night"][order])) + 1)
+
+
+def train_windows(groups, L: int, rng: np.random.Generator) -> np.ndarray:
+    """Non-overlapping sequences of ``L`` epochs with a random offset per night: ``(S, L)``."""
+    out = []
+    for g in groups:
+        for s in range(int(rng.integers(0, L)), len(g) - L + 1, L):
+            out.append(g[s:s + L])
+    return np.stack(out)
+
+
+def all_windows(groups, L: int) -> np.ndarray:
+    """Every sequence of ``L`` epochs with stride 1, ``(S, L)``; every night needs >= ``L`` epochs."""
+    assert all(len(g) >= L for g in groups), "a night is shorter than the sequence"
+    return np.concatenate([np.lib.stride_tricks.sliding_window_view(g, L) for g in groups])
 
 
 @torch.no_grad()
 def predict(model, d, batch: int = 2048, device="cpu"):
+    L = getattr(model, "seq_len", 1)
+    if L > 1:
+        return _predict_seq(model, d, L, batch, device)
     model.eval()
     logits, attn = [], []
     for i in range(0, len(d["y"]), batch):
@@ -174,6 +249,27 @@ def predict(model, d, batch: int = 2048, device="cpu"):
         if model.last_attn is not None:
             attn.append(model.last_attn.float().cpu())
     return torch.cat(logits), (torch.cat(attn) if attn else None)
+
+
+@torch.no_grad()
+def _predict_seq(model, d, L, batch, device):
+    """Voting as ProtoSleepNet: every window of ``L`` epochs (stride 1), class probabilities
+    averaged over the windows that contain an epoch. Returns log of the mean probabilities."""
+    model.eval()
+    W = torch.from_numpy(all_windows(night_groups(d), L))
+    M = len(d["y"])
+    prob, cnt, attn = torch.zeros(M, len(STAGES)), torch.zeros(M), None
+    nb = max(1, batch // L)
+    for i in range(0, len(W), nb):
+        w = W[i:i + nb]
+        out = model(d["N"][w].to(device), d["E"][w].to(device), d["P"][w].to(device)).float().softmax(-1).cpu()
+        prob.index_add_(0, w.flatten(), out.flatten(0, 1))
+        cnt.index_add_(0, w.flatten(), torch.ones(w.numel()))
+        if model.last_attn is not None:
+            a = model.last_attn.float().cpu()
+            attn = torch.zeros(M, a.shape[-1]) if attn is None else attn
+            attn.index_add_(0, w.flatten(), a)
+    return (prob / cnt[:, None]).clamp_min(1e-8).log(), (attn / cnt[:, None] if attn is not None else None)
 
 
 def metrics(pred: np.ndarray, y: np.ndarray, night: np.ndarray) -> dict:
@@ -210,7 +306,10 @@ def train(model, data, epochs: int = 30, lr: float = 3e-4, batch: int = 512, wei
     model.to(device)
     tr = data["train"]
     opt = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=weight_decay)
-    per_epoch = (len(tr["y"]) + batch - 1) // batch
+    # steps per epoch (seq models: sequences of L epochs, ~len/L per epoch with random offsets)
+    L0 = getattr(model, "seq_len", 1)
+    per_epoch = (len(tr["y"]) + batch - 1) // batch if L0 == 1 else \
+        (sum(len(g) // L0 for g in night_groups(tr)) + max(1, batch // L0) - 1) // max(1, batch // L0)
     steps = epochs * per_epoch
     if sched == "onecycle":
         sch = torch.optim.lr_scheduler.OneCycleLR(opt, lr, total_steps=steps, pct_start=0.05)
@@ -222,19 +321,24 @@ def train(model, data, epochs: int = 30, lr: float = 3e-4, batch: int = 512, wei
     best, best_state, wait, hist = -1.0, None, 0, []
     g = torch.Generator().manual_seed(seed)
     va = data["valid"]
+    L = getattr(model, "seq_len", 1)
+    groups, rng = (night_groups(tr), np.random.default_rng(seed)) if L > 1 else (None, None)
     for ep in range(epochs):
         model.train()
-        perm, tot, seen = torch.randperm(len(tr["y"]), generator=g), 0.0, 0
-        for b, i in enumerate(range(0, len(perm), batch), 1):
-            idx = perm[i:i + batch]
+        # seq models: ``batch`` counts epochs, i.e. batch // L sequences per step
+        units = torch.from_numpy(train_windows(groups, L, rng)) if L > 1 else torch.arange(len(tr["y"]))
+        perm, tot, seen = units[torch.randperm(len(units), generator=g)], 0.0, 0
+        nb = max(1, batch // L)
+        for b, i in enumerate(range(0, len(perm), nb), 1):
+            idx = perm[i:i + nb]
             logits = model(tr["N"][idx].to(device), tr["E"][idx].to(device), tr["P"][idx].to(device))
-            loss = F.cross_entropy(logits, tr["y"][idx].to(device))
+            loss = F.cross_entropy(logits.reshape(-1, logits.shape[-1]), tr["y"][idx].reshape(-1).to(device))
             opt.zero_grad()
             loss.backward()
             nn.utils.clip_grad_norm_(model.parameters(), 1.0)
             opt.step()
             sch.step()
-            tot, seen = tot + loss.item() * len(idx), seen + len(idx)
+            tot, seen = tot + loss.item() * idx.numel(), seen + idx.numel()
             if b not in eval_at:
                 continue
             k = metrics(predict(model, va, device=device)[0].argmax(1).numpy(), va["y"].numpy(), va["night"])["kappa_night_mean"]
@@ -283,8 +387,10 @@ def _train(a):
     raw = {s: dict(np.load(os.path.join(a.data, f"latents_{s}.npz"))) for s in SPLITS}
     data = standardize(raw)
     tr = raw["train"]
+    torch.manual_seed(a.seed)  # the seed fixes the initial weights too
+    extra = {"seq_len": a.seq_len, "seq_layers": a.seq_layers} if a.arch.startswith("seq") else {}
     model = ARCHS[a.arch](dim=tr["N"].shape[-1], d_p=tr["P"].shape[-1], n_tok=tr["P"].shape[1], d=a.d, k=a.k,
-                          layers=a.layers, heads=a.heads, dropout=a.dropout)
+                          layers=a.layers, heads=a.heads, dropout=a.dropout, **extra)
     device = "cuda" if torch.cuda.is_available() else "cpu"
     hist = train(model, data, epochs=a.epochs, lr=a.lr, batch=a.batch, patience=a.patience, device=device, seed=a.seed,
                  sched=a.sched, evals_per_epoch=a.evals_per_epoch)
@@ -321,6 +427,8 @@ def main():
     t.add_argument("--layers", type=int, default=2)
     t.add_argument("--heads", type=int, default=4)
     t.add_argument("--dropout", type=float, default=0.1)
+    t.add_argument("--seq-len", type=int, default=21, help="seq archs: epochs per sequence (ProtoSleepTransformer: 21)")
+    t.add_argument("--seq-layers", type=int, default=2, help="seq archs: temporal transformer layers")
     t.add_argument("--epochs", type=int, default=30)
     t.add_argument("--patience", type=int, default=6, help="evaluations without improvement (0 = off)")
     t.add_argument("--sched", choices=("onecycle", "cosine"), default="onecycle")

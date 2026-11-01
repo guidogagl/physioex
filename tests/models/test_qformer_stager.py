@@ -62,3 +62,42 @@ def test_extract_latents_windows_and_labels():
     assert d["epoch"].tolist() == [2, 4, 5, 6, 7, 8, 9]  # 3 unscored, context of 2 each side
     assert d["E"][:, 0].tolist() == d["epoch"].tolist() and d["N"][:, 0].tolist() == (d["epoch"] - 2).tolist()
     assert d["y"].tolist() == [2, 3, 4, 0, 1, 2, 3]
+
+
+def _fake_seq(M, seed, where):
+    """Nights of M // 6 consecutive epochs; the stage of epoch t is written in the P of epoch t
+    (``where="p_same"``) or in the E of epoch t - 1 (``"e_prev"``)."""
+    rng = np.random.default_rng(seed)
+    y = rng.integers(0, 5, M)
+    N = rng.standard_normal((M, 16)).astype(np.float16)
+    E = rng.standard_normal((M, 16)).astype(np.float16)
+    P = rng.standard_normal((M, 6, 4)).astype(np.float16)
+    if where == "p_same":
+        P[np.arange(M), y, 0] += 4
+    else:
+        E[np.arange(M), y] += 4
+        E = np.roll(E, 1, axis=0)
+    return {"N": N, "E": E, "P": P, "y": y.astype(np.int8), "night": (np.arange(M) // (M // 6)).astype(np.int16),
+            "epoch": np.arange(M) % (M // 6)}
+
+
+def _fit_seq(arch, where):
+    from physioex.models.qformer_stager import ARCHS, metrics, predict, standardize, train
+
+    torch.manual_seed(0)
+    data = standardize({s: _fake_seq(M, i, where) for i, (s, M) in enumerate((("train", 3000), ("valid", 300), ("test", 300)))})
+    m = ARCHS[arch](dim=16, d_p=4, n_tok=6, d=32, k=4, layers=1, heads=2, dropout=0.0, seq_len=5, seq_layers=1)
+    train(m, data, epochs=30, lr=3e-3, batch=160, patience=0, sched="cosine", evals_per_epoch=1, log=lambda *_: None)
+    logits, attn = predict(m, data["test"])
+    assert logits.shape == (300, 5) and torch.isfinite(logits).all()  # voting covers every epoch
+    return metrics(logits.argmax(1).numpy(), data["test"]["y"].numpy(), data["test"]["night"])["kappa_pooled"], attn
+
+
+def test_seq_linear_reads_the_previous_epoch():
+    k, attn = _fit_seq("seqlinear", "e_prev")
+    assert k > 0.8 and attn is None, k
+
+
+def test_seq_qformer_trains_and_votes():
+    k, attn = _fit_seq("seqqformer", "p_same")
+    assert k > 0.8 and attn.shape == (300, 8), k
