@@ -285,6 +285,42 @@ def encoder_recon(run_dir, vq, target, target_root=None, per_night=60):
     return out
 
 
+def raw_vs_clean(ds, recs, ids=("kc_excerpt1", "kc_excerpt2"), n_each=2, span_s=30.0):
+    """Raw scoring channel (EDF, 0.3-35 Hz, 100 Hz) against the clean EEG, both in µV, on
+    ``span_s`` windows centred on expert-1 K-complexes. Returns arrays for the page."""
+    from scipy.signal import resample_poly
+
+    from physioex.data.readers.edf import read_edf_lenient
+
+    have = {s.subject_id: s for s in ds._subjects}
+    out, meta = {}, []
+    for sid in ids:
+        r = next((r for r in recs if r["id"] == sid), None)
+        if r is None or sid not in have:
+            continue
+        e = read_edf_lenient(str(have[sid].edf_path))
+        ch = next(c for c in ("CZ-A1", "C3-A1") if c in e["labels"])
+        i = e["labels"].index(ch)
+        fs = int(round(e["fs"][i]))
+        raw = resample_poly(np.asarray(e["signals"][i], np.float64), FS, fs) if fs != FS else np.asarray(e["signals"][i], np.float64)
+        raw = _bp(raw, 0.3, 35.0)
+        clean = r["x"]["eeg"].reshape(-1)
+        kcs = [ev for ev in r["events"] if ev.type == "k_complex" and ev.concept == "vis1"]
+        kcs = kcs[:: max(1, len(kcs) // n_each)][:n_each]
+        for k, ev in enumerate(kcs):
+            c = ev.onset_sec + ev.duration_sec / 2
+            a = int(max(0, min(c - span_s / 2, len(clean) / FS - span_s)) * FS)
+            b = a + int(span_s * FS)
+            key = f"{sid}_{k}"
+            out[f"rvc_raw_{key}"], out[f"rvc_clean_{key}"] = raw[a:b], clean[a:b]
+            others = [(o.onset_sec - a / FS, o.duration_sec) for o in kcs + [x for x in r["events"] if x.type == "k_complex" and x.concept == "vis1"]
+                      if a / FS <= o.onset_sec < b / FS]
+            meta.append({"key": key, "rec": sid, "channel": ch, "start_s": a / FS, "kc_in_window": sorted(set(others)),
+                         "stage": int(r["y"][int(c // 30)]) if int(c // 30) < len(r["y"]) else -1,
+                         "corr_raw_clean": float(np.corrcoef(raw[a:b], clean[a:b])[0, 1])})
+    return out, meta
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--target", default="dreams")
@@ -294,6 +330,7 @@ def main():
     ap.add_argument("--cache-dir", default=None)
     ap.add_argument("--max-dcsm-nights", type=int, default=0)
     ap.add_argument("--no-encoder", action="store_true")
+    ap.add_argument("--examples-only", action="store_true", help="only the raw-vs-clean windows (CPU, seconds)")
     ap.add_argument("--out", required=True)
     a = ap.parse_args()
     from physioex.data.datasets import get_dataset
@@ -309,8 +346,15 @@ def main():
     tkw = dict(channels=CHANNELS, pipelines=raw, sequence_length=1, cache_dir=cache, trim_mode="excess_wake")
     if a.target_root:
         tkw["root"] = a.target_root
-    tgt = load_recordings(get_dataset(a.target)(**tkw))
+    tds = get_dataset(a.target)(**tkw)
+    tgt = load_recordings(tds)
     log("target", a.target, len(tgt), "recordings")
+    if a.examples_only:
+        ex, meta = raw_vs_clean(tds, tgt)
+        json.dump(_jsonable(meta), open(os.path.join(a.out, "raw_vs_clean.json"), "w"), indent=1)
+        np.savez_compressed(os.path.join(a.out, "raw_vs_clean.npz"), **{k: np.asarray(v, np.float32) for k, v in ex.items()})
+        log("DONE")
+        return
     dkw = dict(channels=CHANNELS, pipelines=raw, sequence_length=1, cache_dir=cache, trim_mode="main_period")
     if ra.get("root"):
         dkw["root"] = ra["root"]
@@ -350,7 +394,6 @@ def main():
         if len(n2):
             xf = r["x"]["eeg"][n2].reshape(-1)
             sp_d.append(spindle_stats(xf, spindles(xf)))
-    cat = lambda L, i: np.concatenate([np.asarray(s[i]) for s in L if len(s[i])]) if any(len(s[i]) for s in L) else np.array([])  # noqa: E731
     cat = lambda L, i: np.concatenate([np.asarray(s[i]) for s in L if len(s[i])]) if any(len(s[i]) for s in L) else np.array([])  # noqa: E731
     sp_dt = [spindle_stats(r["x"]["eeg"].reshape(-1), spindles(r["x"]["eeg"].reshape(-1))) for r in sp_recs]
     rep["spindle"] = {
