@@ -164,3 +164,40 @@ def test_multi_early_fusion_reads_tokens_of_the_right_modality():
     logits, _ = predict(m, data["test"])
     k = metrics(logits.argmax(1).numpy(), data["test"]["y"].numpy(), data["test"]["night"])["kappa_pooled"]
     assert logits.shape == (300, 5) and k > 0.5, k
+
+
+def test_modality_dropout_weights_replacement_and_eval():
+    """PSN's ZeroEmbeddingDropout: dropped modalities get the zero-input embedding, never all of
+    them, the most accurate modality is dropped most often, nothing is dropped in eval."""
+    from physioex.models.qformer_stager import MultiSeqStager
+
+    spec = [("a", 4, 2, 3), ("b", 4, 2, 3), ("c", 4, 2, 3)]
+    torch.manual_seed(0)
+    m = MultiSeqStager(spec, epoch="linear", d=8, heads=2, seq_len=5, seq_layers=1, mod_dropout=1.0)
+    m.mod_acc.copy_(torch.tensor([0.8, 0.15, 0.05]))
+    hs = torch.randn(20000, 3, 8)
+    with torch.no_grad():
+        out = m.drop_modalities(hs)
+        z = m.zero_embeddings()
+    dropped = (out != hs).any(-1)
+    assert torch.allclose(out[dropped], z.expand(20000, 3, 8)[dropped])
+    assert dropped.any(1).all() and not dropped.all(1).any()  # 1..M-1 per epoch with p_apply 1
+    share = dropped.float().mean(0)
+    assert share[0] > share[1] > share[2], share
+    m.eval()
+    n, e, p = torch.randn(2, 5, 12), torch.randn(2, 5, 12), torch.randn(2, 5, 9, 2)
+    assert torch.equal(m(n, e, p), m(n, e, p)) and m.aux_logits is None
+
+
+def test_modality_dropout_trains_and_tracks_accuracy():
+    from physioex.models.qformer_stager import MultiSeqStager, metrics, pack_modalities, predict, train
+
+    data, spec, _ = pack_modalities(_fake_mods())
+    torch.manual_seed(0)
+    m = MultiSeqStager(spec, epoch="linear", d=32, heads=2, dropout=0.0, seq_len=5, seq_layers=1, mod_dropout=0.5)
+    train(m, data, epochs=30, lr=3e-3, batch=160, patience=0, sched="cosine", log=lambda *_: None)
+    logits, _ = predict(m, data["test"])
+    k = metrics(logits.argmax(1).numpy(), data["test"]["y"].numpy(), data["test"]["night"])["kappa_pooled"]
+    assert k > 0.7, k
+    # b carries the stage (in E of the previous epoch: the per-epoch head reads only part of it), a is noise
+    assert m.mod_acc[1] > m.mod_acc[0], m.mod_acc

@@ -231,9 +231,17 @@ class MultiSeqStager(nn.Module):
 
     def __init__(self, spec, epoch: str = "qformer", seq_len: int = 21, seq_layers: int = 2, d: int = 128,
                  heads: int = 4, n_classes: int = 5, dropout: float = 0.1, k: int = 8, layers: int = 2,
-                 fusion: str = "late", **_):
+                 fusion: str = "late", mod_dropout: float = 0.0, acc_momentum: float = 0.9, **_):
         super().__init__()
         self.spec, self.seq_len, self.fusion = [tuple(s) for s in spec], seq_len, fusion
+        self.mod_dropout, self.acc_momentum = mod_dropout, acc_momentum
+        if mod_dropout:  # accuracy-weighted modality dropout as ProtoSleepNet (ZeroEmbeddingDropout)
+            assert fusion == "late", "modality dropout: late fusion only"
+            # per-modality heads on the detached embeddings: they estimate each modality's accuracy
+            # (the drop weights) without changing the representation
+            self.aux = nn.ModuleList([nn.Linear(d, n_classes) for _ in spec])
+            self.register_buffer("mod_acc", torch.full((len(spec),), 1.0 / n_classes))
+        self.aux_logits = None
         if fusion == "early":  # one Q-Former on the tokens of all modalities, k queries per modality
             assert epoch == "qformer", "early fusion: seqqformer only"
             self.joint = _JointQFormer(self.spec, d=d, k=k * len(self.spec), layers=layers, heads=heads,
@@ -268,8 +276,54 @@ class MultiSeqStager(nn.Module):
             h = enc.embed(n[:, a:a + dim], e[:, a:a + dim], p[:, t:t + n_tok, :d_p])
             hs.append(h + self.mod_emb[i])
             a, t = a + dim, t + n_tok
-        h = self.fuse(torch.cat(hs, -1)).view(B, L, -1)
+        hs = torch.stack(hs, 1)  # (B * L, M, d)
+        if self.mod_dropout and self.training:
+            self.aux_logits = torch.stack([head(hs[:, i].detach()) for i, head in enumerate(self.aux)], 1)
+            hs = self.drop_modalities(hs, n.dtype)
+        h = self.fuse(hs.flatten(1)).view(B, L, -1)
         return self.head(self.ln(self.temporal(h + self.pos_t[:L])))
+
+
+    def zero_embeddings(self, dtype=torch.float32):
+        """``(M, d)``: every modality's embedding of the all-zero input (= the training mean after
+        :func:`standardize`), plus its modality embedding; the replacement of a dropped modality."""
+        out = []
+        for i, (enc, (_, dim, d_p, n_tok)) in enumerate(zip(self.encs, self.spec)):
+            dev = self.mod_emb.device
+            z = enc.embed(torch.zeros(1, dim, device=dev, dtype=dtype), torch.zeros(1, dim, device=dev, dtype=dtype),
+                          torch.zeros(1, n_tok, d_p, device=dev, dtype=dtype))
+            out.append(z[0] + self.mod_emb[i])
+        return torch.stack(out)
+
+    def drop_modalities(self, hs, dtype=torch.float32):
+        """ProtoSleepNet's ZeroEmbeddingDropout: with probability ``mod_dropout`` an epoch loses
+        ``n ~ U{1, ..., M-1}`` modalities, drawn without replacement with ``p_m = acc_m / sum acc``
+        (the modalities the stager relies on most are dropped most often); their embeddings are
+        replaced by the zero-input embeddings."""
+        N, M, _ = hs.shape
+        dev = hs.device
+        prob = self.mod_acc.clamp_min(0)
+        prob = prob / prob.sum() if prob.sum() > 0 else torch.full((M,), 1.0 / M, device=dev)
+        apply = torch.rand(N, device=dev) < self.mod_dropout
+        n_drop = torch.randint(1, M, (N,), device=dev)
+        # weighted sampling without replacement, vectorized: Gumbel top-k on log p
+        keys = prob.log()[None] - torch.log(-torch.log(torch.rand(N, M, device=dev).clamp_min(1e-12)))
+        rank = keys.argsort(1, descending=True).argsort(1)  # rank of every modality per epoch
+        mask = (rank < n_drop[:, None]) & apply[:, None]  # (N, M)
+        return torch.where(mask[..., None], self.zero_embeddings(dtype)[None], hs)
+
+    def aux_step(self, y: torch.Tensor) -> torch.Tensor:
+        """Loss of the per-modality heads (detached inputs) and EMA update of ``mod_acc``."""
+        if self.aux_logits is None:
+            return torch.zeros((), device=y.device)
+        lg, yy = self.aux_logits, y.reshape(-1)
+        ok = yy >= 0
+        loss = F.cross_entropy(lg[ok].flatten(0, 1), yy[ok].repeat_interleave(lg.shape[1]))
+        with torch.no_grad():
+            acc = (lg[ok].argmax(-1) == yy[ok, None]).float().mean(0)
+            self.mod_acc.mul_(self.acc_momentum).add_((1 - self.acc_momentum) * acc)
+        self.aux_logits = None
+        return loss
 
 
 def pack_modalities(splits_by_mod: Dict[str, Dict[str, Dict[str, np.ndarray]]], drop: Sequence[str] = ()):
@@ -462,6 +516,8 @@ def train(model, data, epochs: int = 30, lr: float = 3e-4, batch: int = 512, wei
             idx = perm[i:i + nb]
             logits = model(tr["N"][idx].to(device), tr["E"][idx].to(device), tr["P"][idx].to(device))
             loss = F.cross_entropy(logits.reshape(-1, logits.shape[-1]), tr["y"][idx].reshape(-1).to(device))
+            if hasattr(model, "aux_step"):  # modality dropout: per-modality heads, accuracy estimates
+                loss = loss + model.aux_step(tr["y"][idx].to(device))
             opt.zero_grad()
             loss.backward()
             nn.utils.clip_grad_norm_(model.parameters(), 1.0)
@@ -527,7 +583,7 @@ def _train(a):
         print(f"[qformer_stager] modalities {spec}, zero-filled epochs {missing}", flush=True)
         torch.manual_seed(a.seed)  # the seed fixes the initial weights too
         model = MultiSeqStager(spec, epoch=a.arch[3:], d=a.d, k=a.k, layers=a.layers, heads=a.heads,
-                               dropout=a.dropout, fusion=a.fusion, **extra)
+                               dropout=a.dropout, fusion=a.fusion, mod_dropout=a.mod_dropout, **extra)
     else:
         raw = _load(a.data)
         data = standardize(raw)
@@ -568,6 +624,8 @@ def main():
     t.add_argument("--mods", nargs="*", default=None,
                    help="multimodal: name=latents_dir per modality, the first is the reference (eeg=... eog=... emg=...)")
     t.add_argument("--drop", nargs="*", default=(), help="multimodal ablation: levels set to zero, e.g. eog:N emg:P")
+    t.add_argument("--mod-dropout", type=float, default=0.0,
+                   help="multimodal, late fusion: accuracy-weighted modality dropout as ProtoSleepNet (p_apply, PSN 0.5)")
     t.add_argument("--fusion", choices=("late", "early"), default="late",
                    help="multimodal: late = one Q-Former per modality, fused after pooling; early = one Q-Former "
                         "with k x modalities queries on the tokens of all modalities")
