@@ -336,6 +336,10 @@ def main():
         "detector_target": {"n": len(kc_td), "ptp_slow_median": float(np.median(kc_td_amp)) if kc_td else None},
         "detector_dcsm": {"n": len(kc_d), "ptp_slow_median": float(np.median(kc_d_amp)) if kc_d else None},
         "agreement": detector_vs_experts([r for r in tgt if r["id"].startswith("kc_")], "k_complex"),
+        # threshold of the detector (k x median N2 half peak-to-peak): k=4 is the one of vq_explain_n2
+        "agreement_by_k": {str(k): detector_vs_experts([r for r in tgt if r["id"].startswith("kc_")], "k_complex", k)["pooled"]
+                           for k in (1.5, 2.0, 2.5, 3.0)},
+        "detector_dcsm_by_k": {str(k): len(kc_shapes_detector(dcsm, k=k)[2]) for k in (1.5, 2.0, 2.5, 3.0, 4.0)},
     }
     sp_recs = [r for r in tgt if r["id"].startswith("sp_")]
     sp_t = [spindle_stats(r["x"]["eeg"].reshape(-1), [(int(e.onset_sec * FS), int((e.onset_sec + e.duration_sec) * FS))
@@ -347,7 +351,10 @@ def main():
             xf = r["x"]["eeg"][n2].reshape(-1)
             sp_d.append(spindle_stats(xf, spindles(xf)))
     cat = lambda L, i: np.concatenate([np.asarray(s[i]) for s in L if len(s[i])]) if any(len(s[i]) for s in L) else np.array([])  # noqa: E731
+    cat = lambda L, i: np.concatenate([np.asarray(s[i]) for s in L if len(s[i])]) if any(len(s[i]) for s in L) else np.array([])  # noqa: E731
+    sp_dt = [spindle_stats(r["x"]["eeg"].reshape(-1), spindles(r["x"]["eeg"].reshape(-1))) for r in sp_recs]
     rep["spindle"] = {
+        "detector_target": {"n": int(len(cat(sp_dt, 0))), **{f"{k}_median": float(np.median(cat(sp_dt, i))) for i, k in enumerate(("amp_uV", "duration_s", "freq_hz")) if len(cat(sp_dt, i))}},
         "expert_target": {"n": int(len(cat(sp_t, 0))), **{f"{k}_median": float(np.median(cat(sp_t, i))) for i, k in enumerate(("amp_uV", "duration_s", "freq_hz")) if len(cat(sp_t, i))}},
         "detector_dcsm": {"n": int(len(cat(sp_d, 0))), **{f"{k}_median": float(np.median(cat(sp_d, i))) for i, k in enumerate(("amp_uV", "duration_s", "freq_hz")) if len(cat(sp_d, i))}},
         "agreement": detector_vs_experts(sp_recs, "spindle"),
