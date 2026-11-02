@@ -161,6 +161,7 @@ def swap_token(model, codes: Dict[str, torch.Tensor], token: int, new_code, leve
     w1 = decode_full(model, z1["N"], z1["E"], z1["P"], seed).float().cpu().numpy()
     T = codes["P"].shape[1]
     n = w0.shape[1] // T
+    band = band if band in (bands or BANDS) else next(iter(bands or BANDS))  # e.g. EOG/EMG: no sigma
     s0 = band_power(token_segments(w0, T).reshape(-1, n), fs, bands)[band].reshape(len(w0), -1)
     s1 = band_power(token_segments(w1, T).reshape(-1, n), fs, bands)[band].reshape(len(w0), -1)
     d = s1 - s0
