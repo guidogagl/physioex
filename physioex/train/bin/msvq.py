@@ -123,6 +123,8 @@ def main():
     ap.add_argument("--max-valid", type=int, default=20000)
     ap.add_argument("--valid-ratio", type=float, default=0.25, help="validations per training epoch = 1/ratio")
     ap.add_argument("--workers", type=int, default=8)
+    ap.add_argument("--eval-only", action="store_true",
+                    help="no training: evaluate the best checkpoint already in --out and write run.json")
     ap.add_argument("--max-subjects", type=int, default=0, help="use only the first N subjects (smoke tests)")
     ap.add_argument("--recon-per-night", type=int, default=250, help="test epochs per night in recon_eval (0 = skip)")
     a = ap.parse_args()
@@ -210,14 +212,18 @@ def main():
         model.targets, model.ce_weight = targets, a.ce_weight
     if not (a.model == "msae_vq" and a.init):  # the norms come with the MSAE weights
         (fit_msae_norms if a.model in ("msae", "msae_vq") else fit_msvq_norms)(model, tr)
-    if a.model == "msae_vq":
+    if a.model == "msae_vq" and a.eval_only:
+        model = model.cuda() if torch.cuda.is_available() else model
+    elif a.model == "msae_vq":
         if torch.cuda.is_available():
             model = model.cuda()
         t1 = time.time()
         used = fit_vq_codebooks(model, tr, seed=a.fold)
         print(f"[msae_vq] k-means codebooks on {used} vectors in {time.time() - t1:.0f}s, "
               f"{model.bits_per_epoch()} bits per epoch at full depth", flush=True)
-    if a.posthoc:
+    if a.eval_only:  # the run trained but its evaluation did not finish: best checkpoint of --out
+        assert os.path.isdir(os.path.join(a.out, "ckpt")), f"--eval-only: no checkpoints in {a.out}"
+    elif a.posthoc:
         os.makedirs(os.path.join(a.out, "ckpt"), exist_ok=True)
         torch.save(model.state_dict(), os.path.join(a.out, "ckpt", "posthoc.pt"))
     else:
@@ -227,7 +233,8 @@ def main():
                               logger="tensorboard", run_name=a.model, seed=a.fold,
                               gpu_id=0 if torch.cuda.is_available() else None, grad_clip=a.grad_clip or None,
                               **opt_kw)
-    torch.save(model.state_dict(), os.path.join(a.out, "model.pt"))
+    if not a.eval_only:
+        torch.save(model.state_dict(), os.path.join(a.out, "model.pt"))
     # evaluate the best validation checkpoint, not the last weights (a late divergence would hide it)
     best = load_best(model, a.out)
     print(f"[msvq] evaluating {best or 'final weights'}", flush=True)
@@ -243,6 +250,8 @@ def main():
                 acc.setdefault(k, []).append(v)
             if isinstance(model, MSAEVQ):
                 for s_, c_ in model.last_codes.items():
+                    if c_ is None:  # level not quantized (use_n=False)
+                        continue
                     for l_ in range(c_.shape[-1]):
                         codes.setdefault(f"{s_}{l_ + 1}", []).append(c_[..., l_].reshape(-1).cpu())
             elif getattr(model, "quantize_codes", False):
