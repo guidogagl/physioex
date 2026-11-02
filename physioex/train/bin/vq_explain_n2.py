@@ -200,18 +200,23 @@ def main():
             if len(non) < len(ev_tok) + 2:
                 continue
 
-            def code_swap(toks):
+            def code_swap(toks, full=False):
                 c2 = {kk: (v.clone() if v is not None else None) for kk, v in codes0.items()}
+                swap = {}
                 for j in toks:
                     pool = non[~np.isin(non, toks)]
                     j2 = int(pool[np.argmin(np.abs(pool - j))])
                     c2["P"][:, j] = codes0["P"][:, j2]
-                zs = std_(model.embed(c2))
+                    swap[int(j)] = j2
+                zq = model.embed(c2)
+                zs = std_(zq)
                 P2 = Pw.clone()
                 P2[0, half] = zs["P"][0]
-                return float(p_centre(Nw, Ew, P2)[0, N2])
+                pr2 = p_centre(Nw, Ew, P2)[0]
+                return (pr2, swap, zq) if full else float(pr2[N2])
 
-            p_code = code_swap(ev_tok)
+            pr_code, swap_map, zq_swap = code_swap(ev_tok, full=True)
+            p_code = float(pr_code[N2])
             ctrl = [code_swap(sorted(rng.choice(non, len(ev_tok), replace=False).tolist())) for _ in range(a.n_control)]
             # signal edit: remove every event, re-encode, replace the centre epoch's latents
             xe = x[t].copy()
@@ -240,7 +245,11 @@ def main():
             # waves for the figure (kept for every candidate, small)
             dec0 = vx.decode_full(model, z0["N"], z0["E"], z0["P"]).float().cpu().numpy()[0]
             dec1 = vx.decode_full(model, z1["N"], z1["E"], z1["P"]).float().cpu().numpy()[0]
-            rec["_waves"] = {"input": x[t], "edited": xe, "decoded": dec0, "decoded_edited": dec1}
+            dec2 = vx.decode_full(model, zq_swap["N"], zq_swap["E"], zq_swap["P"]).float().cpu().numpy()[0]
+            rec["_waves"] = {"input": x[t], "edited": xe, "decoded": dec0, "decoded_edited": dec1, "decoded_code_swapped": dec2}
+            rec["probs_code_removed"] = pr_code.tolist()
+            rec["probs_signal_removed"] = p_centre(N2w, E2w, P2w)[0].tolist()
+            rec["swap_map"] = {str(k_): v_ for k_, v_ in swap_map.items()}
         log(f"night {night}: {len(cand)} N2 epochs, {len(sp_night)} spindles, {sum(1 for r in found if r['night'] == night)} candidates")
     found.sort(key=lambda r: (r["delta_code_vs_control"] + r["delta_signal"]))
     waves = {}
