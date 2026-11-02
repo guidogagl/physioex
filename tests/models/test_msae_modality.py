@@ -93,3 +93,18 @@ def test_modality_metrics_shapes_and_perfect_reconstruction():
         assert all(abs(v - 1) < 1e-6 for v in r["logpow5"].values()) and r["event_auc"] > 0.99
         assert len(r["per_night"]["event_auc"]) == 3
         assert ("env" in r) == (kw.get("recon") == "texture") and ("wave_low" in r) != ("env" in r)
+
+
+def test_texture_gradient_survives_saturation():
+    """tex_head pushed far above the clamp: the forward is clamped, the gradient is not zero."""
+    from physioex.models.msae import MSAE
+
+    m = MSAE(3, width=8, dim=32, token_sec=0.5, d_p=4, fs=200, recon="texture", pow_bands=EMG_BANDS,
+             psd_band=(10, 90), seg_sec=0.5)
+    with torch.no_grad():
+        m.tex_head.bias.fill_(10.0)
+    h = torch.randn(2, 60, m.tex_head.in_features)
+    tex = m.noise_texture(h)
+    assert tex.pow(2).mean().sqrt() < 1e3  # clamped at 10 ** 2 per band
+    tex.pow(2).mean().log().backward()
+    assert m.tex_head.bias.grad.abs().sum() > 0

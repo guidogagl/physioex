@@ -306,7 +306,11 @@ class MSAE(nn.Module):
         """``(B, T_p, dim)`` decoder tokens -> ``(B, 3000)`` sum over the bands above ``pow_hz`` of
         unit-RMS band-passed white noise x the amplitude predicted per token (linear in time).
         The phase is random: this restores the band power that the MSE path mutes."""
-        g = 10 ** self.tex_head(h).float().clamp(-6, 2)  # (B, T_p, n_bands)
+        # straight-through clamp: same forward, but the gradient survives saturation. A plain
+        # clamp zeroes it, and on EMG one burst pushed every token above 2 -> constant decoder,
+        # no gradient, permanent collapse (jobs 1552230, 1552356, 01.11.2026)
+        lg = self.tex_head(h).float()
+        g = 10 ** (lg + (lg.clamp(-6, 2) - lg).detach())  # (B, T_p, n_bands)
         g = F.interpolate(g.transpose(1, 2), size=self.epoch, mode="linear", align_corners=True)
         spec = torch.fft.rfft(torch.randn(len(h), self.epoch, device=h.device), dim=-1)
         f = torch.fft.rfftfreq(self.epoch, d=1 / self.fs, device=h.device)
