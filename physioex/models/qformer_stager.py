@@ -277,6 +277,9 @@ class MultiSeqStager(nn.Module):
             hs.append(h + self.mod_emb[i])
             a, t = a + dim, t + n_tok
         hs = torch.stack(hs, 1)  # (B * L, M, d)
+        # last cross-attention of every modality's Q-Former, concatenated: (B * L, sum(2 + T_m))
+        att = [enc.last_attn for enc in self.encs]
+        self.last_attn = torch.cat(att, -1) if all(x is not None for x in att) else None
         if self.mod_dropout and self.training:
             self.aux_logits = torch.stack([head(hs[:, i].detach()) for i, head in enumerate(self.aux)], 1)
             hs = self.drop_modalities(hs, n.dtype)
@@ -379,13 +382,19 @@ ARCHS = {"qformer": QFormerStager, "linear": LinearStager, "seqqformer": _seq("q
 # ----------------------------------------------------------------------------
 
 
-def standardize(splits: Dict[str, Dict[str, np.ndarray]]) -> Dict[str, Dict[str, torch.Tensor]]:
-    """Per-dimension z-score with the training statistics (P: per channel over all tokens)."""
-    tr = splits["train"]
+def latent_stats(tr: Dict[str, np.ndarray]) -> Dict[str, tuple]:
+    """``{level: (mean, std)}`` of the training latents, per dimension (P: per channel over all
+    tokens); the statistics :func:`standardize` uses."""
     stats = {}
     for k in ("N", "E", "P"):
         a = tr[k].astype(np.float32).reshape(-1, tr[k].shape[-1])
         stats[k] = (a.mean(0), a.std(0) + 1e-6)
+    return stats
+
+
+def standardize(splits: Dict[str, Dict[str, np.ndarray]]) -> Dict[str, Dict[str, torch.Tensor]]:
+    """Per-dimension z-score with the training statistics (P: per channel over all tokens)."""
+    stats = latent_stats(splits["train"])
     out = {}
     for s, d in splits.items():
         out[s] = {k: torch.from_numpy((d[k].astype(np.float32) - stats[k][0]) / stats[k][1]) for k in ("N", "E", "P")}
@@ -599,7 +608,7 @@ def _train(a):
         logits, attn = predict(model, data[s], device=device)
         y = data[s]["y"].numpy()
         res[s] = metrics(logits.argmax(1).numpy(), y, data[s]["night"])
-        if attn is not None:
+        if attn is not None and not a.mods:  # multimodal attention: per modality, see stager_explain
             res[s]["attention_by_stage"] = attention_by_stage(attn, y)
     os.makedirs(a.out, exist_ok=True)
     json.dump(res, open(os.path.join(a.out, "stager.json"), "w"), indent=1)

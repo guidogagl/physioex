@@ -23,6 +23,7 @@ import torch
 FS = 100
 STAGES = ("W", "N1", "N2", "N3", "REM")
 BANDS = {"delta": (1, 4), "theta": (4, 8), "alpha": (8, 12), "sigma": (11, 16), "beta": (16, 30)}
+EOG_BANDS = ((0.3, 1), (1, 2), (2, 5), (5, 9), (9, 15), (15, 35))
 
 
 @torch.no_grad()
@@ -35,20 +36,39 @@ def encode_all(model, windows: np.ndarray, batch: int = 64) -> Dict[str, np.ndar
         z = model.encode(torch.from_numpy(windows[i:i + batch])[:, :, None].to(device))
         for s in ("N", "E", "P"):
             acc.setdefault(s, []).append(z[s].float().cpu().numpy())
-            acc.setdefault(f"codes_{s}", []).append(z["codes"][s].cpu().numpy())
+            if z["codes"][s] is not None:  # no N codes in a model without N
+                acc.setdefault(f"codes_{s}", []).append(z["codes"][s].cpu().numpy())
     return {k: np.concatenate(v) for k, v in acc.items()}
 
 
-def band_power(seg: np.ndarray) -> Dict[str, np.ndarray]:
+def model_bands(model) -> Dict[str, tuple]:
+    """Bands of a modality model: the named EEG bands for an EEG model (100 Hz, wave decoder),
+    else the model's ``pow_bands`` named ``"lo-hi"`` (EOG, EMG)."""
+    if getattr(model, "fs", FS) == FS and getattr(model, "recon", "wave") != "texture" and \
+            tuple(map(tuple, getattr(model, "pow_bands", ()))) != EOG_BANDS:
+        return dict(BANDS)
+    return {f"{a:g}-{b:g}": (a, b) for a, b in model.pow_bands}
+
+
+def band_power(seg: np.ndarray, fs: int = FS, bands: Optional[Dict[str, tuple]] = None) -> Dict[str, np.ndarray]:
     """``(M, n)`` segments -> log10 power per band ``{band: (M,)}``."""
     p = np.abs(np.fft.rfft(seg, axis=-1)) ** 2
-    f = np.fft.rfftfreq(seg.shape[-1], 1 / FS)
-    return {b: np.log10(p[:, (f >= lo) & (f < hi)].sum(-1) + 1e-12) for b, (lo, hi) in BANDS.items()}
+    f = np.fft.rfftfreq(seg.shape[-1], 1 / fs)
+    return {b: np.log10(p[:, (f >= lo) & (f < hi)].sum(-1) + 1e-12) for b, (lo, hi) in (bands or BANDS).items()}
+
+
+@torch.no_grad()
+def decode_full(model, n, e=None, p=None, seed: int = 0) -> torch.Tensor:
+    """Decoded epoch with the noise texture when the model has one (``(B, epoch)``). The texture
+    noise is drawn with ``seed``, so two decodes with the same seed differ only by the latents."""
+    torch.manual_seed(seed)
+    out = model.decode(n, e, p, texture=bool(getattr(model, "texture", False)))
+    return out[0] + out[1] if isinstance(out, tuple) else out
 
 
 @torch.no_grad()
 def atlas_e(model, z: Dict[str, np.ndarray], centres: np.ndarray, labels: Optional[np.ndarray] = None,
-            top: int = 20, min_count: int = 5) -> Dict[int, dict]:
+            top: int = 20, min_count: int = 5, fs: int = FS, bands: Optional[Dict[str, tuple]] = None) -> Dict[int, dict]:
     """Level-1 E codes: count, decoded prototype ``D(mean N_q of its epochs, codeword)``, the
     ``top`` epochs nearest to the codeword, mean band power and stage mix (if ``labels``)."""
     device = next(model.parameters()).device
@@ -60,9 +80,9 @@ def atlas_e(model, z: Dict[str, np.ndarray], centres: np.ndarray, labels: Option
         if len(m) < min_count:
             continue
         n = torch.from_numpy(z["N"][m].mean(0, keepdims=True)).to(device)
-        proto = model.decode(n, cb[int(c)][None])
+        proto = decode_full(model, n, cb[int(c)][None])
         d = ((z["E"][m] - cb[int(c)].cpu().numpy()) ** 2).sum(1)
-        bp = band_power(centres[m])
+        bp = band_power(centres[m], fs, bands)
         out[int(c)] = {"count": int(len(m)), "prototype": proto[0].float().cpu().numpy(),
                        "nearest": m[np.argsort(d)[:top]].tolist(),
                        "band_power": {b: float(v.mean()) for b, v in bp.items()}}
@@ -78,12 +98,13 @@ def token_segments(centres: np.ndarray, n_tok: int) -> np.ndarray:
 
 
 def atlas_p(z: Dict[str, np.ndarray], centres: np.ndarray, bursts: Optional[np.ndarray] = None,
-            min_count: int = 20) -> Dict[int, dict]:
+            min_count: int = 20, fs: int = FS, bands: Optional[Dict[str, tuple]] = None) -> Dict[int, dict]:
     """Level-1 P codes: count, band power of their segments minus the mean of all segments,
-    and (with ``bursts`` ``(M, n_tok)`` bool) the fraction of their segments inside a sigma burst."""
+    and (with ``bursts`` ``(M, n_tok)`` bool) the fraction of their segments inside an event
+    (sigma burst for EEG, rapid eye movement for EOG, burst for EMG)."""
     c1 = z["codes_P"][..., 0]
     seg = token_segments(centres, c1.shape[1]).reshape(-1, centres.shape[1] // c1.shape[1])
-    bp = band_power(seg)
+    bp = band_power(seg, fs, bands)
     mean = {b: v.mean() for b, v in bp.items()}
     flat = c1.reshape(-1)
     bflat = None if bursts is None else bursts.reshape(-1)
@@ -121,23 +142,33 @@ def burst_codes(codes_p1: np.ndarray, bursts: np.ndarray, top: int = 5) -> dict:
 
 
 @torch.no_grad()
-def swap_token(model, codes: Dict[str, torch.Tensor], token: int, new_code: int, level: int = 0) -> dict:
-    """Intervention: replace the level-``level`` P code of ``token`` with ``new_code`` and decode.
-    Returns both waves and the sigma power change inside the token's segment and outside it."""
+def swap_token(model, codes: Dict[str, torch.Tensor], token: int, new_code, level: int = 0, band: str = "sigma",
+               fs: int = FS, bands: Optional[Dict[str, tuple]] = None, seed: int = 0) -> dict:
+    """Intervention: replace the level-``level`` P code of ``token`` with ``new_code`` (an int), or
+    the whole code stack of the token with ``new_code`` (a sequence of codes, one per level), and
+    decode (same texture noise before and after). Returns both waves and the change of the
+    ``band`` power inside the token's segment and outside it."""
     model.eval()
     z0 = model.embed(codes)
-    c2 = {k: v.clone() for k, v in codes.items()}
-    c2["P"][:, token, level] = new_code
+    c2 = {k: (v.clone() if v is not None else None) for k, v in codes.items()}
+    if np.ndim(new_code):
+        nc = torch.as_tensor(np.asarray(new_code), device=c2["P"].device, dtype=c2["P"].dtype)
+        c2["P"][:, token, :len(nc)] = nc
+    else:
+        c2["P"][:, token, level] = new_code
     z1 = model.embed(c2)
-    w0 = model.decode(z0["N"], z0["E"], z0["P"]).float().cpu().numpy()
-    w1 = model.decode(z1["N"], z1["E"], z1["P"]).float().cpu().numpy()
-    n = w0.shape[1] // codes["P"].shape[1]
-    s0 = band_power(token_segments(w0, codes["P"].shape[1]).reshape(-1, n))["sigma"].reshape(len(w0), -1)
-    s1 = band_power(token_segments(w1, codes["P"].shape[1]).reshape(-1, n))["sigma"].reshape(len(w0), -1)
+    w0 = decode_full(model, z0["N"], z0["E"], z0["P"], seed).float().cpu().numpy()
+    w1 = decode_full(model, z1["N"], z1["E"], z1["P"], seed).float().cpu().numpy()
+    T = codes["P"].shape[1]
+    n = w0.shape[1] // T
+    s0 = band_power(token_segments(w0, T).reshape(-1, n), fs, bands)[band].reshape(len(w0), -1)
+    s1 = band_power(token_segments(w1, T).reshape(-1, n), fs, bands)[band].reshape(len(w0), -1)
     d = s1 - s0
     others = np.delete(d, token, axis=1)
-    return {"wave_before": w0, "wave_after": w1, "sigma_change_token": d[:, token],
-            "sigma_change_others": np.abs(others).mean(1)}
+    return {"wave_before": w0, "wave_after": w1, "latents_after": z1, "band_change_token": d[:, token],
+            "band_change_others": np.abs(others).mean(1),
+            # old names (EEG sigma)
+            "sigma_change_token": d[:, token], "sigma_change_others": np.abs(others).mean(1)}
 
 
 def _entropy(p: np.ndarray) -> float:
@@ -163,12 +194,27 @@ def sequence_stats(seq: np.ndarray, labels: Optional[np.ndarray] = None) -> dict
     return out
 
 
-def bag_of_codes(z: Dict[str, np.ndarray], n_codes: Dict[str, int]) -> np.ndarray:
+def bag_of_codes(z: Dict[str, np.ndarray], n_codes: Dict[str, int], sparse: bool = False):
     """Per epoch: one-hot level-1 N and E codes and the histogram of level-1 P codes over the tokens.
-    Columns: ``N:0..K_N-1, E:0..K-1, P:0..K-1`` (see :func:`bag_names`)."""
+    Columns: ``N:0..K_N-1, E:0..K-1, P:0..K-1`` (see :func:`bag_names`); a model without N has an
+    all-zero N block. ``sparse=True``: a ``scipy.sparse.csr_matrix`` (large codebooks)."""
     m = len(z["codes_E"])
+    if sparse:
+        from scipy import sparse as sp
+
+        kn, ke, kp = n_codes["N"], n_codes["E"], n_codes["P"]
+        rows, cols, vals = [], [], []
+        if z.get("codes_N") is not None:
+            rows.append(np.arange(m)); cols.append(z["codes_N"][:, 0]); vals.append(np.ones(m, np.float32))
+        rows.append(np.arange(m)); cols.append(kn + z["codes_E"][:, 0]); vals.append(np.ones(m, np.float32))
+        c = z["codes_P"][..., 0]
+        rows.append(np.repeat(np.arange(m), c.shape[1])); cols.append(kn + ke + c.reshape(-1))
+        vals.append(np.full(c.size, 1.0 / c.shape[1], np.float32))
+        return sp.csr_matrix((np.concatenate(vals), (np.concatenate(rows), np.concatenate(cols))),
+                             shape=(m, kn + ke + kp))
     oh_n = np.zeros((m, n_codes["N"]), np.float32)
-    oh_n[np.arange(m), z["codes_N"][:, 0]] = 1
+    if z.get("codes_N") is not None:
+        oh_n[np.arange(m), z["codes_N"][:, 0]] = 1
     oh_e = np.zeros((m, n_codes["E"]), np.float32)
     oh_e[np.arange(m), z["codes_E"][:, 0]] = 1
     hist_p = np.zeros((m, n_codes["P"]), np.float32)
@@ -181,7 +227,7 @@ def bag_names(n_codes: Dict[str, int]) -> list:
     return [f"{s}:{i}" for s in ("N", "E", "P") for i in range(n_codes[s])]
 
 
-def code_evidence(xtr: np.ndarray, ytr: np.ndarray, names: Sequence[str], top: int = 10) -> dict:
+def code_evidence(xtr, ytr: np.ndarray, names: Sequence[str], top: int = 10) -> dict:
     """Logistic regression on the bag of codes; per stage the ``top`` codes with the largest weight
     (global explanation). Returns the fitted model too."""
     from sklearn.linear_model import LogisticRegression

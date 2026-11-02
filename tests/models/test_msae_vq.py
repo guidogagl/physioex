@@ -286,3 +286,29 @@ def test_vq_explain_atlas_bursts_swap_sequence_bag():
     bag = vx.bag_of_codes(z, model.n_codes)
     assert bag.shape == (6, 8 + 16 + 16) and np.allclose(bag[:, 24:].sum(1), 1)
     assert len(vx.bag_names(model.n_codes)) == bag.shape[1]
+
+
+def test_vq_explain_stack_swap_texture_seed_and_sparse_bag():
+    """Whole-stack swap: same stack -> same wave even with the random-phase texture (fixed
+    seed); another stack changes the token more than the rest; sparse bag == dense bag."""
+    import numpy as np
+
+    from physioex.models import vq_explain as vx
+
+    model = _model(texture=True).eval()
+    _init_codebooks(model)
+    windows = np.random.default_rng(1).standard_normal((4, L, 3000)).astype(np.float32)
+    z = vx.encode_all(model, windows, batch=2)
+    codes = {k: torch.from_numpy(z[f"codes_{k}"][:1]) for k in ("N", "E", "P")}
+    same = vx.swap_token(model, codes, token=10, new_code=z["codes_P"][0, 10])
+    assert np.allclose(same["wave_before"], same["wave_after"], atol=1e-5)
+    other = (z["codes_P"][0, 10] + 3) % 16
+    sw = vx.swap_token(model, codes, token=10, new_code=other)
+    assert np.array_equal(sw["latents_after"]["E"].numpy(), model.embed(codes)["E"].numpy())
+    p0 = model.embed(codes)["P"][0].numpy()
+    p1 = sw["latents_after"]["P"][0].numpy()
+    assert not np.allclose(p0[10], p1[10]) and np.allclose(np.delete(p0, 10, 0), np.delete(p1, 10, 0))
+    dense = vx.bag_of_codes(z, model.n_codes)
+    assert np.allclose(vx.bag_of_codes(z, model.n_codes, sparse=True).toarray(), dense)
+    bp = vx.band_power(np.random.default_rng(2).standard_normal((3, 100)), fs=200, bands={"20-35": (20, 35)})
+    assert set(bp) == {"20-35"} and bp["20-35"].shape == (3,)
