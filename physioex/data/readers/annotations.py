@@ -429,3 +429,23 @@ def parse_stages_csv(
         )
 
     return labels, events
+
+
+def parse_onset_duration_txt(path: Union[str, Path]) -> Tuple[Optional[str], List[Tuple[float, float]]]:
+    """Two-column event file: an optional ``[header]`` line, then ``onset duration`` rows (s).
+
+    Used by the DREAMS micro-event databases (e.g. ``[vis1_Kcomplexes/CZ-A1]`` followed by
+    ``50.4113  0.6544``). Returns ``(header, [(onset_sec, duration_sec), ...])``.
+    """
+    header, rows = None, []
+    for line in Path(path).read_text(encoding="latin-1").splitlines():
+        s = line.strip()
+        if not s:
+            continue
+        if s.startswith("["):
+            header = s.strip("[]")
+            continue
+        parts = s.replace(",", " ").split()
+        if len(parts) >= 2:
+            rows.append((float(parts[0]), float(parts[1])))
+    return header, rows

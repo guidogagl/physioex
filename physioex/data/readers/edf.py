@@ -445,3 +445,58 @@ def read_channels_from_edf(
             sig, fs = read_channel(f, rc)
             out[_encode_physical(rc.physical)] = (sig, fs)
     return out
+
+
+# ---------- Tolerant reader (non-compliant EDF) ----------
+
+
+def read_edf_lenient(edf_path: Union[str, Path]) -> Dict:
+    """Read a 16-bit EDF with numpy, without the spec checks of pyedflib.
+
+    Some public EDFs violate the spec in harmless ways (e.g. DREAMS: a channel with
+    physical min = physical max), which makes pyedflib refuse the whole file. Here every
+    channel is converted with its own digital/physical range (a channel with an empty range
+    reads as its physical minimum) and scaled to µV from its physical dimension, as
+    :func:`read_channel` does.
+
+    Returns ``{"labels", "fs", "units", "signals" (list of float32 arrays, µV for voltage
+    channels), "duration_sec", "start_sec"}``.
+    """
+    b = Path(edf_path).read_bytes()
+    ns = int(b[252:256])
+    n_rec = int(b[236:244])
+    rec_dur = float(b[244:252])
+    hdr = int(b[184:192])
+    try:
+        hh, mm, ss = (int(x) for x in b[176:184].decode("latin-1").strip().split("."))
+        start_sec = float(hh * 3600 + mm * 60 + ss)
+    except ValueError:
+        start_sec = 0.0
+    pos = 256
+
+    def field(width):
+        nonlocal pos
+        out = [b[pos + i * width:pos + (i + 1) * width].decode("latin-1").strip() for i in range(ns)]
+        pos += width * ns
+        return out
+
+    labels = field(16)
+    field(80)
+    units = field(8)
+    pmin = np.array(field(8), float)
+    pmax = np.array(field(8), float)
+    dmin = np.array(field(8), float)
+    dmax = np.array(field(8), float)
+    field(80)
+    nsr = np.array(field(8), int)
+    rec_len = int(nsr.sum())
+    n_rec = min(n_rec, (len(b) - hdr) // (2 * rec_len)) if n_rec > 0 else (len(b) - hdr) // (2 * rec_len)
+    data = np.frombuffer(b, "<i2", count=n_rec * rec_len, offset=hdr).reshape(n_rec, rec_len)
+    signals, col = [], 0
+    for i in range(ns):
+        d = data[:, col:col + nsr[i]].reshape(-1).astype(np.float64)
+        col += nsr[i]
+        gain = (pmax[i] - pmin[i]) / (dmax[i] - dmin[i]) if dmax[i] != dmin[i] else 0.0
+        signals.append((((d - dmin[i]) * gain + pmin[i]) * _unit_scale_to_uv(units[i])).astype(np.float32))
+    return {"labels": labels, "fs": [float(n) / rec_dur for n in nsr], "units": units, "signals": signals,
+            "duration_sec": n_rec * rec_dur, "start_sec": start_sec}
