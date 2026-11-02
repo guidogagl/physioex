@@ -35,6 +35,7 @@ CHANNELS = ["EEG_clean", "EOG_clean", "EMG_clean"]
 MODS = ["eeg", "eog", "emg"]
 BANDS = {"delta": (0.5, 4), "theta": (4, 8), "alpha": (8, 11), "sigma": (11, 16), "beta": (16, 30)}
 FS = 100
+GRID = np.arange(0, 50.001, 0.25)  # Hz, common spectrum grid
 
 
 def _jsonable(o):
@@ -82,7 +83,7 @@ def epoch_features(recs: List[dict]) -> Dict[str, dict]:
 
     out = {}
     for m in MODS:
-        acc = {s: {"rms": [], "p5": [], "p95": [], "ptp_slow": [], "psd": []} for s in STAGES}
+        acc = {s: {"rms": [], "p5": [], "p95": [], "ptp_slow": [], "psd": []} for s in STAGES}  # noqa: E501
         freqs = None
         for r in recs:
             x, fs, y = r["x"][m], r["fs"][m], r["y"]
@@ -97,24 +98,28 @@ def epoch_features(recs: List[dict]) -> Dict[str, dict]:
                 acc[st]["p95"] += np.percentile(e, 95, axis=1).tolist()
                 if m == "eeg":
                     acc[st]["ptp_slow"] += np.ptp(_bp(e, 0.3, 4.0, int(fs)), axis=1).tolist()
-                freqs, p = welch(e, fs=fs, nperseg=int(4 * fs), axis=-1)
-                acc[st]["psd"].append(np.log10(p + 1e-12))
+                f_in, p = welch(e, fs=fs, nperseg=int(4 * fs), axis=-1)
+                lp = np.log10(p + 1e-12)  # common 0.25 Hz grid; NaN above this recording's Nyquist
+                acc[st]["psd"].append(np.stack([np.interp(GRID, f_in, row, right=np.nan) for row in lp]))
+                acc[st]["fs"] = sorted(set(acc[st].get("fs", [])) | {float(fs)})
+                freqs = GRID
         res = {"freqs": freqs.tolist() if freqs is not None else []}
         for st, a in acc.items():
             if not a["rms"]:
                 continue
             psd = np.concatenate(a["psd"])
             f = np.asarray(freqs)
-            bp = {b: float(np.median(np.log10((10 ** psd[:, (f >= lo) & (f < hi)]).sum(1) * (f[1] - f[0]) + 1e-12)))
-                  for b, (lo, hi) in BANDS.items() if hi <= f[-1]}
+            bp = {b: float(np.nanmedian(np.log10(np.nansum(10 ** psd[:, (f >= lo) & (f < hi)], 1) * (f[1] - f[0]) + 1e-12)))
+                  for b, (lo, hi) in BANDS.items()}
             res[st] = {"n": len(a["rms"]), "rms_median": float(np.median(a["rms"])),
                        "rms_iqr": np.percentile(a["rms"], [25, 75]).tolist(),
                        "p5_median": float(np.median(a["p5"])), "p95_median": float(np.median(a["p95"])),
                        "ptp_slow_median": float(np.median(a["ptp_slow"])) if a["ptp_slow"] else None,
-                       "logpsd_mean": psd.mean(0).tolist(), "log_band_power_median": bp}
+                       "logpsd_mean": np.nanmean(psd, 0).tolist(), "fs_seen": a.get("fs", []), "log_band_power_median": bp}
             if m == "eeg" and st == "N2":
                 s = (f >= 10) & (f <= 16)
-                res[st]["sigma_peak_hz"] = float(f[s][np.argmax(psd.mean(0)[s] - np.linspace(psd.mean(0)[s][0], psd.mean(0)[s][-1], s.sum()))])
+                m_ = np.nanmean(psd, 0)[s]  # peak above the straight line between 10 and 16 Hz
+                res[st]["sigma_peak_hz"] = float(f[s][np.argmax(m_ - np.linspace(m_[0], m_[-1], s.sum()))])
         out[m] = res
     return out
 
