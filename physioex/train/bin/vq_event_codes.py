@@ -19,7 +19,7 @@ Label-free codes, expert events used only to evaluate:
    3 tokens and E, continuous), ``signal`` (band powers and slow-wave peak-to-peak in ±1 s, the
    filter baseline), and the rule-based ``filter`` detectors of
    :mod:`physioex.train.bin.vq_explain_n2`. Threshold picked by inner group CV on the training
-   excerpts. Token average precision and event precision / recall / F1 (overlap match).
+   excerpts. Token average precision and one-to-one event precision / recall / F1, bootstrap CIs over excerpts.
 5. **DCSM check (label-free domain).** Stage distribution of the enriched codes in DCSM test nights.
 
 ``python -m physioex.train.bin.vq_event_codes --run VQ_RUN --vq N8E8P6 --out DIR``
@@ -34,7 +34,7 @@ from typing import Dict, List
 
 import numpy as np
 
-from physioex.train.bin.domain_shift_report import _jsonable, match
+from physioex.train.bin.domain_shift_report import _jsonable
 from physioex.train.bin.vq_explain_n2 import _bp, kcomplexes, spindles
 
 FS = 100
@@ -189,19 +189,37 @@ def runs_to_events(pred: np.ndarray, gap: int = 1) -> List[tuple]:
     return ev
 
 
-def event_scores(preds: Dict[str, np.ndarray], refs: Dict[str, list]):
-    tp_p = n_p = tp_r = n_r = 0
-    for rid, p in preds.items():
-        pe = runs_to_events(p)
-        m = match(pe, refs[rid])
-        n_p += len(pe); n_r += len(refs[rid])
-        tp_p += round((m["precision"] or 0) * len(pe)); tp_r += round((m["recall"] or 0) * len(refs[rid]))
-    pr = tp_p / n_p if n_p else 0.0
-    rc = tp_r / n_r if n_r else 0.0
-    return {"precision": pr, "recall": rc, "f1": 2 * pr * rc / (pr + rc) if pr + rc else 0.0, "n_pred": n_p, "n_ref": n_r}
+def match_one_to_one(pred: list, ref: list) -> int:
+    """Greedy one-to-one matching by overlap (s): a predicted event can claim one reference event
+    and vice versa, so a long prediction spanning many events counts once. Returns the matches."""
+    pairs = []
+    for i, (a, b) in enumerate(pred):
+        for j, (c, d) in enumerate(ref):
+            ov = min(b, d) - max(a, c)
+            if ov > 0:
+                pairs.append((ov, i, j))
+    pairs.sort(reverse=True)
+    used_p, used_r, tp = set(), set(), 0
+    for _, i, j in pairs:
+        if i in used_p or j in used_r:
+            continue
+        used_p.add(i); used_r.add(j); tp += 1
+    return tp
 
 
-def best_threshold(scores, labels_by_rec, refs, order) -> float:
+def event_scores(preds: Dict[str, np.ndarray], refs: Dict[str, list], events: Dict[str, list] = None):
+    """Event precision / recall / F1 pooled over recordings, one-to-one matching. ``preds`` are
+    token masks (converted to events) unless ``events`` gives the predicted events directly."""
+    tp = n_p = n_r = 0
+    for rid in preds if events is None else events:
+        pe = runs_to_events(preds[rid]) if events is None else events[rid]
+        tp += match_one_to_one(pe, refs[rid]); n_p += len(pe); n_r += len(refs[rid])
+    pr = tp / n_p if n_p else 0.0
+    rc = tp / n_r if n_r else 0.0
+    return {"precision": pr, "recall": rc, "f1": 2 * pr * rc / (pr + rc) if pr + rc else 0.0, "n_pred": n_p, "n_ref": n_r, "tp": tp}
+
+
+def best_threshold(scores, refs, order) -> float:
     qs = np.unique(np.quantile(np.concatenate([scores[r] for r in order]), np.linspace(0.5, 0.995, 60)))
     best, bt = -1.0, qs[-1]
     for q in qs:
@@ -209,6 +227,32 @@ def best_threshold(scores, labels_by_rec, refs, order) -> float:
         if f > best:
             best, bt = f, q
     return float(bt)
+
+
+def evaluate_scores(scores: Dict[str, np.ndarray], y: Dict[str, np.ndarray], refs: Dict[str, list],
+                    n_boot: int = 1000, seed: int = 0) -> dict:
+    """Token AP and one-to-one event F1 of out-of-fold token scores. The threshold of a recording
+    is the one with the best F1 on the other recordings' scores. Bootstrap over recordings."""
+    from sklearn.metrics import average_precision_score
+
+    ids = list(scores)
+    thr = {r: best_threshold(scores, refs, [o for o in ids if o != r]) for r in ids}
+    masks = {r: scores[r] >= thr[r] for r in ids}
+
+    def stats(sel):
+        yy = np.concatenate([y[r] for r in sel]); ss = np.concatenate([scores[r] for r in sel])
+        ap = float(average_precision_score(yy, ss)) if yy.any() else 0.0
+        ev = event_scores({r: masks[r] for r in sel}, refs)
+        return ap, ev["f1"]
+
+    ap, f1 = stats(ids)
+    rng = np.random.default_rng(seed)
+    boots = np.array([stats([ids[i] for i in rng.integers(0, len(ids), len(ids))]) for _ in range(n_boot)])
+    lo, hi = np.percentile(boots, [2.5, 97.5], axis=0)
+    return {"token_ap": ap, "token_ap_ci": [float(lo[0]), float(hi[0])],
+            "token_base_rate": float(np.concatenate([y[r] for r in ids]).mean()),
+            "vis1": event_scores(masks, refs), "f1_ci": [float(lo[1]), float(hi[1])],
+            "threshold_median": float(np.median(list(thr.values())))}
 
 
 def fit_predict(Xtr, ytr, Xte, dense: bool):
@@ -224,35 +268,59 @@ def fit_predict(Xtr, ytr, Xte, dense: bool):
 
 
 def loo(recs: List[dict], feats: Dict[str, object], y: Dict[str, np.ndarray], refs: Dict[str, list], dense: bool):
-    """Leave-one-excerpt-out scores; threshold from inner group CV on the training excerpts."""
+    """Leave-one-excerpt-out token scores, then :func:`evaluate_scores`."""
     from scipy import sparse
-    from sklearn.metrics import average_precision_score
 
     ids = [r["id"] for r in recs]
     stack = (lambda L: np.concatenate(L)) if dense else (lambda L: sparse.vstack(L).tocsr())  # noqa: E731
-    out_scores, thr = {}, {}
+    out_scores = {}
     for te in ids:
         tr = [r for r in ids if r != te]
-        # inner out-of-fold scores on the training excerpts (3 groups)
-        inner = {}
-        folds = [tr[i::3] for i in range(3)]
-        for f in folds:
-            itr = [r for r in tr if r not in f]
-            if not any(y[r].any() for r in itr):
-                continue
-            s = fit_predict(stack([feats[r] for r in itr]), np.concatenate([y[r] for r in itr]),
-                            stack([feats[r] for r in f]), dense)
-            o = 0
-            for r in f:
-                k = feats[r].shape[0]
-                inner[r] = s[o:o + k]; o += k
-        thr[te] = best_threshold(inner, y, refs, list(inner))
         out_scores[te] = fit_predict(stack([feats[r] for r in tr]), np.concatenate([y[r] for r in tr]), feats[te], dense)
-    yy = np.concatenate([y[r] for r in ids])
-    ss = np.concatenate([out_scores[r] for r in ids])
-    res = {"token_ap": float(average_precision_score(yy, ss)), "token_base_rate": float(yy.mean()),
-           "vis1": event_scores({r: out_scores[r] >= thr[r] for r in ids}, refs)}
-    return res, out_scores, thr
+    return evaluate_scores(out_scores, y, refs), out_scores, None
+
+
+def filter_events(recs: List[dict], kind: str, kc_k: float) -> Dict[str, list]:
+    """Events (s) of the rule-based detectors of ``vq_explain_n2`` (no training)."""
+    out = {}
+    for r in recs:
+        x = r["x"]
+        if kind == "k_complex":
+            n23 = np.flatnonzero(np.isin(r["y"], (2, 3)))
+            ref = float(np.median(np.ptp(_bp(x[n23], 0.3, 4.0), axis=1))) / 2 if len(n23) else 1.0
+            out[r["id"]] = [((ep * 3000 + s) / FS, (ep * 3000 + e) / FS) for ep in n23 for s, e in kcomplexes(x[ep], ref, kc_k)]
+        else:
+            out[r["id"]] = [(s / FS, e / FS) for s, e in spindles(x.reshape(-1))]
+    return out
+
+
+def expert_refs(recs: List[dict], kind: str, concept: str) -> Dict[str, list]:
+    return {r["id"]: [(e.onset_sec, e.onset_sec + e.duration_sec) for e in r["events"] if e.type == kind and e.concept == concept]
+            for r in recs}
+
+
+def ceilings(det: dict, refs: Dict[str, list], refs2: Dict[str, list], scores_all: Dict[str, dict],
+             y: Dict[str, np.ndarray], fev: Dict[str, list]) -> dict:
+    """Expert 2 against expert 1 on the excerpts that have both, and every detector restricted to
+    those excerpts, against expert 1 and against expert 2."""
+    both = [rid for rid in refs2 if refs2[rid]]
+    if not both:
+        return {}
+    out = {"excerpts": both, "expert2_vs_expert1": event_scores({}, refs, events={r: refs2[r] for r in both}),
+           "expert1_vs_expert2": event_scores({}, refs2, events={r: refs[r] for r in both}), "detectors": {}}
+    sub = lambda d: {r: d[r] for r in both}  # noqa: E731
+    for name, sc in scores_all.items():
+        out["detectors"][name] = {"vs_expert1": evaluate_scores(sub(sc), sub(y), refs, n_boot=200),
+                                  "vs_expert2": evaluate_scores(sub(sc), {r: token_labels_from(refs2[r], len(y[r])) for r in both}, refs2, n_boot=200)}
+    out["detectors"]["filter"] = {"vs_expert1": event_scores({}, refs, events=sub(fev)), "vs_expert2": event_scores({}, refs2, events=sub(fev))}
+    return out
+
+
+def token_labels_from(ref: list, n: int) -> np.ndarray:
+    lab = np.zeros(n, bool)
+    for a, b in ref:
+        lab[max(0, int(np.floor(a / TOK_S))):min(n, int(np.ceil(b / TOK_S)))] = True
+    return lab
 
 
 def enrichment(recs, y, key_fn, min_n=20):
@@ -282,6 +350,38 @@ def enrichment(recs, y, key_fn, min_n=20):
             "top": [dict(zip(("key", "n", "pos", "precision", "lift", "p", "q"), r)) for r in rows[:25]]}
 
 
+# ---------------------------------------------------------------------------- rescore
+def rescore(a, tds, log):
+    """Metrics (one-to-one events, bootstrap, ceilings) from the saved out-of-fold token scores."""
+    rep = json.load(open(os.path.join(a.out, "vq_event_codes.json")))
+    specs = {s.subject_id: s for s in tds._subjects}
+    for pref, kind in KINDS.items():
+        z = np.load(os.path.join(a.out, f"scores_{kind}.npz"))
+        ids = sorted({k.split("__", 1)[1] for k in z if k.startswith("label__")})
+        R = []
+        for sid in ids:
+            n = tds._n_epochs[sid]
+            x = next(iter(tds._build_item(specs[sid], 0, n)["signals"].values())).numpy().reshape(n, -1).astype(np.float32)
+            R.append({"id": sid, "x": x, "y": np.asarray(tds._get_labels(specs[sid]))[:n], "events": tds._load_or_compute_events(specs[sid])})
+        y = {sid: z[f"label__{sid}"] for sid in ids}
+        refs, refs2 = expert_refs(R, kind, "vis1"), expert_refs(R, kind, "vis2")
+        names = sorted({k.split("__", 1)[0] for k in z if not k.startswith("label__")})
+        scores_all = {n_: {sid: z[f"{n_}__{sid}"] for sid in ids} for n_ in names}
+        det = {n_: evaluate_scores(sc, y, refs) for n_, sc in scores_all.items()}
+        for n_, d in det.items():
+            log(kind, n_, round(d["token_ap"], 3), d["token_ap_ci"], round(d["vis1"]["f1"], 3), d["f1_ci"])
+        fev = filter_events(R, kind, a.kc_k)
+        det["filter"] = {"vis1": event_scores({}, refs, events=fev), "k": a.kc_k if kind == "k_complex" else None}
+        res = rep["events"][kind]
+        res["detectors"] = det
+        res["ceiling"] = ceilings(det, refs, refs2, scores_all, y, fev)
+        res.pop("expert2_vs_expert1", None)
+        log(kind, "filter", det["filter"]["vis1"], "ceiling", res["ceiling"].get("expert2_vs_expert1"))
+    rep["rescored"] = "one-to-one event matching, bootstrap over excerpts"
+    json.dump(_jsonable(rep), open(os.path.join(a.out, "vq_event_codes.json"), "w"), indent=1)
+    log("DONE")
+
+
 # ---------------------------------------------------------------------------- main
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
@@ -290,6 +390,7 @@ def main():
     ap.add_argument("--target", default="dreams")
     ap.add_argument("--kc-k", type=float, default=2.0, help="threshold of the filter K-complex detector")
     ap.add_argument("--no-dcsm", action="store_true")
+    ap.add_argument("--rescore", action="store_true", help="recompute the metrics from DIR/scores_*.npz (no GPU)")
     ap.add_argument("--out", required=True)
     a = ap.parse_args()
     import torch
@@ -303,10 +404,14 @@ def main():
     run, dcsm_ds, model = _load_run(a.run)
     ra = run["args"]
     model.vq_levels = parse_vq_key(a.vq)
-    model.to("cuda" if torch.cuda.is_available() else "cpu").eval()
-    seq, T = ra["seq"], model.n_tok
+    seq = ra["seq"]
     tds = get_dataset(a.target)(channels=[ra.get("channel", "EEG_clean")], pipelines=channel_pipelines(ra),
                                 sequence_length=1, cache_dir=ra.get("cache_dir"))
+    if a.rescore:
+        rescore(a, tds, log)
+        return
+    model.to("cuda" if torch.cuda.is_available() else "cpu").eval()
+    T = model.n_tok
     recs = []
     t0 = time.time()
     for spec in tds._subjects:
@@ -326,8 +431,7 @@ def main():
     for pref, kind in KINDS.items():
         R = [r for r in recs if r["id"].startswith(pref)]
         y = {r["id"]: token_labels(r["events"], kind, "vis1", len(r["x"]), T) for r in R}
-        refs = {r["id"]: [(e.onset_sec, e.onset_sec + e.duration_sec) for e in r["events"] if e.type == kind and e.concept == "vis1"] for r in R}
-        refs2 = {r["id"]: [(e.onset_sec, e.onset_sec + e.duration_sec) for e in r["events"] if e.type == kind and e.concept == "vis2"] for r in R}
+        refs, refs2 = expert_refs(R, kind, "vis1"), expert_refs(R, kind, "vis2")
         res = {"n_excerpts": len(R), "n_events_vis1": int(sum(len(v) for v in refs.values())),
                "n_tokens": int(sum(len(v) for v in y.values())), "n_event_tokens": int(sum(v.sum() for v in y.values()))}
         # stage of event tokens (description only)
@@ -354,30 +458,9 @@ def main():
             feats = {r["id"]: ff(r) for r in R}
             det[name], scores_all[name], _ = loo(R, feats, y, refs, dense=True)
             log(kind, name, det[name]["token_ap"], det[name]["vis1"]["f1"])
-        # filter detectors (no training)
-        fp = {}
-        for r in R:
-            x = r["x"]
-            if kind == "k_complex":
-                n23 = np.flatnonzero(np.isin(r["y"], (2, 3)))
-                ref = float(np.median(np.ptp(_bp(x[n23], 0.3, 4.0), axis=1))) / 2 if len(n23) else 1.0
-                ev = [((ep * 3000 + s) / FS, (ep * 3000 + e) / FS) for ep in n23 for s, e in kcomplexes(x[ep], ref, a.kc_k)]
-            else:
-                ev = [(s / FS, e / FS) for s, e in spindles(x.reshape(-1))]
-            p = np.zeros(len(y[r["id"]]), bool)
-            for s, e in ev:
-                p[int(s / TOK_S):int(np.ceil(e / TOK_S))] = True
-            fp[r["id"]] = p
-        det["filter"] = {"vis1": event_scores(fp, refs), "k": a.kc_k if kind == "k_complex" else None}
-        # expert 2 against expert 1 on the excerpts that have both (ceiling), and every detector on them
-        both = [rid for rid in refs2 if refs2[rid]]
-        if both:
-            m_ = [match(refs2[rid], refs[rid]) for rid in both]
-            n_p = sum(len(refs2[rid]) for rid in both); n_r = sum(len(refs[rid]) for rid in both)
-            tp_p = sum(round((mm["precision"] or 0) * len(refs2[rid])) for mm, rid in zip(m_, both))
-            tp_r = sum(round((mm["recall"] or 0) * len(refs[rid])) for mm, rid in zip(m_, both))
-            pr, rc = tp_p / n_p, tp_r / n_r
-            res["expert2_vs_expert1"] = {"precision": pr, "recall": rc, "f1": 2 * pr * rc / (pr + rc) if pr + rc else 0.0, "excerpts": both}
+        fev = filter_events(R, kind, a.kc_k)
+        det["filter"] = {"vis1": event_scores({}, refs, events=fev), "k": a.kc_k if kind == "k_complex" else None}
+        res["ceiling"] = ceilings(det, refs, refs2, scores_all, y, fev)
         res["detectors"] = det
         rep["events"][kind] = res
         np.savez_compressed(os.path.join(a.out, f"scores_{kind}.npz"),
