@@ -147,3 +147,20 @@ def test_multi_stager_reads_the_right_modality_and_drop_removes_it():
     assert k > 0.8, k
     k_drop, *_ = _fit_multi(drop=("b:E",))
     assert k_drop < 0.2, k_drop
+
+
+def test_multi_early_fusion_reads_tokens_of_the_right_modality():
+    """One Q-Former, k x 2 queries on the tokens of both modalities: learns the stage written in
+    the P tokens of modality b (same epoch); late-fusion modules absent. On this toy (one modality is
+    pure noise) early fusion reaches kappa 0.69, late fusion 0.42 (01.11.2026): threshold 0.5."""
+    from physioex.models.qformer_stager import MultiSeqStager, metrics, pack_modalities, predict, train
+
+    data, spec, _ = pack_modalities(_fake_mods(where_b="p_same"))
+    torch.manual_seed(0)
+    m = MultiSeqStager(spec, epoch="qformer", d=32, k=4, layers=1, heads=2, dropout=0.0, seq_len=5, seq_layers=1,
+                       fusion="early")
+    assert m.joint.queries.shape == (8, 32) and not hasattr(m, "fuse") and len(m.encs) == 0
+    train(m, data, epochs=30, lr=3e-3, batch=160, patience=0, sched="cosine", log=lambda *_: None)
+    logits, _ = predict(m, data["test"])
+    k = metrics(logits.argmax(1).numpy(), data["test"]["y"].numpy(), data["test"]["night"])["kappa_pooled"]
+    assert logits.shape == (300, 5) and k > 0.5, k

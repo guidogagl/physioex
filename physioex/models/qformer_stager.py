@@ -184,6 +184,42 @@ class SeqStager(nn.Module):
         return self.head(self.ln(self.temporal(h + self.pos_t[:L])))
 
 
+class _JointQFormer(nn.Module):
+    """Early fusion at token level: one Q-Former whose ``k`` queries read the N, E and P tokens of
+    every modality at once. Every token: per-modality projection + type (N/E/P) + per-modality
+    position (P) + modality embedding. Same blocks and pooling as :class:`QFormerStager`."""
+
+    def __init__(self, spec, d: int = 128, k: int = 24, layers: int = 2, heads: int = 4, dropout: float = 0.1):
+        super().__init__()
+        self.spec = spec
+        self.proj_n = nn.ModuleList([nn.Linear(dim, d) for _, dim, _, _ in spec])
+        self.proj_e = nn.ModuleList([nn.Linear(dim, d) for _, dim, _, _ in spec])
+        self.proj_p = nn.ModuleList([nn.Linear(d_p, d) for _, _, d_p, _ in spec])
+        self.pos = nn.ParameterList([nn.Parameter(torch.randn(n_tok, d) * 0.02) for *_, n_tok in spec])
+        self.type_emb = nn.Parameter(torch.randn(3, d) * 0.02)
+        self.mod_emb = nn.Parameter(torch.randn(len(spec), d) * 0.02)
+        self.queries = nn.Parameter(torch.randn(k, d) * 0.02)
+        self.blocks = nn.ModuleList([_Block(d, heads, dropout) for _ in range(layers)])
+        self.pool_query = nn.Parameter(torch.randn(1, d) * 0.02)
+        self.pool = nn.MultiheadAttention(d, heads, batch_first=True)
+        self.last_attn = None
+
+    def embed(self, n, e, p):
+        toks, a, t = [], 0, 0
+        for i, (_, dim, d_p, n_tok) in enumerate(self.spec):
+            m = self.mod_emb[i]
+            toks += [(self.proj_n[i](n[:, a:a + dim]) + self.type_emb[0] + m)[:, None],
+                     (self.proj_e[i](e[:, a:a + dim]) + self.type_emb[1] + m)[:, None],
+                     self.proj_p[i](p[:, t:t + n_tok, :d_p]) + self.type_emb[2] + self.pos[i] + m]
+            a, t = a + dim, t + n_tok
+        kv = torch.cat(toks, 1)
+        q = self.queries.expand(len(kv), -1, -1)
+        for blk in self.blocks:
+            q, w = blk(q, kv)
+        self.last_attn = w.detach().mean(1)  # (B, sum(2 + T_m))
+        return self.pool(self.pool_query.expand(len(q), -1, -1), q, q, need_weights=False)[0][:, 0]
+
+
 class MultiSeqStager(nn.Module):
     """:class:`SeqStager` over several modalities (EEG, EOG, EMG). Every modality has its own
     per-epoch embedding (``epoch="qformer"`` or ``"linear"``) plus a learned modality embedding;
@@ -194,11 +230,16 @@ class MultiSeqStager(nn.Module):
     and ``P`` ``(B, L, sum T_m, max d_p)``; ``spec`` gives ``(name, dim, d_p, n_tok)`` per modality."""
 
     def __init__(self, spec, epoch: str = "qformer", seq_len: int = 21, seq_layers: int = 2, d: int = 128,
-                 heads: int = 4, n_classes: int = 5, dropout: float = 0.1, k: int = 8, layers: int = 2, **_):
+                 heads: int = 4, n_classes: int = 5, dropout: float = 0.1, k: int = 8, layers: int = 2,
+                 fusion: str = "late", **_):
         super().__init__()
-        self.spec, self.seq_len = [tuple(s) for s in spec], seq_len
+        self.spec, self.seq_len, self.fusion = [tuple(s) for s in spec], seq_len, fusion
+        if fusion == "early":  # one Q-Former on the tokens of all modalities, k queries per modality
+            assert epoch == "qformer", "early fusion: seqqformer only"
+            self.joint = _JointQFormer(self.spec, d=d, k=k * len(self.spec), layers=layers, heads=heads,
+                                       dropout=dropout)
         encs = []
-        for _, dim, d_p, n_tok in self.spec:
+        for _, dim, d_p, n_tok in (self.spec if fusion == "late" else ()):
             if epoch == "qformer":
                 enc = QFormerStager(dim=dim, d_p=d_p, n_tok=n_tok, d=d, k=k, layers=layers, heads=heads, dropout=dropout)
                 del enc.head, enc.ln
@@ -206,8 +247,9 @@ class MultiSeqStager(nn.Module):
                 enc = _LinearEmbed(dim=dim, d=d)
             encs.append(enc)
         self.encs = nn.ModuleList(encs)
-        self.mod_emb = nn.Parameter(torch.randn(len(self.spec), d) * 0.02)
-        self.fuse = nn.Linear(len(self.spec) * d, d)
+        if fusion == "late":
+            self.mod_emb = nn.Parameter(torch.randn(len(self.spec), d) * 0.02)
+            self.fuse = nn.Linear(len(self.spec) * d, d)
         self.pos_t = nn.Parameter(torch.randn(seq_len, d) * 0.02)
         layer = nn.TransformerEncoderLayer(d, heads, 4 * d, dropout, activation="gelu", batch_first=True, norm_first=True)
         self.temporal = nn.TransformerEncoder(layer, seq_layers, enable_nested_tensor=False)
@@ -218,6 +260,9 @@ class MultiSeqStager(nn.Module):
     def forward(self, n, e, p):
         B, L = n.shape[:2]
         n, e, p = n.flatten(0, 1), e.flatten(0, 1), p.flatten(0, 1)
+        if self.fusion == "early":
+            h = self.joint.embed(n, e, p).view(B, L, -1)
+            return self.head(self.ln(self.temporal(h + self.pos_t[:L])))
         hs, a, t = [], 0, 0
         for i, (enc, (_, dim, d_p, n_tok)) in enumerate(zip(self.encs, self.spec)):
             h = enc.embed(n[:, a:a + dim], e[:, a:a + dim], p[:, t:t + n_tok, :d_p])
@@ -482,7 +527,7 @@ def _train(a):
         print(f"[qformer_stager] modalities {spec}, zero-filled epochs {missing}", flush=True)
         torch.manual_seed(a.seed)  # the seed fixes the initial weights too
         model = MultiSeqStager(spec, epoch=a.arch[3:], d=a.d, k=a.k, layers=a.layers, heads=a.heads,
-                               dropout=a.dropout, **extra)
+                               dropout=a.dropout, fusion=a.fusion, **extra)
     else:
         raw = _load(a.data)
         data = standardize(raw)
@@ -523,6 +568,9 @@ def main():
     t.add_argument("--mods", nargs="*", default=None,
                    help="multimodal: name=latents_dir per modality, the first is the reference (eeg=... eog=... emg=...)")
     t.add_argument("--drop", nargs="*", default=(), help="multimodal ablation: levels set to zero, e.g. eog:N emg:P")
+    t.add_argument("--fusion", choices=("late", "early"), default="late",
+                   help="multimodal: late = one Q-Former per modality, fused after pooling; early = one Q-Former "
+                        "with k x modalities queries on the tokens of all modalities")
     t.add_argument("--arch", choices=sorted(ARCHS), default="qformer")
     t.add_argument("--d", type=int, default=128)
     t.add_argument("--k", type=int, default=8, help="learned queries")
