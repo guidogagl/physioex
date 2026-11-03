@@ -310,9 +310,9 @@ def fit_bases(dcsm: dict, seed: int, fit_rows: int = 120000) -> dict:
     X3 = ctx3(dcsm["pq"])
     sub = rng.choice(len(X1), min(fit_rows, len(X1)), replace=False)
     d = X1.shape[1]
-    out = {"pq1_ica": ("pq1", fit_basis(X1[sub], "ica", d)),
-           "pq3_ica16": ("pq3", fit_basis(X3[sub], "ica", 16)),
-           "pq3_ica": ("pq3", fit_basis(X3[sub], "ica", min(3 * d, 48)))}
+    out = {"pq1_ica": ("pq1", fit_basis(X1[sub], "ica", d, seed)),
+           "pq3_ica16": ("pq3", fit_basis(X3[sub], "ica", 16, seed)),
+           "pq3_ica": ("pq3", fit_basis(X3[sub], "ica", min(3 * d, 48), seed))}
     return out, {"pq1": X1, "pq3": X3}
 
 
