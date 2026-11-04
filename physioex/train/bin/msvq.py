@@ -40,7 +40,7 @@ from physioex.models.recon_eval import channel_pipelines, evaluate as recon_eval
 # MSAE architecture args copied from the --init run (msae_vq)
 MSAE_ARCH = ("seq", "width", "dim", "d_p", "token_sec", "decoder", "tf_consistency", "loss", "band_weight",
              "low_hz", "low_weight", "pow_hz", "texture", "channel", "resample", "fs", "pow_bands", "psd_band",
-             "recon", "seg_sec", "no_n")
+             "recon", "seg_sec", "no_n", "load_fs", "items", "splits", "steps_per_epoch", "valid_per_item")
 
 
 def _loader(ds, ids, n_max, batch, workers, shuffle, seed):
@@ -54,9 +54,58 @@ def _loader(ds, ids, n_max, batch, workers, shuffle, seed):
     return DataLoader(Subset(ds, idx.tolist()), **kw), len(idx)
 
 
+def _merged_data(a):
+    """Merged dataset of ``--items`` (one channel) and the subject ids of its train/val split."""
+    from physioex.data.merged import ResampledView, build_train
+
+    items = [x for x in a.items.split(",") if x]
+    assert a.splits, "--items needs --splits (ProtoSleepNet splits JSON)"
+    md = build_train(items, a.splits, [a.channel], channel_pipelines(vars(a)), a.seq, a.cache_dir,
+                     valid_per_item=a.valid_per_item, seed=a.fold, allow_empty=a.channel == "EMG_clean",
+                     trim_mode="main_period")
+    ds = md.multi
+    if a.load_fs:
+        from physioex.data.modality import infer_channel_modality
+
+        ds = ResampledView(ds, infer_channel_modality(a.channel).name, a.load_fs)
+    rep = md.report
+    tr_ids = [f"{n}:{s}" for n, r in rep.items() if isinstance(r, dict) and "train_ids" in r for s in r["train_ids"]]
+    va_ids = [f"{n}:{s}" for n, r in rep.items() if isinstance(r, dict) and "val_ids" in r for s in r["val_ids"]]
+    print(f"[msvq] merged {items}: " + ", ".join(f"{n} {r['train_nights']}/{r['train_nights_in_splits']}"
+                                                 for n, r in rep.items() if isinstance(r, dict))
+          + f" train nights (cached/splits); empty items {rep['empty_items']}", flush=True)
+    return md, ds, tr_ids, va_ids, []
+
+
+def _merged_loaders(a, md, ds):
+    """Train: ``--steps-per-epoch`` x ``--batch`` windows per epoch drawn with equal mass per item
+    (then per night, :func:`physioex.data.sampling.make_site_sampler`); valid: fixed windows."""
+    from physioex.data.sampling import make_site_sampler
+
+    sites = [it if it is not None else "_none" for it in md.item_of_dataset]
+    sampler, rep = make_site_sampler(md.multi, md.train_idx, sites, num_samples=a.steps_per_epoch * a.batch, seed=a.fold)
+    md.report["sampler"] = rep
+    kw = dict(batch_size=a.batch, num_workers=a.workers, collate_fn=dict_collate_fn, pin_memory=True,
+              persistent_workers=a.workers > 0)
+    if a.workers > 0:
+        kw["prefetch_factor"] = 4
+    tr = DataLoader(Subset(ds, md.train_idx.tolist()), sampler=sampler, **kw)
+    va = DataLoader(Subset(ds, md.valid_idx.tolist()), shuffle=False, **kw)
+    return tr, a.steps_per_epoch * a.batch, va, len(md.valid_idx)
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--dataset", default="dcsm")
+    ap.add_argument("--items", default=None,
+                    help="comma list of pool items of physioex.data.merged (e.g. shhs,dcsm,mass): merged training "
+                         "on their ProtoSleepNet train split (--splits), equal sampling mass per item; replaces --dataset")
+    ap.add_argument("--steps-per-epoch", type=int, default=3000,
+                    help="--items: optimizer steps per epoch (windows drawn per epoch = steps x --batch)")
+    ap.add_argument("--valid-per-item", type=int, default=5000, help="--items: validation windows per item")
+    ap.add_argument("--load-fs", type=float, default=None,
+                    help="--items: resample the channel to this rate when an item is loaded (EMG: the cached rate "
+                         "differs per dataset); the cache is not touched")
     ap.add_argument("--root", default=None, help="raw root (default: dataset default under PHYSIOEX_DATA)")
     ap.add_argument("--cache-dir", default=None, help="cache root (the folder that contains v1/)")
     ap.add_argument("--out", required=True)
@@ -142,31 +191,35 @@ def main():
 
     os.makedirs(a.out, exist_ok=True)
     torch.manual_seed(a.fold)
-    cls = get_dataset(a.dataset)
-    kw = dict(channels=[a.channel], pipelines=channel_pipelines(vars(a)), sequence_length=a.seq,
-              cache_dir=a.cache_dir, trim_mode="main_period")
-    if a.root:
-        kw["root"] = a.root
-    ds = cls(**kw)
-    if a.max_subjects:
-        keep = {s.subject_id for s in ds._subjects[: a.max_subjects]}
-        ds._subjects = [s for s in ds._subjects if s.subject_id in keep]
-        ds._build_index()
-    if a.split == "grouped":  # subject-grouped 80/10/10 of the ProtoSleepNet release
-        from physioex.data.splits import grouped_splits, load_site_splits
-
-        have = [s.subject_id for s in ds._subjects]
-        if a.splits:
-            sp = load_site_splits(a.splits, a.dataset)
-            missing = sum(len(set(x) - set(have)) for x in sp)
-            train_ids, valid_ids, test_ids = ([s for s in x if s in set(have)] for x in sp)
-            print(f"[msvq] splits from {a.splits} ({missing} subjects not in the dataset)", flush=True)
-        else:
-            train_ids, valid_ids, test_ids = grouped_splits(have, a.dataset)
+    merged = None
+    if a.items:  # merged training (physioex.data.merged): train split of the items, equal mass per item
+        merged, ds, train_ids, valid_ids, test_ids = _merged_data(a)
     else:
-        train_ids, valid_ids, test_ids = ds.get_splits(fold=a.fold)
-    print(f"[msvq] {a.dataset}: {len(ds._subjects)} subjects, {len(ds)} windows "
-          f"(train/valid/test subjects {len(train_ids)}/{len(valid_ids)}/{len(test_ids)})", flush=True)
+        cls = get_dataset(a.dataset)
+        kw = dict(channels=[a.channel], pipelines=channel_pipelines(vars(a)), sequence_length=a.seq,
+                  cache_dir=a.cache_dir, trim_mode="main_period")
+        if a.root:
+            kw["root"] = a.root
+        ds = cls(**kw)
+        if a.max_subjects:
+            keep = {s.subject_id for s in ds._subjects[: a.max_subjects]}
+            ds._subjects = [s for s in ds._subjects if s.subject_id in keep]
+            ds._build_index()
+        if a.split == "grouped":  # subject-grouped 80/10/10 of the ProtoSleepNet release
+            from physioex.data.splits import grouped_splits, load_site_splits
+
+            have = [s.subject_id for s in ds._subjects]
+            if a.splits:
+                sp = load_site_splits(a.splits, a.dataset)
+                missing = sum(len(set(x) - set(have)) for x in sp)
+                train_ids, valid_ids, test_ids = ([s for s in x if s in set(have)] for x in sp)
+                print(f"[msvq] splits from {a.splits} ({missing} subjects not in the dataset)", flush=True)
+            else:
+                train_ids, valid_ids, test_ids = grouped_splits(have, a.dataset)
+        else:
+            train_ids, valid_ids, test_ids = ds.get_splits(fold=a.fold)
+        print(f"[msvq] {a.dataset}: {len(ds._subjects)} subjects, {len(ds)} windows "
+              f"(train/valid/test subjects {len(train_ids)}/{len(valid_ids)}/{len(test_ids)})", flush=True)
 
     t0 = time.time()
     targets = None
@@ -179,8 +232,11 @@ def main():
             torch.save(targets, tpath)
         print(f"[msvq] targets ready in {time.time() - t0:.0f}s", flush=True)
 
-    tr, n_tr = _loader(ds, train_ids, a.max_train, a.batch, a.workers, True, a.fold)
-    va, n_va = _loader(ds, valid_ids, a.max_valid, a.batch, a.workers, False, a.fold)
+    if merged is not None:
+        tr, n_tr, va, n_va = _merged_loaders(a, merged, ds)
+    else:
+        tr, n_tr = _loader(ds, train_ids, a.max_train, a.batch, a.workers, True, a.fold)
+        va, n_va = _loader(ds, valid_ids, a.max_valid, a.batch, a.workers, False, a.fold)
     print(f"[msvq] windows: train {n_tr}, valid {n_va}", flush=True)
 
     opt_kw = {}
@@ -275,7 +331,7 @@ def main():
         json.dump(ev, f, indent=1)
     print("[msvq] valid " + " ".join(f"{k}={v:.3f}" for k, v in ev.items()), flush=True)
 
-    if a.recon_per_night:
+    if a.recon_per_night and merged is None:  # merged runs: test nights scored by physioex.train.bin.pretrain_combo
         # msae_vq: the prefix of levels is chosen on the validation nights; the test nights are scored once, later
         split = "valid" if a.model == "msae_vq" else "test"
         rec = recon_evaluate(model, ds, valid_ids if split == "valid" else test_ids, train_ids,
@@ -294,7 +350,9 @@ def main():
     import physioex
     run = {"args": vars(a), "git_sha": _git("rev-parse", "HEAD"), "git_dirty": bool(_git("status", "--porcelain")),
            "physioex_version": getattr(physioex, "__version__", None), "host": socket.gethostname(),
-           "job_id": os.environ.get("SLURM_JOB_ID"), "n_subjects": len(ds._subjects),
+           "job_id": os.environ.get("SLURM_JOB_ID"),
+           "n_subjects": len(train_ids) + len(valid_ids) + len(test_ids) if merged is not None else len(ds._subjects),
+           "merged": merged.report if merged is not None else None,
            "splits": {"train": train_ids, "valid": valid_ids, "test": test_ids},
            "windows": {"train": n_tr, "valid": n_va}, "minutes": round((time.time() - t0) / 60, 1)}
     with open(os.path.join(a.out, "run.json"), "w") as f:
