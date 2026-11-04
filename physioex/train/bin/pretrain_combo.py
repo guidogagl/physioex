@@ -24,6 +24,10 @@ the DCSM reference (``qformer_stager/multi/EnP_vq_dp64``) EEG-only and EEG+EOG+E
 The latents stay in node-local scratch; the stager keeps the training statistics
 (``stats_<mod>.npz``) so that ``eval`` can standardize new nights.
 
+``aggregate``: matrix combination x group, fixed panel (clinical subgroups + MASS SS01, with and
+without LSEC), out-of-domain and in-domain macro, bootstrap CI of the panel, OLS on the item
+indicators.
+
 ``eval``: every test night of :func:`physioex.data.merged.build_test` (pool test splits, all
 nights of the test-only units) is read once per modality and passed to every model of the task.
 One JSONL row per (combination, night): staging (kappa, accuracy, macro F1, both stagers, zero
@@ -520,6 +524,92 @@ def evaluate(a):
     print("DONE", flush=True)
 
 
+# ----------------------------------------------------------------------------
+# aggregate: combination x group matrix, panel, trend
+# ----------------------------------------------------------------------------
+
+#: groups of the fixed always-out-of-domain panel (never in training)
+PANEL = ("alzheimers_ad", "alzheimers_hc", "parkinsons_night_pd", "parkinsons_night_hoa", "parkinsons_nap_pd",
+         "parkinsons_nap_hoa", "lsec_control", "lsec_wce", "lsec_dre", "mass_ss01")
+
+
+def _scores(rows):
+    """Per-night scores of one JSONL row: staging kappa of both stagers and the mean NEP log
+    band power R^2 (5 s, mean over bands) per modality."""
+    out = {}
+    for k, v in rows["staging"].items():
+        out[f"kappa_{k}"] = v["kappa"]
+        out[f"f1_{k}"] = v["macro_f1"]
+    for m, r in rows["recon"].items():
+        if r.get("logpow5"):
+            out[f"logpow5_{m}"] = float(np.mean(list(r["logpow5"].values())))
+    return out
+
+
+def aggregate(a):
+    """Matrix combination x group (pool: item; test-only: subgroup) of the mean per-night scores;
+    per combination the panel macro (with and without LSEC), the out-of-domain macro over the pool
+    items not in training and the in-domain macro; bootstrap CI over nights (within group) of the
+    panel; OLS of every macro on the item indicators (marginal contribution per item)."""
+    import glob
+    from collections import defaultdict
+
+    rows = defaultdict(lambda: defaultdict(list))  # combo -> group -> [scores]
+    for f in sorted(glob.glob(os.path.join(a.out, "eval", "*.jsonl"))):
+        for l in open(f):
+            r = json.loads(l)
+            g = r["item"] if r["item"] is not None else r["subgroup"]
+            rows[r["combo"]][g].append(_scores(r))
+    keys = sorted({k for c in rows.values() for g in c.values() for s in g for k in s})
+    rng = np.random.default_rng(a.seed)
+    res = {"keys": keys, "panel": list(PANEL), "pool": sorted(POOL), "combos": {}}
+    for c, groups in sorted(rows.items()):
+        items = set(c.split("+"))
+        mean = {g: {k: float(np.nanmean([s.get(k, np.nan) for s in v])) for k in keys} | {"n": len(v)}
+                for g, v in groups.items()}
+        macro = {}
+        for name, gs in (("panel", [g for g in PANEL if g in groups]),
+                         ("panel_no_lsec", [g for g in PANEL if g in groups and not g.startswith("lsec")]),
+                         ("ood", [g for g in POOL if g in groups and g not in items]),
+                         ("in_domain", [g for g in POOL if g in groups and g in items])):
+            macro[name] = {k: float(np.nanmean([mean[g][k] for g in gs])) if gs else None for k in keys}
+            macro[name]["groups"] = gs
+        # bootstrap over nights within each panel group (the groups stay fixed)
+        boot = {}
+        for k in keys:
+            gs = [g for g in PANEL if g in groups]
+            if not gs:
+                continue
+            vals = [np.asarray([s.get(k, np.nan) for s in groups[g]], float) for g in gs]
+            bs = [np.nanmean([np.nanmean(v[rng.integers(0, len(v), len(v))]) for v in vals]) for _ in range(a.n_boot)]
+            boot[k] = [float(np.nanpercentile(bs, 2.5)), float(np.nanpercentile(bs, 97.5))]
+        res["combos"][c] = {"items": sorted(items), "groups": mean, "macro": macro, "panel_ci95": boot}
+    # trend: OLS of each macro on the inclusion indicators of the pool items (intercept = baseline)
+    combos = sorted(res["combos"])
+    pool = sorted(POOL)
+    X = np.asarray([[1.0] + [float(it in res["combos"][c]["items"]) for it in pool] for c in combos])
+    trend = {}
+    for name in ("panel", "panel_no_lsec", "ood", "in_domain"):
+        for k in keys:
+            y = np.asarray([res["combos"][c]["macro"][name][k] if res["combos"][c]["macro"][name][k] is not None
+                            else np.nan for c in combos])
+            ok = np.isfinite(y)
+            if ok.sum() <= X.shape[1]:
+                continue
+            beta, *_ = np.linalg.lstsq(X[ok], y[ok], rcond=None)
+            trend[f"{name}:{k}"] = {"intercept": float(beta[0]), **{it: float(b) for it, b in zip(pool, beta[1:])},
+                                    "n_combos": int(ok.sum())}
+    res["trend"] = trend
+    out = os.path.join(a.out, "aggregate.json")
+    json.dump(res, open(out, "w"), indent=1)
+    best = sorted(combos, key=lambda c: -(res["combos"][c]["macro"]["panel"].get("kappa_multi") or -1))[:10]
+    for c in best:
+        mc = res["combos"][c]["macro"]
+        print(f"{c:40s} panel kappa_multi {mc['panel'].get('kappa_multi')} ood {mc['ood'].get('kappa_multi')} "
+              f"in {mc['in_domain'].get('kappa_multi')}", flush=True)
+    print(f"[aggregate] {len(combos)} combinations -> {out}", flush=True)
+
+
 def _q(x):
     x = str(x)
     return x if x and all(c.isalnum() or c in "-_./=+,:" for c in x) else "'" + x.replace("'", "'\\''") + "'"
@@ -563,8 +653,12 @@ def main():
     q.add_argument("--units", default=None, help="comma list of units (default: all)")
     q.add_argument("--max-nights", type=int, default=0, help="smoke: first nights per unit (0 = all)")
     q.add_argument("--recon-per-night", type=int, default=250)
+    q = sp.add_parser("aggregate", help="combination x group matrix, panel, trend")
+    q.add_argument("--out", required=True)
+    q.add_argument("--n-boot", type=int, default=1000)
+    q.add_argument("--seed", type=int, default=0)
     a = ap.parse_args()
-    {"combos": combos, "pack": pack, "stager": stager, "eval": evaluate}[a.cmd](a)
+    {"combos": combos, "pack": pack, "stager": stager, "eval": evaluate, "aggregate": aggregate}[a.cmd](a)
 
 
 if __name__ == "__main__":
