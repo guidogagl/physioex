@@ -188,6 +188,9 @@ class BasePhysioDataset(Dataset):
         self._labels_cache: Dict[str, np.ndarray] = {}
         self._events_cache: Dict[str, List[SleepEvent]] = {}
         self._fs_out_cache: Dict[tuple, float] = {}
+        # False skips the per-subject event parse (raw EDF/XML annotations, one read
+        # per subject and worker): training and staging do not use events.
+        self.load_events = True
         # LRU cache for open memmap file handles. Avoids repeated mmap() calls
         # which are expensive on NFS (~0.16ms per call on network filesystems).
         # Cache key is (subject_id, physical_channel, pipeline_hash).
@@ -1614,7 +1617,7 @@ class BasePhysioDataset(Dataset):
         }
 
         # Events -- map to epochs, slice to match window
-        all_events = self._load_or_compute_events(spec)
+        all_events = self._load_or_compute_events(spec) if self.load_events else []
         if all_events:
             n_total = self._n_epochs.get(spec.subject_id, max_len)
             epoch_events_full = map_events_to_epochs(

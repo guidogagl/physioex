@@ -114,16 +114,23 @@ def lsec_audit_kwargs(config: str) -> dict:
 
 
 def make_dataset(name: str, channels: Sequence[str], pipelines, sequence_length: int, cache_dir: Optional[str],
-                 memmap_cache_size: int = 200, **extra):
-    """One physioex dataset of :data:`UNITS` (class and defaults from ``DATASET_CONFIGS``)."""
+                 memmap_cache_size: int = 200, load_events: bool = False, **extra):
+    """One physioex dataset of :data:`UNITS` (class and defaults from ``DATASET_CONFIGS``).
+
+    ``load_events`` is False by default: items then carry empty ``events`` and no raw
+    annotation file is opened. With many workers on GPFS that parse (one per subject and
+    worker) saturated the client and broke the 04.11 smoke runs.
+    """
     from physioex.models.foundation_datasets import DATASET_CONFIGS
 
     u = BY_NAME[name]
     dc = DATASET_CONFIGS[u["config"]]
     cls = getattr(importlib.import_module(dc.module_path), dc.class_name)
     kw = {**dc.extra_kwargs, **u["kwargs"], **lsec_audit_kwargs(u["config"]), **extra}
-    return cls(channels=list(channels), pipelines=pipelines, sequence_length=sequence_length, cache_dir=cache_dir,
-               memmap_cache_size=memmap_cache_size, **kw)
+    ds = cls(channels=list(channels), pipelines=pipelines, sequence_length=sequence_length, cache_dir=cache_dir,
+             memmap_cache_size=memmap_cache_size, **kw)
+    ds.load_events = bool(load_events)
+    return ds
 
 
 def cached_subjects(ds) -> set:
