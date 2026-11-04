@@ -304,7 +304,8 @@ class ResampledView(Dataset):
 
 
 def stage_local(items: Sequence[str], splits_path: str, src_root: str, dst_root: str, channels: Sequence[str],
-                splits_keys: Sequence[str] = ("train", "val"), threads: int = 32) -> Dict[str, dict]:
+                splits_keys: Sequence[str] = ("train", "val"), threads: int = 32,
+                min_free_gib: float = 100.0) -> Dict[str, dict]:
     """Copy the cache files that training on ``items`` reads into ``dst_root`` (node-local disk).
 
     Per unit of the items: ``headers/``, ``labels/`` and ``subjects/`` whole (small files, the
@@ -319,6 +320,10 @@ def stage_local(items: Sequence[str], splits_path: str, src_root: str, dst_root:
     file from the servers again (the GPFS page pool is a few GB and the Linux page cache does not
     hold GPFS pages), so the loaders of a pack spend most of each step waiting on I/O. On the
     node's NVMe the files sit in the Linux page cache after the first read.
+
+    Slurm does not reserve node disk on Sofia (``TmpDisk=0``) and other jobs share ``/tmp``:
+    before copying, the free space must exceed the bytes to copy by ``min_free_gib``, else
+    ``OSError`` (nothing copied).
 
     Returns per unit the number of nights and files copied and the bytes."""
     from concurrent.futures import ThreadPoolExecutor
@@ -357,12 +362,20 @@ def stage_local(items: Sequence[str], splits_path: str, src_root: str, dst_root:
             nights += got
         rep[n] = {"nights": nights, "split_nights": len(sids)}
 
-    def cp(pair):
-        shutil.copyfile(*pair)
-        return pair[1].stat().st_size
+    with ThreadPoolExecutor(threads) as ex:
+        sizes = list(ex.map(lambda p: p[0].stat().st_size, jobs))
+    need = sum(sizes)
+    probe = Path(dst_root)
+    while not probe.exists():
+        probe = probe.parent
+    free = shutil.disk_usage(probe).free
+    if free - need < min_free_gib * 2**30:
+        shutil.rmtree(dst_root.parent, ignore_errors=True)  # only the empty folders made by the scan
+        raise OSError(f"stage_local: {need / 2**30:.0f} GiB to copy, {free / 2**30:.0f} GiB free on {probe} "
+                      f"(margin {min_free_gib:.0f} GiB)")
 
     with ThreadPoolExecutor(threads) as ex:
-        sizes = list(ex.map(cp, jobs))
+        list(ex.map(lambda p: shutil.copyfile(*p), jobs))
     for n in rep:
         rep[n]["files"] = sum(1 for _, t in jobs if Path(t).is_relative_to(dst_root / n))
     rep["_total"] = {"files": len(jobs), "bytes": int(sum(sizes))}

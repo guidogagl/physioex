@@ -178,7 +178,7 @@ def test_stage_local_copies_train_val_channels_only(tmp_path):
     splits = {site: {"train": [["dcsm", "a"]], "val": [["dcsm", "b"]], "test": [["dcsm", "c"]]}}
     sp = tmp_path / "splits.json"
     sp.write_text(json.dumps(splits))
-    rep = stage_local(["dcsm"], str(sp), str(tmp_path / "src"), str(tmp_path / "dst"), ["EEG_clean"])
+    rep = stage_local(["dcsm"], str(sp), str(tmp_path / "src"), str(tmp_path / "dst"), ["EEG_clean"], min_free_gib=0)
     d = tmp_path / "dst" / "v1" / "dcsm"
     assert rep["dcsm"]["nights"] == 2
     assert (d / "signals/a/EEG_clean_h/p/signal.npy").exists()
@@ -187,3 +187,15 @@ def test_stage_local_copies_train_val_channels_only(tmp_path):
     assert not (d / "signals/c").exists() and not (d / "events").exists()
     assert sorted(p.name for p in (d / "labels").iterdir()) == ["a.npy", "b.npy", "c.npy"]
     assert rep["_total"]["files"] == 2 * 2 + 3
+
+
+def test_stage_local_refuses_without_space(tmp_path):
+    from physioex.data.merged import BY_NAME, stage_local
+    src = tmp_path / "src" / "v1" / "dcsm" / "signals" / "a" / "EEG_clean_h" / "p"
+    src.mkdir(parents=True)
+    (src / "signal.npy").write_bytes(b"x")
+    sp = tmp_path / "s.json"
+    sp.write_text(json.dumps({BY_NAME["dcsm"]["site"]: {"train": [["dcsm", "a"]]}}))
+    with pytest.raises(OSError, match="GiB free"):
+        stage_local(["dcsm"], str(sp), str(tmp_path / "src"), str(tmp_path / "dst"), ["EEG_clean"], min_free_gib=1e9)
+    assert not (tmp_path / "dst").exists()

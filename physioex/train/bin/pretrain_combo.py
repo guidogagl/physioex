@@ -122,11 +122,20 @@ def pack(a):
         t = time.time()
         items_all = sorted({i for c in mine for i in c})
         chans = [RECIPES[m][0][RECIPES[m][0].index("--channel") + 1] for m in mods]
-        rep = stage_local(items_all, a.splits, src, local, chans)
-        print(f"[pack] local cache {local}: {rep['_total']['files']} files, {rep['_total']['bytes'] / 2**30:.1f} GiB "
+        try:
+            rep = stage_local(items_all, a.splits, src, local, chans)
+        except OSError as e:
+            print(f"[pack] {e}: training from {src}", flush=True)
+            import shutil
+            shutil.rmtree(local, ignore_errors=True)
+            local = None
+        if local:
+            print(f"[pack] local cache {local}: {rep['_total']['files']} files, {rep['_total']['bytes'] / 2**30:.1f} GiB "
               f"in {(time.time() - t) / 60:.1f} min; " + ", ".join(f"{k} {v['nights']}/{v['split_nights']}"
                                                                 for k, v in rep.items() if k != "_total"), flush=True)
-        a.cache_dir = local
+            a.cache_dir = local
+            import signal  # Slurm timeout / scancel: SIGTERM, so that the finally below removes the copy
+            signal.signal(signal.SIGTERM, lambda *_: sys.exit(143))
     try:
         rc = _pack_run(a, mine, mods)
     finally:
