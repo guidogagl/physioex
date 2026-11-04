@@ -112,6 +112,31 @@ def pack(a):
     """Run the combinations of this task, ``--per-gpu`` at a time, all modalities in parallel."""
     mine = _mine(a)
     mods = a.mods.split(",")
+    local = None
+    if a.local_cache:
+        # copy the train/val cache files of this task's items to the node's disk (see stage_local)
+        from physioex.data.merged import stage_local
+        src = a.cache_dir or os.environ.get("PHYSIOEX_CACHE_DIR")
+        local = os.path.join(os.environ.get("TMPDIR", "/tmp"),
+                             f"physioex_cache_{os.environ.get('SLURM_JOB_ID', os.getpid())}_{a.task}")
+        t = time.time()
+        items_all = sorted({i for c in mine for i in c})
+        chans = [RECIPES[m][0][RECIPES[m][0].index("--channel") + 1] for m in mods]
+        rep = stage_local(items_all, a.splits, src, local, chans)
+        print(f"[pack] local cache {local}: {rep['_total']['files']} files, {rep['_total']['bytes'] / 2**30:.1f} GiB "
+              f"in {(time.time() - t) / 60:.1f} min; " + ", ".join(f"{k} {v['nights']}/{v['split_nights']}"
+                                                                for k, v in rep.items() if k != "_total"), flush=True)
+        a.cache_dir = local
+    try:
+        rc = _pack_run(a, mine, mods)
+    finally:
+        if local:
+            import shutil
+            shutil.rmtree(local, ignore_errors=True)
+    sys.exit(rc)
+
+
+def _pack_run(a, mine, mods):
     n_proc = len(mine) * len(mods)
     workers = max(1, a.workers_total // max(1, n_proc))
     print(f"[pack] task {a.task}: {[tag(c) for c in mine]} x {mods}, {n_proc} processes, {workers} workers each",
@@ -148,7 +173,7 @@ def pack(a):
             open(os.path.join(d, "TRAIN_DONE"), "w").write(json.dumps({"mods": mods, "job": os.environ.get("SLURM_JOB_ID")}))
     print(f"[pack] {'FAILED ' + str(fails) if fails else 'all ok'}", flush=True)
     print("DONE", flush=True)
-    sys.exit(1 if fails else 0)
+    return 1 if fails else 0
 
 
 def _mine(a):
@@ -176,12 +201,21 @@ def load_s2(run_dir, mod, device):
     return run, model.to(device).eval()
 
 
+def _cache_dir(cache_dir, args):
+    """``--cache-dir`` if given, else the run's own if it still exists (a ``--local-cache`` run
+    stored a node-local path), else ``$PHYSIOEX_CACHE_DIR``."""
+    if cache_dir:
+        return cache_dir
+    c = args.get("cache_dir")
+    return c if c and os.path.isdir(c) else os.environ.get("PHYSIOEX_CACHE_DIR")
+
+
 def open_unit(unit, args, cache_dir=None):
     """Dataset of one unit with the channel and pipeline of a run (``args``)."""
     from physioex.data.merged import make_dataset
     from physioex.models.recon_eval import channel_pipelines
 
-    return make_dataset(unit, [args["channel"]], channel_pipelines(args), args["seq"], cache_dir or args.get("cache_dir"),
+    return make_dataset(unit, [args["channel"]], channel_pipelines(args), args["seq"], _cache_dir(cache_dir, args),
                         memmap_cache_size=4, trim_mode="main_period")
 
 
@@ -436,7 +470,7 @@ def evaluate(a):
     tests, index, readers = {}, {}, {}
     for m in mods:
         ar = args0[m]
-        tests[m] = build_test(a.splits, [ar["channel"]], channel_pipelines(ar), ar["seq"], a.cache_dir or ar.get("cache_dir"),
+        tests[m] = build_test(a.splits, [ar["channel"]], channel_pipelines(ar), ar["seq"], _cache_dir(a.cache_dir, ar),
                               units=units, memmap_cache_size=4, trim_mode="main_period")
         index[m] = {(tests[m].unit_names[dd], s): dd for dd, s, _, _ in tests[m].test}
         readers[m] = {}
@@ -629,6 +663,8 @@ def main():
     p.add_argument("--workers-total", type=int, default=22)
     p.add_argument("--splits", required=True)
     p.add_argument("--cache-dir", default=None)
+    p.add_argument("--local-cache", action="store_true",
+                   help="copy the train/val cache files to $TMPDIR first and train from there")
     p.add_argument("--steps-per-epoch", type=int, default=3000)
     p.add_argument("--epochs", type=int, default=30)
     p.add_argument("--valid-per-item", type=int, default=5000)

@@ -301,3 +301,69 @@ class ResampledView(Dataset):
         if name in ("base", "modality", "fs", "epoch_s"):
             raise AttributeError(name)
         return getattr(self.base, name)
+
+
+def stage_local(items: Sequence[str], splits_path: str, src_root: str, dst_root: str, channels: Sequence[str],
+                splits_keys: Sequence[str] = ("train", "val"), threads: int = 32) -> Dict[str, dict]:
+    """Copy the cache files that training on ``items`` reads into ``dst_root`` (node-local disk).
+
+    Per unit of the items: ``headers/``, ``labels/`` and ``subjects/`` whole (small files, the
+    dataset reads them for every night at construction), and for the nights of ``splits_keys``
+    the signal folders ``signals/<sid>/<channel>_<hash>/`` of the requested ``channels`` plus the
+    ``NIGHT_<hash>`` metadata. Nights of other splits are not copied, so :func:`cached_subjects`
+    on the copy sees only the nights the training uses. ``events/`` and the raw-channel folders
+    are not copied (``load_events=False``).
+
+    Why (Sofia, 04.11.2026): a night of a clean channel is one ~6.5 MB ``signal.npy``, smaller than
+    one GPFS block (16 MiB). Random windows over thousands of nights make every read pull the
+    file from the servers again (the GPFS page pool is a few GB and the Linux page cache does not
+    hold GPFS pages), so the loaders of a pack spend most of each step waiting on I/O. On the
+    node's NVMe the files sit in the Linux page cache after the first read.
+
+    Returns per unit the number of nights and files copied and the bytes."""
+    from concurrent.futures import ThreadPoolExecutor
+    import shutil
+
+    splits = json.loads(Path(splits_path).read_text())
+    src_root, dst_root = Path(src_root) / "v1", Path(dst_root) / "v1"
+    jobs, rep = [], {}
+    for n in units_of(items):
+        s, d = src_root / n, dst_root / n
+        nb = 0
+        for sub in ("headers", "labels", "subjects"):
+            if (s / sub).is_dir():
+                (d / sub).mkdir(parents=True, exist_ok=True)
+                with os.scandir(s / sub) as it:
+                    for e in it:
+                        if e.is_file():
+                            jobs.append((Path(e.path), d / sub / e.name))
+        sids = sorted({sid for k in splits_keys for sid in _split_ids(splits, BY_NAME[n]["site"], n, k)})
+        nights = 0
+        for sid in sids:
+            sd = s / "signals" / sid
+            if not sd.is_dir():
+                continue
+            got = False
+            with os.scandir(sd) as it:
+                for e in it:
+                    if not (e.name.startswith("NIGHT_") or any(e.name.startswith(c + "_") for c in channels)):
+                        continue
+                    for root, _, files in os.walk(e.path):
+                        rel = Path(root).relative_to(s)
+                        (d / rel).mkdir(parents=True, exist_ok=True)
+                        for f in files:
+                            jobs.append((Path(root) / f, d / rel / f))
+                            got = True
+            nights += got
+        rep[n] = {"nights": nights, "split_nights": len(sids)}
+
+    def cp(pair):
+        shutil.copyfile(*pair)
+        return pair[1].stat().st_size
+
+    with ThreadPoolExecutor(threads) as ex:
+        sizes = list(ex.map(cp, jobs))
+    for n in rep:
+        rep[n]["files"] = sum(1 for _, t in jobs if Path(t).is_relative_to(dst_root / n))
+    rep["_total"] = {"files": len(jobs), "bytes": int(sum(sizes))}
+    return rep

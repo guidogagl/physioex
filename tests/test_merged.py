@@ -161,3 +161,29 @@ def test_resampled_view():
             return {"signals": {"EMG_0": torch.from_numpy(z)}, "channel_info": {"EMG_0": {"fs_out": 100.0}}}
 
     assert M.ResampledView(Same(), "EMG", 100.0)[0]["signals"]["EMG_0"].data_ptr() == torch.from_numpy(z).data_ptr()
+
+
+def test_stage_local_copies_train_val_channels_only(tmp_path):
+    from physioex.data.merged import BY_NAME, stage_local
+    site = BY_NAME["dcsm"]["site"]
+    src = tmp_path / "src" / "v1" / "dcsm"
+    for sid in ("a", "b", "c"):
+        for sub in ("EEG_clean_h/p", "EOG_clean_h/p", "EEG/p", "NIGHT_h/night"):
+            (src / "signals" / sid / sub).mkdir(parents=True)
+            (src / "signals" / sid / sub / "signal.npy").write_bytes(b"x" * 10)
+        (src / "labels").mkdir(exist_ok=True)
+        (src / "labels" / f"{sid}.npy").write_bytes(b"l")
+    (src / "events").mkdir()
+    (src / "events" / "a.json").write_text("{}")
+    splits = {site: {"train": [["dcsm", "a"]], "val": [["dcsm", "b"]], "test": [["dcsm", "c"]]}}
+    sp = tmp_path / "splits.json"
+    sp.write_text(json.dumps(splits))
+    rep = stage_local(["dcsm"], str(sp), str(tmp_path / "src"), str(tmp_path / "dst"), ["EEG_clean"])
+    d = tmp_path / "dst" / "v1" / "dcsm"
+    assert rep["dcsm"]["nights"] == 2
+    assert (d / "signals/a/EEG_clean_h/p/signal.npy").exists()
+    assert (d / "signals/b/NIGHT_h/night/signal.npy").exists()
+    assert not (d / "signals/a/EOG_clean_h").exists() and not (d / "signals/a/EEG").exists()
+    assert not (d / "signals/c").exists() and not (d / "events").exists()
+    assert sorted(p.name for p in (d / "labels").iterdir()) == ["a.npy", "b.npy", "c.npy"]
+    assert rep["_total"]["files"] == 2 * 2 + 3
