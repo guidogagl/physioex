@@ -329,19 +329,21 @@ class MultiSeqStager(nn.Module):
         return loss
 
 
-def pack_modalities(splits_by_mod: Dict[str, Dict[str, Dict[str, np.ndarray]]], drop: Sequence[str] = ()):
+def pack_modalities(splits_by_mod: Dict[str, Dict[str, Dict[str, np.ndarray]]], drop: Sequence[str] = (),
+                    stats: Dict[str, Dict[str, tuple]] = None):
     """Standardize every modality on its own training statistics (:func:`standardize`), align
     them on ``(night, epoch)`` of the first modality (the reference: EEG) and pack them for
     :class:`MultiSeqStager`. An epoch missing in a modality (e.g. a night without EMG) gets zeros,
     i.e. the training mean. ``drop``: levels removed from the input, ``"eog:N"``, ``"emg:P"``...
     (set to zero in every split). Returns ``(data, spec, missing)``; ``missing[split][mod]`` counts
-    the zero-filled epochs."""
+    the zero-filled epochs. ``stats``: ``{mod: latent_stats}`` stored with a trained stager, for
+    splits without ``"train"`` (evaluation of new nights)."""
     mods = list(splits_by_mod)
-    std = {m: standardize(splits_by_mod[m]) for m in mods}
+    std = {m: standardize(splits_by_mod[m], (stats or {}).get(m)) for m in mods}
     ref = std[mods[0]]
-    dpmax = max(std[m]["train"]["P"].shape[-1] for m in mods)
-    spec = [(m, std[m]["train"]["N"].shape[-1], std[m]["train"]["P"].shape[-1], std[m]["train"]["P"].shape[1])
-            for m in mods]
+    first = {m: next(iter(std[m].values())) for m in mods}
+    dpmax = max(first[m]["P"].shape[-1] for m in mods)
+    spec = [(m, first[m]["N"].shape[-1], first[m]["P"].shape[-1], first[m]["P"].shape[1]) for m in mods]
     gone = {tuple(x.split(":")) for x in drop}
     unknown = gone - {(m, lv) for m in mods for lv in ("N", "E", "P")}
     assert not unknown, f"unknown levels to drop: {sorted(unknown)}"
@@ -392,9 +394,10 @@ def latent_stats(tr: Dict[str, np.ndarray]) -> Dict[str, tuple]:
     return stats
 
 
-def standardize(splits: Dict[str, Dict[str, np.ndarray]]) -> Dict[str, Dict[str, torch.Tensor]]:
-    """Per-dimension z-score with the training statistics (P: per channel over all tokens)."""
-    stats = latent_stats(splits["train"])
+def standardize(splits: Dict[str, Dict[str, np.ndarray]], stats: Dict[str, tuple] = None) -> Dict[str, Dict[str, torch.Tensor]]:
+    """Per-dimension z-score with the training statistics (P: per channel over all tokens);
+    ``stats`` (:func:`latent_stats`) replaces those of ``splits["train"]``."""
+    stats = stats or latent_stats(splits["train"])
     out = {}
     for s, d in splits.items():
         out[s] = {k: torch.from_numpy((d[k].astype(np.float32) - stats[k][0]) / stats[k][1]) for k in ("N", "E", "P")}
