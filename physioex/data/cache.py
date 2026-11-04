@@ -261,30 +261,24 @@ class ChannelCache:
         dtype = _resolve_dtype(dtype_name)
         shape = tuple(meta["shape"])
 
-        # For non-native dtypes (like bfloat16), np.load mmap returns void/V2.
-        # Use np.memmap directly with the correct dtype and the .npy header offset.
+        # Header parsed on an unbuffered file, then np.memmap at the data offset. np.load(mmap_mode)
+        # opens the file buffered: on GPFS the buffer is the file-system block (16 MiB), so every
+        # cold open read ~30 MB to parse a ~128 byte header; with many workers and nights this
+        # saturated the client (smoke 04.11). Non-native dtypes (bfloat16) take the dtype and shape
+        # from the sidecar, because the .npy header stores them as void (|V2).
+        with open(data_path, "rb", buffering=0) as f:
+            version = np.lib.format.read_magic(f)
+            if version == (1, 0):
+                hshape, fortran, hdtype = np.lib.format.read_array_header_1_0(f)
+            else:
+                hshape, fortran, hdtype = np.lib.format.read_array_header_2_0(f)
+            offset = f.tell()
         if dtype_name in ("bfloat16",):
-            # Parse the .npy header to find data offset
-            with open(data_path, "rb") as f:
-                # numpy .npy format: 6-byte magic + 2-byte version + 2-byte header_len (v1)
-                # or 6-byte magic + 2-byte version + 4-byte header_len (v2/v3)
-                magic = f.read(6)
-                version = f.read(2)
-                major = version[0]
-                if major == 1:
-                    header_len = int.from_bytes(f.read(2), "little")
-                else:
-                    header_len = int.from_bytes(f.read(4), "little")
-                # data offset = position after magic + version + header_len_field + header
-                if major == 1:
-                    offset = 6 + 2 + 2 + header_len
-                else:
-                    offset = 6 + 2 + 4 + header_len
             mm = np.memmap(data_path, dtype=dtype, mode="r", offset=offset, shape=shape)
-            return mm, meta
-
-        # For standard numpy dtypes, np.load handles it correctly
-        return np.load(data_path, mmap_mode="r"), meta
+        else:
+            mm = np.memmap(data_path, dtype=hdtype, mode="r", offset=offset, shape=tuple(hshape),
+                           order="F" if fortran else "C")
+        return mm, meta
 
     # ----- Cache invalidation -----
 
