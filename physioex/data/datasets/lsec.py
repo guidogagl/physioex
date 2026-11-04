@@ -43,6 +43,7 @@ from __future__ import annotations
 import csv
 import logging
 import re
+import warnings
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional
 
@@ -259,10 +260,13 @@ class LeuvenSleepEpilepsyChildrenDataset(BasePhysioDataset):
                 meta = {"group": group, **_edf_header_fields(edf)}
                 specs.append(SubjectSpec(subject_id=stem, edf_path=edf, label_path=csv_path, external_meta=meta))
         if self.label_offset == "audited":
-            # fail here: a label-read error in ``_build_index`` would only drop the subject with a warning
+            # A recording the audit never saw has no verified offset: it leaves the dataset here (a
+            # label-read error in ``_build_index`` would only drop it later, with a vaguer warning).
+            # WCE_35 is the known case: its annotation CSV arrived after the 19.10.2026 audit.
             missing = sorted(s.subject_id for s in specs if s.subject_id not in self._offsets)
             if missing:
-                raise KeyError(f"no offset in label_offsets_path for {len(missing)} recording(s): {missing[:10]}")
+                warnings.warn(f"LSEC: {len(missing)} recording(s) without audited offset excluded: {missing[:10]}")
+                specs = [s for s in specs if s.subject_id in self._offsets]
         return specs
 
     def _filter_subset(self, subjects: List[SubjectSpec], subset: str) -> List[SubjectSpec]:

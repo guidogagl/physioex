@@ -191,13 +191,15 @@ def test_audited_mode_requires_offsets(tmp_path):
     with pytest.raises(ValueError, match="subject_id"):
         LSEC(root=str(tmp_path), label_offset="audited", label_offsets_path=str(bad))
     _subject(tmp_path, "DRE", "DRE_1", _rows(3, STAGES))
+    _subject(tmp_path, "DRE", "DRE_7", _rows(3, STAGES))
     ok = tmp_path / "ok.csv"
     ok.write_text("subject_id,offset_epochs\nDRE_7,0\n")
     with tempfile.TemporaryDirectory() as cache:
-        # a recording without an offset is an error in audited mode (never a silent 0)
-        with pytest.raises(KeyError):
-            LSEC(root=str(tmp_path), channels=["EEG"], pipelines="raw", sequence_length=4, cache_dir=cache,
-                 label_offset="audited", label_offsets_path=str(ok))
+        # a recording without an audited offset leaves the dataset with a warning (never a silent 0)
+        with pytest.warns(UserWarning, match="without audited offset"):
+            ds = LSEC(root=str(tmp_path), channels=["EEG"], pipelines="raw", sequence_length=4, cache_dir=cache,
+                      label_offset="audited", label_offsets_path=str(ok))
+        assert ds.get_subjects() == ["DRE_7"]
 
 
 def test_end_to_end_spectrogram(tmp_path):
