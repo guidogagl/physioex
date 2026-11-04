@@ -136,9 +136,24 @@ def pack(a):
             a.cache_dir = local
             import signal  # Slurm timeout / scancel: SIGTERM, so that the finally below removes the copy
             signal.signal(signal.SIGTERM, lambda *_: sys.exit(143))
+    mps = None
+    if a.mps:
+        # CUDA MPS: the processes of the pack share the GPU instead of time-slicing it. 05.11.2026,
+        # acc020, 1000 steps: 2 combinations per GPU 320 ms/step plain, 145 ms with MPS (1: 150 / 100).
+        mps = os.path.join(os.environ.get("TMPDIR", "/tmp"), f"mps_{os.environ.get('SLURM_JOB_ID', os.getpid())}")
+        os.environ["CUDA_MPS_PIPE_DIRECTORY"] = os.path.join(mps, "pipe")
+        os.environ["CUDA_MPS_LOG_DIRECTORY"] = os.path.join(mps, "log")
+        for k in ("pipe", "log"):
+            os.makedirs(os.path.join(mps, k), exist_ok=True)
+        rc = subprocess.call(["nvidia-cuda-mps-control", "-d"])
+        print(f"[pack] MPS daemon rc={rc} ({mps})", flush=True)
     try:
         rc = _pack_run(a, mine, mods)
     finally:
+        if mps:
+            subprocess.run(["nvidia-cuda-mps-control"], input=b"quit\n")
+            import shutil
+            shutil.rmtree(mps, ignore_errors=True)
         if local:
             import shutil
             shutil.rmtree(local, ignore_errors=True)
@@ -674,6 +689,7 @@ def main():
     p.add_argument("--cache-dir", default=None)
     p.add_argument("--local-cache", action="store_true",
                    help="copy the train/val cache files to $TMPDIR first and train from there")
+    p.add_argument("--mps", action="store_true", help="start a CUDA MPS daemon for the pack's processes")
     p.add_argument("--steps-per-epoch", type=int, default=3000)
     p.add_argument("--epochs", type=int, default=30)
     p.add_argument("--valid-per-item", type=int, default=5000)
