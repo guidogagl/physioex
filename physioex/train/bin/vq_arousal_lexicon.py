@@ -150,7 +150,8 @@ def load(a):
         for b in lex.bases:
             Z[b][sid] = lex.coords(pq, b).astype(np.float32)
         Z["bp"][sid] = (10.0 ** z["bp"]).astype(np.float32)
-        st = z["stage"].astype(int)
+        st = np.full(len(z["flat"]), -1)
+        st[:len(z["stage"])] = z["stage"][:len(st)]  # labels can be one epoch short
         ok = ~z["flat"]
         stage[sid] = np.where(ok, st, -1)
         valid[sid] = np.repeat(ok & (st >= 1) & (st <= 4), T)
@@ -162,7 +163,8 @@ def load(a):
     for sid in dn:
         z = np.load(os.path.join(rd, f"dcsm_{sid}.npz"))
         pq = z["pq"].astype(np.float32)
-        st = z["stage"].astype(int)
+        st = np.full(len(z["flat"]), -1)
+        st[:len(z["stage"])] = z["stage"][:len(st)]  # labels can be one epoch short
         keep = np.repeat((~z["flat"]) & (st >= 0), T)
         for b in lex.bases:
             Zd[b].append((lex.coords(pq, b).astype(np.float32), keep))
