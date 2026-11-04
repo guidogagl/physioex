@@ -620,6 +620,225 @@ def decoder(a):
     print("DONE", flush=True)
 
 
+# ---------------------------------------------------------------------------- context: N, E and the stager
+def ctxout(a):
+    """Quantized N, E, P of every epoch (41-epoch windows, reflected) and the probabilities of the
+    sequence stager (``seq_len`` epochs centred on each epoch) for MASS SS01 and the DCSM nights."""
+    import torch
+
+    from physioex.data.datasets import get_dataset
+    from physioex.models.msae_vq import parse_vq_key
+    from physioex.models.qformer_stager import ARCHS, latent_stats
+    from physioex.models.recon_eval import _load_run, channel_pipelines
+    from physioex.train.bin.vq_event_codes import reflect_index
+
+    dev = "cuda" if torch.cuda.is_available() else "cpu"
+    run, dcsm_ds, model = _load_run(a.run)
+    ra = run["args"]
+    model.vq_levels = parse_vq_key(a.vq)
+    model.to(dev).eval()
+    lz = np.load(os.path.join(a.latents, "latents_train.npz"))
+    lat = {k: lz[k] for k in ("N", "E", "P")}
+    st = latent_stats(lat)
+    sa = json.load(open(os.path.join(a.stager, "stager.json")))["args"]
+    stager = ARCHS[sa["arch"]](dim=lat["N"].shape[-1], d_p=lat["P"].shape[-1], n_tok=lat["P"].shape[1], d=sa["d"], k=sa["k"],
+                               layers=sa["layers"], heads=sa["heads"], dropout=sa["dropout"], seq_len=sa["seq_len"],
+                               seq_layers=sa["seq_layers"])
+    stager.load_state_dict(torch.load(os.path.join(a.stager, "stager.pt"), map_location="cpu"))
+    stager.to(dev).eval()
+    L, half = sa["seq_len"], sa["seq_len"] // 2
+    del lat, lz
+    od = os.path.join(a.out, "readout")
+    meta = json.load(open(os.path.join(od, "meta.json")))
+    mds = get_dataset("mass")(cohort=1, channels=[ra.get("channel", "EEG_clean")], pipelines=channel_pipelines(ra),
+                              sequence_length=1, cache_dir=ra.get("cache_dir"))
+    have = {**{("mass", s.subject_id): (mds, s) for s in mds._subjects}, **{("dcsm", s.subject_id): (dcsm_ds, s) for s in dcsm_ds._subjects}}
+    seq = ra["seq"]
+    for tag in ("mass", "dcsm"):
+        for sid in meta[tag]:
+            ds, spec = have[(tag, sid)]
+            n = ds._n_epochs[sid]
+            x = next(iter(ds._build_item(spec, 0, n)["signals"].values())).numpy().reshape(n, -1).astype(np.float32)
+            idx = reflect_index(n, seq // 2)
+            Z = {"N": [], "E": [], "P": []}
+            with torch.no_grad():
+                for i in range(0, n, 32):
+                    w = np.stack([x[idx[s:s + seq]] for s in range(i, min(n, i + 32))])
+                    z = model.encode(torch.from_numpy(w)[:, :, None].to(dev))
+                    for k in Z:
+                        Z[k].append(z[k].float().cpu().numpy())
+            Z = {k: np.concatenate(v) for k, v in Z.items()}
+            S = {k: torch.from_numpy((Z[k] - st[k][0]) / st[k][1]).float() for k in Z}
+            j = reflect_index(n, half)
+            prob = []
+            with torch.no_grad():
+                for i in range(0, n, 64):
+                    ws = [j[s:s + L] for s in range(i, min(n, i + 64))]
+                    out = stager(*(torch.stack([S[k][w_] for w_ in ws]).to(dev) for k in ("N", "E", "P")))
+                    prob.append(out[:, half].float().softmax(-1).cpu().numpy())
+            np.savez(os.path.join(od, f"ctx_{tag}_{sid}.npz"), N=Z["N"].astype(np.float16), E=Z["E"].astype(np.float16),
+                     prob=np.concatenate(prob).astype(np.float32))
+            print(f"[arousal ctxout] {tag} {sid} {n}", flush=True)
+    print("DONE", flush=True)
+
+
+SHIFT_Q = (0.5, 0.75, 0.9)
+
+
+def ev_counts(pe: List[tuple], ref: List[tuple]) -> np.ndarray:
+    return np.array([match_count(pe, ref), len(pe), len(ref)], np.int64)
+
+
+def context(a):
+    """(1) Label-free: the decoder word (beta-gamma jump) kept only where the stager sees sleep 10 s
+    before the event and a shift towards wake (p(W) + p(N1) of the event epoch minus the previous
+    one, threshold at a DCSM quantile); rule and word chosen leave-one-night-out like the words.
+    (2) Supervised ceiling: MLP probes on P (pq x3) plus E, N and the stager probabilities of the
+    epoch and its neighbours, 5 folds by night: how much the other levels add."""
+    t0 = time.time()
+    load(a)
+    rd = os.path.join(a.out, "readout")
+    nights = D["nights"]
+    bands = D["meta"]["tex_bands"]
+    D["Z"]["tex"] = {s: (10.0 ** (2 * np.load(os.path.join(rd, f"tex_mass_{s}.npy")))).astype(np.float32) for s in nights}
+    D["Zd"]["tex"] = [((10.0 ** (2 * np.load(os.path.join(rd, f"tex_dcsm_{s}.npy")))).astype(np.float32), k)
+                      for s, (_, k) in zip(D["dcsm_nights"], D["Zd"]["bp"])]
+    C = {s: np.load(os.path.join(rd, f"ctx_mass_{s}.npz")) for s in nights}
+    Cd = [np.load(os.path.join(rd, f"ctx_dcsm_{s}.npz")) for s in D["dcsm_nights"]]
+    res = {"stager_agreement": {}}
+    # stager vs expert hypnogram on MASS (scored, non-flat epochs)
+    yt = np.concatenate([D["stage"][s] for s in nights])
+    yp = np.concatenate([C[s]["prob"].argmax(1) for s in nights])
+    ok = yt >= 0
+    from sklearn.metrics import cohen_kappa_score
+    res["stager_agreement"] = {"kappa": float(cohen_kappa_score(yt[ok], yp[ok])), "acc": float((yt[ok] == yp[ok]).mean())}
+    print("[context] stager on MASS", res["stager_agreement"], flush=True)
+
+    def shift(prob):
+        wn = prob[:, 0] + prob[:, 1]
+        return wn - np.r_[wn[:1], wn[:-1]]
+
+    dsh = np.concatenate([shift(c["prob"]) for c in Cd])
+    qthr = {q: float(np.quantile(dsh, q)) for q in SHIFT_Q}
+    res["shift_thresholds_dcsm"] = qthr
+
+    SH = {s: shift(C[s]["prob"]) for s in nights}
+
+    def keep_rule(e, s, rule):
+        prob = C[s]["prob"]
+        k = int(0.5 * (e[0] + e[1]) // EPOCH_S)
+        kb = int((e[0] + TOL - 10) // EPOCH_S)
+        if not (0 <= kb and k < len(prob)):
+            return False
+        if rule["sleep_before"] and prob[kb].argmax() == 0:
+            return False
+        if rule["shift_q"] is not None and SH[s][k] < qthr[rule["shift_q"]]:
+            return False
+        return True
+
+    rules = [{"sleep_before": sb, "shift_q": q} for sb in (False, True) for q in (None,) + SHIFT_Q]
+    g = {"basis": "tex", "name": "beta-gamma", "dirs": [bands.index("17-31"), bands.index("31-51")], "family": "decoder"}
+    words = [w for w in group_words(g) if w["rel"]]
+    cands, cnt = [], []
+    for w in words:
+        fired = {s: mask_events((values(w, w["win"], w["rel"], D["Z"]["tex"][s]) >= w["threshold"]) & D["valid"][s]) for s in nights}
+        for r in rules:
+            cands.append({"word": w["name"], "win": w["win"], "q": w["q"], "threshold": w["threshold"], **r})
+            per = []
+            for s in nights:
+                pe = [e for e in fired[s] if keep_rule(e, s, r)]
+                per.append(ev_counts(pe, D["refs"][s]))
+            cnt.append(np.stack(per))
+    cnt = np.stack(cnt)  # (cand, night, 3)
+    print(f"[context] {len(cands)} candidates ({time.time() - t0:.0f}s)", flush=True)
+
+    def pick(tr):
+        c = cnt[:, tr].sum(1)
+        pur, cov = c[:, 0] / np.maximum(c[:, 1], 1), c[:, 0] / np.maximum(c[:, 2], 1)
+        okc = np.flatnonzero(cov >= COV_MIN)
+        f1 = 2 * pur * cov / np.maximum(pur + cov, 1e-9)
+        return int(okc[np.argmax(pur[okc])]) if len(okc) else int(np.argmax(f1))
+
+    allidx = np.arange(len(nights))
+    tot, freq = np.zeros(3, np.int64), {}
+    for i in allidx:
+        k = pick(allidx[allidx != i])
+        tot += cnt[k, i]
+        freq[k] = freq.get(k, 0) + 1
+    base = [i for i, c in enumerate(cands) if not c["sleep_before"] and c["shift_q"] is None]
+    res["label_free"] = {"loo": prf(tot), "picked": [{**cands[k], "folds": n} for k, n in sorted(freq.items(), key=lambda kv: -kv[1])],
+                         "in_sample_best": {**cands[pick(allidx)], **prf(cnt[pick(allidx)].sum(0))},
+                         "table": [{**c, **prf(cnt[i].sum(0))} for i, c in enumerate(cands)]}
+    kf = pick(allidx)
+    stc = {}
+    for st_ in range(1, 5):
+        c3 = np.zeros(3, np.int64)
+        w = next(w for w in words if w["name"] == cands[kf]["word"])
+        for s in nights:
+            m = (values(w, w["win"], w["rel"], D["Z"]["tex"][s]) >= w["threshold"]) & D["valid"][s]
+            pe = [e for e in mask_events(m) if keep_rule(e, s, cands[kf]) and ev_stage(e, D["stage"][s]) == st_]
+            c3 += ev_counts(pe, [e for e in D["refs"][s] if ev_stage(e, D["stage"][s]) == st_])
+        stc[STAGES[st_]] = prf(c3)
+    res["label_free"]["per_stage_in_sample"] = stc
+    print("[context] label-free LOO", res["label_free"]["loo"], "picked", res["label_free"]["picked"][:2], flush=True)
+
+    # supervised ceiling
+    from sklearn.metrics import average_precision_score
+    from sklearn.model_selection import GroupKFold
+    from sklearn.neural_network import MLPClassifier
+    from sklearn.preprocessing import StandardScaler
+
+    def feats(s, parts):
+        n = len(D["stage"][s])
+        out = []
+        if "P" in parts:
+            out.append(ctx3(D["pq"][s]))
+        rep = lambda v: np.repeat(v.astype(np.float32), T, 0)  # noqa: E731
+        if "E" in parts:
+            out.append(rep(C[s]["E"]))
+        if "N" in parts:
+            out.append(rep(C[s]["N"]))
+        if "S" in parts:
+            p = C[s]["prob"]
+            out.append(rep(np.concatenate([np.r_[p[:1], p[:-1]], p, np.r_[p[1:], p[-1:]]], 1)))
+        if "T" in parts:  # decoded texture power, log, +-1 token
+            lt = np.log10(D["Z"]["tex"][s])
+            out.append(np.concatenate([np.r_[lt[:1], lt[:-1]], lt, np.r_[lt[1:], lt[-1:]]], 1))
+        assert all(len(o) == n * T for o in out)
+        return np.concatenate(out, 1).astype(np.float32)
+
+    rng = np.random.default_rng(0)
+    y = {s: token_targets(s) for s in nights}
+    res["probes"] = {}
+    for parts in ("P", "PE", "PEN", "PENS", "S", "ENS", "PENST"):
+        X = {s: feats(s, parts) for s in nights}
+        score, thr = {}, {}
+        for tr, te in GroupKFold(5).split(nights, groups=nights):
+            trn = [nights[i] for i in tr]
+            Xt = np.concatenate([X[s][D["valid"][s]] for s in trn]); yt_ = np.concatenate([y[s][D["valid"][s]] for s in trn])
+            sub = rng.choice(len(Xt), min(300000, len(Xt)), replace=False)
+            sc = StandardScaler().fit(Xt[sub])
+            clf = MLPClassifier((128,), early_stopping=True, max_iter=60, random_state=0).fit(sc.transform(Xt[sub]), yt_[sub])
+            ptr = {s: clf.predict_proba(sc.transform(X[s]))[:, 1] for s in trn}
+            qs = np.quantile(np.concatenate([ptr[s][D["valid"][s]] for s in trn]), np.linspace(0.8, 0.995, 40))
+            best = None
+            for q in qs:
+                p_ = prf(sum(acounts((ptr[s] >= q) & D["valid"][s], D["refs"][s]) for s in trn))
+                if p_["coverage"] >= COV_MIN and (best is None or p_["purity"] > best[1]):
+                    best = (q, p_["purity"])
+            for i in te:
+                score[nights[i]] = clf.predict_proba(sc.transform(X[nights[i]]))[:, 1]
+                thr[nights[i]] = best[0] if best else qs[0]
+        ap_ = average_precision_score(np.concatenate([y[s][D["valid"][s]] for s in nights]), np.concatenate([score[s][D["valid"][s]] for s in nights]))
+        ev = prf(sum(acounts((score[s] >= thr[s]) & D["valid"][s], D["refs"][s]) for s in nights))
+        st4 = {STAGES[k]: prf(sum(acounts((score[s] >= thr[s]) & D["valid"][s], D["refs"][s], D["stage"][s], k) for s in nights)) for k in range(1, 5)}
+        res["probes"][parts] = {"token_ap": float(ap_), "events": ev, "per_stage": st4, "n_feat": int(X[nights[0]].shape[1])}
+        print(f"[context probe {parts}] AP {ap_:.3f} events {ev['purity']:.3f}/{ev['coverage']:.3f} f1 {ev['f1']:.3f}", flush=True)
+    res["minutes"] = (time.time() - t0) / 60
+    json.dump(res, open(os.path.join(a.out, "arousal_context.json"), "w"), indent=1, default=lambda o: o.tolist() if hasattr(o, "tolist") else str(o))
+    print("DONE", flush=True)
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sp = ap.add_subparsers(dest="cmd", required=True)
@@ -646,8 +865,19 @@ def main():
     d.add_argument("--jobs", type=int, default=8)
     d.add_argument("--null-shift", type=int, default=20)
     d.add_argument("--out", required=True)
+    c = sp.add_parser("ctxout")
+    c.add_argument("--run", required=True)
+    c.add_argument("--vq", default="N8E8P6")
+    c.add_argument("--stager", required=True)
+    c.add_argument("--latents", required=True)
+    c.add_argument("--out", required=True)
+    x2 = sp.add_parser("context")
+    x2.add_argument("--run", required=True)
+    x2.add_argument("--lexicon", required=True)
+    x2.add_argument("--jobs", type=int, default=8)
+    x2.add_argument("--out", required=True)
     a = ap.parse_args()
-    {"readout": readout, "lexicon": lexicon, "texout": texout, "decoder": decoder}[a.cmd](a)
+    {"readout": readout, "lexicon": lexicon, "texout": texout, "decoder": decoder, "ctxout": ctxout, "context": context}[a.cmd](a)
 
 
 if __name__ == "__main__":
