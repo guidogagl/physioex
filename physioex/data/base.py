@@ -187,6 +187,7 @@ class BasePhysioDataset(Dataset):
         # invalidation.
         self._labels_cache: Dict[str, np.ndarray] = {}
         self._events_cache: Dict[str, List[SleepEvent]] = {}
+        self._fs_out_cache: Dict[tuple, float] = {}
         # LRU cache for open memmap file handles. Avoids repeated mmap() calls
         # which are expensive on NFS (~0.16ms per call on network filesystems).
         # Cache key is (subject_id, physical_channel, pipeline_hash).
@@ -1114,17 +1115,16 @@ class BasePhysioDataset(Dataset):
                 pipeline_hash,
             )
 
+            # Check the LRU first: an open memmap needs no file-system call (on a shared parallel
+            # file system a stat per item stalls the loader workers when the metadata server is busy).
+            cache_key = f"{spec.subject_id}:{resolved.physical}:{pipeline_hash}"
+            if cache_key in self._memmap_cache:
+                self._memmap_cache.move_to_end(cache_key)
+                self._memmap_cache_hits += 1
+                return self._memmap_cache[cache_key]
             # If cache file exists, try to use it.
             if signal_path.exists():
                 try:
-                    # Check LRU cache first
-                    cache_key = f"{spec.subject_id}:{resolved.physical}:{pipeline_hash}"
-                    if cache_key in self._memmap_cache:
-                        # Move to end (most recently used)
-                        self._memmap_cache.move_to_end(cache_key)
-                        self._memmap_cache_hits += 1
-                        return self._memmap_cache[cache_key]
-
                     # Cache miss - load from disk
                     memmap, meta = self.cache.load_memmap(signal_path)
                     self._memmap_cache_misses += 1
@@ -1496,8 +1496,9 @@ class BasePhysioDataset(Dataset):
 
             pipeline = self._pipeline_for_channel(rc)
             # Try to get fs_out from cache metadata to avoid recompiling
-            fs_out = None
-            if self.cache_enabled:
+            fs_key = (spec.subject_id, str(rc.physical), pipeline.hash())
+            fs_out = self._fs_out_cache.get(fs_key)
+            if fs_out is None and self.cache_enabled:
                 signal_path = self.cache.signal_path(
                     self.DATASET_NAME, spec.subject_id, rc.physical, pipeline.hash()
                 )
@@ -1507,6 +1508,7 @@ class BasePhysioDataset(Dataset):
                     ))
                     if meta:
                         fs_out = meta.get("fs_out")
+                        self._fs_out_cache[fs_key] = fs_out  # read once per night and channel
 
             # Only compile if not found in cache metadata
             if fs_out is None:

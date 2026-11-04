@@ -25,6 +25,8 @@ from __future__ import annotations
 
 import importlib
 import json
+import os
+import warnings
 from collections import defaultdict
 from dataclasses import dataclass, field
 from fractions import Fraction
@@ -95,6 +97,22 @@ def test_only_units() -> List[str]:
     return [u["name"] for u in UNITS if u["item"] is None]
 
 
+def lsec_audit_kwargs(config: str) -> dict:
+    """LSEC labels shifted by the alignment audit and the ambiguous recordings left out
+    (``label_offsets.csv`` + ``exclude_audited.txt`` in ``$PHYSIOEX_LSEC_AUDIT``, from the
+    ProtoSleepNet audit of 19.10.2026: 49 recordings are off by up to 39 epochs). Without the
+    variable the index labels are used, with a warning: the LSEC kappas are then not valid."""
+    if config != "lsec":
+        return {}
+    d = os.environ.get("PHYSIOEX_LSEC_AUDIT")
+    if not d:
+        warnings.warn("PHYSIOEX_LSEC_AUDIT not set: LSEC with index labels (not audited)")
+        return {}
+    excl = Path(d, "exclude_audited.txt").read_text().replace("\n", ",").split(",")
+    return {"label_offset": "audited", "label_offsets_path": str(Path(d, "label_offsets.csv")),
+            "exclude_subjects": [x.strip() for x in excl if x.strip()]}
+
+
 def make_dataset(name: str, channels: Sequence[str], pipelines, sequence_length: int, cache_dir: Optional[str],
                  memmap_cache_size: int = 200, **extra):
     """One physioex dataset of :data:`UNITS` (class and defaults from ``DATASET_CONFIGS``)."""
@@ -103,7 +121,7 @@ def make_dataset(name: str, channels: Sequence[str], pipelines, sequence_length:
     u = BY_NAME[name]
     dc = DATASET_CONFIGS[u["config"]]
     cls = getattr(importlib.import_module(dc.module_path), dc.class_name)
-    kw = {**dc.extra_kwargs, **u["kwargs"], **extra}
+    kw = {**dc.extra_kwargs, **u["kwargs"], **lsec_audit_kwargs(u["config"]), **extra}
     return cls(channels=list(channels), pipelines=pipelines, sequence_length=sequence_length, cache_dir=cache_dir,
                memmap_cache_size=memmap_cache_size, **kw)
 
@@ -162,10 +180,14 @@ def _build(names, channels, pipelines, sequence_length, cache_dir, memmap_cache_
 
 
 def build_train(items: Sequence[str], splits_path: str, channels: Sequence[str], pipelines, sequence_length: int,
-                cache_dir: Optional[str], valid_per_item: int = 5000, seed: int = 0, memmap_cache_size: int = 200,
+                cache_dir: Optional[str], valid_per_item: int = 5000, seed: int = 0, memmap_cache_size: int = 50000,
                 allow_empty: bool = False, **ds_kwargs) -> MergedData:
     """Merged training data of the pool ``items``: train split for training, validation windows
     of the val split (``valid_per_item`` per item, drawn without replacement, fixed seed).
+
+    ``memmap_cache_size`` is the total of open memmaps, shared among the units by their number of
+    nights: it must cover every night, or random sampling reopens a file at almost every item
+    (one open and one stat on the parallel file system per window).
 
     ``allow_empty``: an item without cached nights for the channel (Sleep-EDF has no clean EMG)
     is reported in ``report["empty_items"]`` instead of raising; it then gets no sampling mass."""

@@ -49,6 +49,7 @@ from typing import Any, Dict, Iterable, List, Optional
 import numpy as np
 
 from physioex.data.base import BasePhysioDataset, SubjectSpec, get_data_root
+from physioex.data.cleaning.montage import CleanMontage
 
 logger = logging.getLogger("physioex.data")
 
@@ -154,6 +155,37 @@ class LeuvenSleepEpilepsyChildrenDataset(BasePhysioDataset):
     DATASET_NAME = "lsec"
     DATASET_SUBDIR = "LeuvenSleepEpilepsyChildren"
     DEFAULT_EPOCH_LENGTH_SEC = 30.0
+
+    #: Clean-channel recipe (physioex.data.cleaning). All 175 PSGs have the full 10-20 montage, A1/A2,
+    #: LOC/ROC, EMG Chin and ECG at 256 Hz, every electrode against the amplifier reference (04.11.2026).
+    #: EEG C4-A1 as the other datasets (C4-M1), C3-A2 if missing; the other 10-20 electrodes on the
+    #: contralateral ear feed the source separation. Legs: "Tib. L"/"Tib. R" (9 recordings), else
+    #: "EMG Li"/"EMG Re" (leg channels, see the module docstring). Mains 50 Hz (Leuven).
+    CLEAN_MONTAGE = CleanMontage(
+        eeg=[("C4", "A1"), ("C3", "A2")],
+        eog=[("LOC", "ROC")],
+        chin=["EMG Chin"],
+        leg_l=["Tib. L", "EMG Li"],
+        leg_r=["Tib. R", "EMG Re"],
+        ecg=["ECG"],
+        extra={
+            "C3": [("C3", "A2")],
+            "F3": [("F3", "A2")],
+            "F4": [("F4", "A1")],
+            "O1": [("O1", "A2")],
+            "O2": [("O2", "A1")],
+            "Fz": [("Fz", "A1")],
+            "Cz": [("Cz", "A1")],
+            "Pz": [("Pz", "A1")],
+            "Fp1": [("Fp1", "A2")],
+            "Fp2": [("Fp2", "A1")],
+        },
+        extra_eeg=["C3", "F3", "F4", "O1", "O2", "Fz", "Cz", "Pz", "Fp1", "Fp2"],
+        level="rich",
+        mains=50.0,
+        notes="EEG polarity as recorded (opposite to CCSHS by the 0.5-4 Hz skewness, 21.10.2026); "
+              "legs Tib. L/R (9 recordings) or EMG Li/Re",
+    )
 
     CHANNEL_PREFERENCES: Dict[str, List] = {
         "EEG": [("C3", "A2"), ("C4", "A1"), "C3", "C4"],
