@@ -187,14 +187,19 @@ def _build(names, channels, pipelines, sequence_length, cache_dir, memmap_cache_
 
 
 def build_train(items: Sequence[str], splits_path: str, channels: Sequence[str], pipelines, sequence_length: int,
-                cache_dir: Optional[str], valid_per_item: int = 5000, seed: int = 0, memmap_cache_size: int = 50000,
+                cache_dir: Optional[str], valid_per_item: int = 5000, seed: int = 0, memmap_cache_size: int = 8,
                 allow_empty: bool = False, **ds_kwargs) -> MergedData:
     """Merged training data of the pool ``items``: train split for training, validation windows
     of the val split (``valid_per_item`` per item, drawn without replacement, fixed seed).
 
-    ``memmap_cache_size`` is the total of open memmaps, shared among the units by their number of
-    nights: it must cover every night, or random sampling reopens a file at almost every item
-    (one open and one stat on the parallel file system per window).
+    ``memmap_cache_size`` is the total of open memmaps per process (main or DataLoader worker),
+    shared among the units by their number of nights. Keep it small: every open memmap holds a
+    GPFS file open, and the client of a Sofia node stalls as a whole (every process, even ``ls``)
+    once ~800 cache files are open on the node (measured 04.11.2026, acc019: one process with no
+    cap hung after ~830 open memmaps; capped at 64 it ran 60 batches without a stall). A reopen
+    costs ~1 ms on a healthy client, so a miss per item is cheap (with random sampling over
+    thousands of nights the LRU hardly hits anyway). Budget per node: processes x workers (train
+    and valid loaders are both persistent) x this value well below 800.
 
     ``allow_empty``: an item without cached nights for the channel (Sleep-EDF has no clean EMG)
     is reported in ``report["empty_items"]`` instead of raising; it then gets no sampling mass."""
