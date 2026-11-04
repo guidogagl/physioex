@@ -303,6 +303,16 @@ class ResampledView(Dataset):
         return getattr(self.base, name)
 
 
+def _cache_name(unit: str, src_v1: Path) -> str:
+    """Cache folder of a unit: its name if that folder exists, else the class ``DATASET_NAME``
+    (``hpap_lab_full`` and ``hpap_lab_split`` share ``hpap``)."""
+    if (src_v1 / unit).is_dir():
+        return unit
+    from physioex.models.foundation_datasets import DATASET_CONFIGS
+    dc = DATASET_CONFIGS[BY_NAME[unit]["config"]]
+    return getattr(importlib.import_module(dc.module_path), dc.class_name).DATASET_NAME
+
+
 def stage_local(items: Sequence[str], splits_path: str, src_root: str, dst_root: str, channels: Sequence[str],
                 splits_keys: Sequence[str] = ("train", "val"), threads: int = 32,
                 min_free_gib: float = 100.0) -> Dict[str, dict]:
@@ -332,15 +342,17 @@ def stage_local(items: Sequence[str], splits_path: str, src_root: str, dst_root:
     splits = json.loads(Path(splits_path).read_text())
     src_root, dst_root = Path(src_root) / "v1", Path(dst_root) / "v1"
     jobs, rep = [], {}
+    seen = set()
     for n in units_of(items):
-        s, d = src_root / n, dst_root / n
-        nb = 0
+        c = _cache_name(n, src_root)
+        s, d = src_root / c, dst_root / c
         for sub in ("headers", "labels", "subjects"):
             if (s / sub).is_dir():
                 (d / sub).mkdir(parents=True, exist_ok=True)
                 with os.scandir(s / sub) as it:
                     for e in it:
-                        if e.is_file():
+                        if e.is_file() and (d / sub / e.name) not in seen:  # hpap: two units, one folder
+                            seen.add(d / sub / e.name)
                             jobs.append((Path(e.path), d / sub / e.name))
         sids = sorted({sid for k in splits_keys for sid in _split_ids(splits, BY_NAME[n]["site"], n, k)})
         nights = 0
@@ -360,7 +372,7 @@ def stage_local(items: Sequence[str], splits_path: str, src_root: str, dst_root:
                             jobs.append((Path(root) / f, d / rel / f))
                             got = True
             nights += got
-        rep[n] = {"nights": nights, "split_nights": len(sids)}
+        rep[n] = {"nights": nights, "split_nights": len(sids), "folder": c}
 
     with ThreadPoolExecutor(threads) as ex:
         sizes = list(ex.map(lambda p: p[0].stat().st_size, jobs))
@@ -377,6 +389,6 @@ def stage_local(items: Sequence[str], splits_path: str, src_root: str, dst_root:
     with ThreadPoolExecutor(threads) as ex:
         list(ex.map(lambda p: shutil.copyfile(*p), jobs))
     for n in rep:
-        rep[n]["files"] = sum(1 for _, t in jobs if Path(t).is_relative_to(dst_root / n))
+        rep[n]["files"] = sum(1 for _, t in jobs if Path(t).is_relative_to(dst_root / rep[n]["folder"]))
     rep["_total"] = {"files": len(jobs), "bytes": int(sum(sizes))}
     return rep
