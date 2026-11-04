@@ -201,7 +201,7 @@ def groups_of(basis: str, family_lf=True, family_si=True) -> List[dict]:
 
 
 def values(g: dict, win: int, rel: int, Zs: np.ndarray) -> np.ndarray:
-    e = Zs[:, g["dirs"]].sum(1) if g["basis"] == "bp" else (Zs[:, g["dirs"]] ** 2).sum(1)
+    e = Zs[:, g["dirs"]].sum(1) if g["basis"] in ("bp", "tex") else (Zs[:, g["dirs"]] ** 2).sum(1)
     if win > 1:
         e = window_mean(e, win, len(e))
     if rel:
@@ -509,6 +509,117 @@ def lexicon(a):
     log("DONE")
 
 
+# ---------------------------------------------------------------------------- decoder words (texture)
+TEX_GROUPS = {"beta-gamma": ["17-31", "31-51"], "beta": ["17-31"], "alpha": ["9-13"], "alpha-gamma": ["9-13", "13-17", "17-31", "31-51"],
+              "theta-gamma": ["5-9", "9-13", "13-17", "17-31", "31-51"], "theta": ["5-9"]}
+
+
+def tex_batch(model, w: np.ndarray) -> np.ndarray:
+    """Per-token log10 amplitude of the texture bands decoded from the quantized N, E, P of the
+    centre epoch (same path as ``MSAE.decode`` + ``noise_texture``, without the noise)."""
+    import torch
+
+    dev = next(model.parameters()).device
+    x = torch.from_numpy(w).to(dev).float()
+    with torch.no_grad():
+        n = model.encode_context(x)
+        if model.use_n:
+            n, _, _ = model._q("N", n)
+        h = model.features(x[:, model.c])
+        g, b = model.e_film(n).chunk(2, -1)
+        he = h * (1 + g[:, None]) + b[:, None]
+        e = torch.tanh(model.e_out(model.e_pool(model.e_query.expand(len(h), -1, -1), he, he, need_weights=False)[0][:, 0]))
+        e, _, _ = model._q("E", e)
+        g, b = model.p_film(torch.cat([n, e], -1)).chunk(2, -1)
+        p = torch.tanh(model.p_out(h * (1 + g[:, None]) + b[:, None]))
+        pq, _, _ = model._q("P", p)
+        z = (model.dec_n(n) + model.dec_e(e))[:, None] + model.pos_dec + model.dec_p(pq)
+        lg = model.tex_head(model.dec_tok(z)).float().clamp(-6, 2)
+    return lg.cpu().numpy()
+
+
+def texout(a):
+    import torch
+
+    from physioex.data.datasets import get_dataset
+    from physioex.models.msae_vq import parse_vq_key
+    from physioex.models.recon_eval import _load_run, channel_pipelines
+    from physioex.train.bin.vq_event_codes import reflect_index
+
+    run, dcsm_ds, model = _load_run(a.run)
+    ra = run["args"]
+    model.vq_levels = parse_vq_key(a.vq)
+    model.to("cuda" if torch.cuda.is_available() else "cpu").eval()
+    assert model.texture, "the run has no texture head"
+    bands = [f"{model.pow_bands[i][0]}-{model.pow_bands[i][1]}" for i in model.tex_bands]
+    od = os.path.join(a.out, "readout")
+    meta = json.load(open(os.path.join(od, "meta.json")))
+    mds = get_dataset("mass")(cohort=1, channels=[ra.get("channel", "EEG_clean")], pipelines=channel_pipelines(ra),
+                              sequence_length=1, cache_dir=ra.get("cache_dir"))
+    have = {**{("mass", s.subject_id): (mds, s) for s in mds._subjects},
+            **{("dcsm", s.subject_id): (dcsm_ds, s) for s in dcsm_ds._subjects}}
+    seq, half = ra["seq"], ra["seq"] // 2
+    for tag in ("mass", "dcsm"):
+        for sid in meta[tag]:
+            ds, spec = have[(tag, sid)]
+            n = ds._n_epochs[sid]
+            x = next(iter(ds._build_item(spec, 0, n)["signals"].values())).numpy().reshape(n, -1).astype(np.float32)
+            idx = reflect_index(n, half)
+            out = [tex_batch(model, np.stack([x[idx[s:s + seq]] for s in range(i, min(n, i + 64))])) for i in range(0, n, 64)]
+            np.save(os.path.join(od, f"tex_{tag}_{sid}.npy"), np.concatenate(out).reshape(n * T, -1).astype(np.float32))
+            print(f"[arousal texout] {tag} {sid}", flush=True)
+    meta["tex_bands"] = bands
+    json.dump(meta, open(os.path.join(od, "meta.json"), "w"))
+    print("DONE", flush=True)
+
+
+def decoder(a):
+    """Arousal words on the decoded texture power (``tex``): same windows, thresholds on DCSM, AASM
+    rule and leave-one-night-out selection as the latent words; the input band power (``signal``)
+    is rerun as reference."""
+    t0 = time.time()
+    load(a)
+    rd = os.path.join(a.out, "readout")
+    bands = D["meta"]["tex_bands"]
+    D["Z"]["tex"] = {s: (10.0 ** (2 * np.load(os.path.join(rd, f"tex_mass_{s}.npy")))).astype(np.float32) for s in D["nights"]}
+    D["Zd"]["tex"] = [((10.0 ** (2 * np.load(os.path.join(rd, f"tex_dcsm_{s}.npy")))).astype(np.float32), k)
+                      for s, (_, k) in zip(D["dcsm_nights"], D["Zd"]["bp"])]
+    groups = [{"basis": "tex", "name": k, "dirs": [bands.index(b) for b in v], "family": "decoder"} for k, v in TEX_GROUPS.items()]
+    groups += [{"basis": "bp", "name": k, "dirs": v, "family": "signal"} for k, v in SIGNAL_GROUPS.items()]
+    words = build_words(groups, a.jobs)
+    fam = {f: [i for i, w in enumerate(words) if w["family"] == f] for f in ("decoder", "signal")}
+    nights = D["nights"]
+    res = {"tex_bands": bands, "groups": TEX_GROUPS, "loo": {f: loo(words, idx, D["refs"], D["valid"], print, f) for f, idx in fam.items()}}
+    M = Masks(words, D["valid"])
+    ws = select(words, M, nights, D["refs"], fam["decoder"])
+    fin = {"words": [{k: words[w][k] for k in ("name", "dirs", "win", "rel", "q", "threshold", "dcsm_stage_mix", "dcsm_rate")} for w in ws]}
+    fin["in_sample"] = prf(sum(acounts(M.union(ws, s), D["refs"][s]) for s in nights))
+    fin["per_stage"] = per_stage(M, ws, nights, D["refs"])
+    fin["word_alone"] = [prf(sum(acounts(M(w, s), D["refs"][s]) for s in nights)) for w in ws]
+    fin["shift_null"] = shift_null(M, ws, D["refs"], a.null_shift, np.random.default_rng(1))
+    Ma = Masks(words, D["valid_all"])
+    fin["scored_with_wake"] = prf(sum(acounts(Ma.union(ws, s), D["refs_all"][s]) for s in nights))
+    raw = Masks(words, {s: np.ones(len(D["valid"][s]), bool) for s in nights})
+    fin["mass_rate"] = {STAGES[k]: float(sum(raw.union(ws, s)[np.repeat(D["stage"][s] == k, T)].sum() for s in nights)
+                                         / max(sum(np.repeat(D["stage"][s] == k, T).sum() for s in nights), 1)) for k in range(5)}
+    # decoded vs input power per token (sleep tokens): how much of the input band change the codes keep
+    corr = {}
+    for gname, v in TEX_GROUPS.items():
+        ti = [bands.index(b) for b in v]
+        ii = [ {"5-9": 1, "9-13": 2, "13-17": 3, "17-31": 4, "31-51": 5}[b] for b in v]
+        dv = np.concatenate([np.log10(D["Z"]["tex"][s][:, ti].sum(1))[D["valid"][s]] for s in nights])
+        iv = np.concatenate([np.log10(D["Z"]["bp"][s][:, ii].sum(1))[D["valid"][s]] for s in nights])
+        corr[gname] = float(np.corrcoef(dv, iv)[0, 1])
+    fin["tex_vs_input_corr"] = corr
+    print("[decoder final]", fin["in_sample"], [words[w]["name"] for w in ws], "per stage", fin["per_stage"], "corr", corr, flush=True)
+    res["final"] = fin
+    ev = {s: {"lexicon": [[a_, b_] for a_, b_ in mask_events(M.union(ws, s))]} for s in nights}
+    json.dump(ev, open(os.path.join(a.out, "arousal_decoder_events.json"), "w"))
+    res["minutes"] = (time.time() - t0) / 60
+    json.dump(res, open(os.path.join(a.out, "arousal_decoder.json"), "w"), indent=1, default=lambda o: o.tolist() if hasattr(o, "tolist") else str(o))
+    print("DONE", flush=True)
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sp = ap.add_subparsers(dest="cmd", required=True)
@@ -525,8 +636,18 @@ def main():
     x.add_argument("--null-shift", type=int, default=20)
     x.add_argument("--null-seeds", type=int, nargs="+", default=[0, 1, 2])
     x.add_argument("--out", required=True)
+    t = sp.add_parser("texout")
+    t.add_argument("--run", required=True)
+    t.add_argument("--vq", default="N8E8P6")
+    t.add_argument("--out", required=True)
+    d = sp.add_parser("decoder")
+    d.add_argument("--run", required=True)
+    d.add_argument("--lexicon", required=True)
+    d.add_argument("--jobs", type=int, default=8)
+    d.add_argument("--null-shift", type=int, default=20)
+    d.add_argument("--out", required=True)
     a = ap.parse_args()
-    readout(a) if a.cmd == "readout" else lexicon(a)
+    {"readout": readout, "lexicon": lexicon, "texout": texout, "decoder": decoder}[a.cmd](a)
 
 
 if __name__ == "__main__":
