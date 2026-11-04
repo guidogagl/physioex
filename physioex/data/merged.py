@@ -187,14 +187,15 @@ def _build(names, channels, pipelines, sequence_length, cache_dir, memmap_cache_
 
 
 def build_train(items: Sequence[str], splits_path: str, channels: Sequence[str], pipelines, sequence_length: int,
-                cache_dir: Optional[str], valid_per_item: int = 5000, seed: int = 0, memmap_cache_size: int = 0,
+                cache_dir: Optional[str], valid_per_item: int = 5000, seed: int = 0, memmap_cache_size: int = 4,
                 allow_empty: bool = False, **ds_kwargs) -> MergedData:
     """Merged training data of the pool ``items``: train split for training, validation windows
     of the val split (``valid_per_item`` per item, drawn without replacement, fixed seed).
 
     ``memmap_cache_size`` is the total of open memmaps per process (main or DataLoader worker),
-    shared among the units by their number of nights. Default 0: no LRU, the night's file is
-    mapped for the item and released after it. Every open memmap holds a GPFS file open, and the
+    shared among the units by their number of nights. Default 4 (acc013, 04.11.2026, 6 loaders x
+    3 workers, 60 batches: cap 0 16.8-18.5 s, 4 14.6-16.8 s, 16 13.4-16.2 s, 64 stalled); 0 turns
+    the LRU off (the file is mapped for the item and released after it). Every open memmap holds a GPFS file open, and the
     client of a Sofia node stalls as a whole (every process, even ``ls``) once ~800 cache files
     are open on the node (measured 04.11.2026, acc019: one process with no cap hung after ~830
     open memmaps; capped at 64 it ran 60 batches without a stall). The count adds up over
