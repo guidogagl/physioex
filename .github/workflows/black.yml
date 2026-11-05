@@ -1,6 +1,11 @@
 name: Lint
 
-on: [push, pull_request]
+# black solo dove conta (main, physioex-dev e PR): i branch di ricerca si formattano al merge
+# (05.11.2026, il Lint falliva a ogni push di feat/clean-channels e feat/merged-pretrain)
+on:
+  push:
+    branches: [main, physioex-dev]
+  pull_request:
 
 jobs:
   lint:
