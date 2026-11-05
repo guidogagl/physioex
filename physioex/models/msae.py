@@ -130,6 +130,18 @@ class MultiScaleStem(nn.Module):
         return torch.cat([b(x) for b in self.branches], 1)
 
 
+#: pre-``tanh`` magnitude above which :func:`tanh_saturation` charges (tanh(3) = 0.995)
+SAT_AT = 3.0
+
+
+def tanh_saturation(*us: torch.Tensor) -> torch.Tensor:
+    """Mean squared excess of the pre-``tanh`` latents over :data:`SAT_AT`. On merged EMG the E/P
+    bottleneck saturated in the first ~500 steps in about half of the runs (|z| > 0.99 on every
+    input, zero gradient, R^2 stuck at -0.1: 70/120 triplets, 6/11 leave-one-out, 05.11.2026);
+    ``sat_weight`` x this term keeps the pre-activations where tanh still has a gradient."""
+    return sum(F.relu(u.float().abs() - SAT_AT).pow(2).mean() for u in us)
+
+
 def _bottleneck(z: torch.Tensor, bits: int, training: bool) -> torch.Tensor:
     """``tanh`` then a ``bits``-bit channel: uniform noise of one step in training, rounding in eval."""
     z = torch.tanh(z)
@@ -143,6 +155,9 @@ def _bottleneck(z: torch.Tensor, bits: int, training: bool) -> torch.Tensor:
 
 class MSAE(nn.Module):
     """Hierarchical continuous autoencoder N + E + P (see module docstring)."""
+
+    #: weight of :func:`tanh_saturation` in the training loss (0 = off, the default recipe)
+    sat_weight: float = 0.0
 
     def __init__(self, sequence_length: int = 41, width: int = 32, dim: int = 128, d_p: int = 8,
                  token_sec: float = 1.0, latent_bits: int = 8, n_psd_bins: int = None,
@@ -264,9 +279,13 @@ class MSAE(nn.Module):
         g, b = self.e_film(n).chunk(2, -1)
         he = h * (1 + g[:, None]) + b[:, None]
         e = self.e_out(self.e_pool(self.e_query.expand(len(h), -1, -1), he, he, need_weights=False)[0][:, 0])
+        e_pre = e
         e = _bottleneck(e, self.latent_bits, self.training)
         g, b = self.p_film(torch.cat([n, e], -1)).chunk(2, -1)
-        p = _bottleneck(self.p_out(h * (1 + g[:, None]) + b[:, None]), self.latent_bits, self.training)
+        p_pre = self.p_out(h * (1 + g[:, None]) + b[:, None])
+        p = _bottleneck(p_pre, self.latent_bits, self.training)
+        if self.sat_weight > 0:
+            self.last_sat = tanh_saturation(e_pre, p_pre)
         return {"N": n, "E": e, "P": p}
 
     def tokens(self, x: torch.Tensor) -> torch.Tensor:
@@ -480,6 +499,14 @@ class MSAETrainer(Trainer):
         psd = (model.logpsd(xc) - model.psd_mean) / model.psd_std
         with _autocast(device):
             out = model(x)
+        loss, r2, extra = MSAETrainer._losses(model, out, xc, psd)
+        if model.sat_weight > 0:
+            loss = loss + model.sat_weight * model.last_sat
+            extra["sat"] = model.last_sat.item()
+        return loss, r2, extra
+
+    @staticmethod
+    def _losses(model, out, xc, psd):
         if model.recon == "texture":
             return MSAETrainer._step_texture(model, out, xc, psd)
         if model.decoder == "istft":

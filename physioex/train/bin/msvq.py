@@ -166,6 +166,8 @@ def main():
     ap.add_argument("--batch", type=int, default=64)
     ap.add_argument("--lr", type=float, default=3e-4)
     ap.add_argument("--grad-clip", type=float, default=0.0, help="max gradient norm (0 = no clipping)")
+    ap.add_argument("--sat-weight", type=float, default=0.0,
+                    help="msae / msae_vq: weight of the penalty on pre-tanh E/P latents above 3 (0 = off; EMG 0.1)")
     ap.add_argument("--epochs", type=int, default=20)
     ap.add_argument("--patience", type=int, default=3)
     ap.add_argument("--max-train", type=int, default=0, help="cap on training windows per epoch (0 = all; smoke tests)")
@@ -255,6 +257,7 @@ def main():
                            factor_dim_n=a.vq_factor_dim_n, whiten_n=a.vq_whiten_n, **arch)
             if a.init:
                 print(f"[msae_vq] weights from {load_best(model, a.init)}", flush=True)
+        model.sat_weight = a.sat_weight
         opt = torch.optim.AdamW(model.parameters(), lr=a.lr, weight_decay=1e-4)
         n_val = a.epochs * max(1, round(1 / a.valid_ratio))  # the Trainer steps the scheduler at each validation
         opt_kw = dict(optimizer=opt, scheduler=torch.optim.lr_scheduler.CosineAnnealingLR(opt, n_val, eta_min=a.lr / 20))

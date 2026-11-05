@@ -70,8 +70,8 @@ RECIPES = {
             ["--vq-codes", "1024", "--vq-codes-n", "1024"]),
     "emg": (["--channel", "EMG_clean", "--d-p", "8", "--no-n", "--fs", "100", "--load-fs", "100", "--recon", "texture",
              "--seg-sec", "0.5", "--band-weight", "1.0", "--pow-bands", "10", "20", "20", "35", "35", "50",
-             "--psd-band", "10", "50"],
-            ["--vq-codes", "1024", "--vq-codes-n", "1024"]),
+             "--psd-band", "10", "50", "--sat-weight", "0.1"],
+            ["--vq-codes", "1024", "--vq-codes-n", "1024", "--sat-weight", "0.1"]),
 }
 
 

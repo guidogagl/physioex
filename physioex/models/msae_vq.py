@@ -30,7 +30,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from physioex.models.msae import MSAE, MSAETrainer
+from physioex.models.msae import MSAE, MSAETrainer, tanh_saturation
 from physioex.models.msvq import EMAVQ, code_stats
 
 SCALES = ("N", "E", "P")
@@ -200,10 +200,13 @@ class MSAEVQ(MSAE):
         h = self.features(x[:, self.c])
         g, b = self.e_film(n).chunk(2, -1)
         he = h * (1 + g[:, None]) + b[:, None]
-        e = torch.tanh(self.e_out(self.e_pool(self.e_query.expand(len(h), -1, -1), he, he, need_weights=False)[0][:, 0]))
-        e, ce, le = self._q("E", e)
+        e_pre = self.e_out(self.e_pool(self.e_query.expand(len(h), -1, -1), he, he, need_weights=False)[0][:, 0])
+        e, ce, le = self._q("E", torch.tanh(e_pre))
         g, b = self.p_film(torch.cat([n, e], -1)).chunk(2, -1)
-        p = torch.tanh(self.p_out(h * (1 + g[:, None]) + b[:, None]))
+        p_pre = self.p_out(h * (1 + g[:, None]) + b[:, None])
+        p = torch.tanh(p_pre)
+        if self.sat_weight > 0:
+            self.last_sat = tanh_saturation(e_pre, p_pre)
         p, cp, lp = self._q("P", p)
         self.last_codes = {"N": cn, "E": ce, "P": cp}
         self.last_vq_loss = ln + le + lp
