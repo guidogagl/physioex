@@ -125,10 +125,12 @@ def pack(a):
         try:
             rep = stage_local(items_all, a.splits, src, local, chans)
         except OSError as e:
-            print(f"[pack] {e}: training from {src}", flush=True)
             import shutil
             shutil.rmtree(local, ignore_errors=True)
             local = None
+            if _requeue_elsewhere(a, str(e)):
+                return
+            print(f"[pack] {e}: training from {src}", flush=True)
         if local:
             print(f"[pack] local cache {local}: {rep['_total']['files']} files, {rep['_total']['bytes'] / 2**30:.1f} GiB "
               f"in {(time.time() - t) / 60:.1f} min; " + ", ".join(f"{k} {v['nights']}/{v['split_nights']}"
@@ -158,6 +160,32 @@ def pack(a):
             import shutil
             shutil.rmtree(local, ignore_errors=True)
     sys.exit(rc)
+
+
+def _requeue_elsewhere(a, why, max_restarts=3):
+    """The node's disk is full (array tasks of one node share its NVMe, each job sees only its own
+    ``/tmp``): leave a marker ``<out>/requeue/<job>`` with the host and put the job back in the
+    queue held. ``pretrain_combo_requeue.sh`` (cron on the orchestrator) adds the host to the job's
+    ExcNodeList and releases it; a running job cannot change its own ExcNodeList (05.11.2026).
+    After ``max_restarts`` requeues the caller trains from GPFS."""
+    jid = os.environ.get("SLURM_JOB_ID")
+    if not jid or int(os.environ.get("SLURM_RESTART_COUNT", "0")) >= max_restarts:
+        return False
+    arr, task = os.environ.get("SLURM_ARRAY_JOB_ID"), os.environ.get("SLURM_ARRAY_TASK_ID")
+    name = f"{arr}_{task}" if arr and task else jid
+    d = os.path.join(a.out, "requeue")
+    os.makedirs(d, exist_ok=True)
+    import socket
+    with open(os.path.join(d, name), "w") as f:
+        f.write(f"{socket.gethostname().split('.')[0]}\n{why}\n")
+    print(f"[pack] {why}: requeue held {name} (marker {d}/{name})", flush=True)
+    rc = subprocess.call(["scontrol", "requeuehold", name])
+    print(f"[pack] requeuehold rc={rc}", flush=True)
+    if rc:
+        os.remove(os.path.join(d, name))
+        return False
+    time.sleep(600)  # Slurm kills the job; never reached
+    return True
 
 
 def _pack_run(a, mine, mods):
