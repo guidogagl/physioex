@@ -374,20 +374,26 @@ def stage_local(items: Sequence[str], splits_path: str, src_root: str, dst_root:
             nights += got
         rep[n] = {"nights": nights, "split_nights": len(sids), "folder": c}
 
+    import fcntl
+
     with ThreadPoolExecutor(threads) as ex:
         sizes = list(ex.map(lambda p: p[0].stat().st_size, jobs))
     need = sum(sizes)
-    probe = Path(dst_root)
-    while not probe.exists():
-        probe = probe.parent
-    free = shutil.disk_usage(probe).free
-    if free - need < min_free_gib * 2**30:
-        shutil.rmtree(dst_root.parent, ignore_errors=True)  # only the empty folders made by the scan
-        raise OSError(f"stage_local: {need / 2**30:.0f} GiB to copy, {free / 2**30:.0f} GiB free on {probe} "
-                      f"(margin {min_free_gib:.0f} GiB)")
-
-    with ThreadPoolExecutor(threads) as ex:
-        list(ex.map(lambda p: shutil.copyfile(*p), jobs))
+    # one copy at a time per node: the free-space check of a job must see the copies of the others
+    # (05.11.2026: 7 array tasks on one node checked together and would have overfilled /tmp)
+    lock = open(dst_root.parent.parent / ".physioex_stage.lock", "a")
+    fcntl.flock(lock, fcntl.LOCK_EX)
+    try:
+        free = shutil.disk_usage(dst_root.parent).free
+        if free - need < min_free_gib * 2**30:
+            shutil.rmtree(dst_root.parent, ignore_errors=True)  # only the empty folders made by the scan
+            raise OSError(f"stage_local: {need / 2**30:.0f} GiB to copy, {free / 2**30:.0f} GiB free on "
+                          f"{dst_root.parent} (margin {min_free_gib:.0f} GiB)")
+        with ThreadPoolExecutor(threads) as ex:
+            list(ex.map(lambda p: shutil.copyfile(*p), jobs))
+    finally:
+        fcntl.flock(lock, fcntl.LOCK_UN)
+        lock.close()
     for n in rep:
         rep[n]["files"] = sum(1 for _, t in jobs if Path(t).is_relative_to(dst_root / rep[n]["folder"]))
     rep["_total"] = {"files": len(jobs), "bytes": int(sum(sizes))}
