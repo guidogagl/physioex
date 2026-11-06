@@ -408,6 +408,174 @@ def standardize(splits: Dict[str, Dict[str, np.ndarray]], stats: Dict[str, tuple
     return out
 
 
+# ----------------------------------------------------------------------------
+# Latents of whole training splits: on disk, read per batch (07.11.2026)
+# ----------------------------------------------------------------------------
+
+
+class LatentWriter:
+    """Appends the latents of one split, night by night, to ``<dir>/<split>_<key>.bin`` (raw, C
+    order; shapes in ``<split>.json``) and, with ``stats``, accumulates the statistics of
+    :func:`latent_stats` in float64. The split never sits in memory: the train split of the whole
+    pool is ~13k nights, ~100 GB of EEG ``P`` in float16."""
+
+    def __init__(self, d: str, split: str, stats: bool = False):
+        os.makedirs(d, exist_ok=True)
+        self.d, self.split, self.n = d, split, 0
+        self.fh, self.shape, self.dtype = {}, {}, {}
+        self.sums = {} if stats else None
+
+    def add(self, **arrs):
+        n = {len(v) for v in arrs.values()}
+        assert len(n) == 1, f"rows differ: {n}"
+        for k, v in arrs.items():
+            v = np.ascontiguousarray(v)
+            if k not in self.fh:
+                self.fh[k] = open(os.path.join(self.d, f"{self.split}_{k}.bin"), "wb")
+                self.shape[k], self.dtype[k] = tuple(v.shape[1:]), v.dtype.str
+            assert tuple(v.shape[1:]) == self.shape[k] and v.dtype.str == self.dtype[k], k
+            self.fh[k].write(v.tobytes())
+            if self.sums is not None and k in ("N", "E", "P"):
+                f = v.astype(np.float64).reshape(-1, v.shape[-1])
+                acc = self.sums.setdefault(k, [0, 0.0, 0.0])
+                acc[0] += len(f)
+                acc[1] = acc[1] + f.sum(0)
+                acc[2] = acc[2] + (f * f).sum(0)
+        self.n += n.pop()
+
+    def close(self):
+        """Closes the files, writes ``<split>.json`` and returns the statistics (``None`` without)."""
+        for f in self.fh.values():
+            f.close()
+        json.dump({"n": self.n, "shape": {k: list(v) for k, v in self.shape.items()}, "dtype": self.dtype},
+                  open(os.path.join(self.d, f"{self.split}.json"), "w"))
+        if self.sums is None:
+            return None
+        out = {}
+        for k, (n, s1, s2) in self.sums.items():
+            m = s1 / n
+            out[k] = (m.astype(np.float32), (np.sqrt(np.maximum(s2 / n - m * m, 0.0)) + 1e-6).astype(np.float32))
+        return out
+
+
+def save_stats(path: str, st: Dict[str, tuple]):
+    np.savez(path, **{f"{k}_{i}": v[i] for k, v in st.items() for i in (0, 1)})
+
+
+def load_stats(path: str) -> Dict[str, tuple]:
+    z = np.load(path)
+    return {k: (z[f"{k}_0"], z[f"{k}_1"]) for k in "NEP"}
+
+
+def has_split(d: str, split: str) -> bool:
+    return os.path.exists(os.path.join(d, f"{split}.json")) or os.path.exists(os.path.join(d, f"latents_{split}.npz"))
+
+
+def open_latents(d: str, split: str) -> Dict[str, np.ndarray]:
+    """Latents of :class:`LatentWriter`, memory-mapped (``y``, ``night``, ``epoch`` in memory), or
+    the ``latents_<split>.npz`` of :func:`extract_latents` (loaded)."""
+    js = os.path.join(d, f"{split}.json")
+    if not os.path.exists(js):
+        return dict(np.load(os.path.join(d, f"latents_{split}.npz")))
+    meta = json.load(open(js))
+    out = {}
+    for k, shp in meta["shape"].items():
+        a = np.memmap(os.path.join(d, f"{split}_{k}.bin"), dtype=np.dtype(meta["dtype"][k]), mode="r",
+                      shape=(meta["n"], *shp))
+        out[k] = a if k in ("N", "E", "P") else np.array(a)
+    return out
+
+
+class LazyLevel:
+    """One level (``N``, ``E`` or ``P``) of the stager input, read and standardized per batch, as
+    :func:`standardize` + :func:`pack_modalities` build it in memory: per modality ``(arr, rows,
+    mean, std, gone)``, sample ``i`` is row ``rows[i]`` of ``arr`` (``rows`` ``None`` = identity,
+    ``-1`` = missing epoch -> zeros, i.e. the training mean; ``gone`` = level dropped -> zeros); the
+    modalities are concatenated on the last axis (``N``, ``E``) or on the token axis (``P``, channels
+    zero-padded to ``dpmax``). Indexing takes a slice or an integer array / tensor of any shape."""
+
+    def __init__(self, parts, level: str, dpmax: int = 0):
+        self.parts, self.level, self.dpmax = parts, level, dpmax
+        arr, rows = parts[0][0], parts[0][1]
+        self.n = len(arr) if rows is None else len(rows)
+        self.shape = (self.n,) + self._row_shape()
+
+    def _row_shape(self):
+        shapes = [tuple(p[0].shape[1:]) for p in self.parts]
+        if self.level == "P":
+            dp = max(self.dpmax, max(s[-1] for s in shapes))
+            return (sum(s[0] for s in shapes), dp)
+        return shapes[0][:-1] + (sum(s[-1] for s in shapes),)
+
+    def __len__(self):
+        return self.n
+
+    def __getitem__(self, idx):
+        if isinstance(idx, slice):
+            idx = np.arange(self.n)[idx]
+        elif isinstance(idx, torch.Tensor):
+            idx = idx.numpy()
+        idx = np.asarray(idx, dtype=np.int64)
+        outs = []
+        for arr, rows, mean, std, gone in self.parts:
+            x = np.zeros(idx.shape + tuple(arr.shape[1:]), np.float32)
+            if not gone:
+                r = idx if rows is None else rows[idx]
+                ok = r >= 0
+                if ok.all():
+                    x[...] = (arr[r].astype(np.float32) - mean) / std
+                elif ok.any():
+                    x[ok] = (arr[r[ok]].astype(np.float32) - mean) / std
+            if self.level == "P" and x.shape[-1] < self.dpmax:
+                x = np.pad(x, [(0, 0)] * (x.ndim - 1) + [(0, self.dpmax - x.shape[-1])])
+            outs.append(x)
+        x = outs[0] if len(outs) == 1 else np.concatenate(outs, -2 if self.level == "P" else -1)
+        return torch.from_numpy(x)
+
+
+def lazy_modalities(dirs: Dict[str, str], drop: Sequence[str] = (), stats: Dict[str, Dict[str, tuple]] = None):
+    """:func:`pack_modalities` on the latents of :class:`LatentWriter` (or ``.npz``), without building
+    the packed arrays: same alignment on ``(night, epoch)`` of the first modality, same
+    standardization (``stats`` per modality; default ``<dir>/stats.npz``, else computed on the
+    train split), same zero-filling and padding, read per batch by :class:`LazyLevel`. Returns
+    ``(data, spec, missing)`` as :func:`pack_modalities`."""
+    mods = list(dirs)
+    raw = {m: {s: open_latents(dirs[m], s) for s in SPLITS if has_split(dirs[m], s)} for m in mods}
+    st = {}
+    for m in mods:
+        f = os.path.join(dirs[m], "stats.npz")
+        st[m] = (stats or {}).get(m) or (load_stats(f) if os.path.exists(f) else latent_stats(raw[m]["train"]))
+    first = {m: next(iter(raw[m].values())) for m in mods}
+    dpmax = max(first[m]["P"].shape[-1] for m in mods)
+    spec = [(m, first[m]["N"].shape[-1], first[m]["P"].shape[-1], first[m]["P"].shape[1]) for m in mods]
+    gone = {tuple(x.split(":")) for x in drop}
+    unknown = gone - {(m, lv) for m in mods for lv in ("N", "E", "P")}
+    assert not unknown, f"unknown levels to drop: {sorted(unknown)}"
+    data, missing = {}, {}
+    for s, ref in raw[mods[0]].items():
+        key = ref["night"].astype(np.int64) * 10 ** 6 + ref["epoch"].astype(np.int64)
+        rows, missing[s] = {}, {}
+        for i, m in enumerate(mods):
+            if i == 0:
+                rows[m] = None
+                missing[s][m] = 0
+                continue
+            d = raw[m][s]
+            km = d["night"].astype(np.int64) * 10 ** 6 + d["epoch"].astype(np.int64)
+            order = np.argsort(km, kind="stable")
+            pos = np.minimum(np.searchsorted(km[order], key), len(km) - 1)
+            hit = km[order][pos] == key
+            rows[m] = np.where(hit, order[pos], -1).astype(np.int64)
+            missing[s][m] = int((~hit).sum())
+        data[s] = {lv: LazyLevel([(raw[m][s][lv], rows[m], st[m][lv][0], st[m][lv][1], (m, lv) in gone) for m in mods],
+                                 lv, dpmax if len(mods) > 1 else 0)
+                   for lv in ("N", "E", "P")}
+        data[s]["y"] = torch.from_numpy(ref["y"].astype(np.int64))
+        data[s]["night"] = ref["night"].astype(np.int64)
+        data[s]["epoch"] = ref["epoch"].astype(np.int64)
+    return data, spec, missing
+
+
 def night_groups(d) -> List[np.ndarray]:
     """Sample indices of every night, in epoch order (the extracted epochs of a night; unscored
     epochs inside the main period are skipped, so a sequence is consecutive *scored* epochs)."""
@@ -449,21 +617,29 @@ def predict(model, d, batch: int = 2048, device="cpu"):
 @torch.no_grad()
 def _predict_seq(model, d, L, batch, device):
     """Voting as ProtoSleepNet: every window of ``L`` epochs (stride 1), class probabilities
-    averaged over the windows that contain an epoch. Returns log of the mean probabilities."""
+    averaged over the windows that contain an epoch. Returns log of the mean probabilities.
+    Each night is read once and its windows are built on the device (with memory-mapped
+    latents, :class:`LazyLevel`, the windows would otherwise read every epoch ``L`` times)."""
     model.eval()
-    W = torch.from_numpy(all_windows(night_groups(d), L))
     M = len(d["y"])
     prob, cnt, attn = torch.zeros(M, len(STAGES)), torch.zeros(M), None
     nb = max(1, batch // L)
-    for i in range(0, len(W), nb):
-        w = W[i:i + nb]
-        out = model(d["N"][w].to(device), d["E"][w].to(device), d["P"][w].to(device)).float().softmax(-1).cpu()
-        prob.index_add_(0, w.flatten(), out.flatten(0, 1))
-        cnt.index_add_(0, w.flatten(), torch.ones(w.numel()))
-        if model.last_attn is not None:
-            a = model.last_attn.float().cpu()
-            attn = torch.zeros(M, a.shape[-1]) if attn is None else attn
-            attn.index_add_(0, w.flatten(), a)
+    for g in night_groups(d):
+        assert len(g) >= L, "a night is shorter than the sequence"
+        g = torch.from_numpy(g)
+        X = [d[k][g].to(device) for k in ("N", "E", "P")]
+        W = torch.arange(len(g)).unfold(0, L, 1)
+        for i in range(0, len(W), nb):
+            w = W[i:i + nb]
+            wd = w.to(device)
+            out = model(*(x[wd] for x in X)).float().softmax(-1).cpu()
+            gi = g[w].flatten()
+            prob.index_add_(0, gi, out.flatten(0, 1))
+            cnt.index_add_(0, gi, torch.ones(gi.numel()))
+            if model.last_attn is not None:
+                a = model.last_attn.float().cpu()
+                attn = torch.zeros(M, a.shape[-1]) if attn is None else attn
+                attn.index_add_(0, gi, a.flatten(0, 1) if a.dim() == 3 else a)
     return (prob / cnt[:, None]).clamp_min(1e-8).log(), (attn / cnt[:, None] if attn is not None else None)
 
 
@@ -538,7 +714,8 @@ def train(model, data, epochs: int = 30, lr: float = 3e-4, batch: int = 512, wei
             tot, seen = tot + loss.item() * idx.numel(), seen + idx.numel()
             if b not in eval_at:
                 continue
-            k = metrics(predict(model, va, device=device)[0].argmax(1).numpy(), va["y"].numpy(), va["night"])["kappa_night_mean"]
+            k = metrics(predict(model, va, batch=max(2048, 512 * L), device=device)[0].argmax(1).numpy(), va["y"].numpy(),
+                        va["night"])["kappa_night_mean"]
             model.train()
             at = round(ep + b / per_epoch, 3)
             hist.append({"epoch": at, "train_loss": tot / seen, "valid_kappa": k, "lr": opt.param_groups[0]["lr"]})
@@ -587,27 +764,40 @@ def _load(d):
 def _train(a):
     extra = {"seq_len": a.seq_len, "seq_layers": a.seq_layers} if a.arch.startswith("seq") else {}
     info = {}
+    dirs = dict(x.split("=", 1) for x in a.mods) if a.mods else {"x": a.data}
+    on_disk = all(os.path.exists(os.path.join(d, "train.json")) for d in dirs.values())  # LatentWriter
     if a.mods:  # multimodal: one latents directory per modality, the first is the reference
         assert a.arch.startswith("seq"), "multimodal stager: seqqformer or seqlinear"
-        dirs = dict(x.split("=", 1) for x in a.mods)
-        data, spec, missing = pack_modalities({m: _load(d) for m, d in dirs.items()}, a.drop)
+        if on_disk:
+            data, spec, missing = lazy_modalities(dirs, a.drop)
+        else:
+            data, spec, missing = pack_modalities({m: _load(d) for m, d in dirs.items()}, a.drop)
         info = {"spec": spec, "missing": missing, "drop": a.drop}
         print(f"[qformer_stager] modalities {spec}, zero-filled epochs {missing}", flush=True)
         torch.manual_seed(a.seed)  # the seed fixes the initial weights too
         model = MultiSeqStager(spec, epoch=a.arch[3:], d=a.d, k=a.k, layers=a.layers, heads=a.heads,
                                dropout=a.dropout, fusion=a.fusion, mod_dropout=a.mod_dropout, **extra)
     else:
-        raw = _load(a.data)
-        data = standardize(raw)
-        tr = raw["train"]
+        if on_disk:
+            data, spec, _ = lazy_modalities(dirs)
+            _, dim, d_p, n_tok = spec[0]
+        else:
+            raw = _load(a.data)
+            data = standardize(raw)
+            tr = raw["train"]
+            dim, d_p, n_tok = tr["N"].shape[-1], tr["P"].shape[-1], tr["P"].shape[1]
         torch.manual_seed(a.seed)  # the seed fixes the initial weights too
-        model = ARCHS[a.arch](dim=tr["N"].shape[-1], d_p=tr["P"].shape[-1], n_tok=tr["P"].shape[1], d=a.d, k=a.k,
+        model = ARCHS[a.arch](dim=dim, d_p=d_p, n_tok=n_tok, d=a.d, k=a.k,
                               layers=a.layers, heads=a.heads, dropout=a.dropout, **extra)
+    print(f"[qformer_stager] {sum(p.numel() for p in model.parameters()) / 1e6:.2f} M parameters, "
+          f"{len(data['train']['y'])} train epochs, {len(np.unique(data['valid']['night']))} valid nights", flush=True)
     device = "cuda" if torch.cuda.is_available() else "cpu"
     hist = train(model, data, epochs=a.epochs, lr=a.lr, batch=a.batch, patience=a.patience, device=device, seed=a.seed,
                  sched=a.sched, evals_per_epoch=a.evals_per_epoch)
     res = {"args": vars(a), "params": sum(p.numel() for p in model.parameters()), "history": hist, **info}
     for s in ("valid", "test"):  # test read once, with the checkpoint chosen on valid
+        if s not in data:  # latents on disk: no copy of valid as test
+            continue
         logits, attn = predict(model, data[s], device=device)
         y = data[s]["y"].numpy()
         res[s] = metrics(logits.argmax(1).numpy(), y, data[s]["night"])
@@ -617,7 +807,7 @@ def _train(a):
     json.dump(res, open(os.path.join(a.out, "stager.json"), "w"), indent=1)
     torch.save(model.state_dict(), os.path.join(a.out, "stager.pt"))
     print(json.dumps({s: {k: round(res[s][k], 4) for k in ("kappa_night_mean", "kappa_pooled", "macro_f1")}
-                      for s in ("valid", "test")}), flush=True)
+                      for s in ("valid", "test") if s in res}), flush=True)
 
 
 def main():
@@ -632,7 +822,7 @@ def main():
     e.add_argument("--batch", type=int, default=128)
     e.add_argument("--out", required=True)
     t = sub.add_parser("train")
-    t.add_argument("--data", default=None, help="latents directory (one modality)")
+    t.add_argument("--data", default=None, help="latents directory (one modality; .npz or LatentWriter files)")
     t.add_argument("--mods", nargs="*", default=None,
                    help="multimodal: name=latents_dir per modality, the first is the reference (eeg=... eog=... emg=...)")
     t.add_argument("--drop", nargs="*", default=(), help="multimodal ablation: levels set to zero, e.g. eog:N emg:P")

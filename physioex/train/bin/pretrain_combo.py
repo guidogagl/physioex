@@ -344,16 +344,73 @@ def _load_stats(path):
 # ----------------------------------------------------------------------------
 
 
+def _stager_nights(a, items, rep):
+    """Train / val nights of the stager: ``--train-per-item`` / ``--valid-nights-per-item`` per item
+    drawn with ``--seed`` (0 = every night of the split). Same nights for every modality and process."""
+    from physioex.data.merged import units_of
+
+    rng = np.random.default_rng(a.seed)
+    nights = {}
+    for split, key, k in (("train", "train_ids", a.train_per_item), ("valid", "val_ids", a.valid_nights_per_item)):
+        rows = []
+        for it in items:
+            cand = [(u, s) for u in units_of([it]) for s in rep["eeg"][u][key]]
+            rows += cand if k <= 0 else [cand[i] for i in sorted(rng.choice(len(cand), min(k, len(cand)), replace=False))]
+        nights[split] = rows
+    return nights
+
+
+def _extract_mod(a, items, m, nights, rep, md, sd, dev):
+    """Latents of modality ``m`` for the stager nights, streamed to ``md`` (:class:`LatentWriter`:
+    the whole train split does not fit in the job's RAM), training statistics to
+    ``<sd>/stats_<m>.npz`` and ``<md>/stats.npz``. Skipped when ``<md>/valid.json`` exists."""
+    import torch
+
+    from physioex.models.qformer_stager import LatentWriter, open_latents, save_stats
+
+    d = os.path.join(a.out, tag(items))
+    if os.path.exists(os.path.join(md, "valid.json")) and os.path.exists(os.path.join(sd, f"stats_{m}.npz")):
+        meta = {s: json.load(open(os.path.join(md, f"{s}.json"))) for s in ("train", "valid")}
+        return {s: meta[s]["n"] for s in meta}, int(meta["train"]["shape"]["P"][0])
+    t0 = time.time()
+    run, model = load_s2(os.path.join(d, m, "s2"), m, dev)
+    ok = {(u, s) for u, r in rep[m].items() if isinstance(r, dict) and "train_ids" in r for s in r["train_ids"] + r["val_ids"]}
+    readers, counts = {}, {}
+    for split, rows in nights.items():
+        w = LatentWriter(md, split, stats=(split == "train"))
+        for i, (u, s) in enumerate(rows):
+            if (u, s) not in ok:  # e.g. Sleep-EDF without EMG: zero-filled by pack_modalities
+                continue
+            r = readers.get(u) or readers.setdefault(u, Nights(open_unit(u, run["args"], a.cache_dir), run["args"]))
+            x, y, ts = r.get(s)
+            if not len(ts):
+                continue
+            z = encode_night(model, x, ts, r.half)
+            w.add(N=z["N"], E=z["E"], P=z["P"], y=y[ts].astype(np.int8), night=np.full(len(ts), i, np.int32),
+                  epoch=ts.astype(np.int32))
+            if (i + 1) % 500 == 0:
+                print(f"[stager] {tag(items)} {m} {split}: {i + 1}/{len(rows)} nights, {(time.time() - t0) / 60:.1f} min",
+                      flush=True)
+        assert w.n, f"{tag(items)} {m} {split}: no nights"
+        st = w.close()
+        counts[split] = w.n
+        if st is not None:
+            save_stats(os.path.join(md, "stats.npz"), st)
+            _save_stats(os.path.join(sd, f"stats_{m}.npz"), st)
+    n_tok = int(open_latents(md, "train")["P"].shape[1])
+    print(f"[stager] {tag(items)} {m}: latents {counts} after {(time.time() - t0) / 60:.1f} min", flush=True)
+    del model
+    torch.cuda.empty_cache()
+    return counts, n_tok
+
+
 def stager_one(a, items):
     import shutil
 
     import torch
 
-    from physioex.data.merged import units_of
-    from physioex.models.qformer_stager import latent_stats
-
     d = os.path.join(a.out, tag(items))
-    sd = os.path.join(d, "stager")
+    sd = os.path.join(d, a.name)
     if os.path.exists(os.path.join(sd, "STAGER_DONE")):
         print(f"[stager] {tag(items)}: done", flush=True)
         return 0
@@ -361,54 +418,19 @@ def stager_one(a, items):
     assert mods[0] == "eeg", "EEG is the reference modality"
     dev = "cuda" if torch.cuda.is_available() else "cpu"
     rep = {m: json.load(open(os.path.join(d, m, "s2", "run.json")))["merged"] for m in mods}
-    rng = np.random.default_rng(a.seed)
-    nights = {}
-    for split, key, k in (("train", "train_ids", a.train_per_item), ("valid", "val_ids", a.valid_nights_per_item)):
-        rows = []
-        for it in items:
-            cand = [(u, s) for u in units_of([it]) for s in rep["eeg"][u][key]]
-            rows += [cand[i] for i in sorted(rng.choice(len(cand), min(k, len(cand)), replace=False))]
-        nights[split] = rows
-    lat = os.path.join(a.scratch or os.environ.get("TMPDIR") or "/tmp", "pc_latents", tag(items))
+    nights = _stager_nights(a, items, rep)
+    lat = os.path.join(a.scratch or os.environ.get("TMPDIR") or "/tmp", "pc_latents", a.name, tag(items))
     os.makedirs(sd, exist_ok=True)
+    if a.extract_only:  # one modality per process (the sbatch runs them in parallel)
+        _extract_mod(a, items, a.extract_only, nights, rep, os.path.join(lat, a.extract_only), sd, dev)
+        return 0
     meta = {"items": list(items), "nights": nights, "n_tok": {}, "epochs": {}, "vq": {m: VQ_KEY[m] for m in mods}}
     t0 = time.time()
     for m in mods:
-        run, model = load_s2(os.path.join(d, m, "s2"), m, dev)
-        ok = {(u, s) for u, r in rep[m].items() if isinstance(r, dict) and "train_ids" in r
-              for s in r["train_ids"] + r["val_ids"]}
-        md = os.path.join(lat, m)
-        os.makedirs(md, exist_ok=True)
-        readers = {}
-        for split, rows in nights.items():
-            acc = {k: [] for k in ("N", "E", "P", "y", "night", "epoch")}
-            for i, (u, s) in enumerate(rows):
-                if (u, s) not in ok:  # e.g. Sleep-EDF without EMG: zero-filled by pack_modalities
-                    continue
-                r = readers.get(u) or readers.setdefault(u, Nights(open_unit(u, run["args"], a.cache_dir), run["args"]))
-                x, y, ts = r.get(s)
-                if not len(ts):
-                    continue
-                z = encode_night(model, x, ts, r.half)
-                for k in "NEP":
-                    acc[k].append(z[k])
-                acc["y"].append(y[ts].astype(np.int8))
-                acc["night"].append(np.full(len(ts), i, np.int32))
-                acc["epoch"].append(ts.astype(np.int32))
-            assert acc["y"], f"{tag(items)} {m} {split}: no nights"
-            arr = {k: np.concatenate(v) for k, v in acc.items()}
-            np.savez(os.path.join(md, f"latents_{split}.npz"), **arr)
-            meta["epochs"].setdefault(m, {})[split] = int(len(arr["y"]))
-            if split == "train":
-                _save_stats(os.path.join(sd, f"stats_{m}.npz"), latent_stats(arr))
-                meta["n_tok"][m] = int(arr["P"].shape[1])
-        # the stager reads "test" once at the end: here the val nights (the real test is ``eval``)
-        shutil.copyfile(os.path.join(md, "latents_valid.npz"), os.path.join(md, "latents_test.npz"))
-        print(f"[stager] {tag(items)} {m}: latents {meta['epochs'][m]} after {(time.time() - t0) / 60:.1f} min", flush=True)
-        del model
-        torch.cuda.empty_cache()
+        meta["epochs"][m], meta["n_tok"][m] = _extract_mod(a, items, m, nights, rep, os.path.join(lat, m), sd, dev)
     json.dump(meta, open(os.path.join(sd, "nights.json"), "w"))
-    py = [sys.executable, "-m", "physioex.models.qformer_stager", "train", *STAGER]
+    extra = a.stager_args.split() if a.stager_args else []
+    py = [sys.executable, "-m", "physioex.models.qformer_stager", "train", *STAGER, *extra]  # argparse: last wins
     jobs = {"eeg": py + ["--data", os.path.join(lat, "eeg"), "--out", os.path.join(sd, "eeg")]}
     if len(mods) > 1:
         jobs["multi"] = py + ["--mods", *[f"{m}={os.path.join(lat, m)}" for m in mods], "--fusion", "late",
@@ -417,12 +439,13 @@ def stager_one(a, items):
     # others, went past the 182 GiB of the job (OOM, 1563128_3, 06.11.2026)
     rc = {}
     for k, c in jobs.items():
-        if os.path.exists(os.path.join(sd, k, "stager.json")):  # done before an interruption
+        if os.path.exists(os.path.join(sd, k, "stager.json")):  # done before an interruption (or copied from a sweep)
             rc[k] = 0
             continue
         rc[k] = subprocess.call(c, stdout=open(os.path.join(sd, f"{k}.log"), "w"), stderr=subprocess.STDOUT)
     print(f"[stager] {tag(items)}: {rc} after {(time.time() - t0) / 60:.1f} min", flush=True)
-    shutil.rmtree(lat, ignore_errors=True)
+    if not a.keep_latents:
+        shutil.rmtree(lat, ignore_errors=True)
     if any(rc.values()):
         return 1
     open(os.path.join(sd, "STAGER_DONE"), "w").write(json.dumps({"job": os.environ.get("SLURM_JOB_ID")}))
@@ -513,7 +536,7 @@ def evaluate(a):
     mods = a.mods.split(",")
     assert mods[0] == "eeg", "EEG is the reference modality"
     dev = "cuda" if torch.cuda.is_available() else "cpu"
-    mine = [c for c in _mine(a) if os.path.exists(os.path.join(a.out, tag(c), "stager", "STAGER_DONE"))]
+    mine = [c for c in _mine(a) if os.path.exists(os.path.join(a.out, tag(c), a.name, "STAGER_DONE"))]
     tags = [tag(c) for c in mine]
     items_of = {tag(c): set(c) for c in mine}
     models, args0 = {}, {}
@@ -521,7 +544,8 @@ def evaluate(a):
         for m in mods:
             run, models[c, m] = load_s2(os.path.join(a.out, c, m, "s2"), m, dev)
             args0.setdefault(m, run["args"])
-    stagers = {c: load_stagers(os.path.join(a.out, c, "stager"), mods, dev) for c in tags}
+    stagers = {c: load_stagers(os.path.join(a.out, c, a.name), mods, dev) for c in tags}
+    ev = "eval" if a.name == "stager" else f"eval_{a.name}"
     units = a.units.split(",") if a.units else None
     tests, index, readers = {}, {}, {}
     for m in mods:
@@ -535,9 +559,9 @@ def evaluate(a):
     if a.max_nights:  # smoke: the first nights of every unit
         seen = {}
         rows = [r for r in rows if seen.setdefault(r[0], []).append(r) or len(seen[r[0]]) <= a.max_nights]
-    os.makedirs(os.path.join(a.out, "eval"), exist_ok=True)
+    os.makedirs(os.path.join(a.out, ev), exist_ok=True)
     name = f"task{a.task}" if a.task is not None else "all"
-    path = os.path.join(a.out, "eval", f"{name}.jsonl")
+    path = os.path.join(a.out, ev, f"{name}.jsonl")
     done = set()
     if os.path.exists(path):
         for l in open(path):
@@ -606,7 +630,7 @@ def evaluate(a):
     codes = {}
     for (c, m, site, k), h in hist.items():
         codes.setdefault(c, {}).setdefault(m, {}).setdefault(site, {})[k] = _code_usage(h, len(h[0]))
-    cp = os.path.join(a.out, "eval", f"{name}_codes.json")
+    cp = os.path.join(a.out, ev, f"{name}_codes.json")
     if os.path.exists(cp) and done:  # resumed run: the counts cover only the new nights
         cp = cp.replace(".json", f"_resume{int(time.time())}.json")
     json.dump(codes, open(cp, "w"))
@@ -735,10 +759,15 @@ def main():
         q.add_argument("--mods", default="eeg,eog,emg")
         q.add_argument("--cache-dir", default=None)
         q.add_argument("--seed", type=int, default=0)
+        q.add_argument("--name", default="stager", help="stager directory in each combination (eval: eval_<name>)")
         q.add_argument("--out", required=True)
     q = sp.choices["stager"]
-    q.add_argument("--train-per-item", type=int, default=100, help="train nights per item (latents of the stager)")
-    q.add_argument("--valid-nights-per-item", type=int, default=20)
+    q.add_argument("--train-per-item", type=int, default=100,
+                   help="train nights per item (latents of the stager); 0 = the whole train split")
+    q.add_argument("--valid-nights-per-item", type=int, default=20, help="0 = the whole val split")
+    q.add_argument("--extract-only", default=None, help="only the latents of this modality (kept), then exit")
+    q.add_argument("--keep-latents", action="store_true", help="keep the latents directory (sweeps)")
+    q.add_argument("--stager-args", default="", help="appended to the stager recipe, e.g. '--d 256 --lr 1e-4'")
     q.add_argument("--scratch", default=None, help="latents directory (default $TMPDIR)")
     q.add_argument("--only", type=int, default=None, help=argparse.SUPPRESS)
     q = sp.choices["eval"]
