@@ -413,9 +413,14 @@ def stager_one(a, items):
     if len(mods) > 1:
         jobs["multi"] = py + ["--mods", *[f"{m}={os.path.join(lat, m)}" for m in mods], "--fusion", "late",
                               "--out", os.path.join(sd, "multi")]
-    procs = {k: subprocess.Popen(c, stdout=open(os.path.join(sd, f"{k}.log"), "w"), stderr=subprocess.STDOUT)
-             for k, c in jobs.items()}
-    rc = {k: p.wait() for k, p in procs.items()}
+    # one stager at a time: the multimodal one loads the latents of all modalities and, next to the
+    # others, went past the 182 GiB of the job (OOM, 1563128_3, 06.11.2026)
+    rc = {}
+    for k, c in jobs.items():
+        if os.path.exists(os.path.join(sd, k, "results.json")):
+            rc[k] = 0
+            continue
+        rc[k] = subprocess.call(c, stdout=open(os.path.join(sd, f"{k}.log"), "w"), stderr=subprocess.STDOUT)
     print(f"[stager] {tag(items)}: {rc} after {(time.time() - t0) / 60:.1f} min", flush=True)
     shutil.rmtree(lat, ignore_errors=True)
     if any(rc.values()):
@@ -430,8 +435,7 @@ def stager(a):
         sys.exit(stager_one(a, mine[a.only]))
     print(f"[stager] task {a.task}: {[tag(c) for c in mine]}", flush=True)
     me = [sys.executable, "-m", "physioex.train.bin.pretrain_combo"] + [x for x in sys.argv[1:]]
-    procs = [subprocess.Popen(me + ["--only", str(i)]) for i in range(len(mine))]
-    rc = [p.wait() for p in procs]
+    rc = [subprocess.call(me + ["--only", str(i)]) for i in range(len(mine))]  # sequential: RAM (see stager_one)
     print(f"[stager] {'FAILED ' + str(rc) if any(rc) else 'all ok'}", flush=True)
     print("DONE", flush=True)
     sys.exit(1 if any(rc) else 0)
