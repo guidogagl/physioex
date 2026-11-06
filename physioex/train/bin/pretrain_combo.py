@@ -417,7 +417,7 @@ def stager_one(a, items):
     # others, went past the 182 GiB of the job (OOM, 1563128_3, 06.11.2026)
     rc = {}
     for k, c in jobs.items():
-        if os.path.exists(os.path.join(sd, k, "results.json")):
+        if os.path.exists(os.path.join(sd, k, "stager.json")):  # done before an interruption
             rc[k] = 0
             continue
         rc[k] = subprocess.call(c, stdout=open(os.path.join(sd, f"{k}.log"), "w"), stderr=subprocess.STDOUT)
