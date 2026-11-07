@@ -111,3 +111,21 @@ def test_night_refs_without_scale_skips_amplitude_rules():
     r = R.night_refs(night, {"fs": {"eeg": 100.0, "eog": 100.0}})
     assert "spindle_rule" in r and "alpha" in r
     assert not {"slow_wave", "delta", "vertex", "sawtooth", "artifact_eeg", "rem_eye", "sem"} & set(r)
+
+
+def test_eye_movement_rejected_when_also_on_eeg():
+    x = _bg(30, amp=1)
+    fast = np.concatenate([np.linspace(0, 80, 15), np.linspace(80, 0, 60)])
+    x[500:575] += fast
+    eeg = _bg(30, amp=1, seed=1)
+    assert _covers(R.detect_eye_movements(x, FS, ref=eeg)["rem_eye"], 5.0, 5.7)
+    eeg[500:575] += fast * 0.8  # frontal delta: same wave on EEG and EOG
+    assert not _covers(R.detect_eye_movements(x, FS, ref=eeg)["rem_eye"], 5.0, 5.7)
+
+
+def test_stage_gates():
+    rng = np.random.default_rng(6)
+    night = {"ts": np.arange(4), "y": np.array([0, 2, 4, 2]), "x_eeg": rng.normal(0, 1.5, (4, 3000))}
+    r = R.night_refs(night, {"fs": {"eeg": 100.0}, "scale": {"eeg": [0.0, 10.0]}})
+    assert not r["sawtooth"].reshape(4, R.T)[[0, 1, 3]].any()
+    assert not r["spindle_rule"].reshape(4, R.T)[[0, 2]].any()

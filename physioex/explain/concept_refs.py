@@ -133,6 +133,18 @@ def _per_run(x, ts, fs, fn):
     return out
 
 
+def _per_run_multi(x, ts, fs, fn, keys):
+    """As :func:`_per_run` for a detector returning ``{key: intervals}``; ``fn(signal, run)`` also gets
+    the ``slice`` of the run's epochs (to read a reference channel of the same samples)."""
+    out = {k: np.zeros(len(ts) * T, bool) for k in keys}
+    for a, b in contiguous(ts):
+        sig = x[a:b].reshape(-1).astype(np.float64)
+        d = fn(sig, slice(a, b))
+        for k in keys:
+            out[k][a * T:b * T] = samples_to_tokens(d[k], len(sig), fs)[:(b - a) * T]
+    return out
+
+
 def _band_rel(sig, fs, bands, win_s=2.0, step_s=TOK_S):
     """Relative power of ``bands`` over 0.5-30 Hz in ``win_s`` windows centred on every token."""
     from numpy.lib.stride_tricks import sliding_window_view
@@ -258,16 +270,19 @@ def eeg_background(sig, fs):
 
 
 # ---------------------------------------------------------------------------- EOG / EMG detectors
-def detect_eye_movements(sig, fs):
+def detect_eye_movements(sig, fs, ref=None, ratio=2.0):
     """Single EOG derivation, 0.3-5 Hz. ``rem_eye``: half-wave reaching >= 50 uV less than 0.5 s after
     its start; ``sem``: 0.1-2 Hz (order 2, to keep the slow deflections) half-wave of 0.5-2.5 s,
     >= 25 uV, peak reached >= 0.4 s after its start; ``blink``: half-wave 0.15-0.5 s, >= 100 uV.
-    Without the second EOG channel conjugacy is not checked."""
+    Without the second EOG channel conjugacy is not checked. ``ref``: the EEG of the same samples
+    (uV); a deflection counts only if it is >= ``ratio`` x larger on the EOG than on the EEG in the
+    same band (frontal delta reaches the EOG almost unchanged, eye movements do not reach the EEG)."""
     x = bandpass(sig, 0.3, 5, fs)
+    r = bandpass(ref, 0.3, 5, fs) if ref is not None else None
     rem, blink = [], []
     for a, b, _ in _half_waves(x):
         seg = np.abs(x[a:b])
-        if len(seg) == 0:
+        if len(seg) == 0 or (r is not None and seg.max() < ratio * np.abs(r[a:b]).max()):
             continue
         pk = int(np.argmax(seg))
         if seg[pk] >= 50 and pk < 0.5 * fs:
@@ -275,8 +290,10 @@ def detect_eye_movements(sig, fs):
         if seg[pk] >= 100 and 0.15 * fs <= b - a <= 0.5 * fs:
             blink.append((a, b))
     xs = bandpass(sig, 0.1, 2, fs, order=2)
+    rs = bandpass(ref, 0.1, 2, fs, order=2) if ref is not None else None
     sem = [(a, b) for a, b, _ in _half_waves(xs) if 0.5 * fs <= b - a <= 2.5 * fs
-           and np.abs(xs[a:b]).max() >= 25 and np.argmax(np.abs(xs[a:b])) >= 0.4 * fs]
+           and np.abs(xs[a:b]).max() >= 25 and np.argmax(np.abs(xs[a:b])) >= 0.4 * fs
+           and (rs is None or np.abs(xs[a:b]).max() >= ratio * np.abs(rs[a:b]).max())]
     return {"rem_eye": rem, "sem": sem, "blink": blink}
 
 
@@ -351,6 +368,13 @@ def night_refs(night: Dict[str, np.ndarray], meta: dict) -> Dict[str, np.ndarray
             out["plm_arousal"] = events_to_tokens(plm, ts)
     # EEG
     sc = meta.get("scale", {})
+    y = night.get("y")
+
+    def in_stage(*stages):
+        """Token mask of the epochs scored in ``stages`` (all True without the hypnogram)."""
+        if y is None:
+            return np.ones(n * T, bool)
+        return np.repeat(np.isin(y, stages), T)
 
     def uv(m):
         xs = night[f"x_{m}"].astype(np.float32)
@@ -362,12 +386,12 @@ def night_refs(night: Dict[str, np.ndarray], meta: dict) -> Dict[str, np.ndarray
     if "x_eeg" in night:
         x, clip = uv("eeg")
         f = fs["eeg"]
-        out["spindle_rule"] = _per_run(x, ts, f, lambda s: detect_spindles(s, f))
+        out["spindle_rule"] = _per_run(x, ts, f, lambda s: detect_spindles(s, f)) & in_stage(2, 3)
         out["alpha"], out["lamf"], out["alpha_epoch"] = _background(x, ts, f)
     if "x_eeg" in night and clip is not None:
         out["slow_wave"] = _per_run(x, ts, f, lambda s: detect_slow_waves(s, f))
-        out["vertex"] = _per_run(x, ts, f, lambda s: detect_vertex(s, f))
-        out["sawtooth"] = _per_run(x, ts, f, lambda s: detect_sawtooth(s, f))
+        out["vertex"] = _per_run(x, ts, f, lambda s: detect_vertex(s, f)) & in_stage(1, 2)
+        out["sawtooth"] = _per_run(x, ts, f, lambda s: detect_sawtooth(s, f)) & in_stage(4)
         dw = _per_run(x, ts, f, lambda s: detect_delta_waves(s, f))
         out["delta"] = dw
         out["delta_epoch"] = _epoch_cover(x, ts, f, lambda s: detect_delta_waves(s, f)) >= 0.2
@@ -375,8 +399,10 @@ def night_refs(night: Dict[str, np.ndarray], meta: dict) -> Dict[str, np.ndarray
         out["artifact_eeg"] = _tok_fn(x, ts, f, artifact_mask) | sat.reshape(n, T, -1).any(2).reshape(-1)
     if "x_eog" in night and "eog" in sc:
         x, f = uv("eog")[0], fs["eog"]
-        for k in ("rem_eye", "sem", "blink"):
-            out[k] = _per_run(x, ts, f, lambda s, k=k: detect_eye_movements(s, f)[k])
+        ref = uv("eeg")[0] if "eeg" in sc and night.get("x_eeg", np.zeros(0)).shape == x.shape else None
+        eye = _per_run_multi(x, ts, f, lambda s, i: detect_eye_movements(
+            s, f, None if ref is None else ref[i].reshape(-1).astype(np.float64)), ("rem_eye", "sem", "blink"))
+        out.update(eye)
     if "x_emg" in night:  # relative rules: valid on the scaled signal too
         x, f = uv("emg")[0], fs["emg"]
         at, tma, rise = np.zeros(n * T, bool), np.zeros(n * T, bool), np.zeros(n * T, bool)
