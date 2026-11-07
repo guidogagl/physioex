@@ -114,7 +114,7 @@ def test_train_on_disk_runs(tmp_path):
     model = Q.ARCHS["seqqformer"](dim=6, d_p=3, n_tok=4, d=16, k=2, layers=1, heads=2, dropout=0.0, seq_len=5,
                                   seq_layers=1)
     hist = Q.train(model, data, epochs=2, lr=1e-3, batch=20, patience=0, sched="cosine", evals_per_epoch=2,
-                   log=lambda *_: None)
+                   log=lambda *_, **__: None)
     assert len(hist) >= 2 and all(np.isfinite(h["valid_kappa"]) or np.isnan(h["valid_kappa"]) for h in hist)
 
 
@@ -129,5 +129,5 @@ def test_prefetch_threads_do_not_change_training(tmp_path):
         model = Q.ARCHS["seqqformer"](dim=6, d_p=3, n_tok=4, d=16, k=2, layers=1, heads=2, dropout=0.1, seq_len=5,
                                       seq_layers=1)
         hs.append(Q.train(model, data, epochs=2, lr=1e-3, batch=20, patience=0, sched="cosine", evals_per_epoch=2,
-                          log=lambda *_: None, prefetch_threads=th))
+                          log=lambda *_, **__: None, prefetch_threads=th))
     assert hs[0] == hs[1]

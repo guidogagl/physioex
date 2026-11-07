@@ -30,7 +30,7 @@ def test_training_learns_stage_from_p():
     torch.manual_seed(0)
     data = standardize({"train": _fake(1200, 0), "valid": _fake(300, 1), "test": _fake(300, 2)})
     m = QFormerStager(dim=16, d_p=4, n_tok=6, d=32, k=4, layers=1, heads=2, dropout=0.0)
-    train(m, data, epochs=25, lr=3e-3, batch=128, patience=0, sched="cosine", evals_per_epoch=2, log=lambda *_: None)
+    train(m, data, epochs=25, lr=3e-3, batch=128, patience=0, sched="cosine", evals_per_epoch=2, log=lambda *_, **__: None)
     r = metrics(predict(m, data["test"])[0].argmax(1).numpy(), data["test"]["y"].numpy(), data["test"]["night"])
     assert r["kappa_pooled"] > 0.8, r["kappa_pooled"]
 
@@ -87,7 +87,7 @@ def _fit_seq(arch, where):
     torch.manual_seed(0)
     data = standardize({s: _fake_seq(M, i, where) for i, (s, M) in enumerate((("train", 3000), ("valid", 300), ("test", 300)))})
     m = ARCHS[arch](dim=16, d_p=4, n_tok=6, d=32, k=4, layers=1, heads=2, dropout=0.0, seq_len=5, seq_layers=1)
-    train(m, data, epochs=30, lr=3e-3, batch=160, patience=0, sched="cosine", evals_per_epoch=1, log=lambda *_: None)
+    train(m, data, epochs=30, lr=3e-3, batch=160, patience=0, sched="cosine", evals_per_epoch=1, log=lambda *_, **__: None)
     logits, attn = predict(m, data["test"])
     assert logits.shape == (300, 5) and torch.isfinite(logits).all()  # voting covers every epoch
     return metrics(logits.argmax(1).numpy(), data["test"]["y"].numpy(), data["test"]["night"])["kappa_pooled"], attn
@@ -125,7 +125,7 @@ def _fit_multi(drop=(), drop_rows=0):
     data, spec, missing = pack_modalities(_fake_mods(drop_rows=drop_rows), drop)
     torch.manual_seed(0)
     m = MultiSeqStager(spec, epoch="linear", d=32, heads=2, dropout=0.0, seq_len=5, seq_layers=1)
-    train(m, data, epochs=30, lr=3e-3, batch=160, patience=0, sched="cosine", log=lambda *_: None)
+    train(m, data, epochs=30, lr=3e-3, batch=160, patience=0, sched="cosine", log=lambda *_, **__: None)
     logits, _ = predict(m, data["test"])
     return metrics(logits.argmax(1).numpy(), data["test"]["y"].numpy(), data["test"]["night"])["kappa_pooled"], data, spec, missing
 
@@ -160,7 +160,7 @@ def test_multi_early_fusion_reads_tokens_of_the_right_modality():
     m = MultiSeqStager(spec, epoch="qformer", d=32, k=4, layers=1, heads=2, dropout=0.0, seq_len=5, seq_layers=1,
                        fusion="early")
     assert m.joint.queries.shape == (8, 32) and not hasattr(m, "fuse") and len(m.encs) == 0
-    train(m, data, epochs=30, lr=3e-3, batch=160, patience=0, sched="cosine", log=lambda *_: None)
+    train(m, data, epochs=30, lr=3e-3, batch=160, patience=0, sched="cosine", log=lambda *_, **__: None)
     logits, _ = predict(m, data["test"])
     k = metrics(logits.argmax(1).numpy(), data["test"]["y"].numpy(), data["test"]["night"])["kappa_pooled"]
     assert logits.shape == (300, 5) and k > 0.5, k
@@ -195,7 +195,7 @@ def test_modality_dropout_trains_and_tracks_accuracy():
     data, spec, _ = pack_modalities(_fake_mods())
     torch.manual_seed(0)
     m = MultiSeqStager(spec, epoch="linear", d=32, heads=2, dropout=0.0, seq_len=5, seq_layers=1, mod_dropout=0.5)
-    train(m, data, epochs=30, lr=3e-3, batch=160, patience=0, sched="cosine", log=lambda *_: None)
+    train(m, data, epochs=30, lr=3e-3, batch=160, patience=0, sched="cosine", log=lambda *_, **__: None)
     logits, _ = predict(m, data["test"])
     k = metrics(logits.argmax(1).numpy(), data["test"]["y"].numpy(), data["test"]["night"])["kappa_pooled"]
     assert k > 0.7, k

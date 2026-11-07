@@ -730,7 +730,8 @@ def train(model, data, epochs: int = 30, lr: float = 3e-4, batch: int = 512, wei
             model.train()
             at = round(ep + b / per_epoch, 3)
             hist.append({"epoch": at, "train_loss": tot / seen, "valid_kappa": k, "lr": opt.param_groups[0]["lr"]})
-            log(f"[qformer_stager] epoch {at}/{epochs} loss {tot / seen:.4f} valid kappa {k:.4f}")
+            # flush: with stdout on a file the lines stayed buffered until the end of the run (07.11.2026)
+            log(f"[qformer_stager] epoch {at}/{epochs} loss {tot / seen:.4f} valid kappa {k:.4f}", flush=True)
             if k > best:
                 best, wait = k, 0
                 best_state = {n: v.detach().cpu().clone() for n, v in model.state_dict().items()}
