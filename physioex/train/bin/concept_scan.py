@@ -329,7 +329,7 @@ def refs(a):
     sc = json.load(open(os.path.join(a.dump, "scale.json")))
     jobs = []
     for k, v in meta["nights"].items():
-        if os.path.exists(os.path.join(a.dump, "refs", f"{k}.npz")):
+        if not a.force and os.path.exists(os.path.join(a.dump, "refs", f"{k}.npz")):
             continue
         e = dict(v, fs=meta["fs"], scale={m: [o["median"], o["scale"]] for m, o in sc.get(k, {}).items()})
         jobs.append((k, a.dump, e))
@@ -680,6 +680,7 @@ def main(argv=None):
     r = sp.add_parser("refs", help="reference masks of every dumped night (CPU)")
     r.add_argument("--dump", required=True)
     r.add_argument("--workers", type=int, default=8)
+    r.add_argument("--force", action="store_true", help="recompute (overwrite) the nights already done")
     s_ = sp.add_parser("scan", help="codebook components of every concept (CPU)")
     s_.add_argument("--dump", required=True)
     s_.add_argument("--concepts", default=None, help="comma list of TARGETS (default: all)")
