@@ -350,9 +350,6 @@ def main(argv=None):
     print("DONE", flush=True)
 
 
-if __name__ == "__main__":
-    main()
-
 
 # ---------------------------------------------------------------------------- L3 fidelity (GPU)
 #: concept -> (modality, stages the stager should lose when the concept's tokens are swapped out)
@@ -479,3 +476,7 @@ def fidelity(a):
         print(f"[fidelity] {c}: {summary[c]}", flush=True)
     json.dump({"summary": summary, "nights": out}, open(os.path.join(a.dump, "fidelity.json"), "w"), indent=1)
     print("DONE", flush=True)
+
+
+if __name__ == "__main__":
+    main()
