@@ -116,3 +116,18 @@ def test_train_on_disk_runs(tmp_path):
     hist = Q.train(model, data, epochs=2, lr=1e-3, batch=20, patience=0, sched="cosine", evals_per_epoch=2,
                    log=lambda *_: None)
     assert len(hist) >= 2 and all(np.isfinite(h["valid_kappa"]) or np.isnan(h["valid_kappa"]) for h in hist)
+
+
+def test_prefetch_threads_do_not_change_training(tmp_path):
+    """Threaded read-ahead: same batches in the same order, same history as one thread."""
+    rng = np.random.default_rng(5)
+    d = _write(tmp_path, "eeg", {"train": _nights(rng, 4), "valid": _nights(rng, 2)})
+    data, _, _ = Q.lazy_modalities({"eeg": d})
+    hs = []
+    for th in (1, 4):
+        torch.manual_seed(0)
+        model = Q.ARCHS["seqqformer"](dim=6, d_p=3, n_tok=4, d=16, k=2, layers=1, heads=2, dropout=0.1, seq_len=5,
+                                      seq_layers=1)
+        hs.append(Q.train(model, data, epochs=2, lr=1e-3, batch=20, patience=0, sched="cosine", evals_per_epoch=2,
+                          log=lambda *_: None, prefetch_threads=th))
+    assert hs[0] == hs[1]

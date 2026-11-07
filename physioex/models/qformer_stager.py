@@ -22,6 +22,8 @@ from __future__ import annotations
 import argparse
 import json
 import os
+from collections import deque
+from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, List, Sequence
 
 import numpy as np
@@ -666,7 +668,7 @@ def attention_by_stage(attn: torch.Tensor, y: np.ndarray) -> dict:
 
 def train(model, data, epochs: int = 30, lr: float = 3e-4, batch: int = 512, weight_decay: float = 0.05,
           patience: int = 6, device="cpu", seed: int = 0, sched: str = "onecycle", evals_per_epoch: int = 1,
-          log=print):
+          log=print, prefetch_threads: int = 6):
     """AdamW; best state on the mean per-night kappa of ``data["valid"]``, evaluated
     ``evals_per_epoch`` times per epoch. ``sched``: ``"onecycle"`` (peak at 5%) or ``"cosine"``
     (2% linear warm-up, then cosine to 0 over all ``epochs``). ``patience`` counts evaluations
@@ -700,10 +702,19 @@ def train(model, data, epochs: int = 30, lr: float = 3e-4, batch: int = 512, wei
         units = torch.from_numpy(train_windows(groups, L, rng)) if L > 1 else torch.arange(len(tr["y"]))
         perm, tot, seen = units[torch.randperm(len(units), generator=g)], 0.0, 0
         nb = max(1, batch // L)
-        for b, i in enumerate(range(0, len(perm), nb), 1):
+        # batches read ahead by threads (same batches, same order): with latents on disk the
+        # single-threaded read and standardization kept the GPU at ~60% (07.11.2026)
+        starts = list(range(0, len(perm), nb))
+        fetch = lambda i: [tr[k][perm[i:i + nb]] for k in ("N", "E", "P", "y")]  # noqa: E731
+        pool = ThreadPoolExecutor(prefetch_threads)
+        ahead = deque(pool.submit(fetch, i) for i in starts[:2 * prefetch_threads])
+        for b, i in enumerate(starts, 1):
             idx = perm[i:i + nb]
-            logits = model(tr["N"][idx].to(device), tr["E"][idx].to(device), tr["P"][idx].to(device))
-            loss = F.cross_entropy(logits.reshape(-1, logits.shape[-1]), tr["y"][idx].reshape(-1).to(device))
+            n_, e_, p_, y_ = ahead.popleft().result()
+            if b - 1 + 2 * prefetch_threads < len(starts):
+                ahead.append(pool.submit(fetch, starts[b - 1 + 2 * prefetch_threads]))
+            logits = model(n_.to(device), e_.to(device), p_.to(device))
+            loss = F.cross_entropy(logits.reshape(-1, logits.shape[-1]), y_.reshape(-1).to(device))
             if hasattr(model, "aux_step"):  # modality dropout: per-modality heads, accuracy estimates
                 loss = loss + model.aux_step(tr["y"][idx].to(device))
             opt.zero_grad()
@@ -725,6 +736,7 @@ def train(model, data, epochs: int = 30, lr: float = 3e-4, batch: int = 512, wei
                 best_state = {n: v.detach().cpu().clone() for n, v in model.state_dict().items()}
             else:
                 wait += 1
+        pool.shutdown(wait=True)
         if patience and wait >= patience:
             break
     model.load_state_dict(best_state)
