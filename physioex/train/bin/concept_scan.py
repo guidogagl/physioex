@@ -13,6 +13,14 @@ Sub-commands:
 
     python -m physioex.train.bin.concept_scan dump --combo-dir RUNS/<tag> --stager stager_full \\
         --splits splits_29sites.json --cache-dir CACHE --per-unit 20 --out OUT
+
+- ``scale`` (CPU): the dumped signals are robust-scaled per night (``RobustScale`` of the clean-channel
+  pipeline), not uV, and the night cache keeps no uV copy. The night cleaner runs again on every dumped
+  night and the median / scale of ``RobustScale`` are recomputed on its outputs, so that
+  ``x_uV = x * scale + median``; where the model rate equals the cleaner rate the reconstruction is
+  checked against the dump (``maxerr``, fp16 rounding ~1e-2). ``<out>/scale.json``.
+
+    python -m physioex.train.bin.concept_scan scale --dump OUT --cache-dir CACHE --workers 8
 """
 from __future__ import annotations
 
@@ -179,6 +187,74 @@ def dump(a):
     print("DONE", flush=True)
 
 
+def robust_stats(x, k=1.349, eps=1e-6):
+    """Median and scale of ``RobustScale`` (``physioex.data.steps.normalize``) on one night."""
+    x = np.nan_to_num(np.asarray(x, dtype=np.float32).astype(np.float64))
+    v = x.reshape(-1)
+    v = v[:: max(1, len(v) // 2_000_000)]
+    v = v[v != 0]
+    if len(v) < 100:
+        v = x.reshape(-1)
+    q1, med, q3 = np.percentile(v, [25, 50, 75])
+    return float(med), float((q3 - q1) / k + eps)
+
+
+def _scale_night(job):
+    """Median / scale of every modality of one dumped night (one cleaner run gives all channels)."""
+    key, dump_dir, cache_dir, chans, mods = job
+    from physioex.data.datasets import get_dataset
+    from physioex.models.recon_eval import channel_pipelines
+    from physioex.train.bin.pretrain_combo import _cache_dir, open_unit
+
+    unit, sid = key.split("/")
+    a = chans["eeg"]
+    t0 = time.time()
+    if unit == "dreams":
+        ds = get_dataset("dreams")(channels=[a["channel"]], pipelines=channel_pipelines(a), sequence_length=a["seq"],
+                                   cache_dir=_cache_dir(cache_dir, a))
+    else:
+        ds = open_unit(unit, a, cache_dir)
+    cn = ds._clean_night({s.subject_id: s for s in ds._subjects}[sid])
+    z = np.load(os.path.join(dump_dir, f"{key}.npz"))
+    out = {}
+    for m in mods:
+        raw, fs = cn.outputs[chans[m]["channel"]]
+        med, k = robust_stats(raw)
+        err = None
+        spe = int(round(30 * fs))
+        if f"x_{m}" in z and z[f"x_{m}"].shape[1] == spe:
+            ep = np.asarray(raw, np.float32).astype(np.float64)
+            ep = ep[: len(ep) // spe * spe].reshape(-1, spe)
+            ts = z["ts"]
+            if ts.max() < len(ep):
+                err = float(np.abs(np.clip((ep[ts] - med) / k, -20, 20) - z[f"x_{m}"]).max())
+        out[m] = {"median": med, "scale": k, "fs_clean": float(fs), "maxerr": err}
+    return key, out, time.time() - t0
+
+
+def scale(a):
+    from concurrent.futures import ProcessPoolExecutor
+
+    meta = json.load(open(os.path.join(a.dump, "meta.json")))
+    chans = {m: json.load(open(os.path.join(meta["combo_dir"], m, "s2", "run.json")))["args"] for m in meta["mods"]}
+    sp = os.path.join(a.dump, "scale.json")
+    done = json.load(open(sp)) if os.path.exists(sp) else {}
+    jobs = [(k, a.dump, a.cache_dir, chans, v["mods"]) for k, v in meta["nights"].items() if k not in done]
+    t0 = time.time()
+    with ProcessPoolExecutor(a.workers) as ex:
+        for i, (key, out, dt) in enumerate(ex.map(_scale_night, jobs)):
+            done[key] = out
+            bad = [m for m, o in out.items() if o["maxerr"] is not None and o["maxerr"] > 0.05]
+            print(f"[scale] {i + 1}/{len(jobs)} {key} {dt:.0f}s "
+                  + " ".join(f"{m}:s={o['scale']:.1f}" for m, o in out.items()) + (f" MISMATCH {bad}" if bad else ""),
+                  flush=True)
+            if i % 10 == 0:
+                json.dump(done, open(sp, "w"))
+    json.dump(done, open(sp, "w"))
+    print(f"[scale] done after {(time.time() - t0) / 60:.1f} min -> {sp}", flush=True)
+    print("DONE", flush=True)
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sp = ap.add_subparsers(dest="cmd", required=True)
@@ -193,8 +269,12 @@ def main(argv=None):
     d.add_argument("--dreams", action="store_true", help="also the DREAMS excerpts (EEG only)")
     d.add_argument("--seed", type=int, default=0)
     d.add_argument("--out", required=True)
+    c = sp.add_parser("scale", help="per-night median / scale of the robust-scaled dump (CPU, reruns the cleaner)")
+    c.add_argument("--dump", required=True)
+    c.add_argument("--cache-dir", default=None)
+    c.add_argument("--workers", type=int, default=8)
     a = ap.parse_args(argv)
-    {"dump": dump}[a.cmd](a)
+    {"dump": dump, "scale": scale}[a.cmd](a)
 
 
 if __name__ == "__main__":

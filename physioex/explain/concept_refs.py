@@ -25,6 +25,7 @@ from typing import Dict, List, Tuple
 import numpy as np
 
 TOK_S = 0.5
+CLIP = 20.0  # clip of RobustScale in the clean-channel pipelines
 EPOCH_S = 30.0
 T = int(EPOCH_S / TOK_S)
 
@@ -212,21 +213,39 @@ def detect_delta_waves(sig, fs):
     return out
 
 
-def detect_vertex(sig, fs):
-    """Sharp negative transients: 1-10 Hz negative half-wave of 50-250 ms whose minimum is below
-    -4x the median absolute amplitude of its 30 s epoch."""
+def detect_vertex(sig, fs, min_uv=40.0, k_mad=6.0):
+    """Sharp negative transients (AASM: < 0.5 s, sharply contoured, standing out of the background):
+    1-10 Hz negative half-wave of 50-250 ms whose minimum is below ``-min_uv`` uV and below
+    ``-k_mad`` x the median absolute amplitude of its 30 s epoch, with a positive rebound of at least
+    half its depth within 250 ms (sharp contour, not the slope of a slow wave)."""
     x = bandpass(sig, 1, 10, fs)
     spe = int(EPOCH_S * fs)
     mad = np.repeat([np.median(np.abs(x[i:i + spe])) + 1e-9 for i in range(0, len(x), spe)], spe)[:len(x)]
-    return [(a, b) for a, b, s in _half_waves(x)
-            if s < 0 and 0.05 * fs <= b - a <= 0.25 * fs and x[a:b].min() <= -4 * mad[a]]
+    hw = _half_waves(x)
+    out = []
+    for (a, b, s), nxt in zip(hw, hw[1:] + [None]):
+        if s >= 0 or not 0.05 * fs <= b - a <= 0.25 * fs:
+            continue
+        lo = x[a:b].min()
+        if lo > -min_uv or lo > -k_mad * mad[a] or nxt is None:
+            continue
+        c, d, _ = nxt
+        if x[c:min(d, c + int(0.25 * fs))].max(initial=0) >= -lo / 2:
+            out.append((a, b))
+    return out
 
 
-def detect_sawtooth(sig, fs):
-    """2-6 Hz trains: tokens whose 2-6 Hz power is >= 0.4 of 0.5-30 Hz, runs >= 1 s."""
-    rel, _ = _band_rel(sig, fs, {"st": (2, 6)})
+def detect_sawtooth(sig, fs, rel_min=0.5, min_ptp=20.0, min_s=1.5):
+    """2-6 Hz trains (AASM: sharply contoured, often serrated, central): tokens whose 2-6 Hz power is
+    >= ``rel_min`` of 0.5-30 Hz and larger than 0.5-2 Hz, with 2-6 Hz peak-to-peak >= ``min_ptp`` uV,
+    in runs >= ``min_s`` s."""
+    rel, _ = _band_rel(sig, fs, {"st": (2, 6), "d": (0.5, 2)})
     tok = int(TOK_S * fs)
-    return [(a * tok, b * tok) for a, b in runs(rel["st"] >= 0.4) if b - a >= 2]
+    xb = bandpass(sig, 2, 6, fs)
+    n = len(rel["st"])
+    ptp = np.ptp(xb[:n * tok].reshape(n, tok), axis=1) if n else np.zeros(0)
+    ok = (rel["st"] >= rel_min) & (rel["st"] > rel["d"]) & (ptp >= min_ptp)
+    return [(a * tok, b * tok) for a, b in runs(ok) if b - a >= int(round(min_s / TOK_S))]
 
 
 def eeg_background(sig, fs):
@@ -297,7 +316,12 @@ def _events_iv(events, pred):
 def night_refs(night: Dict[str, np.ndarray], meta: dict) -> Dict[str, np.ndarray]:
     """All reference masks of one dumped night: ``{name: (n * T,) bool}`` for the token masks and
     ``{name + "_epoch": (n,) bool}`` for the epoch masks. ``night``: the arrays of the dump (``ts``,
-    ``x_<mod>``); ``meta``: its ``meta.json`` entry plus ``fs``."""
+    ``x_<mod>``); ``meta``: its ``meta.json`` entry plus ``fs`` and ``scale`` (``{mod: [median, scale]}``
+    of the per-night ``RobustScale`` of the dumped signal, from ``concept_scan scale``).
+
+    The dumped signals are robust-scaled, not uV: the amplitude rules (slow waves, delta, vertex, saw
+    tooth, eye movements, artifacts) need ``scale`` and are left out of the modalities without it.
+    Samples at the clip of ``RobustScale`` (+-20) count as saturation in ``artifact_eeg``."""
     ts = night["ts"]
     n = len(ts)
     ev = meta.get("events", [])
@@ -326,29 +350,35 @@ def night_refs(night: Dict[str, np.ndarray], meta: dict) -> Dict[str, np.ndarray
         if plm:
             out["plm_arousal"] = events_to_tokens(plm, ts)
     # EEG
+    sc = meta.get("scale", {})
+
+    def uv(m):
+        xs = night[f"x_{m}"].astype(np.float32)
+        if m not in sc:
+            return xs, None
+        med, k = sc[m]
+        return xs * np.float32(k) + np.float32(med), np.abs(xs) >= CLIP - 1e-2
+
     if "x_eeg" in night:
-        x, f = night["x_eeg"].astype(np.float32), fs["eeg"]
+        x, clip = uv("eeg")
+        f = fs["eeg"]
         out["spindle_rule"] = _per_run(x, ts, f, lambda s: detect_spindles(s, f))
+        out["alpha"], out["lamf"], out["alpha_epoch"] = _background(x, ts, f)
+    if "x_eeg" in night and clip is not None:
         out["slow_wave"] = _per_run(x, ts, f, lambda s: detect_slow_waves(s, f))
         out["vertex"] = _per_run(x, ts, f, lambda s: detect_vertex(s, f))
         out["sawtooth"] = _per_run(x, ts, f, lambda s: detect_sawtooth(s, f))
         dw = _per_run(x, ts, f, lambda s: detect_delta_waves(s, f))
         out["delta"] = dw
         out["delta_epoch"] = _epoch_cover(x, ts, f, lambda s: detect_delta_waves(s, f)) >= 0.2
-        al, la = np.zeros(n * T, bool), np.zeros(n * T, bool)
-        for a, b in contiguous(ts):
-            s = x[a:b].reshape(-1).astype(np.float64)
-            al_r, la_r = eeg_background(s, f)
-            al[a * T:b * T], la[a * T:b * T] = al_r[:(b - a) * T], la_r[:(b - a) * T]
-        out["alpha"], out["lamf"] = al, la
-        out["alpha_epoch"] = al.reshape(n, T).mean(1) > 0.5
-        out["artifact_eeg"] = _tok_fn(x, ts, f, artifact_mask)
-    if "x_eog" in night:
-        x, f = night["x_eog"].astype(np.float32), fs["eog"]
+        sat = clip.reshape(n, -1)
+        out["artifact_eeg"] = _tok_fn(x, ts, f, artifact_mask) | sat.reshape(n, T, -1).any(2).reshape(-1)
+    if "x_eog" in night and "eog" in sc:
+        x, f = uv("eog")[0], fs["eog"]
         for k in ("rem_eye", "sem", "blink"):
             out[k] = _per_run(x, ts, f, lambda s, k=k: detect_eye_movements(s, f)[k])
-    if "x_emg" in night:
-        x, f = night["x_emg"].astype(np.float32), fs["emg"]
+    if "x_emg" in night:  # relative rules: valid on the scaled signal too
+        x, f = uv("emg")[0], fs["emg"]
         at, tma, rise = np.zeros(n * T, bool), np.zeros(n * T, bool), np.zeros(n * T, bool)
         for a, b in contiguous(ts):
             s = x[a:b].reshape(-1).astype(np.float64)
@@ -359,6 +389,16 @@ def night_refs(night: Dict[str, np.ndarray], meta: dict) -> Dict[str, np.ndarray
         out["atonia"], out["tma"], out["emg_rise"] = at, tma, rise
         out["atonia_epoch"] = at.reshape(n, T).mean(1) > 0.5
     return out
+
+
+def _background(x, ts, fs):
+    """Alpha / LAMF token masks of the contiguous runs (relative rules) and the alpha epochs (> 50 %)."""
+    n = len(ts)
+    al, la = np.zeros(n * T, bool), np.zeros(n * T, bool)
+    for a, b in contiguous(ts):
+        al_r, la_r = eeg_background(x[a:b].reshape(-1).astype(np.float64), fs)
+        al[a * T:b * T], la[a * T:b * T] = al_r[:(b - a) * T], la_r[:(b - a) * T]
+    return al, la, al.reshape(n, T).mean(1) > 0.5
 
 
 def _epoch_cover(x, ts, fs, fn):

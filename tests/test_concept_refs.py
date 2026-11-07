@@ -78,9 +78,36 @@ def test_night_refs_shapes():
     ts = np.array([0, 1, 2, 5, 6])
     night = {"ts": ts, "x_eeg": rng.normal(0, 10, (5, 3000)), "x_eog": rng.normal(0, 10, (5, 3000)),
              "x_emg": rng.normal(0, 10, (5, 3000))}
-    meta = {"fs": {"eeg": 100.0, "eog": 100.0, "emg": 100.0},
+    meta = {"fs": {"eeg": 100.0, "eog": 100.0, "emg": 100.0}, "scale": {m: [0.0, 1.0] for m in ("eeg", "eog", "emg")},
             "events": [{"type": "arousal", "concept": "ASDA arousal", "onset": 31.0, "dur": 5.0}]}
     r = R.night_refs(night, meta)
     for k, v in r.items():
         assert v.dtype == bool and len(v) in (5, 5 * R.T), k
     assert r["arousal_ann"].reshape(5, R.T)[1, 2:12].all()
+
+
+def test_vertex_sharp_vs_slow_and_small():
+    x = _pink(30, rms=5)
+    t = np.arange(20) / FS
+    sharp = np.concatenate([-80 * np.sin(np.pi * t / 0.2), 50 * np.sin(np.pi * np.arange(20) / 20)])  # 0.2 s down, rebound
+    x[1000:1040] += sharp
+    assert _covers(R.detect_vertex(x, FS), 10.0, 10.2)
+    y = _pink(30, rms=5)
+    y[1000:1040] += sharp / 8  # 10 uV: not a vertex
+    assert not _covers(R.detect_vertex(y, FS), 10.0, 10.4)
+
+
+def test_sawtooth_train_vs_background():
+    x = _pink(30, rms=5)
+    t = np.arange(300) / FS
+    x[1000:1300] += 20 * np.sign(np.sin(2 * np.pi * 3 * t)) * np.abs(np.sin(2 * np.pi * 3 * t)) ** 0.3  # 3 s at 3 Hz, 40 uV ptp
+    assert _covers(R.detect_sawtooth(x, FS), 10.5, 12.5)
+    assert not R.detect_sawtooth(_pink(30, rms=5, seed=1), FS)
+
+
+def test_night_refs_without_scale_skips_amplitude_rules():
+    rng = np.random.default_rng(5)
+    night = {"ts": np.arange(4), "x_eeg": rng.normal(0, 1.5, (4, 3000)), "x_eog": rng.normal(0, 1.5, (4, 3000))}
+    r = R.night_refs(night, {"fs": {"eeg": 100.0, "eog": 100.0}})
+    assert "spindle_rule" in r and "alpha" in r
+    assert not {"slow_wave", "delta", "vertex", "sawtooth", "artifact_eeg", "rem_eye", "sem"} & set(r)
