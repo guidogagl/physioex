@@ -36,7 +36,8 @@ import time
 
 import numpy as np
 
-from physioex.train.bin.concept_scan import EXPERT, TARGETS, _group, average_precision, load_refs
+from physioex.train.bin.concept_scan import (EXPERT, TARGETS, _group, average_precision, code_lift, family,
+                                             load_refs, nb_score)
 
 T = 60
 FIT_ROWS = 200_000
@@ -92,13 +93,15 @@ def transform(P, b, rep):
     return ((X.reshape(-1, X.shape[-1]) - b["mean"]) @ b["unmix"].T).astype(np.float32)
 
 
-def load_coords(dump_dir, mod, bases, level_refs, frac=0.25, seed=0):
+def load_coords(dump_dir, mod, bases, level_refs, frac=0.25, seed=0, with_codes=False):
     """Coordinates of a random ``frac`` of the epochs of every night (whole 60-token epochs, the context
-    computed on the whole night first), stage, group, night and the token reference masks."""
+    computed on the whole night first), stage, group, night and the token reference masks; with
+    ``with_codes`` also the P codes of the same tokens (``(n_tok, L)``, last element)."""
     rng = np.random.default_rng(seed + 7)
     Z = {r: [] for r in bases}
     Y, G, NI, groups = [], [], [], []
     R = {r: ([], []) for r in level_refs}
+    C = []
     for i, (key, e) in enumerate(_nights(dump_dir, mod)):
         z = np.load(os.path.join(dump_dir, f"{key}.npz"))
         P = z[f"P_{mod}"].astype(np.float32)
@@ -108,6 +111,9 @@ def load_coords(dump_dir, mod, bases, level_refs, frac=0.25, seed=0):
         tk = np.repeat(keep, T)
         for r, b in bases.items():
             Z[r].append(transform(P, b, r)[tk])
+        if with_codes:
+            c = z[f"codes_{mod}_P"]
+            C.append(c.reshape(-1, c.shape[-1])[tk].astype(np.int16))
         y = np.repeat(z["y"].astype(np.int8), T)[tk]
         g = _group(e["unit"])
         if g not in groups:
@@ -120,8 +126,9 @@ def load_coords(dump_dir, mod, bases, level_refs, frac=0.25, seed=0):
             ok = r in rf and len(rf[r]) == len(tk)
             R[r][0].append(rf[r][tk] if ok else np.zeros(len(y), bool))
             R[r][1].append(np.full(len(y), ok))
-    return ({r: np.concatenate(v) for r, v in Z.items()}, np.concatenate(Y), np.concatenate(G), np.concatenate(NI),
-            groups, {r: (np.concatenate(a), np.concatenate(h)) for r, (a, h) in R.items()})
+    out = ({r: np.concatenate(v) for r, v in Z.items()}, np.concatenate(Y), np.concatenate(G), np.concatenate(NI),
+           groups, {r: (np.concatenate(a), np.concatenate(h)) for r, (a, h) in R.items()})
+    return out + (np.concatenate(C),) if with_codes else out
 
 
 def _rows_mean3(e):
@@ -208,7 +215,74 @@ def shift_within_nights(ref, night, rng):
     return out
 
 
-def scan_concept(name, Zs, bases, y, grp_names, night, refs, n_rot=5, n_shift=5, seed=0, max_tok=600_000):
+# ---------------------------------------------------------------------------- code words
+def code_score(C, lift, win):
+    """Naive-Bayes code score (sum of the log-lifts of the P codes of a token) on whole 60-token rows,
+    averaged over +-1 token when ``win == 3`` (as ``Lexicon.code_values``)."""
+    s = nb_score(C, lift)
+    return _rows_mean3(s) if win == 3 else s
+
+
+def code_heldout(C, r, key, groups, n_codes, win):
+    """Leave-one-group-out code score: the lift is fitted on the other groups. Returns the held-out AP
+    per group and the held-out score of every token."""
+    held, sc = {}, np.full(len(r), np.nan)
+    for g in groups:
+        tr, te = key != g, key == g
+        if not r[te].any() or not r[tr].any():
+            continue
+        sc[te] = code_score(C[te], code_lift(C[tr], r[tr], n_codes), win)
+        held[g] = average_precision(sc[te], r[te])
+    return held, sc
+
+
+def permute_within_stage(C, y, rng):
+    """Codes of the tokens shuffled among the tokens of the same stage (keeps what the stage explains)."""
+    out = C.copy()
+    for st in np.unique(y):
+        ix = np.flatnonzero(y == st)
+        out[ix] = C[rng.permutation(ix)]
+    return out
+
+
+def scan_code_word(C, r, key, groups, n_codes, y, stages, night, rng, n_null=5):
+    """The concept's code word: naive Bayes over the P codes with the lifts fitted on the selection set
+    (raw or +-1 token mean, the better one by held-out AP). Held-out AP, nulls (references shifted within
+    the nights; codes permuted within the stage), family size and its stability across the folds
+    (Jaccard of the fold families with the whole one), held-out AP/base within the stage."""
+    best, win, held, sc = -1.0, 1, {}, None
+    for w in (1, 3):
+        h, s_ = code_heldout(C, r, key, groups, n_codes, w)
+        m = float(np.nanmean(list(h.values()))) if h else float("nan")
+        if m > best:
+            best, win, held, sc = m, w, h, s_
+    sh = [float(np.nanmean(list(code_heldout(C, shift_within_nights(r, night, rng), key, groups, n_codes, win)[0].values())))
+          for _ in range(n_null)]
+    pm = [float(np.nanmean(list(code_heldout(permute_within_stage(C, y, rng), r, key, groups, n_codes, win)[0].values())))
+          for _ in range(n_null)]
+    fam = set(family(C, r, n_codes)[0])
+    jac = []
+    for g in groups:
+        tr = key != g
+        if r[tr].any() and fam:
+            fg = set(family(C[tr], r[tr], n_codes)[0])
+            jac.append(len(fam & fg) / max(1, len(fam | fg)))
+    ws, wt = 0.0, 0
+    ok = ~np.isnan(sc)
+    for st in stages:
+        m = ok & (y == st)
+        if r[m].any():
+            ws += r[m].sum() * average_precision(sc[m], r[m]) / r[m].mean()
+            wt += r[m].sum()
+    return {"win": win, "loo_ap": best, "loo_ap_per_group": held,
+            "null_shift_q95": float(np.quantile(sh, 0.95)) if sh else None,
+            "null_perm_q95": float(np.quantile(pm, 0.95)) if pm else None,
+            "family_size": len(fam), "family_jaccard": float(np.mean(jac)) if jac else 0.0,
+            "ap_over_base_within_stage": ws / wt if wt else None}
+
+
+def scan_concept(name, Zs, bases, y, grp_names, night, refs, n_rot=5, n_shift=5, seed=0, max_tok=600_000,
+                 codes=None, n_codes=None):
     ref_name, _, stages, _, sel_set = TARGETS[name]
     ref, has = refs[ref_name]
     ext = np.isin(grp_names, ["shhs", "mass_ss01", "dreams"])
@@ -289,6 +363,23 @@ def scan_concept(name, Zs, bases, y, grp_names, night, refs, n_rot=5, n_shift=5,
             tr[f"expert:{e}"] = {"base": float(er[ix].mean()),
                                  **{t["word"]: average_precision(score_of(Zs, bases, t["word"], ix), er[ix]) for t in top}}
     res["transfer"] = tr
+    if codes is not None:
+        cw = scan_code_word(codes[idx], r, key, groups, n_codes, y[idx], stages, night[idx], rng)
+        lift = code_lift(codes[idx], r, n_codes)
+        ctr = {}
+        for g in ("shhs", "mass_ss01", "dreams"):
+            ix = rows_of(strat & (grp_names == g))
+            if g != sel_set and len(ix) and ref[ix].any():
+                ctr[g] = {"base": float(ref[ix].mean()), "ap": average_precision(code_score(codes[ix], lift, cw["win"]), ref[ix])}
+        for e in EXPERT.get(name, ()):
+            if e in refs:
+                er, eh = refs[e]
+                ix = rows_of(np.isin(y, stages) & eh)
+                if len(ix) and er[ix].any():
+                    ctr[f"expert:{e}"] = {"base": float(er[ix].mean()),
+                                          "ap": average_precision(code_score(codes[ix], lift, cw["win"]), er[ix])}
+        cw["transfer"] = ctr
+        res["code"] = cw
     return res
 
 
@@ -339,19 +430,20 @@ def main(argv=None):
         print("DONE", flush=True)
         return
     need = sorted({TARGETS[n][0] for n in names} | {e for n in names for e in EXPERT.get(n, ())})
-    Zs, y, G, NI, groups, refs = load_coords(a.dump, a.mod, bases, need, a.frac, a.seed)
+    Zs, y, G, NI, groups, refs, C = load_coords(a.dump, a.mod, bases, need, a.frac, a.seed, with_codes=True)
     gn = np.array(groups)[G]
+    n_codes = json.load(open(os.path.join(a.dump, "meta.json")))["n_codes"][a.mod]["P"]
     print(f"[words] {a.mod}: {len(y)} tokens, groups {groups}, {(time.time() - t0) / 60:.1f} min", flush=True)
     sp = os.path.join(a.dump, f"words_{a.tag}.json")
     out = json.load(open(sp)) if os.path.exists(sp) else {}
     for n in names:
-        r = scan_concept(n, Zs, bases, y, gn, NI, refs, a.rotations, a.shifts, a.seed)
+        r = scan_concept(n, Zs, bases, y, gn, NI, refs, a.rotations, a.shifts, a.seed, codes=C, n_codes=n_codes)
         out[f"{n}/{a.mod}"] = r
         json.dump(out, open(sp, "w"), indent=1)
         print(f"[words] {n}/{a.mod}: top {[(t['word'], round(t['ap'], 3)) for t in r.get('top', [])]} "
               f"loo {r.get('loo_ap', np.nan):.3f} base {r.get('base_rate', np.nan):.3f} "
               f"rot95 {r.get('null_rotation', {}).get('q95')} shift95 {r.get('null_shift', {}).get('q95')} "
-              f"stab {r.get('stability')} transfer "
+              f"stab {r.get('stability')} code {({k: v for k, v in r.get('code', {}).items() if k not in ('transfer', 'loo_ap_per_group')})} transfer "
               f"{ {g: {k: round(v, 3) for k, v in t.items()} for g, t in r.get('transfer', {}).items()} } "
               f"{(time.time() - t0) / 60:.1f} min", flush=True)
     print("DONE", flush=True)
@@ -545,28 +637,45 @@ def lexicon_word(name, word, bases_m, mod, thr, extra):
     return out
 
 
-def gates(r, fid):
-    """Verdict of one concept from the scan (L1, L2) and the fidelity summary (L3)."""
-    rot, sh = r["null_rotation"]["q95"], r["null_shift"]["q95"]
-    amp = "E[all]" in r["top"][0]["word"]
-    l1 = r["loo_ap"] > sh and (amp or r["loo_ap"] > rot)
-    l1_margin = r["loo_ap"] - max(sh, rot if not amp else sh)
-    l2 = r["stability"] >= 7 / 9
-    l3 = None
-    if fid is not None:
-        l3 = bool(fid["nights_above_ctrl95"] >= 0.9 and fid["dp_minus_ctrl_median"] > 0)
-    within = r.get("best_ap_over_base_within_stage") or 0
-    if not l1 or l1_margin < 0.01:  # a hair above the null is no word
+def candidates(r):
+    """The two definitions of a concept from its scan: the ICA word (best by mean AP) and the code word,
+    each with the fields of :func:`gates`."""
+    out = {}
+    if r.get("top"):
+        amp = "E[all]" in r["top"][0]["word"]
+        nulls = [r["null_shift"]["q95"]] + ([] if amp else [r["null_rotation"]["q95"]])
+        out["ica"] = {"kind": "ica", "word": r["top"][0]["word"], "loo_ap": r["loo_ap"], "nulls": nulls, "amp": amp,
+                      "stable": r["stability"] >= 7 / 9, "stability": r["stability"],
+                      "within": r.get("best_ap_over_base_within_stage")}
+    c = r.get("code")
+    if c and c.get("null_shift_q95") is not None:
+        out["code"] = {"kind": "code", "word": f"code:NB{'~' if c['win'] == 3 else ''}", "win": c["win"],
+                       "loo_ap": c["loo_ap"], "nulls": [c["null_shift_q95"], c["null_perm_q95"]], "amp": False,
+                       "stable": c["family_jaccard"] >= 0.5, "stability": c["family_jaccard"],
+                       "within": c.get("ap_over_base_within_stage"), "family_size": c["family_size"]}
+    return out
+
+
+def gates(concept, c):
+    """Verdict of one definition: do the codes determine the term? L1: held-out AP above the q95 of every
+    null (ICA: shifted references and random rotations, rotation-invariant ``E[all]`` only the shift; code:
+    shifted references and codes permuted within the stage); L2: the same word / family across the folds;
+    specificity beyond the stage: held-out AP/base within the stage. Whether the stager uses the term (L3)
+    is a property of the stager and is not part of the verdict."""
+    margin = c["loo_ap"] - max(c["nulls"])
+    l1 = margin > 0
+    within = c.get("within") or 0
+    if not l1 or margin < 0.01:  # a hair above the null is no word
         verdict = "bocciata"
-    elif r["concept"] in ("atonia",) or within < 1.6:
+    elif concept in ("atonia",) or within < 1.6:
         verdict = "solo stadio"
-    elif amp:
+    elif c["amp"]:
         verdict = "ampiezza"
-    elif l1_margin < 0.05 or not l2:
+    elif margin < 0.05 or not c["stable"]:
         verdict = "debole"
     else:
         verdict = "valida"
-    return {"L1": bool(l1), "L1_margin": float(l1_margin), "L2": bool(l2), "L3": l3, "verdict": verdict}
+    return {"L1": bool(l1), "L1_margin": float(margin), "L2": bool(c["stable"]), "verdict": verdict}
 
 
 def freeze(a):
@@ -583,10 +692,11 @@ def freeze(a):
             continue
         wj = json.load(open(wp))
         bases = np.load(os.path.join(a.dump, "word_bases", f"{mod}.npz"), allow_pickle=True)["bases"].item()
-        names = [k.split("/")[0] for k, r in wj.items() if r.get("top")]
+        names = [k.split("/")[0] for k, r in wj.items() if r.get("top") and k.endswith(f"/{mod}")]
         need = sorted({TARGETS[n][0] for n in names} | {e for n in names for e in EVENT_EXPERT.get(n, ())}
                       | {e for n in names for e in EXPERT.get(n, ())})
-        Zs, y, G, NI, groups, refs = load_coords(a.dump, mod, bases, need, a.frac, a.seed)
+        Zs, y, G, NI, groups, refs, C = load_coords(a.dump, mod, bases, need, a.frac, a.seed, with_codes=True)
+        n_codes = meta["n_codes"][mod]["P"]
         gn = np.array(groups)[G]
         for rep, b in bases.items():
             lex_bases[f"{mod}_{rep}"] = {"rep": rep, "mod": mod, "mean": b["mean"], "unmix": b["unmix"], "mix": b["mix"]}
@@ -596,26 +706,45 @@ def freeze(a):
             ref, has = refs[ref_name]
             strat = np.isin(y, stages) & has
             fit = strat & ((gn == "dreams") if sel_set == "dreams" else ~np.isin(gn, ["shhs", "mass_ss01", "dreams"]))
-            word = r["top"][0]["word"]
             rows = np.flatnonzero(fit.reshape(-1, T).all(1))
             idx = (rows[:, None] * T + np.arange(T)).reshape(-1)
-            sc = score_of(Zs, bases, word, idx)
             rr, key = ref[idx], (gn[idx] if sel_set == "pool" else NI[idx].astype(str))
+            cands = candidates(r)
+            ver = {k: gates(n, c) for k, c in cands.items()}
+            win_kind = max(cands, key=lambda k: cands[k]["loo_ap"])
+            cw = cands[win_kind]
+            word = cw["word"]
+            if win_kind == "code":
+                lift = code_lift(C[idx], rr, n_codes)
+
+                def score(ix, lift_=None):
+                    return code_score(C[ix], lift if lift_ is None else lift_, cw["win"])
+            else:
+                def score(ix, lift_=None):
+                    return score_of(Zs, bases, word, ix)
+            sc = score(idx)
             q = 1 - r["base_rate"]
             thr = float(np.quantile(sc, q))
             held = []
             for g in sorted(set(key)):
                 tr, te = key != g, key == g
                 if rr[te].any():
-                    held.append(_tok_f1(sc[te] >= np.quantile(sc[tr], q), rr[te]))
-            rec = {"word": word, "threshold": thr, "base_rate": r["base_rate"], "token_f1_loo": float(np.mean(held)),
-                   "loo_ap": r["loo_ap"], "null_rotation_q95": r["null_rotation"]["q95"],
-                   "null_shift_q95": r["null_shift"]["q95"], "stability": r["stability"],
-                   "ap_over_base_within_stage": r.get("best_ap_over_base_within_stage"), "transfer_ap": r["transfer"]}
+                    if win_kind == "code":  # the lift of the fold as well
+                        lf = code_lift(C[idx[tr]], rr[tr], n_codes)
+                        held.append(_tok_f1(score(idx[te], lf) >= np.quantile(score(idx[tr], lf), q), rr[te]))
+                    else:
+                        held.append(_tok_f1(sc[te] >= np.quantile(sc[tr], q), rr[te]))
+            rec = {"word": word, "definition": win_kind, "threshold": thr, "base_rate": r["base_rate"],
+                   "token_f1_loo": float(np.mean(held)), "loo_ap": cw["loo_ap"], "nulls_q95": cw["nulls"],
+                   "stability": cw["stability"], "ap_over_base_within_stage": cw["within"],
+                   "family_size": cands.get("code", {}).get("family_size"),
+                   "alternative": {k: {**{f: v for f, v in c.items() if f in ("word", "loo_ap", "nulls", "stability", "within")},
+                                       **ver[k]} for k, c in cands.items() if k != win_kind},
+                   "transfer_ap": r["code"]["transfer"] if win_kind == "code" else r["transfer"]}
+            rec.update(ver[win_kind])
             fkey = n if mod == "eeg" or n != "arousal" else f"{n}_{mod}"
-            rec.update(gates(r, fid.get(fkey) if (fkey in FIDELITY and FIDELITY[fkey][0] == mod) else None))
             if fkey in fid and FIDELITY.get(fkey, (None,))[0] == mod:
-                rec["fidelity"] = fid[fkey]
+                rec["stager_use"] = fid[fkey]  # L3: a property of the stager, not of the lexicon
             # token F1 at the frozen threshold on the out-of-pool sets; event F1 against the DREAMS experts
             tf = {}
             for g in ("shhs", "mass_ss01", "dreams"):
@@ -623,7 +752,7 @@ def freeze(a):
                 rw = np.flatnonzero(m.reshape(-1, T).all(1))
                 ix = (rw[:, None] * T + np.arange(T)).reshape(-1)
                 if g != sel_set and len(ix) and ref[ix].any():
-                    tf[g] = _tok_f1(score_of(Zs, bases, word, ix) >= thr, ref[ix])
+                    tf[g] = _tok_f1(score(ix) >= thr, ref[ix])
             rec["transfer_token_f1"] = tf
             ev = {}
             for e in EVENT_EXPERT.get(n, ()):
@@ -633,12 +762,14 @@ def freeze(a):
                     ix = np.flatnonzero((NI == night) & eh)
                     if not er[ix].any():
                         continue
-                    if sel_set == "dreams":  # threshold from the other excerpts
-                        oth = np.flatnonzero(fit & (NI != night))
-                        t_ = np.quantile(score_of(Zs, bases, word, oth), q)
+                    if sel_set == "dreams":  # threshold (and code lift) from the other excerpts
+                        oth = np.flatnonzero(fit.reshape(-1, T).all(1) & (NI.reshape(-1, T)[:, 0] != night))
+                        oth = (oth[:, None] * T + np.arange(T)).reshape(-1)
+                        lf = code_lift(C[oth], ref[oth], n_codes) if win_kind == "code" else None
+                        t_ = np.quantile(score(oth, lf), q)
+                        per.append(event_f1(score(ix, lf) >= t_, er[ix]))
                     else:
-                        t_ = thr
-                    per.append(event_f1(score_of(Zs, bases, word, ix) >= t_, er[ix]))
+                        per.append(event_f1(score(ix) >= thr, er[ix]))
                 if per:
                     tp = sum(round(p["coverage"] * p["n_ref"]) for p in per)
                     npred, nref = sum(p["n_pred"] for p in per), sum(p["n_ref"] for p in per)
@@ -648,8 +779,14 @@ def freeze(a):
             rec["event_f1_experts"] = ev
             name = n if mod == "eeg" or n not in ("arousal", "resp_end", "plm_arousal") else f"{n}_{mod}"
             report[name] = {"mod": mod, **rec}
-            lex_words.append(lexicon_word(name, word, bases, mod, thr,
-                                          {"verdict": rec["verdict"], "stages": list(stages), "base_rate": r["base_rate"]}))
+            extra = {"verdict": rec["verdict"], "stages": list(stages), "base_rate": r["base_rate"]}
+            if win_kind == "code":
+                cb = f"{mod}_code_{name}"
+                lex_bases[cb] = {"rep": "code", "mod": mod, "loglift": np.log(lift).astype(np.float32)}
+                lex_words.append({"name": name, "event": name, "basis": cb, "word": word, "kind": "code",
+                                  "win": cw["win"], "side": 1, "threshold": thr, "family_size": cw["family_size"], **extra})
+            else:
+                lex_words.append(lexicon_word(name, word, bases, mod, thr, extra))
             print(f"[freeze] {name}: {rec['verdict']} thr {thr:.3f} tokF1 {rec['token_f1_loo']:.3f} "
                   f"transfer {({k: round(v, 3) for k, v in tf.items()})} events {({k: round(v['f1'], 3) for k, v in ev.items()})}",
                   flush=True)
@@ -665,9 +802,16 @@ def freeze(a):
     key = next(k for k, e in sorted(meta["nights"].items()) if e["unit"] != "dreams" and set(meta["mods"]) <= set(e["mods"]))
     z = np.load(os.path.join(a.dump, f"{key}.npz"))
     pqs = {m: z[f"P_{m}"].astype(np.float32) for m in meta["mods"]}
-    fired = lx.fire(pqs, continuous=False)
+    cds = {m: z[f"codes_{m}_P"] for m in meta["mods"]}
+    fired = lx.fire(pqs, continuous=False, codes=cds)
     bad = []
     for w in lex_words:
+        if w["kind"] == "code":
+            c = cds[lx.mod_of(w["basis"])]
+            s_ = code_score(c.reshape(-1, c.shape[-1]), np.exp(lex_bases[w["basis"]]["loglift"].astype(np.float64)), w["win"])
+            if ((s_ >= w["threshold"]) != fired[w["name"]]).mean() > 1e-3:
+                bad.append(w["name"])
+            continue
         mod, rep = w["basis"].split("_")
         b = np.load(os.path.join(a.dump, "word_bases", f"{mod}.npz"), allow_pickle=True)["bases"].item()
         s_ = word_score(transform(pqs[mod], b[rep], rep), w["word"], b[rep]["groups"])

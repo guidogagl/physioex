@@ -130,3 +130,59 @@ def test_event_f1_matching():
     pred = np.zeros(40, bool); pred[8] = True; pred[30] = True  # first adjacent (tolerance 1 token), second false
     r = W.event_f1(pred, ref)
     assert r["n_pred"] == 2 and r["n_ref"] == 2 and abs(r["f1"] - 0.5) < 1e-9
+
+
+def _codes_setup(seed=0, n_rows=400, L=2, n_codes=64):
+    """Random P codes; the events of stage 2 use codes 5 and 6 of level 0 (a planted family)."""
+    Zs, bases, y, grp, night, refs = _setup(seed, n_rows)
+    rng = np.random.default_rng(seed + 1)
+    C = rng.integers(0, n_codes, (len(y), L)).astype(np.int16)
+    ref = refs["spindle_rule"][0]
+    C[ref, 0] = rng.choice([5, 6], ref.sum())
+    return Zs, bases, y, grp, night, refs, C, n_codes
+
+
+def test_code_word_finds_planted_family_and_beats_nulls():
+    Zs, bases, y, grp, night, refs, C, n_codes = _codes_setup()
+    r = W.scan_concept("spindle", Zs, bases, y, grp, night, refs, n_rot=2, n_shift=2, codes=C, n_codes=n_codes)
+    c = r["code"]
+    assert c["loo_ap"] > 0.5 > max(c["null_shift_q95"], c["null_perm_q95"])
+    assert c["family_size"] >= 2 and c["family_jaccard"] >= 0.5
+
+
+def test_stage_only_code_fails_the_permutation_null():
+    Zs, bases, y, grp, night, refs, C, n_codes = _codes_setup()
+    ref = refs["spindle_rule"][0]
+    C[:, 0] = np.where(y == 2, 5, 9)  # the code says the stage, not the event
+    C[ref, 0] = 5
+    r = W.scan_concept("spindle", Zs, bases, y, grp, night, refs, n_rot=2, n_shift=2, codes=C, n_codes=n_codes)
+    cand = W.candidates(r)["code"]
+    assert W.gates("spindle", cand)["verdict"] == "bocciata"
+
+
+def test_gates_ignore_the_stager():
+    c = {"loo_ap": 0.5, "nulls": [0.1, 0.2], "amp": False, "stable": True, "within": 5.0}
+    assert W.gates("spindle", c)["verdict"] == "valida" and "L3" not in W.gates("spindle", c)
+
+
+def test_code_word_lexicon_round_trip(tmp_path):
+    import importlib.util
+    import pathlib
+
+    spec = importlib.util.spec_from_file_location(
+        "vql", pathlib.Path(W.__file__).parents[2] / "models" / "vq_lexicon.py")
+    vql = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(vql)
+    rng = np.random.default_rng(3)
+    C = rng.integers(0, 16, (4, W.T, 2)).astype(np.int16)
+    lift = rng.random((2, 16)) + 0.5
+    for win in (1, 3):
+        s = W.code_score(C.reshape(-1, 2), lift, win)
+        thr = float(np.quantile(s, 0.8))
+        lex = vql.Lexicon({"eeg_code_x": {"rep": "code", "mod": "eeg", "loglift": np.log(lift)}},
+                          [{"name": "x", "event": "x", "basis": "eeg_code_x", "kind": "code", "win": win,
+                            "side": 1, "threshold": thr}])
+        lex.save(str(tmp_path))
+        back = vql.Lexicon.load(str(tmp_path))
+        np.testing.assert_array_equal(back.fire(None, continuous=False, codes={"eeg": C})["x"], s >= thr)
+        assert back.fire(np.zeros((4, W.T, 3), np.float32), continuous=False) == {}  # no codes: no code word

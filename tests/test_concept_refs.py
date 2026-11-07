@@ -61,10 +61,10 @@ def test_emg_atonia_and_tma():
     rng = np.random.default_rng(3)
     x = rng.normal(0, 10, int(60 * FS))
     x[3000:4500] *= 0.05  # 15 s of atonia
-    x[1000:1015] += rng.normal(0, 200, 15)  # 0.15 s burst
-    at, tma, _ = R.emg_masks(x, FS)
+    x[3500:3515] += rng.normal(0, 200, 15)  # 0.15 s burst on the low tone
+    at, tma, _, _ = R.emg_masks(x, FS)
     assert at[62:88].mean() > 0.9 and at[:50].mean() < 0.1
-    assert R.samples_to_tokens(tma, len(x), FS)[20]
+    assert R.samples_to_tokens(tma, len(x), FS)[70]
 
 
 def test_events_to_tokens_on_dumped_epochs():
@@ -129,3 +129,45 @@ def test_stage_gates():
     r = R.night_refs(night, {"fs": {"eeg": 100.0}, "scale": {"eeg": [0.0, 10.0]}})
     assert not r["sawtooth"].reshape(4, R.T)[[0, 1, 3]].any()
     assert not r["spindle_rule"].reshape(4, R.T)[[0, 2]].any()
+
+
+def test_k_complex_isolated_vs_train():
+    x = _pink(30, rms=5)
+    t = np.arange(int(0.8 * FS)) / FS
+    kc = -60 * np.sin(2 * np.pi * t / 0.8)  # 0.4 s negative, 0.4 s positive: 0.8 s biphasic
+    x[1000:1080] += kc
+    assert _covers(R.detect_k_complex(x, FS), 10.0, 10.8)
+    y = _pink(30, rms=5)
+    for k in range(6):  # a train of slow waves is not a K-complex
+        y[1000 + 80 * k:1080 + 80 * k] += kc
+    assert not _covers(R.detect_k_complex(y, FS), 11.6, 13.0)
+
+
+def test_cap_a1_and_a3():
+    x = _pink(120, rms=5)
+    t = np.arange(int(6 * FS)) / FS
+    x[6000:6600] += 40 * np.sin(2 * np.pi * 1.5 * t)  # 6 s delta burst
+    x[9000:9600] += 20 * np.sin(2 * np.pi * 20 * t)  # 6 s fast burst
+    d = R.detect_cap_a(x, FS)
+    assert _covers(d["a1"], 61, 65) and not _covers(d["a1"], 91, 95)
+    assert _covers(d["a3"], 91, 95)
+
+
+def test_rmma_series_vs_single_burst():
+    rng = np.random.default_rng(7)
+    x = rng.normal(0, 5, int(60 * FS))
+    for k in range(4):  # 4 bursts of 0.5 s, 1 s apart
+        a = 2000 + 100 * k
+        x[a:a + 50] += rng.normal(0, 60, 50)
+    x[4500:4550] += rng.normal(0, 60, 50)  # isolated burst
+    rm = R.emg_masks(x, FS)[3]
+    assert _covers(rm, 20.0, 23.5) and not _covers(rm, 45.0, 45.5)
+
+
+def test_emg_rise_needs_one_second():
+    rng = np.random.default_rng(8)
+    x = rng.normal(0, 5, int(60 * FS))
+    x[3000:3300] = rng.normal(0, 30, 300)  # 3 s rise
+    x[4500:4560] = rng.normal(0, 30, 60)  # 0.6 s
+    rise = R.emg_masks(x, FS)[2]
+    assert rise[60:66].any() and not rise[89:93].any()

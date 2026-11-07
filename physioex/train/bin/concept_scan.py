@@ -75,6 +75,13 @@ TARGETS = {
     "tma": ("tma", ("emg",), (4,), "tok", "pool"),
     "emg_rise": ("emg_rise", ("emg",), _ALL, "tok", "pool"),
     "artifact": ("artifact_eeg", ("eeg",), _ALL, "tok", "pool"),
+    # terms added from the scoring manuals (LEXICON_DEFINIZIONI.md, 08.11.2026)
+    "k_complex_rule": ("k_complex_rule", ("eeg",), (2,), "tok", "pool"),
+    "alpha_rem": ("alpha_rem", ("eeg",), (4,), "tok", "pool"),
+    "alpha_nrem": ("alpha_nrem", ("eeg",), (2, 3), "tok", "pool"),
+    "cap_a1": ("cap_a1", ("eeg",), (1, 2, 3), "tok", "pool"),
+    "cap_a3": ("cap_a3", ("eeg",), (1, 2, 3), "tok", "pool"),
+    "rmma": ("rmma", ("emg",), _SLEEP, "tok", "pool"),
 }
 
 
@@ -298,7 +305,7 @@ def scale(a):
 
 #: expert references the selection is also scored against (transfer), and the scorer pair of the ceiling
 EXPERT = {"spindle": ("spindle_vis1", "spindle_vis2"), "spindle_expert": ("spindle_vis2",),
-          "k_complex": ("k_complex_vis2",)}
+          "k_complex": ("k_complex_vis2",), "k_complex_rule": ("k_complex_vis1", "k_complex_vis2")}
 EXPERT_PAIR = {"spindle": ("spindle_vis1", "spindle_vis2"), "spindle_expert": ("spindle_vis1", "spindle_vis2"),
                "k_complex": ("k_complex_vis1", "k_complex_vis2")}
 

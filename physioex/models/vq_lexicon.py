@@ -12,6 +12,11 @@ set at a DCSM quantile, on
   of that energy to the median of the ``rel`` tokens before the window (an abrupt change, as an
   arousal).
 
+A ``code`` word reads the discrete P codes instead of ``pq``: its basis (``rep: "code"``) holds the
+log-lift of every code of every RVQ level (``loglift``, ``(L, n_codes)``), the score of a token is the
+sum of the log-lifts of its codes (naive Bayes over the levels), optionally averaged over ``win``
+tokens. The codes alone determine the word.
+
 An event can carry post-processing rules in ``meta["event_rules"][event]``: ``gap`` (largest gap,
 in tokens, merged inside one event; default 1) and ``min_tok`` (shortest event kept; default 1).
 
@@ -29,6 +34,7 @@ from typing import Dict, List
 import numpy as np
 
 TOK_S = 0.5
+_ARRAYS = ("mean", "unmix", "mix", "loglift")
 
 
 def ctx3(f: np.ndarray) -> np.ndarray:
@@ -77,7 +83,8 @@ class Lexicon:
         """``bases[name] = {"rep": "pq1"|"pq3", "mean": (D_in,), "unmix": (k, D_in), "mix": (D_in, k)}``
         plus, for a multimodal lexicon, ``"mod"`` (the modality whose P tokens the basis reads; default
         ``"eeg"``); ``words[i] = {"name", "event", "basis", "kind", "dirs", "threshold", "side", "smooth"}``
-        (extra keys, e.g. the gates of the word, are kept as they are)."""
+        (extra keys, e.g. the gates of the word, are kept as they are). A code basis is
+        ``{"rep": "code", "mod", "loglift": (L, n_codes)}`` and its words have ``kind: "code"``."""
         self.bases, self.words, self.meta = bases, words, meta or {}
 
     # ------------------------------------------------------------------ reading
@@ -102,25 +109,48 @@ class Lexicon:
     def mod_of(self, basis: str) -> str:
         return self.bases[basis].get("mod", "eeg")
 
-    def fire(self, pq, continuous: bool = True) -> Dict[str, np.ndarray]:
+    def code_values(self, codes: np.ndarray, w: dict, T: int) -> np.ndarray:
+        """Naive-Bayes score of the code word ``w`` on ``codes`` (``(n, T, L)`` P codes)."""
+        ll = self.bases[w["basis"]]["loglift"]
+        c = codes.reshape(-1, codes.shape[-1])
+        v = sum(ll[l][c[:, l].astype(np.int64)] for l in range(ll.shape[0])).astype(np.float64)
+        win = int(w.get("win", 1))
+        return window_mean(v, win, T) if win > 1 else v
+
+    def fire(self, pq, continuous: bool = True, codes=None) -> Dict[str, np.ndarray]:
         """Word masks over the ``n*T`` tokens of ``pq`` (``(n, T, d_p)``, or ``{mod: (n, T, d_p)}`` for a
-        multimodal lexicon: the words of a missing modality are left out). ``continuous``: the epochs
-        are consecutive (smoothing and 3-token context run across epoch borders)."""
+        multimodal lexicon: the words of a missing modality are left out). ``codes``: the P codes
+        (``(n, T, L)`` or ``{mod: ...}``) read by the ``code`` words; without them those words are left
+        out. ``continuous``: the epochs are consecutive (smoothing and 3-token context run across epoch
+        borders)."""
         pqs = pq if isinstance(pq, dict) else None
-        words = [w for w in self.words if pqs is None or self.mod_of(w["basis"]) in pqs]
-        src = {b: (pqs[self.mod_of(b)] if pqs is not None else pq) for b in {w["basis"] for w in words}}
+        cds = codes if isinstance(codes, dict) or codes is None else None
+
+        def have(w):
+            m = self.mod_of(w["basis"])
+            if w.get("kind") == "code":
+                return codes is not None and (cds is None or m in cds)
+            return pq is not None and (pqs is None or m in pqs)
+
+        words = [w for w in self.words if have(w)]
+        src = {b: (pqs[self.mod_of(b)] if pqs is not None else pq)
+               for b in {w["basis"] for w in words if w.get("kind") != "code"}}
         Zc = {b: self.coords(x, b) for b, x in src.items()}
         out = {}
         for w in words:
-            n, T, _ = src[w["basis"]].shape
-            v = self.word_values(Zc[w["basis"]], w, n * T if continuous else T)
+            if w.get("kind") == "code":
+                c = cds[self.mod_of(w["basis"])] if cds is not None else codes
+                v = self.code_values(c, w, c.shape[0] * c.shape[1] if continuous else c.shape[1])
+            else:
+                n, T, _ = src[w["basis"]].shape
+                v = self.word_values(Zc[w["basis"]], w, n * T if continuous else T)
             out[w["name"]] = v >= w["threshold"] if w["side"] > 0 else v <= w["threshold"]
         return out
 
-    def events(self, pq: np.ndarray, continuous: bool = True) -> Dict[str, List[dict]]:
+    def events(self, pq: np.ndarray, continuous: bool = True, codes=None) -> Dict[str, List[dict]]:
         """Events per name: runs of the union of the event's words (gaps merged and short runs
         dropped as in ``meta["event_rules"]``, default: gaps of one token), with the words that fired inside. Times in seconds from the start of ``pq``."""
-        masks = self.fire(pq, continuous)
+        masks = self.fire(pq, continuous, codes)
         out = {}
         for ev in sorted({w["event"] for w in self.words if w["name"] in masks}):
             names = [w["name"] for w in self.words if w["event"] == ev and w["name"] in masks]
@@ -136,7 +166,7 @@ class Lexicon:
     # ------------------------------------------------------------------ io
     def save(self, path: str) -> None:
         os.makedirs(path, exist_ok=True)
-        arrays = {f"{b}__{k}": v[k] for b, v in self.bases.items() for k in ("mean", "unmix", "mix")}
+        arrays = {f"{b}__{k}": v[k] for b, v in self.bases.items() for k in _ARRAYS if k in v}
         np.savez_compressed(os.path.join(path, "lexicon.npz"), **arrays)
         js_b = {b: {"rep": v["rep"], **({"mod": v["mod"]} if "mod" in v else {})} for b, v in self.bases.items()}
         json.dump({"bases": js_b, "words": self.words, "meta": self.meta},
@@ -146,5 +176,5 @@ class Lexicon:
     def load(cls, path: str) -> "Lexicon":
         js = json.load(open(os.path.join(path, "lexicon.json")))
         z = np.load(os.path.join(path, "lexicon.npz"))
-        bases = {b: {**v, **{k: z[f"{b}__{k}"] for k in ("mean", "unmix", "mix")}} for b, v in js["bases"].items()}
+        bases = {b: {**v, **{k: z[f"{b}__{k}"] for k in _ARRAYS if f"{b}__{k}" in z.files}} for b, v in js["bases"].items()}
         return cls(bases, js["words"], js.get("meta"))

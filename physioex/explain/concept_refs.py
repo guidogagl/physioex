@@ -17,6 +17,13 @@ The spindle and slow-wave detectors follow the published criteria of YASA (Valla
 ``spindles_detect`` relative sigma power, moving correlation and moving RMS, two of three; ``sw_detect``
 negative / positive half-wave durations and amplitudes); they are re-implemented with scipy (YASA is
 not in the Sofia environment), so they are "YASA-like", not YASA.
+
+Definitions checked against the scoring manuals of ``~/work/data/sleep-manuals`` (AASM rules at second
+hand; the AASM manual is not in the corpus), table in ``protosleepnet-v3/docs/LEXICON_DEFINIZIONI.md``:
+[F1] Fundamentals of Sleep Medicine 2012 ch. 1, [F3] ch. 3, [F4] ch. 4, [F12] ch. 12; [AE] Atlas of
+Electroencephalography in Sleep Medicine 2012; [AS] Atlas of Sleep Medicine 2023 (CAP: ch. "Cyclic
+alternating pattern"). Thresholds the manuals do not give (minimum uV of a vertex, of an eye movement)
+are ours and marked so.
 """
 from __future__ import annotations
 
@@ -31,23 +38,28 @@ T = int(EPOCH_S / TOK_S)
 
 #: concept -> (modality, strength, short definition)
 CONCEPTS = {
-    "spindle": ("eeg", "expert|rule", "11-16 Hz train 0.5-2 s (DREAMS vis1/vis2; YASA-like detector)"),
-    "k_complex": ("eeg", "expert", "negative sharp wave then positive, >= 0.5 s (DREAMS vis1/vis2)"),
+    "spindle": ("eeg", "expert|rule", "12-15 Hz train 0.5-2 s (DREAMS vis1/vis2; YASA-like detector; manuals 11-16 Hz [F1])"),
+    "k_complex": ("eeg", "expert|rule", "negative sharp wave then positive, >= 0.5 s, standing out, N2 [F1, AS]"),
     "slow_wave": ("eeg", "rule", "0.3-1.5 Hz, negative peak -40..-200 uV, peak-to-peak 75-350 uV (YASA-like)"),
     "vertex": ("eeg", "rule", "sharp negative transient < 0.5 s, >= 4x the epoch's median amplitude"),
     "sawtooth": ("eeg", "rule", "2-6 Hz train >= 1 s, relative power >= 0.4 of 0.5-30 Hz"),
-    "alpha": ("eeg", "rule", "8-12 Hz dominant (token); epoch: > 50 % of the tokens"),
-    "lamf": ("eeg", "rule", "4-8 Hz dominant at low amplitude (token)"),
+    "alpha": ("eeg", "rule", "8-13 Hz dominant (token); epoch: > 50 % of the tokens [F1, F3]"),
+    "alpha_rem": ("eeg", "rule", "alpha tokens in REM (bursts 1-2 Hz slower than in W) [F1 p3]"),
+    "alpha_nrem": ("eeg", "rule", "alpha tokens in N2/N3 (alpha intrusion, alpha-delta) [F4 p8]"),
+    "lamf": ("eeg", "rule", "4-7 Hz dominant at low amplitude (token) [F3 p5]"),
+    "cap_a1": ("eeg", "rule", "CAP phase A1: 0.5-4 Hz burst >= 4/3 of the background, 2-60 s, NREM [AS p265-266]"),
+    "cap_a3": ("eeg", "rule", "CAP phase A3: 8-30 Hz burst >= 4/3 of the background, 2-60 s, NREM [AS p265-266]"),
     "delta": ("eeg", "rule", "0.5-2 Hz waves >= 75 uV peak-to-peak (token); epoch: >= 20 % of the epoch"),
     "arousal": ("eeg", "expert|technician", "annotated arousal (MASS SS01 experts; NSRR/WSC technicians)"),
     "resp_end": ("eeg", "technician", "end of an apnea/hypopnea, from -2 s to +5 s"),
     "plm_arousal": ("eeg", "technician", "arousal within 2 s of a limb movement"),
     "rem_eye": ("eog", "rule", "deflection >= 50 uV reached in < 0.5 s"),
-    "sem": ("eog", "rule", "0.1-2 Hz half-wave of 0.5-2.5 s, >= 25 uV, peak >= 0.4 s after its start"),
-    "blink": ("eog", "rule", "half-wave 0.15-0.5 s, >= 100 uV"),
+    "sem": ("eog", "rule", "0.1-2 Hz half-wave of 0.5-2.5 s, >= 25 uV, initial deflection > 0.5 s [F1]"),
+    "blink": ("eog", "rule", "half-wave 0.25-1 s (0.5-2 Hz), >= 100 uV, in W [F3 p1-2]"),
     "atonia": ("emg", "rule", "token RMS <= 1.5x the 5th percentile of the night; epoch: > 50 % of the tokens"),
-    "tma": ("emg", "rule", "burst < 0.25 s with RMS >= 4x the epoch's median 1 s RMS"),
-    "emg_rise": ("emg", "rule", "3 s RMS >= 2x the median of the 10 s before"),
+    "tma": ("emg", "rule", "burst < 0.25 s, RMS >= 4x the epoch's median 1 s RMS, on low chin tone [F3 p10]"),
+    "emg_rise": ("emg", "rule", "0.1 s RMS >= 2x the median 1 s RMS of the 10 s before, for >= 1 s [F3 p19]"),
+    "rmma": ("emg", "rule", ">= 3 chin bursts of 0.25-2 s at ~1 Hz (bruxism / RMMA) [AS p458, F12]"),
     "artifact": ("any", "rule|technician", "flat (< 0.5 uV), extreme amplitude, annotated artefact"),
 }
 
@@ -161,7 +173,9 @@ def _band_rel(sig, fs, bands, win_s=2.0, step_s=TOK_S):
 
 # ---------------------------------------------------------------------------- EEG detectors
 def detect_spindles(sig, fs, min_dur=0.5, max_dur=2.0):
-    """YASA-like (``spindles_detect`` defaults): sigma 12-15 Hz; relative sigma power (2 s windows,
+    """YASA-like (``spindles_detect`` defaults): sigma 12-15 Hz (the manuals give 11-16 Hz, usually
+    12-14 [F1 p3]; YASA's thresholds are calibrated on 12-15 Hz, and on 11-16 Hz the same thresholds
+    pass 1/f noise: kept at 12-15); relative sigma power (2 s windows,
     0.2 s step) >= 0.2, moving correlation (0.3 s) of sigma vs broadband >= 0.65, moving RMS (0.3 s)
     of sigma >= mean + 1.5 sd (10-90 % trimmed); a spindle where >= 2 of 3 hold, 0.5-2 s, events
     closer than 0.5 s merged."""
@@ -247,6 +261,45 @@ def detect_vertex(sig, fs, min_uv=40.0, k_mad=6.0):
     return out
 
 
+def detect_k_complex(sig, fs, k_mad=6.0, iso_s=2.0):
+    """K-complex rule [F1 Table 1-6, AS]: a well-delineated negative sharp wave immediately followed by a
+    positive component, total >= 0.5 s, standing out of the background (no amplitude criterion). In
+    0.3-4 Hz: negative half-wave 0.15-1 s then positive half-wave, together 0.5-2 s, peak-to-peak >=
+    ``k_mad`` x the median absolute amplitude of its 30 s epoch (ours), with no other such wave within
+    ``iso_s`` s (isolated, not a slow-wave train; ours)."""
+    x = bandpass(sig, 0.3, 4, fs)
+    spe = int(EPOCH_S * fs)
+    mad = np.repeat([np.median(np.abs(x[i:i + spe])) + 1e-9 for i in range(0, len(x), spe)], spe)[:len(x)]
+    hw = _half_waves(x)
+    cand = []
+    for (a, b, s), (c, d, s2) in zip(hw[:-1], hw[1:]):
+        if s >= 0 or s2 <= 0 or not (0.15 * fs <= b - a <= 1.0 * fs and 0.5 * fs <= d - a <= 2.0 * fs):
+            continue
+        if x[c:d].max() - x[a:b].min() >= k_mad * mad[a]:
+            cand.append((a, d))
+    iso = int(iso_s * fs)
+    return [(a, d) for i, (a, d) in enumerate(cand)
+            if (i == 0 or a - cand[i - 1][1] > iso) and (i == len(cand) - 1 or cand[i + 1][0] - d > iso)]
+
+
+def detect_cap_a(sig, fs, ratio=4 / 3, bg_s=60.0, min_s=2.0, max_s=60.0):
+    """CAP phase A [AS p265-266]: phasic activity at least one third larger than the background, 2-60 s.
+    ``a1``: 0.5-4 Hz 1 s RMS >= ``ratio`` x its moving median over ``bg_s`` s while the 8-30 Hz one is not
+    (synchrony); ``a3``: 8-30 Hz 1 s RMS >= ``ratio`` x its background (desynchrony; the A3 rule asks
+    > 50 % of the phase, here the whole run). A2 (mixed) is not separated. Runs of 2-60 s."""
+    from scipy.ndimage import median_filter
+
+    out = {}
+    lo, hi = moving(bandpass(sig, 0.5, 4, fs), fs, "rms"), moving(bandpass(sig, 8, 30, fs), fs, "rms")
+    step = max(1, int(fs // 4))
+    bg = {k: np.repeat(median_filter(v[::step], size=max(3, int(bg_s * fs / step)), mode="nearest"), step)[:len(v)]
+          for k, v in (("lo", lo), ("hi", hi))}
+    up_lo, up_hi = lo >= ratio * bg["lo"], hi >= ratio * bg["hi"]
+    for k, m in (("a1", up_lo & ~up_hi), ("a3", up_hi)):
+        out[k] = [(a, b) for a, b in merge_close(runs(m), int(0.5 * fs)) if min_s * fs <= b - a <= max_s * fs]
+    return out
+
+
 def detect_sawtooth(sig, fs, rel_min=0.5, min_ptp=20.0, min_s=1.5):
     """2-6 Hz trains (AASM: sharply contoured, often serrated, central): tokens whose 2-6 Hz power is
     >= ``rel_min`` of 0.5-30 Hz and larger than 0.5-2 Hz, with 2-6 Hz peak-to-peak >= ``min_ptp`` uV,
@@ -261,9 +314,10 @@ def detect_sawtooth(sig, fs, rel_min=0.5, min_ptp=20.0, min_s=1.5):
 
 
 def eeg_background(sig, fs):
-    """Token masks: ``alpha`` (8-12 Hz relative power larger than 4-8 and 12-30 Hz and >= 0.3) and
-    ``lamf`` (4-8 Hz larger than 0.5-4 and 8-12 Hz, RMS below the night's median RMS)."""
-    rel, rms = _band_rel(sig, fs, {"d": (0.5, 4), "t": (4, 8), "a": (8, 12), "b": (12, 30)})
+    """Token masks: ``alpha`` (8-13 Hz [F1] relative power larger than 4-7 and 13-30 Hz and >= 0.3) and
+    ``lamf`` (4-7 Hz [F3 p5] larger than 0.5-4 and 8-13 Hz, RMS below the night's median RMS; "low"
+    amplitude relative to the night is ours)."""
+    rel, rms = _band_rel(sig, fs, {"d": (0.5, 4), "t": (4, 7), "a": (8, 13), "b": (13, 30)})
     alpha = (rel["a"] >= 0.3) & (rel["a"] > rel["t"]) & (rel["a"] > rel["b"])
     lamf = (rel["t"] > rel["d"]) & (rel["t"] > rel["a"]) & (rms < np.median(rms))
     return alpha, lamf
@@ -271,9 +325,11 @@ def eeg_background(sig, fs):
 
 # ---------------------------------------------------------------------------- EOG / EMG detectors
 def detect_eye_movements(sig, fs, ref=None, ratio=2.0):
-    """Single EOG derivation, 0.3-5 Hz. ``rem_eye``: half-wave reaching >= 50 uV less than 0.5 s after
-    its start; ``sem``: 0.1-2 Hz (order 2, to keep the slow deflections) half-wave of 0.5-2.5 s,
-    >= 25 uV, peak reached >= 0.4 s after its start; ``blink``: half-wave 0.15-0.5 s, >= 100 uV.
+    """Single EOG derivation, 0.3-5 Hz. ``rem_eye``: half-wave reaching >= 50 uV (ours) less than 0.5 s
+    after its start (initial deflection < 500 ms [F1 p8]); ``sem``: 0.1-2 Hz (order 2, to keep the slow
+    deflections) half-wave of 0.5-2.5 s, >= 25 uV (ours), peak reached > 0.5 s after its start
+    (initial deflection > 500 ms, AASM via [F1]); ``blink``: half-wave 0.25-1 s (0.5-2 Hz [F3 p1]),
+    >= 100 uV (ours; stage W is gated in :func:`night_refs`).
     Without the second EOG channel conjugacy is not checked. ``ref``: the EEG of the same samples
     (uV); a deflection counts only if it is >= ``ratio`` x larger on the EOG than on the EEG in the
     same band (frontal delta reaches the EOG almost unchanged, eye movements do not reach the EEG)."""
@@ -287,34 +343,48 @@ def detect_eye_movements(sig, fs, ref=None, ratio=2.0):
         pk = int(np.argmax(seg))
         if seg[pk] >= 50 and pk < 0.5 * fs:
             rem.append((a, b))
-        if seg[pk] >= 100 and 0.15 * fs <= b - a <= 0.5 * fs:
+        if seg[pk] >= 100 and 0.25 * fs <= b - a <= 1.0 * fs:
             blink.append((a, b))
     xs = bandpass(sig, 0.1, 2, fs, order=2)
     rs = bandpass(ref, 0.1, 2, fs, order=2) if ref is not None else None
     sem = [(a, b) for a, b, _ in _half_waves(xs) if 0.5 * fs <= b - a <= 2.5 * fs
-           and np.abs(xs[a:b]).max() >= 25 and np.argmax(np.abs(xs[a:b])) >= 0.4 * fs
+           and np.abs(xs[a:b]).max() >= 25 and np.argmax(np.abs(xs[a:b])) > 0.5 * fs
            and (rs is None or np.abs(xs[a:b]).max() >= ratio * np.abs(rs[a:b]).max())]
     return {"rem_eye": rem, "sem": sem, "blink": blink}
 
 
 def emg_masks(sig, fs, pct=5, factor=1.5):
     """Chin EMG (10 Hz high-pass). ``atonia``: token RMS <= ``factor`` x the night's ``pct``
-    percentile (the lowest level of the night, AASM);
-    ``tma``: 0.1 s RMS >= 4x the median 1 s RMS of its epoch, runs < 0.25 s; ``emg_rise``: 3 s RMS
-    >= 2x the median 1 s RMS of the 10 s before."""
+    percentile (the lowest level of the night [F3 p10-11]);
+    ``tma``: 0.1 s RMS >= 4x the median 1 s RMS of its epoch, runs < 0.25 s, in epochs whose median 1 s
+    RMS is at or below the night's median (on low chin activity [F3 p10]); ``emg_rise``: 0.1 s RMS >= 2x
+    the median 1 s RMS of the 10 s before, for >= 1 s (the EMG increase of a REM arousal [F3 p19]);
+    ``rmma``: runs of >= 3 bursts (0.1 s RMS >= 2x the epoch's median 1 s RMS) of 0.25-2 s with
+    onsets 0.5-2 s apart (about 1 Hz) [AS p458]. The amplitude factors are ours."""
     x = bandpass(sig, 10, None, fs)
     tok = int(TOK_S * fs)
     n_tok = len(x) // tok
     trms = np.sqrt((x[:n_tok * tok].reshape(n_tok, tok) ** 2).mean(1))
     atonia = trms <= factor * np.percentile(trms, pct)
-    r01, r1, r3 = moving(x, 0.1 * fs, "rms"), moving(x, fs, "rms"), moving(x, 3 * fs, "rms")
+    r01, r1 = moving(x, 0.1 * fs, "rms"), moving(x, fs, "rms")
     spe = int(EPOCH_S * fs)
     base = np.repeat([np.median(r1[i:i + spe]) + 1e-9 for i in range(0, len(x), spe)], spe)[:len(x)]
-    tma = [(a, b) for a, b in runs(r01 >= 4 * base) if b - a < 0.25 * fs]
+    low = base <= np.median(base[::spe]) + 1e-9
+    tma = [(a, b) for a, b in runs(r01 >= 4 * base) if b - a < 0.25 * fs and low[a]]
     w10 = int(10 * fs)
     before = np.array([np.median(r1[max(0, i - w10):i]) if i > 0 else np.inf for i in range(0, len(x), tok)])
-    rise_tok = r3[::tok][:n_tok] >= 2 * before[:n_tok]
-    return atonia, tma, rise_tok
+    up = r01 >= 2 * np.repeat(before, tok)[:len(x)]
+    rise_tok = samples_to_tokens([(a, b) for a, b in runs(up) if b - a >= fs], len(x), fs)[:n_tok]
+    bursts = [(a, b) for a, b in runs(r01 >= 2 * base) if 0.25 * fs <= b - a <= 2.0 * fs]
+    rmma, cur = [], []
+    for ab in bursts + [(None, None)]:
+        if cur and (ab[0] is None or not 0.5 * fs <= ab[0] - cur[-1][0] <= 2.0 * fs):
+            if len(cur) >= 3:
+                rmma.append((cur[0][0], cur[-1][1]))
+            cur = []
+        if ab[0] is not None:
+            cur.append(ab)
+    return atonia, tma, rise_tok, rmma
 
 
 def artifact_mask(sig, fs, extreme=500.0):
@@ -388,9 +458,14 @@ def night_refs(night: Dict[str, np.ndarray], meta: dict) -> Dict[str, np.ndarray
         f = fs["eeg"]
         out["spindle_rule"] = _per_run(x, ts, f, lambda s: detect_spindles(s, f)) & in_stage(2, 3)
         out["alpha"], out["lamf"], out["alpha_epoch"] = _background(x, ts, f)
+        out["alpha_rem"] = out["alpha"] & in_stage(4)
+        out["alpha_nrem"] = out["alpha"] & in_stage(2, 3)
+        cap = _per_run_multi(x, ts, f, lambda s, i: detect_cap_a(s, f), ("a1", "a3"))
+        out["cap_a1"], out["cap_a3"] = cap["a1"] & in_stage(1, 2, 3), cap["a3"] & in_stage(1, 2, 3)
     if "x_eeg" in night and clip is not None:
         out["slow_wave"] = _per_run(x, ts, f, lambda s: detect_slow_waves(s, f))
         out["vertex"] = _per_run(x, ts, f, lambda s: detect_vertex(s, f)) & in_stage(1, 2)
+        out["k_complex_rule"] = _per_run(x, ts, f, lambda s: detect_k_complex(s, f)) & in_stage(2)
         out["sawtooth"] = _per_run(x, ts, f, lambda s: detect_sawtooth(s, f)) & in_stage(4)
         dw = _per_run(x, ts, f, lambda s: detect_delta_waves(s, f))
         out["delta"] = dw
@@ -402,17 +477,19 @@ def night_refs(night: Dict[str, np.ndarray], meta: dict) -> Dict[str, np.ndarray
         ref = uv("eeg")[0] if "eeg" in sc and night.get("x_eeg", np.zeros(0)).shape == x.shape else None
         eye = _per_run_multi(x, ts, f, lambda s, i: detect_eye_movements(
             s, f, None if ref is None else ref[i].reshape(-1).astype(np.float64)), ("rem_eye", "sem", "blink"))
+        eye["blink"] = eye["blink"] & in_stage(0)
         out.update(eye)
     if "x_emg" in night:  # relative rules: valid on the scaled signal too
         x, f = uv("emg")[0], fs["emg"]
-        at, tma, rise = np.zeros(n * T, bool), np.zeros(n * T, bool), np.zeros(n * T, bool)
+        at, tma, rise, rm = (np.zeros(n * T, bool) for _ in range(4))
         for a, b in contiguous(ts):
             s = x[a:b].reshape(-1).astype(np.float64)
-            at_r, tma_iv, rise_r = emg_masks(s, f)
+            at_r, tma_iv, rise_r, rm_iv = emg_masks(s, f)
             at[a * T:b * T] = at_r[:(b - a) * T]
             tma[a * T:b * T] = samples_to_tokens(tma_iv, len(s), f)[:(b - a) * T]
             rise[a * T:b * T] = rise_r[:(b - a) * T]
-        out["atonia"], out["tma"], out["emg_rise"] = at, tma, rise
+            rm[a * T:b * T] = samples_to_tokens(rm_iv, len(s), f)[:(b - a) * T]
+        out["atonia"], out["tma"], out["emg_rise"], out["rmma"] = at, tma, rise, rm
         out["atonia_epoch"] = at.reshape(n, T).mean(1) > 0.5
     return out
 
