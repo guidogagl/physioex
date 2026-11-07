@@ -429,6 +429,74 @@ def union_mask(codes, sel):
     return m
 
 
+def code_lift(codes, ref, n_codes, prior=20.0):
+    """Lift of every code of every column (``(L, n_codes)``), shrunk towards 1 with ``prior`` pseudo-uses."""
+    b = max(ref.mean(), 1e-9)
+    out = np.ones((codes.shape[1], n_codes))
+    for l in range(codes.shape[1]):
+        n = np.bincount(codes[:, l], minlength=n_codes)
+        h = np.bincount(codes[:, l], weights=ref, minlength=n_codes)
+        out[l] = (h + prior * b) / (n + prior) / b
+    return out
+
+
+def average_precision(score, ref):
+    """AP of ``score`` against ``ref``; tied scores form one block (no order inside a code)."""
+    H = np.count_nonzero(ref)
+    if H == 0:
+        return float("nan")
+    u, inv = np.unique(-score, return_inverse=True)
+    n = np.bincount(inv, minlength=len(u))
+    h = np.bincount(inv, weights=ref, minlength=len(u))
+    cn, ch = np.cumsum(n), np.cumsum(h)
+    return float(np.sum(h / H * ch / cn))
+
+
+def nb_score(codes, lift, cols=None):
+    """Token score: sum of the log-lifts of its codes over ``cols`` (naive Bayes over the RVQ levels)."""
+    cols = range(codes.shape[1]) if cols is None else cols
+    return sum(np.log(lift[l][codes[:, l]]) for l in cols)
+
+
+def family(codes, ref, n_codes, min_lift=2.0, min_n=50):
+    """Codes with lift >= ``min_lift`` and >= ``min_n`` uses, per column: the concept's code family."""
+    lift = code_lift(codes, ref, n_codes)
+    fam = []
+    for l in range(codes.shape[1]):
+        n = np.bincount(codes[:, l], minlength=n_codes)
+        fam += [(l, int(c)) for c in np.flatnonzero((lift[l] >= min_lift) & (n >= min_n))]
+    return fam, lift
+
+
+def scan_family(codes, ref, y, key, stages, n_codes, cols, n_nulls, night, rng, min_n=50):
+    """Held-out AP of the code-lift score (per column and naive Bayes over all columns), its null on
+    references shifted within the nights, and the family of the whole selection set."""
+    folds = [f for f in np.unique(key) if ref[key == f].any()]
+
+    def heldout(r):
+        per = {c: [] for c in cols + ["NB"]}
+        for f in folds:
+            tr, te = key != f, key == f
+            lift = code_lift(codes[tr], r[tr], n_codes)
+            for l, c in enumerate(cols):
+                per[c].append(average_precision(lift[l][codes[te, l]], r[te]))
+            per["NB"].append(average_precision(nb_score(codes[te], lift), r[te]))
+        return {c: float(np.nanmean(v)) if v else float("nan") for c, v in per.items()}
+
+    real = heldout(ref)
+    nulls = [heldout(_shift_within_nights(ref, night, rng)) for _ in range(n_nulls)]
+    fam, _ = family(codes, ref, n_codes, min_n=min_n)
+    m = union_mask(codes, fam)
+    base = float(ref.mean())
+    out = {"ap": real, "ap_base": base,
+           "ap_null_q95": {c: float(np.nanquantile([n[c] for n in nulls], 0.95)) for c in real} if nulls else None,
+           "family_size": {c: sum(1 for l, _ in fam if cols[l] == c) for c in cols},
+           "family": _describe(codes, ref, y, [], stages)["union"] if not fam else None}
+    if fam:
+        out["family"] = _describe(codes, ref, y, fam, stages)["union"]
+    return out, fam
+
+
 def _describe(codes, ref, y, sel, stages):
     """Purity, coverage, lift in the stratum and the within-stage lift (mean over the stratum's stages,
     weighted by the reference) of the union and of every chosen code."""
@@ -458,7 +526,7 @@ def _shift_within_nights(ref, night, rng):
     return out
 
 
-def scan_concept(name, D, n_codes, n_nulls=20, seed=0):
+def scan_concept(name, D, n_codes, n_nulls=20, seed=0, min_n=50):
     ref_name, _, stages, _, sel_set = TARGETS[name]
     ref, has = D["refs"][ref_name]
     grp = np.array(D["groups"])[D["group"]]
@@ -489,6 +557,11 @@ def scan_concept(name, D, n_codes, n_nulls=20, seed=0):
             if k in back:
                 back[k] += 1
     res["loo"] = loo
+    fam_res, fam = scan_family(codes[fit], ref[fit], y[fit], key[fit], stages, n_codes, D["cols"], n_nulls,
+                               night[fit], np.random.default_rng(seed + 1), min_n)
+    res["family"] = fam_res
+    # code-lift score transferred to the out-of-pool units (AP, base rate)
+    lift_full = code_lift(codes[fit], ref[fit], n_codes)
     res["stability"] = {k: v / max(1, len(loo)) for k, v in back.items()}
     rng = np.random.default_rng(seed)
     nulls = []
@@ -503,6 +576,8 @@ def scan_concept(name, D, n_codes, n_nulls=20, seed=0):
         if g == sel_set or not m.any() or not ref[m].any():
             continue
         tr_out[g] = _describe(codes[m], ref[m], y[m], sel, stages)["union"]
+        tr_out[g].update(ap_nb=average_precision(nb_score(codes[m], lift_full), ref[m]), base=float(ref[m].mean()),
+                         family=_describe(codes[m], ref[m], y[m], fam, stages)["union"])
     # expert references of the same concept (DREAMS): the selection against each scorer, and the
     # ceiling = agreement between the two scorers on the same tokens
     for e in EXPERT.get(name, ()):
@@ -512,6 +587,8 @@ def scan_concept(name, D, n_codes, n_nulls=20, seed=0):
         m = np.isin(y, stages) & eh
         if m.any() and er[m].any():
             tr_out[f"expert:{e}"] = _describe(codes[m], er[m], y[m], sel, stages)["union"]
+            tr_out[f"expert:{e}"].update(ap_nb=average_precision(nb_score(codes[m], lift_full), er[m]),
+                                         base=float(er[m].mean()))
     pair = EXPERT_PAIR.get(name)
     if pair and all(p in D["refs"] for p in pair):
         (r1, h1), (r2, h2) = D["refs"][pair[0]], D["refs"][pair[1]]
@@ -542,6 +619,15 @@ def scan(a):
             out[f"{name}/{m}"] = r
             json.dump(out, open(sp, "w"), indent=1)
             u = r.get("describe", {}).get("union", {})
+            fr = r.get("family", {})
+            ap, apn = fr.get("ap", {}), fr.get("ap_null_q95") or {}
+            print(f"[scan] {name}/{m}: AP NB {ap.get('NB', np.nan):.3f} (null95 {apn.get('NB', np.nan):.3f}, "
+                  f"base {fr.get('ap_base', np.nan):.3f}) best col "
+                  f"{max(((c, v) for c, v in ap.items() if c != 'NB'), key=lambda t: t[1], default=None)} "
+                  f"family {sum((fr.get('family_size') or {}).values())} codes "
+                  f"lift {((fr.get('family') or {}).get('lift') or 0):.2f} within {(fr.get('family') or {}).get('lift_within')}"
+                  f" transfer { {g: round(t.get('ap_nb', np.nan), 3) for g, t in r.get('transfer', {}).items()} }",
+                  flush=True)
             print(f"[scan] {name}/{m}: sel {r.get('selected')} f1 {r.get('f1', 0):.3f} null95 "
                   f"{r.get('null_f1', {}).get('q95')} lift {u.get('lift', 0):.2f} within {u.get('lift_within')} "
                   f"loo {np.mean([f['f1'] for f in r.get('loo', [])] or [np.nan]):.3f} "

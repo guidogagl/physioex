@@ -52,3 +52,22 @@ def test_shift_within_nights_keeps_counts():
     sh = S._shift_within_nights(ref, night, rng)
     for n in range(3):
         assert sh[night == n].sum() == ref[night == n].sum()
+
+
+def test_family_ap_beats_null_and_spreads_over_codes():
+    """A concept spread over several codes: the family and the held-out AP find it, the null does not."""
+    rng = np.random.default_rng(3)
+    D = _data(rng, plant_event=False)
+    ref = D["refs"]["spindle_rule"][0]
+    D["codes"][ref, 0] = rng.integers(56, 64, ref.sum())  # 8 codes share the events
+    D["codes"][~ref & (D["codes"][:, 0] >= 56), 0] = 0
+    r = S.scan_concept("spindle", D, 64, n_nulls=5, min_n=5)
+    f = r["family"]
+    assert f["ap"]["P0"] > 0.8 > f["ap_null_q95"]["P0"]
+    assert f["family_size"]["P0"] >= 6 and f["family"]["coverage"] > 0.9
+
+
+def test_average_precision_ties_and_perfect():
+    ref = np.array([1, 1, 0, 0], bool)
+    assert S.average_precision(np.array([2.0, 2.0, 1.0, 1.0]), ref) == 1.0
+    assert abs(S.average_precision(np.ones(4), ref) - 0.5) < 1e-9
