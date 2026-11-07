@@ -690,7 +690,6 @@ def train(model, data, epochs: int = 30, lr: float = 3e-4, batch: int = 512, wei
         warm = max(1, int(0.02 * steps))
         sch = torch.optim.lr_scheduler.LambdaLR(
             opt, lambda t: (t + 1) / warm if t < warm else 0.5 * (1 + math.cos(math.pi * (t - warm) / max(1, steps - warm))))
-    eval_at = {round(per_epoch * (q + 1) / evals_per_epoch) for q in range(evals_per_epoch)}
     best, best_state, wait, hist = -1.0, None, 0, []
     g = torch.Generator().manual_seed(seed)
     va = data["valid"]
@@ -705,6 +704,9 @@ def train(model, data, epochs: int = 30, lr: float = 3e-4, batch: int = 512, wei
         # batches read ahead by threads (same batches, same order): with latents on disk the
         # single-threaded read and standardization kept the GPU at ~60% (07.11.2026)
         starts = list(range(0, len(perm), nb))
+        # evaluation points on the real number of steps: with a random offset per night the windows are
+        # fewer than ``per_epoch`` and the end-of-epoch evaluation never ran (07.11.2026)
+        eval_at = {round(len(starts) * (q + 1) / evals_per_epoch) for q in range(evals_per_epoch)}
         fetch = lambda i: [tr[k][perm[i:i + nb]] for k in ("N", "E", "P", "y")]  # noqa: E731
         pool = ThreadPoolExecutor(prefetch_threads)
         ahead = deque(pool.submit(fetch, i) for i in starts[:2 * prefetch_threads])
@@ -728,7 +730,7 @@ def train(model, data, epochs: int = 30, lr: float = 3e-4, batch: int = 512, wei
             k = metrics(predict(model, va, batch=max(2048, 512 * L), device=device)[0].argmax(1).numpy(), va["y"].numpy(),
                         va["night"])["kappa_night_mean"]
             model.train()
-            at = round(ep + b / per_epoch, 3)
+            at = round(ep + b / len(starts), 3)
             hist.append({"epoch": at, "train_loss": tot / seen, "valid_kappa": k, "lr": opt.param_groups[0]["lr"]})
             # flush: with stdout on a file the lines stayed buffered until the end of the run (07.11.2026)
             log(f"[qformer_stager] epoch {at}/{epochs} loss {tot / seen:.4f} valid kappa {k:.4f}", flush=True)

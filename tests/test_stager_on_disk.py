@@ -131,3 +131,16 @@ def test_prefetch_threads_do_not_change_training(tmp_path):
         hs.append(Q.train(model, data, epochs=2, lr=1e-3, batch=20, patience=0, sched="cosine", evals_per_epoch=2,
                           log=lambda *_, **__: None, prefetch_threads=th))
     assert hs[0] == hs[1]
+
+
+def test_end_of_epoch_evaluation_runs(tmp_path):
+    """With random window offsets the steps per epoch vary: the last evaluation of every epoch still runs."""
+    rng = np.random.default_rng(6)
+    d = _write(tmp_path, "eeg", {"train": _nights(rng, 4), "valid": _nights(rng, 2)})
+    data, _, _ = Q.lazy_modalities({"eeg": d})
+    torch.manual_seed(0)
+    model = Q.ARCHS["seqqformer"](dim=6, d_p=3, n_tok=4, d=16, k=2, layers=1, heads=2, dropout=0.0, seq_len=5,
+                                  seq_layers=1)
+    hist = Q.train(model, data, epochs=3, lr=1e-3, batch=10, patience=0, sched="cosine", evals_per_epoch=2,
+                   log=lambda *_, **__: None)
+    assert [h["epoch"] for h in hist][1::2] == [1.0, 2.0, 3.0]
