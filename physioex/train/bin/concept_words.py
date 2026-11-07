@@ -15,8 +15,19 @@ a word of the lexicon must be one to three directions. Per modality:
   held-out group; leave-one-group-out choice of the best word (held-out AP, how often the overall best
   word wins); top 3 words with distinct directions; transfer to shhs / MASS SS01 / DREAMS and to the
   expert references.
-- **nulls**: the same selection on a random rotation of the whitened coordinates (``--rotations``) and
-  on references shifted circularly within the nights (``--shifts``).
+- **nulls** (sanity checks): the same selection on a random rotation of the whitened coordinates
+  (``--rotations``) and on references shifted circularly inside the (night, stage) runs (``--shifts``,
+  default 20, p = (1 + #null >= obs) / (n + 1)), the whole selection redone on each draw.
+- **code word** (``--codes``): prefixes of the RVQ codes (level 0, level 0+1) ranked by weight of evidence
+  (hits x log-lift); the word is the smallest top-k (k in 5..200, raw or +-1 token) with held-out AP
+  >= 90 % of the best, chosen inside the fold. The family IS the evaluated object; k > 50 = "distributed".
+  Prefixes in more than 3 families of a modality are state codes and leave every family at freezing.
+- **gates** (``gates``), primary test: the definition must beat the paired baselines (P(ref | stage),
+  the E[all] energy words, token RMS of the raw signal, logistic amplitude+stage) with a one-sided paired
+  Wilcoxon over the held-out groups, BH over the frozen terms (q 0.05); margin in normalized AP
+  (AP - b) / (1 - b) >= 0.05; split-half Spearman stability >= 0.7; held-out AP/base inside the stage
+  >= 1.6. The code word replaces the ICA word only when it beats it with a paired p < 0.05.
+  Retention = AP / AP of a logistic probe on raw band powers of the token (ceiling) is reported, not gated.
 
     python -m physioex.train.bin.concept_words --dump DUMP --mod eeg --concepts spindle,slow_wave --tag eeg1
 
@@ -93,15 +104,41 @@ def transform(P, b, rep):
     return ((X.reshape(-1, X.shape[-1]) - b["mean"]) @ b["unmix"].T).astype(np.float32)
 
 
-def load_coords(dump_dir, mod, bases, level_refs, frac=0.25, seed=0, with_codes=False):
+#: bands of the raw-signal features (Hz)
+BANDS = {"so": (0.5, 2), "delta": (2, 4), "theta": (4, 7), "alpha": (8, 13), "sigma": (11, 16), "beta": (16, 30)}
+FEATS = ("rms", "rms3", "line_length") + tuple(BANDS)
+
+
+def token_features(x, fs):
+    """Raw-signal features of every token of one night (``x``: ``(n, 30 fs)``, consecutive epochs): log RMS
+    of the token, log RMS over +-1 token, log line length, log band powers (``BANDS``) of the 1.5 s centred
+    on the token (Hann). The amplitude baselines and the signal ceiling of the gates."""
+    from numpy.lib.stride_tricks import sliding_window_view
+
+    tok = int(round(0.5 * fs))
+    v = x.reshape(-1).astype(np.float32)
+    t = v.reshape(-1, tok)
+    pad = np.concatenate([v[:tok][::-1], v, v[-tok:][::-1]])
+    w = sliding_window_view(pad, 3 * tok)[::tok][:len(t)]
+    p = np.abs(np.fft.rfft(w * np.hanning(3 * tok).astype(np.float32), axis=1)) ** 2
+    f = np.fft.rfftfreq(3 * tok, 1 / fs)
+    cols = [np.log(np.sqrt((t ** 2).mean(1)) + 1e-6), np.log(np.sqrt((w ** 2).mean(1)) + 1e-6),
+            np.log(np.abs(np.diff(t, axis=1)).mean(1) + 1e-6)]
+    cols += [np.log(p[:, (f >= lo) & (f < hi)].sum(1) + 1e-6) for lo, hi in BANDS.values()]
+    return np.stack(cols, 1).astype(np.float32)
+
+
+def load_coords(dump_dir, mod, bases, level_refs, frac=0.25, seed=0, with_codes=False, with_signal=False):
     """Coordinates of a random ``frac`` of the epochs of every night (whole 60-token epochs, the context
     computed on the whole night first), stage, group, night and the token reference masks; with
-    ``with_codes`` also the P codes of the same tokens (``(n_tok, L)``, last element)."""
+    ``with_codes`` also the P codes of the same tokens (``(n_tok, L)``); with ``with_signal`` also their
+    raw-signal features (:func:`token_features`, last element)."""
     rng = np.random.default_rng(seed + 7)
     Z = {r: [] for r in bases}
     Y, G, NI, groups = [], [], [], []
     R = {r: ([], []) for r in level_refs}
-    C = []
+    C, F = [], []
+    fs = json.load(open(os.path.join(dump_dir, "meta.json")))["fs"][mod] if with_signal else None
     for i, (key, e) in enumerate(_nights(dump_dir, mod)):
         z = np.load(os.path.join(dump_dir, f"{key}.npz"))
         P = z[f"P_{mod}"].astype(np.float32)
@@ -114,6 +151,8 @@ def load_coords(dump_dir, mod, bases, level_refs, frac=0.25, seed=0, with_codes=
         if with_codes:
             c = z[f"codes_{mod}_P"]
             C.append(c.reshape(-1, c.shape[-1])[tk].astype(np.int16))
+        if with_signal:
+            F.append(token_features(z[f"x_{mod}"], fs)[tk])
         y = np.repeat(z["y"].astype(np.int8), T)[tk]
         g = _group(e["unit"])
         if g not in groups:
@@ -128,7 +167,8 @@ def load_coords(dump_dir, mod, bases, level_refs, frac=0.25, seed=0, with_codes=
             R[r][1].append(np.full(len(y), ok))
     out = ({r: np.concatenate(v) for r, v in Z.items()}, np.concatenate(Y), np.concatenate(G), np.concatenate(NI),
            groups, {r: (np.concatenate(a), np.concatenate(h)) for r, (a, h) in R.items()})
-    return out + (np.concatenate(C),) if with_codes else out
+    out = out + (np.concatenate(C),) if with_codes else out
+    return out + (np.concatenate(F),) if with_signal else out
 
 
 def _rows_mean3(e):
@@ -215,74 +255,296 @@ def shift_within_nights(ref, night, rng):
     return out
 
 
+def shift_within_runs(ref, night, y, rng):
+    """Circular shift of the reference inside every run of consecutive tokens of the same night and stage:
+    an event moves in time but stays in its stage (the null of the gates, 08.11.2026)."""
+    out = np.empty_like(ref)
+    cut = np.flatnonzero((np.diff(night) != 0) | (np.diff(y) != 0)) + 1
+    e = np.r_[0, cut, len(ref)]
+    for a, b in zip(e[:-1], e[1:]):
+        out[a:b] = np.roll(ref[a:b], rng.integers(1, max(2, b - a)))
+    return out
+
+
+def null_p(obs, null):
+    """Permutation p-value ``(1 + #(null >= obs)) / (n + 1)``."""
+    null = [v for v in null if np.isfinite(v)]
+    return float((1 + sum(v >= obs for v in null)) / (len(null) + 1))
+
+
+def per_group_ap(s, r, key, groups):
+    return {g: float(average_precision(s[key == g], r[key == g])) for g in groups if r[key == g].any()}
+
+
+def paired_p(a, b):
+    """One-sided Wilcoxon signed-rank p that the per-group APs ``a`` exceed ``b`` (dicts by group); 1 with
+    fewer than 3 common groups or no difference."""
+    from scipy.stats import wilcoxon
+
+    gs = [g for g in a if g in b and np.isfinite(a[g]) and np.isfinite(b[g])]
+    d = np.array([a[g] - b[g] for g in gs])
+    if len(d) < 3 or not np.any(d):
+        return 1.0
+    return float(wilcoxon(d, alternative="greater").pvalue)
+
+
+def nap_margin(a, b, base):
+    """Mean over the common groups of the normalized-AP difference ``(a - b) / (1 - base)``."""
+    gs = [g for g in a if g in b and g in base and np.isfinite(a[g]) and np.isfinite(b[g])]
+    return float(np.mean([(a[g] - b[g]) / (1 - base[g]) for g in gs])) if gs else 0.0
+
+
+def within_stage(hs, r, y, key, stages):
+    """Held-out AP / base inside every (group, stage) of the stratum, weighted by the reference."""
+    ws, wt = 0.0, 0.0
+    ok = np.isfinite(hs)
+    for g in np.unique(key):
+        for st in stages:
+            m = ok & (key == g) & (y == st)
+            if r[m].any() and not r[m].all():
+                ws += r[m].sum() * average_precision(hs[m], r[m]) / r[m].mean()
+                wt += r[m].sum()
+    return float(ws / wt) if wt else None
+
+
+def _sub_rows(n_tok, rng, n_rows=800):
+    rows = np.sort(rng.choice(n_tok // T, min(n_rows, n_tok // T), replace=False))
+    return (rows[:, None] * T + np.arange(T)).reshape(-1)
+
+
+def split_half(gs, score_fn, sub, rng, reps=5):
+    """Stability on disjoint data: Spearman correlation, on the tokens ``sub``, of the scores of the
+    definition fitted on two random disjoint halves of the groups (mean over ``reps`` splits).
+    ``score_fn(groups, sub) -> scores``."""
+    from scipy.stats import spearmanr
+
+    out = []
+    for _ in range(reps):
+        p = list(rng.permutation(gs))
+        h = len(p) // 2
+        if h < 1:
+            break
+        a, b = score_fn(set(p[:h]), sub), score_fn(set(p[h:]), sub)
+        rho = spearmanr(a, b).correlation if np.std(a) > 0 and np.std(b) > 0 else 0.0
+        out.append(float(rho) if np.isfinite(rho) else 0.0)
+    return float(np.mean(out)) if out else 0.0
+
+
+# ---------------------------------------------------------------------------- baselines
+def _stage_heldout(y, r, key, groups):
+    """Leave-one-group-out P(reference | stage)."""
+    out = np.full(len(r), np.nan)
+    for g in groups:
+        tr, te = key != g, key == g
+        rate = np.zeros(int(y.max()) + 1)
+        for s in np.unique(y[tr]):
+            rate[s] = r[tr & (y == s)].mean()
+        out[te] = rate[y[te]]
+    return out
+
+
+def _fold_logistic(X, r, key, groups, max_fit=200_000, seed=0):
+    """Leave-one-group-out logistic regression on standardized features: held-out decision value."""
+    from sklearn.linear_model import LogisticRegression
+
+    rng = np.random.default_rng(seed)
+    out = np.full(len(r), np.nan)
+    for g in groups:
+        tr, te = np.flatnonzero(key != g), key == g
+        if not r[te].any() or not r[tr].any() or r[tr].all():
+            continue
+        if len(tr) > max_fit:
+            tr = rng.choice(tr, max_fit, replace=False)
+        mu, sd = X[tr].mean(0), X[tr].std(0) + 1e-6
+        m = LogisticRegression(max_iter=300).fit((X[tr] - mu) / sd, r[tr])
+        out[te] = m.decision_function((X[te] - mu) / sd)
+    return out
+
+
+def baselines(Zs, bases, names, idx, r, key, groups, y, A, gs, F=None):
+    """Held-out AP per group of the baselines a definition must beat, and of the raw-signal ceiling.
+
+    Rows: ``stadio`` (P(reference | stage) on the other groups); every ICA ``E[all]`` word (total energy of
+    the quantized P, no fit); with the raw-signal features ``F`` (:func:`token_features`) the token RMS
+    (raw and over +-1 token); ``amp+stadio``, a logistic regression on the stage and those amplitudes
+    fitted on the other groups. The baseline of a held-out group is the row chosen on the other groups
+    (as the ICA word). Ceiling: logistic regression on all the raw-signal features (reported as the
+    retention of the definition, not a gate)."""
+    rows = {"stadio": per_group_ap(_stage_heldout(y, r, key, groups), r, key, groups)}
+    amp_names = [n for n in names if ":E[all]" in n]
+    for n in amp_names:
+        j = names.index(n)
+        rows[n] = {g: float(A[j, i]) for i, g in enumerate(gs)}
+    st = np.stack([y == s for s in np.unique(y)], 1).astype(np.float32)
+    amp = [np.log(score_of(Zs, bases, n, idx) + 1e-6) for n in amp_names if not n.endswith("rel")]
+    if F is not None:
+        rows["rms"] = per_group_ap(F[:, 0], r, key, groups)
+        rows["rms3"] = per_group_ap(F[:, 1], r, key, groups)
+        amp = [F[:, 0], F[:, 1]] + amp
+    if amp:
+        rows["amp+stadio"] = per_group_ap(_fold_logistic(np.column_stack([st] + amp), r, key, groups), r, key, groups)
+    keys = list(rows)
+    M = np.array([[rows[k].get(g, np.nan) for g in gs] for k in keys])
+    held, picks = loo_choice(M)
+    base = {"per_group": dict(zip(gs, map(float, held))), "loo_ap": float(np.nanmean(held)),
+            "picks": [keys[p] for p in picks], "rows_mean": {k: float(np.nanmean(M[i])) for i, k in enumerate(keys)}}
+    ceil = None
+    if F is not None:
+        c = per_group_ap(_fold_logistic(F, r, key, groups), r, key, groups)
+        ceil = {"per_group": c, "loo_ap": float(np.nanmean(list(c.values())))}
+    return base, ceil
+
+
 # ---------------------------------------------------------------------------- code words
 def code_score(C, lift, win):
     """Naive-Bayes code score (sum of the log-lifts of the P codes of a token) on whole 60-token rows,
-    averaged over +-1 token when ``win == 3`` (as ``Lexicon.code_values``)."""
+    averaged over +-1 token when ``win == 3`` (the ``code`` words of the lexicon of 08.11.2026, kept to
+    read it; the gates now use the compact words below)."""
     s = nb_score(C, lift)
     return _rows_mean3(s) if win == 3 else s
 
 
-def code_heldout(C, r, key, groups, n_codes, win):
-    """Leave-one-group-out code score: the lift is fitted on the other groups. Returns the held-out AP
-    per group and the held-out score of every token."""
-    held, sc = {}, np.full(len(r), np.nan)
-    for g in groups:
-        tr, te = key != g, key == g
-        if not r[te].any() or not r[tr].any():
+#: compact code words
+#: sizes tried for the compact code word (number of prefixes)
+KS = (5, 10, 20, 50, 100, 200)
+
+
+def prefix_keys(C, n_codes):
+    """Prefix ids of every token: level 0 = first RVQ code; level 1 = first two codes (``c0 * n_codes + c1``)."""
+    k0 = C[:, 0].astype(np.int64)
+    return [k0] if C.shape[1] < 2 else [k0, k0 * n_codes + C[:, 1].astype(np.int64)]
+
+
+def prefix_table(K, r, prior=20.0, min_n=50, exclude=None):
+    """Enriched prefixes, sorted by weight of evidence (hits x log-lift): ``[(level, prefix, log_lift, woe)]``
+    for the prefixes with >= ``min_n`` uses and a lift above 1 (shrunk with ``prior`` pseudo-uses);
+    ``exclude``: ``{(level, prefix)}`` left out (state codes)."""
+    b = max(float(r.mean()), 1e-9)
+    rows = []
+    for lvl, k in enumerate(K):
+        u, inv = np.unique(k, return_inverse=True)
+        n = np.bincount(inv)
+        h = np.bincount(inv, weights=r)
+        ll = np.log((h + prior * b) / (n + prior) / b)
+        ok = (n >= min_n) & (ll > 0)
+        if exclude:
+            ok &= ~np.isin(u, [p for l2, p in exclude if l2 == lvl])
+        rows += [(lvl, int(p), float(l_), float(hh * l_)) for p, l_, hh in zip(u[ok], ll[ok], h[ok])]
+    rows.sort(key=lambda t: -t[3])
+    return rows
+
+
+def compact_word(rows, k):
+    """The top ``k`` prefixes as ``{level: (sorted prefixes, log-lifts)}``."""
+    per = {}
+    for lvl, p, ll, _ in rows[:k]:
+        per.setdefault(lvl, []).append((p, ll))
+    return {l: (np.array([a for a, _ in sorted(v)], np.int64), np.array([b for _, b in sorted(v)], np.float32))
+            for l, v in per.items()}
+
+
+def compact_score(K, word, win):
+    """Score of a token: the largest log-lift among its prefixes in the word (0 outside the word), averaged
+    over +-1 token with ``win == 3`` (as ``Lexicon`` ``code_prefix`` words)."""
+    v = np.zeros(len(K[0]), np.float32)
+    for lvl, (keys, w) in word.items():
+        if lvl >= len(K) or not len(keys):
             continue
-        sc[te] = code_score(C[te], code_lift(C[tr], r[tr], n_codes), win)
-        held[g] = average_precision(sc[te], r[te])
-    return held, sc
+        pos = np.searchsorted(keys, K[lvl]).clip(0, len(keys) - 1)
+        v = np.maximum(v, np.where(keys[pos] == K[lvl], w[pos], np.float32(0)))
+    return _rows_mean3(v) if win == 3 else v
 
 
-def permute_within_stage(C, y, rng):
-    """Codes of the tokens shuffled among the tokens of the same stage (keeps what the stage explains)."""
-    out = C.copy()
-    for st in np.unique(y):
-        ix = np.flatnonzero(y == st)
-        out[ix] = C[rng.permutation(ix)]
+def compact_heldout(K, r, key, groups, exclude=None, ks=KS, keep_scores=True):
+    """Leave-one-group-out compact code word. Per held-out group: the prefix table of the other groups and
+    every (k, win) scored on the group; the (k, win) used for the group is chosen on the other groups (the
+    smallest k with mean AP >= 90 % of the best, then the better win). Returns the held-out AP per group,
+    the held-out token scores, the (k, win) chosen on all the groups and the mean AP of every (k, win)."""
+    cfg = [(k, w) for k in ks for w in (1, 3)]
+    gs = [g for g in groups if r[key == g].any()]
+    A = np.full((len(cfg), len(gs)), np.nan)
+    S = {}
+    for j, g in enumerate(gs):
+        tr, te = key != g, key == g
+        if not r[tr].any():
+            continue
+        rows = prefix_table([k[tr] for k in K], r[tr], exclude=exclude)
+        Kte = [k[te] for k in K]
+        for i, (k, w) in enumerate(cfg):
+            s = compact_score(Kte, compact_word(rows, k), w)
+            A[i, j] = average_precision(s, r[te])
+            if keep_scores:
+                S[i, j] = s
+
+    def pick(cols):
+        m = np.nanmean(A[:, cols], 1) if cols else np.full(len(cfg), np.nan)
+        if not np.isfinite(m).any():
+            return 0
+        ok = np.flatnonzero(m >= 0.9 * np.nanmax(m))
+        kmin = min(cfg[i][0] for i in ok)
+        return max((i for i in ok if cfg[i][0] == kmin), key=lambda i: m[i])
+
+    held, hs = {}, np.full(len(r), np.nan)
+    for j, g in enumerate(gs):
+        i = pick([c for c in range(len(gs)) if c != j] or [j])
+        held[g] = float(A[i, j])
+        if keep_scores and (i, j) in S:
+            hs[key == g] = S[i, j]
+    with np.errstate(all="ignore"):
+        curve = {f"{k}/{w}": float(np.nanmean(A[i])) for i, (k, w) in enumerate(cfg)}
+    return held, hs, cfg[pick(list(range(len(gs))))], curve
+
+
+def decode_prefix(lvl, p, n_codes):
+    return [int(p)] if lvl == 0 else list(map(int, divmod(int(p), n_codes)))
+
+
+def nb_per_level(C, r, key, groups, n_codes):
+    """Held-out AP of naive Bayes over the first 1..L RVQ levels (where the code information saturates)."""
+    out = []
+    for l in range(1, C.shape[1] + 1):
+        held = []
+        for g in groups:
+            tr, te = key != g, key == g
+            if r[te].any() and r[tr].any():
+                held.append(average_precision(nb_score(C[te], code_lift(C[tr], r[tr], n_codes), range(l)), r[te]))
+        out.append(float(np.mean(held)) if held else float("nan"))
     return out
 
 
-def scan_code_word(C, r, key, groups, n_codes, y, stages, night, rng, n_null=5):
-    """The concept's code word: naive Bayes over the P codes with the lifts fitted on the selection set
-    (raw or +-1 token mean, the better one by held-out AP). Held-out AP, nulls (references shifted within
-    the nights; codes permuted within the stage), family size and its stability across the folds
-    (Jaccard of the fold families with the whole one), held-out AP/base within the stage."""
-    best, win, held, sc = -1.0, 1, {}, None
-    for w in (1, 3):
-        h, s_ = code_heldout(C, r, key, groups, n_codes, w)
-        m = float(np.nanmean(list(h.values()))) if h else float("nan")
-        if m > best:
-            best, win, held, sc = m, w, h, s_
-    sh = [float(np.nanmean(list(code_heldout(C, shift_within_nights(r, night, rng), key, groups, n_codes, win)[0].values())))
-          for _ in range(n_null)]
-    pm = [float(np.nanmean(list(code_heldout(permute_within_stage(C, y, rng), r, key, groups, n_codes, win)[0].values())))
-          for _ in range(n_null)]
-    fam = set(family(C, r, n_codes)[0])
-    jac = []
-    for g in groups:
-        tr = key != g
-        if r[tr].any() and fam:
-            fg = set(family(C[tr], r[tr], n_codes)[0])
-            jac.append(len(fam & fg) / max(1, len(fam | fg)))
-    ws, wt = 0.0, 0
-    ok = ~np.isnan(sc)
-    for st in stages:
-        m = ok & (y == st)
-        if r[m].any():
-            ws += r[m].sum() * average_precision(sc[m], r[m]) / r[m].mean()
-            wt += r[m].sum()
-    return {"win": win, "loo_ap": best, "loo_ap_per_group": held,
-            "null_shift_q95": float(np.quantile(sh, 0.95)) if sh else None,
-            "null_perm_q95": float(np.quantile(pm, 0.95)) if pm else None,
-            "family_size": len(fam), "family_jaccard": float(np.mean(jac)) if jac else 0.0,
-            "ap_over_base_within_stage": ws / wt if wt else None}
+def scan_code_word(C, r, key, groups, n_codes, y, stages, night, rng, n_null=20, exclude=None):
+    """The concept's compact code word (top-k prefixes of the first two RVQ codes by weight of evidence;
+    k and the +-1 token mean chosen inside the folds). Held-out AP per group and token scores, null of
+    references shifted inside the (night, stage) runs with the whole selection redone, the word fitted
+    on all the selection tokens (the family = the evaluated object), naive-Bayes AP per RVQ level,
+    split-half stability, held-out AP/base within the stage."""
+    K = prefix_keys(C, n_codes)
+    held, hs, (k, win), curve = compact_heldout(K, r, key, groups, exclude)
+    obs = float(np.nanmean(list(held.values()))) if held else float("nan")
+    nulls = [float(np.nanmean(list(compact_heldout(K, shift_within_runs(r, night, y, rng), key, groups, exclude,
+                                                   keep_scores=False)[0].values())))
+             for _ in range(n_null)]
+    rows = prefix_table(K, r, exclude=exclude)
+    fam = [{"level": l, "codes": decode_prefix(l, p, n_codes), "log_lift": round(ll, 4)} for l, p, ll, _ in rows[:k]]
+    sub = _sub_rows(len(r), rng)
+
+    def fitted(gset, ix):
+        m = np.isin(key, list(gset))
+        return compact_score([kk[ix] for kk in K], compact_word(prefix_table([kk[m] for kk in K], r[m], exclude=exclude), k), win)
+
+    return {"k": int(k), "win": int(win), "loo_ap": obs, "per_group": held, "curve": curve,
+            "null_shift": {"values": nulls, "q95": float(np.quantile(nulls, 0.95)) if nulls else None,
+                           "p": null_p(obs, nulls)},
+            "family": fam, "family_size": len(fam), "distributed": bool(k > 50),
+            "nb_per_level": nb_per_level(C, r, key, groups, n_codes),
+            "stability_split": split_half([g for g in groups if r[key == g].any()], fitted, sub, rng),
+            "within": within_stage(hs, r, y, key, stages), "_word": compact_word(rows, k)}
 
 
-def scan_concept(name, Zs, bases, y, grp_names, night, refs, n_rot=5, n_shift=5, seed=0, max_tok=600_000,
-                 codes=None, n_codes=None):
+def scan_concept(name, Zs, bases, y, grp_names, night, refs, n_rot=5, n_shift=20, seed=0, max_tok=600_000,
+                 codes=None, n_codes=None, F=None):
+    """Both definitions of one concept on its selection set (the stratum of ``TARGETS``), their baselines
+    and nulls (see the module docstring and ``gates``)."""
     ref_name, _, stages, _, sel_set = TARGETS[name]
     ref, has = refs[ref_name]
     ext = np.isin(grp_names, ["shhs", "mass_ss01", "dreams"])
@@ -298,8 +560,10 @@ def scan_concept(name, Zs, bases, y, grp_names, night, refs, n_rot=5, n_shift=5,
     key = grp_names[idx] if sel_set == "pool" else night[idx].astype(str)
     groups = sorted(set(key))
     names = all_words(Zs, bases)
-    r = ref[idx]
+    r, yi, ni = ref[idx], y[idx], night[idx]
+    Fi = F[idx] if F is not None else None
     A, gs = ap_matrix(Zs, bases, names, idx, r, key, groups)
+    gbase = {g: float(r[key == g].mean()) for g in gs}
     mean_ap = np.nanmean(A, 1)
     order = np.argsort(-mean_ap)
     held, picks = loo_choice(A)
@@ -313,12 +577,17 @@ def scan_concept(name, Zs, bases, y, grp_names, night, refs, n_rot=5, n_shift=5,
         top.append({"word": names[w], "ap": float(mean_ap[w]), "ap_sd_groups": float(np.nanstd(A[w]))})
         if len(top) == 3:
             break
+    ica_pg = dict(zip(gs, map(float, held)))
     res = {"concept": name, "ref": ref_name, "stages": list(stages), "selection_set": sel_set,
-           "base_rate": float(r.mean()), "n_tok": int(len(idx)), "groups": gs, "top": top,
-           "loo_ap": float(np.nanmean(held)), "loo_ap_per_group": dict(zip(gs, map(float, held))),
+           "base_rate": float(r.mean()), "group_base": gbase, "n_tok": int(len(idx)), "groups": gs, "top": top,
+           "loo_ap": float(np.nanmean(held)), "loo_ap_per_group": ica_pg,
            "stability": float(np.mean([p == best for p in picks])),
            "loo_words": [names[p] for p in picks]}
-    # nulls: random rotations of the whitened coordinates, references shifted within the nights
+    # baselines (amplitude, stage) and ceiling (raw signal)
+    res["baseline"], res["ceiling"] = baselines(Zs, bases, names, idx, r, key, groups, yi, A, gs, Fi)
+    bpg = res["baseline"]["per_group"]
+    # ICA nulls: random rotations of the whitened coordinates (reported), references shifted inside the
+    # (night, stage) runs with the whole word selection redone (the gate)
     from scipy.stats import ortho_group
 
     rot = []
@@ -329,18 +598,31 @@ def scan_concept(name, Zs, bases, y, grp_names, night, refs, n_rot=5, n_shift=5,
         rot.append(float(np.nanmean(loo_choice(A_r)[0])))
     sh = []
     for s in range(n_shift):
-        rs = shift_within_nights(r, night[idx], rng)
+        rs = shift_within_runs(r, ni, yi, rng)
         sh.append(float(np.nanmean(loo_choice(ap_matrix(Zs, bases, names, idx, rs, key, groups)[0])[0])))
     res["null_rotation"] = {"q95": float(np.quantile(rot, 0.95)) if rot else None, "values": rot}
-    res["null_shift"] = {"q95": float(np.quantile(sh, 0.95)) if sh else None, "values": sh}
-    # within-stage AP of the best word (mean over the stratum's stages, weighted by the reference)
-    ws, wt = 0.0, 0
-    for st in stages:
-        m = y[idx] == st
-        if r[m].any():
-            ws += r[m].sum() * average_precision(score_of(Zs, bases, names[best], idx)[m], r[m]) / r[m].mean()
-            wt += r[m].sum()
-    res["best_ap_over_base_within_stage"] = ws / wt if wt else None
+    res["null_shift"] = {"q95": float(np.quantile(sh, 0.95)) if sh else None, "values": sh,
+                         "p": null_p(res["loo_ap"], sh)}
+    # held-out scores of the ICA word (the word chosen without the group) -> within-stage AP/base
+    hs = np.full(len(idx), np.nan)
+    for j, g in enumerate(gs):
+        m = key == g
+        hs[m] = score_of(Zs, bases, names[picks[j]], idx[m])
+    res["best_ap_over_base_within_stage"] = within_stage(hs, r, yi, key, stages)
+    sub = _sub_rows(len(idx), rng)
+    col = {g: j for j, g in enumerate(gs)}
+
+    def ica_fitted(gset, ix):
+        cols = [col[g] for g in gset if g in col]
+        return score_of(Zs, bases, names[int(np.nanargmax(np.nanmean(A[:, cols], 1)))], idx[ix])
+
+    res["ica"] = {"word": names[best], "loo_ap": res["loo_ap"], "per_group": ica_pg, "amp": "E[all]" in names[best],
+                  "null_shift": res["null_shift"], "null_rotation": res["null_rotation"],
+                  "stability_split": split_half(gs, ica_fitted, sub, rng),
+                  "within": res["best_ap_over_base_within_stage"],
+                  "p_vs_base": paired_p(ica_pg, bpg), "margin_nap": nap_margin(ica_pg, bpg, gbase)}
+    if res["ceiling"]:
+        res["ica"]["retention"] = res["loo_ap"] / max(res["ceiling"]["loo_ap"], 1e-9)
     # transfer of the top words (chosen on the selection set) to the out-of-pool sets and the experts
     tr = {}
 
@@ -364,20 +646,26 @@ def scan_concept(name, Zs, bases, y, grp_names, night, refs, n_rot=5, n_shift=5,
                                  **{t["word"]: average_precision(score_of(Zs, bases, t["word"], ix), er[ix]) for t in top}}
     res["transfer"] = tr
     if codes is not None:
-        cw = scan_code_word(codes[idx], r, key, groups, n_codes, y[idx], stages, night[idx], rng)
-        lift = code_lift(codes[idx], r, n_codes)
+        cw = scan_code_word(codes[idx], r, key, groups, n_codes, yi, stages, ni, rng, n_shift)
+        word, win = cw.pop("_word"), cw["win"]
+        cw["p_vs_base"] = paired_p(cw["per_group"], bpg)
+        cw["margin_nap"] = nap_margin(cw["per_group"], bpg, gbase)
+        if res["ceiling"]:
+            cw["retention"] = cw["loo_ap"] / max(res["ceiling"]["loo_ap"], 1e-9)
+        res["code_vs_ica_p"] = paired_p(cw["per_group"], ica_pg)
         ctr = {}
         for g in ("shhs", "mass_ss01", "dreams"):
             ix = rows_of(strat & (grp_names == g))
             if g != sel_set and len(ix) and ref[ix].any():
-                ctr[g] = {"base": float(ref[ix].mean()), "ap": average_precision(code_score(codes[ix], lift, cw["win"]), ref[ix])}
+                ctr[g] = {"base": float(ref[ix].mean()),
+                          "ap": average_precision(compact_score(prefix_keys(codes[ix], n_codes), word, win), ref[ix])}
         for e in EXPERT.get(name, ()):
             if e in refs:
                 er, eh = refs[e]
                 ix = rows_of(np.isin(y, stages) & eh)
                 if len(ix) and er[ix].any():
                     ctr[f"expert:{e}"] = {"base": float(er[ix].mean()),
-                                          "ap": average_precision(code_score(codes[ix], lift, cw["win"]), er[ix])}
+                                          "ap": average_precision(compact_score(prefix_keys(codes[ix], n_codes), word, win), er[ix])}
         cw["transfer"] = ctr
         res["code"] = cw
     return res
@@ -410,7 +698,7 @@ def main(argv=None):
     ap.add_argument("--tag", required=True)
     ap.add_argument("--frac", type=float, default=0.25, help="fraction of the pool epochs loaded")
     ap.add_argument("--rotations", type=int, default=5)
-    ap.add_argument("--shifts", type=int, default=5)
+    ap.add_argument("--shifts", type=int, default=20)
     ap.add_argument("--seed", type=int, default=0)
     a = ap.parse_args(argv)
     t0 = time.time()
@@ -430,21 +718,24 @@ def main(argv=None):
         print("DONE", flush=True)
         return
     need = sorted({TARGETS[n][0] for n in names} | {e for n in names for e in EXPERT.get(n, ())})
-    Zs, y, G, NI, groups, refs, C = load_coords(a.dump, a.mod, bases, need, a.frac, a.seed, with_codes=True)
+    Zs, y, G, NI, groups, refs, C, F = load_coords(a.dump, a.mod, bases, need, a.frac, a.seed, with_codes=True,
+                                                   with_signal=True)
     gn = np.array(groups)[G]
     n_codes = json.load(open(os.path.join(a.dump, "meta.json")))["n_codes"][a.mod]["P"]
     print(f"[words] {a.mod}: {len(y)} tokens, groups {groups}, {(time.time() - t0) / 60:.1f} min", flush=True)
     sp = os.path.join(a.dump, f"words_{a.tag}.json")
     out = json.load(open(sp)) if os.path.exists(sp) else {}
     for n in names:
-        r = scan_concept(n, Zs, bases, y, gn, NI, refs, a.rotations, a.shifts, a.seed, codes=C, n_codes=n_codes)
+        r = scan_concept(n, Zs, bases, y, gn, NI, refs, a.rotations, a.shifts, a.seed, codes=C, n_codes=n_codes, F=F)
         out[f"{n}/{a.mod}"] = r
-        json.dump(out, open(sp, "w"), indent=1)
-        print(f"[words] {n}/{a.mod}: top {[(t['word'], round(t['ap'], 3)) for t in r.get('top', [])]} "
-              f"loo {r.get('loo_ap', np.nan):.3f} base {r.get('base_rate', np.nan):.3f} "
-              f"rot95 {r.get('null_rotation', {}).get('q95')} shift95 {r.get('null_shift', {}).get('q95')} "
-              f"stab {r.get('stability')} code {({k: v for k, v in r.get('code', {}).items() if k not in ('transfer', 'loo_ap_per_group')})} transfer "
-              f"{ {g: {k: round(v, 3) for k, v in t.items()} for g, t in r.get('transfer', {}).items()} } "
+        json.dump(out, open(sp, "w"), indent=1, default=float)
+        i_, c_, b_ = r.get("ica", {}), r.get("code", {}), r.get("baseline", {})
+        f3 = lambda v: "-" if v is None else f"{v:.3f}"
+        print(f"[words] {n}/{a.mod}: ica {i_.get('word')} ap {f3(i_.get('loo_ap'))} p_null {f3(i_.get('null_shift', {}).get('p'))} "
+              f"p_base {f3(i_.get('p_vs_base'))} stab {f3(i_.get('stability_split'))} | code k{c_.get('k')}/w{c_.get('win')} "
+              f"ap {f3(c_.get('loo_ap'))} p_null {f3(c_.get('null_shift', {}).get('p'))} p_base {f3(c_.get('p_vs_base'))} "
+              f"stab {f3(c_.get('stability_split'))} | baseline {f3(b_.get('loo_ap'))} {sorted(set(b_.get('picks', [])))} "
+              f"ceiling {f3((r.get('ceiling') or {}).get('loo_ap'))} base {f3(r.get('base_rate'))} "
               f"{(time.time() - t0) / 60:.1f} min", flush=True)
     print("DONE", flush=True)
 
@@ -638,54 +929,90 @@ def lexicon_word(name, word, bases_m, mod, thr, extra):
 
 
 def candidates(r):
-    """The two definitions of a concept from its scan: the ICA word (best by mean AP) and the code word,
-    each with the fields of :func:`gates`."""
+    """The two definitions of a concept from its scan, with the fields of :func:`gates`: the ICA word (best
+    by mean AP) and the compact code word."""
     out = {}
-    if r.get("top"):
-        amp = "E[all]" in r["top"][0]["word"]
-        nulls = [r["null_shift"]["q95"]] + ([] if amp else [r["null_rotation"]["q95"]])
-        out["ica"] = {"kind": "ica", "word": r["top"][0]["word"], "loo_ap": r["loo_ap"], "nulls": nulls, "amp": amp,
-                      "stable": r["stability"] >= 7 / 9, "stability": r["stability"],
-                      "within": r.get("best_ap_over_base_within_stage")}
+    i = r.get("ica")
+    if i:
+        out["ica"] = {"kind": "ica", "word": i["word"], "loo_ap": i["loo_ap"], "per_group": i["per_group"],
+                      "null_p": i["null_shift"]["p"], "null_q95": i["null_shift"]["q95"], "amp": i["amp"],
+                      "stability": i["stability_split"], "stable": i["stability_split"] >= 0.7, "within": i["within"],
+                      "p_vs_base": i["p_vs_base"], "margin_nap": i["margin_nap"], "retention": i.get("retention")}
     c = r.get("code")
-    if c and c.get("null_shift_q95") is not None:
-        out["code"] = {"kind": "code", "word": f"code:NB{'~' if c['win'] == 3 else ''}", "win": c["win"],
-                       "loo_ap": c["loo_ap"], "nulls": [c["null_shift_q95"], c["null_perm_q95"]], "amp": False,
-                       "stable": c["family_jaccard"] >= 0.5, "stability": c["family_jaccard"],
-                       "within": c.get("ap_over_base_within_stage"), "family_size": c["family_size"]}
+    if c and "k" in c:
+        out["code"] = {"kind": "code", "word": f"code:top{c['k']}{'~' if c['win'] == 3 else ''}", "k": c["k"],
+                       "win": c["win"], "loo_ap": c["loo_ap"], "per_group": c["per_group"],
+                       "null_p": c["null_shift"]["p"], "null_q95": c["null_shift"]["q95"], "amp": False,
+                       "stability": c["stability_split"], "stable": c["stability_split"] >= 0.7, "within": c["within"],
+                       "p_vs_base": c["p_vs_base"], "margin_nap": c["margin_nap"], "retention": c.get("retention"),
+                       "family_size": c["family_size"], "distributed": c["distributed"], "family": c["family"],
+                       "curve": c.get("curve"), "nb_per_level": c.get("nb_per_level")}
     return out
 
 
-def gates(concept, c):
-    """Verdict of one definition: do the codes determine the term? L1: held-out AP above the q95 of every
-    null (ICA: shifted references and random rotations, rotation-invariant ``E[all]`` only the shift; code:
-    shifted references and codes permuted within the stage); L2: the same word / family across the folds;
-    specificity beyond the stage: held-out AP/base within the stage. Whether the stager uses the term (L3)
-    is a property of the stager and is not part of the verdict."""
-    margin = c["loo_ap"] - max(c["nulls"])
-    l1 = margin > 0
-    within = c.get("within") or 0
-    if not l1 or margin < 0.01:  # a hair above the null is no word
-        verdict = "bocciata"
-    elif concept in ("atonia",) or within < 1.6:
-        verdict = "solo stadio"
-    elif c["amp"]:
-        verdict = "ampiezza"
-    elif margin < 0.05 or not c["stable"]:
-        verdict = "debole"
+def choose(cands, p_code_vs_ica):
+    """The code word replaces the ICA word only when it is better on the held-out groups (one-sided paired
+    test, p < 0.05): on a tie the simpler ICA word stays."""
+    if "code" in cands and ("ica" not in cands or (p_code_vs_ica < 0.05
+                                                   and cands["code"]["loo_ap"] > cands["ica"]["loo_ap"])):
+        return "code"
+    return "ica"
+
+
+def bh(p):
+    """Benjamini-Hochberg q-values."""
+    p = np.asarray(p, float)
+    if not len(p):
+        return p
+    o = np.argsort(p)
+    q = p[o] * len(p) / np.arange(1, len(p) + 1)
+    q = np.minimum.accumulate(q[::-1])[::-1]
+    out = np.empty_like(q)
+    out[o] = np.minimum(q, 1.0)
+    return out
+
+
+def gates(concept, c, q=None):
+    """Verdict of one definition (08.11.2026, after the review): do the codes determine the term?
+
+    - ``bocciata``: the held-out AP does not beat references shifted inside the (night, stage) runs with
+      the whole selection redone (permutation p > 0.05);
+    - ``solo stadio``: held-out AP/base inside the stage < 1.6 (or atonia, a tone level);
+    - ``ampiezza``: not better than the amplitude / stage baselines (one-sided paired test over the
+      held-out groups, BH ``q`` over the frozen terms > 0.05, or normalized-AP margin <= 0), or an ICA
+      word on the total energy ``E[all]``;
+    - ``debole``: normalized-AP margin over the baseline < 0.05, or split-half stability < 0.7;
+    - ``valida`` otherwise.
+
+    Whether the stager uses the term is a property of the stager and is not part of the verdict."""
+    q = c["p_vs_base"] if q is None else q
+    if c["null_p"] > 0.05:
+        v = "bocciata"
+    elif concept in ("atonia",) or (c.get("within") or 0) < 1.6:
+        v = "solo stadio"
+    elif c["amp"] or q > 0.05 or c["margin_nap"] <= 0:
+        v = "ampiezza"
+    elif c["margin_nap"] < 0.05 or not c["stable"]:
+        v = "debole"
     else:
-        verdict = "valida"
-    return {"L1": bool(l1), "L1_margin": float(margin), "L2": bool(c["stable"]), "verdict": verdict}
+        v = "valida"
+    return {"null_p": c["null_p"], "p_vs_base": c["p_vs_base"], "q_vs_base": float(q), "margin_nap": c["margin_nap"],
+            "stable": bool(c["stable"]), "verdict": v}
+
+
+def _family_set(fam, n_codes):
+    return {(f["level"], f["codes"][0] if f["level"] == 0 else f["codes"][0] * n_codes + f["codes"][1]) for f in fam}
 
 
 def freeze(a):
+    from collections import Counter
+
     from physioex.models.vq_lexicon import Lexicon
 
     meta = json.load(open(os.path.join(a.dump, "meta.json")))
     fp = os.path.join(a.dump, "fidelity.json")
     fid = json.load(open(fp))["summary"] if os.path.exists(fp) else {}
-    rng = np.random.default_rng(a.seed)
-    lex_bases, lex_words, report = {}, [], {}
+    lex_bases, pend, overlap = {}, [], {}
     for mod in meta["mods"]:
         wp = os.path.join(a.dump, f"words_{mod}.json")
         if not os.path.exists(wp):
@@ -700,6 +1027,14 @@ def freeze(a):
         gn = np.array(groups)[G]
         for rep, b in bases.items():
             lex_bases[f"{mod}_{rep}"] = {"rep": rep, "mod": mod, "mean": b["mean"], "unmix": b["unmix"], "mix": b["mix"]}
+        # state codes: prefixes in the code families of more than 3 concepts of the modality (null passed)
+        fams = {n: _family_set(wj[f"{n}/{mod}"]["code"]["family"], n_codes) for n in names
+                if wj[f"{n}/{mod}"].get("code", {}).get("null_shift", {}).get("p", 1) <= 0.05}
+        cnt = Counter(p for s in fams.values() for p in s)
+        state = {p for p, k in cnt.items() if k > 3}
+        overlap[mod] = {"state_prefixes": len(state),
+                        "jaccard": {f"{x}|{z}": round(len(fams[x] & fams[z]) / max(1, len(fams[x] | fams[z])), 3)
+                                    for i_, x in enumerate(sorted(fams)) for z in sorted(fams)[i_ + 1:]}}
         for n in names:
             r = wj[f"{n}/{mod}"]
             ref_name, _, stages, _, sel_set = TARGETS[n]
@@ -708,40 +1043,68 @@ def freeze(a):
             fit = strat & ((gn == "dreams") if sel_set == "dreams" else ~np.isin(gn, ["shhs", "mass_ss01", "dreams"]))
             rows = np.flatnonzero(fit.reshape(-1, T).all(1))
             idx = (rows[:, None] * T + np.arange(T)).reshape(-1)
-            rr, key = ref[idx], (gn[idx] if sel_set == "pool" else NI[idx].astype(str))
+            rr, key, yi = ref[idx], (gn[idx] if sel_set == "pool" else NI[idx].astype(str)), y[idx]
             cands = candidates(r)
-            ver = {k: gates(n, c) for k, c in cands.items()}
-            win_kind = max(cands, key=lambda k: cands[k]["loo_ap"])
+            p_ci = r.get("code_vs_ica_p", 1.0)
+            excl = None
+            if "code" in cands and state & fams.get(n, set()):
+                excl = state  # the state codes leave the event's definition: selection redone without them
+                K = prefix_keys(C[idx], n_codes)
+                held, hs, (k, win), _ = compact_heldout(K, rr, key, sorted(set(key)), excl)
+                bpg = r["baseline"]["per_group"]
+                tab = prefix_table(K, rr, exclude=excl)
+                cands["code"].update(
+                    loo_ap=float(np.nanmean(list(held.values()))), per_group=held, k=int(k), win=int(win),
+                    word=f"code:top{k}{'~' if win == 3 else ''}", within=within_stage(hs, rr, yi, key, stages),
+                    p_vs_base=paired_p(held, bpg), margin_nap=nap_margin(held, bpg, r["group_base"]),
+                    family=[{"level": l, "codes": decode_prefix(l, p, n_codes), "log_lift": round(ll, 4)}
+                            for l, p, ll, _ in tab[:k]],
+                    family_size=len(tab[:k]), distributed=bool(k > 50), state_removed=len(state & fams[n]))
+                p_ci = paired_p(held, cands["ica"]["per_group"]) if "ica" in cands else 0.0
+            win_kind = choose(cands, p_ci)
             cw = cands[win_kind]
             word = cw["word"]
             if win_kind == "code":
-                lift = code_lift(C[idx], rr, n_codes)
+                ex_ = excl
 
-                def score(ix, lift_=None):
-                    return code_score(C[ix], lift if lift_ is None else lift_, cw["win"])
+                def fit_word(ix):
+                    return compact_word(prefix_table(prefix_keys(C[ix], n_codes), ref[ix], exclude=ex_), cw["k"])
+
+                word_c = fit_word(idx)
+
+                def score(ix, w_=None):
+                    return compact_score(prefix_keys(C[ix], n_codes), word_c if w_ is None else w_, cw["win"])
             else:
-                def score(ix, lift_=None):
+                def score(ix, w_=None):
                     return score_of(Zs, bases, word, ix)
             sc = score(idx)
             q = 1 - r["base_rate"]
             thr = float(np.quantile(sc, q))
-            held = []
+            if win_kind == "code":
+                if thr <= 0:  # most tokens hold no prefix of the word: fire on the word only
+                    thr = float(sc[sc > 0].min()) if (sc > 0).any() else 1e-6
+                thr -= 1e-6  # discrete scores: the tied values at the threshold fire whatever the summation order
+            held_f1 = []
             for g in sorted(set(key)):
                 tr, te = key != g, key == g
                 if rr[te].any():
-                    if win_kind == "code":  # the lift of the fold as well
-                        lf = code_lift(C[idx[tr]], rr[tr], n_codes)
-                        held.append(_tok_f1(score(idx[te], lf) >= np.quantile(score(idx[tr], lf), q), rr[te]))
+                    if win_kind == "code":  # the word of the fold as well
+                        wf = fit_word(idx[tr])
+                        s_tr = score(idx[tr], wf)
+                        t_ = np.quantile(s_tr, q)
+                        t_ = t_ if t_ > 0 else (s_tr[s_tr > 0].min() if (s_tr > 0).any() else 1e-6)
+                        held_f1.append(_tok_f1(score(idx[te], wf) >= t_, rr[te]))
                     else:
-                        held.append(_tok_f1(sc[te] >= np.quantile(sc[tr], q), rr[te]))
+                        held_f1.append(_tok_f1(sc[te] >= np.quantile(sc[tr], q), rr[te]))
             rec = {"word": word, "definition": win_kind, "threshold": thr, "base_rate": r["base_rate"],
-                   "token_f1_loo": float(np.mean(held)), "loo_ap": cw["loo_ap"], "nulls_q95": cw["nulls"],
-                   "stability": cw["stability"], "ap_over_base_within_stage": cw["within"],
-                   "family_size": cands.get("code", {}).get("family_size"),
-                   "alternative": {k: {**{f: v for f, v in c.items() if f in ("word", "loo_ap", "nulls", "stability", "within")},
-                                       **ver[k]} for k, c in cands.items() if k != win_kind},
+                   "token_f1_loo": float(np.mean(held_f1)), "loo_ap": cw["loo_ap"], "per_group": cw["per_group"],
+                   "group_base": r["group_base"], "baseline": r["baseline"], "ceiling": r.get("ceiling"),
+                   "retention": cw.get("retention"), "null_q95": cw["null_q95"], "stability": cw["stability"],
+                   "ap_over_base_within_stage": cw["within"], "code_vs_ica_p": p_ci,
                    "transfer_ap": r["code"]["transfer"] if win_kind == "code" else r["transfer"]}
-            rec.update(ver[win_kind])
+            for f in ("k", "win", "family_size", "family", "distributed", "curve", "nb_per_level", "state_removed"):
+                if f in cw:
+                    rec[f] = cw[f]
             fkey = n if mod == "eeg" or n != "arousal" else f"{n}_{mod}"
             if fkey in fid and FIDELITY.get(fkey, (None,))[0] == mod:
                 rec["stager_use"] = fid[fkey]  # L3: a property of the stager, not of the lexicon
@@ -762,12 +1125,15 @@ def freeze(a):
                     ix = np.flatnonzero((NI == night) & eh)
                     if not er[ix].any():
                         continue
-                    if sel_set == "dreams":  # threshold (and code lift) from the other excerpts
+                    if sel_set == "dreams":  # threshold (and code word) from the other excerpts
                         oth = np.flatnonzero(fit.reshape(-1, T).all(1) & (NI.reshape(-1, T)[:, 0] != night))
                         oth = (oth[:, None] * T + np.arange(T)).reshape(-1)
-                        lf = code_lift(C[oth], ref[oth], n_codes) if win_kind == "code" else None
-                        t_ = np.quantile(score(oth, lf), q)
-                        per.append(event_f1(score(ix, lf) >= t_, er[ix]))
+                        wf = fit_word(oth) if win_kind == "code" else None
+                        so = score(oth, wf)
+                        t_ = np.quantile(so, q)
+                        if win_kind == "code" and t_ <= 0:
+                            t_ = so[so > 0].min() if (so > 0).any() else 1e-6
+                        per.append(event_f1(score(ix, wf) >= t_, er[ix]))
                     else:
                         per.append(event_f1(score(ix) >= thr, er[ix]))
                 if per:
@@ -778,25 +1144,42 @@ def freeze(a):
                              "n_pred": npred, "n_ref": nref}
             rec["event_f1_experts"] = ev
             name = n if mod == "eeg" or n not in ("arousal", "resp_end", "plm_arousal") else f"{n}_{mod}"
-            report[name] = {"mod": mod, **rec}
-            extra = {"verdict": rec["verdict"], "stages": list(stages), "base_rate": r["base_rate"]}
+            lw = None
             if win_kind == "code":
                 cb = f"{mod}_code_{name}"
-                lex_bases[cb] = {"rep": "code", "mod": mod, "loglift": np.log(lift).astype(np.float32)}
-                lex_words.append({"name": name, "event": name, "basis": cb, "word": word, "kind": "code",
-                                  "win": cw["win"], "side": 1, "threshold": thr, "family_size": cw["family_size"], **extra})
+                lex_bases[cb] = {"rep": "code_prefix", "mod": mod,
+                                 **{f"pref_keys{l}": word_c[l][0] for l in word_c},
+                                 **{f"pref_w{l}": word_c[l][1] for l in word_c}}
+                lw = {"name": name, "event": name, "basis": cb, "word": word, "kind": "code_prefix",
+                      "n_codes": int(n_codes), "win": cw["win"], "side": 1, "threshold": thr,
+                      "family_size": cw["family_size"]}
             else:
-                lex_words.append(lexicon_word(name, word, bases, mod, thr, extra))
-            print(f"[freeze] {name}: {rec['verdict']} thr {thr:.3f} tokF1 {rec['token_f1_loo']:.3f} "
-                  f"transfer {({k: round(v, 3) for k, v in tf.items()})} events {({k: round(v['f1'], 3) for k, v in ev.items()})}",
-                  flush=True)
+                lw = lexicon_word(name, word, bases, mod, thr, {})
+            pend.append((n, name, mod, stages, win_kind, cands, rec, lw))
+    # verdicts: BH over the chosen definitions of all the frozen terms
+    qs = bh([p[5][p[4]]["p_vs_base"] for p in pend])
+    lex_words, report = [], {}
+    for (n, name, mod, stages, win_kind, cands, rec, lw), q in zip(pend, qs):
+        ver = {k: gates(n, c, q if k == win_kind else None) for k, c in cands.items()}
+        rec.update(ver[win_kind])
+        rec["alternative"] = {k: {**{f: v for f, v in c.items() if f in ("word", "loo_ap", "null_q95", "stability",
+                                                                          "within", "family_size", "retention")},
+                                  **ver[k]} for k, c in cands.items() if k != win_kind}
+        report[name] = {"mod": mod, **rec}
+        lex_words.append({**lw, "verdict": rec["verdict"], "stages": list(stages), "base_rate": rec["base_rate"]})
+        print(f"[freeze] {name}: {rec['verdict']} {win_kind} {rec['word']} ap {rec['loo_ap']:.3f} "
+              f"base-line {rec['baseline']['loo_ap']:.3f} q {q:.3g} nAP+ {rec['margin_nap']:.3f} "
+              f"stab {rec['stability']:.2f} within {rec['ap_over_base_within_stage'] or 0:.2f} "
+              f"ret {rec['retention'] or float('nan'):.2f} tokF1 {rec['token_f1_loo']:.3f}", flush=True)
     lex = Lexicon(lex_bases, lex_words, {"continuous": False, "encoder": meta["combo_dir"], "stager": meta["stager"],
                                          "fitted_on": "pool nights of the concept_scan dump (label-free bases)",
                                          "threshold": "quantile of the pool stratum at the concept base rate",
+                                         "gates": "concept_words.gates, 08.11.2026 (baselines, BH, split-half)",
                                          "event_rules": {w["name"]: {"gap": 1, "min_tok": 1} for w in lex_words}})
     out = a.out or os.path.join(meta["combo_dir"], "lexicon_v2")
     lex.save(out)
-    json.dump(report, open(os.path.join(out, "gates.json"), "w"), indent=1)
+    json.dump(report, open(os.path.join(out, "gates.json"), "w"), indent=1, default=float)
+    json.dump(overlap, open(os.path.join(out, "code_overlap.json"), "w"), indent=1)
     # round trip: the saved lexicon fires as the scores of the scan on one pool night (rows, continuous=False)
     lx = Lexicon.load(out)
     key = next(k for k, e in sorted(meta["nights"].items()) if e["unit"] != "dreams" and set(meta["mods"]) <= set(e["mods"]))
@@ -806,9 +1189,11 @@ def freeze(a):
     fired = lx.fire(pqs, continuous=False, codes=cds)
     bad = []
     for w in lex_words:
-        if w["kind"] == "code":
+        if w["kind"] == "code_prefix":
             c = cds[lx.mod_of(w["basis"])]
-            s_ = code_score(c.reshape(-1, c.shape[-1]), np.exp(lex_bases[w["basis"]]["loglift"].astype(np.float64)), w["win"])
+            b = lex_bases[w["basis"]]
+            wd = {l: (b[f"pref_keys{l}"], b[f"pref_w{l}"]) for l in (0, 1) if f"pref_keys{l}" in b}
+            s_ = compact_score(prefix_keys(c.reshape(-1, c.shape[-1]), w["n_codes"]), wd, w["win"])
             if ((s_ >= w["threshold"]) != fired[w["name"]]).mean() > 1e-3:
                 bad.append(w["name"])
             continue

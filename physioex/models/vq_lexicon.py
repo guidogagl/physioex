@@ -17,6 +17,11 @@ log-lift of every code of every RVQ level (``loglift``, ``(L, n_codes)``), the s
 sum of the log-lifts of its codes (naive Bayes over the levels), optionally averaged over ``win``
 tokens. The codes alone determine the word.
 
+A ``code_prefix`` word (08.11.2026) is a compact code family: its basis (``rep: "code_prefix"``) holds the
+prefixes of the word (``pref_keys0``: first RVQ code; ``pref_keys1``: first two codes as
+``c0 * n_codes + c1``, sorted) and their log-lifts (``pref_w0``, ``pref_w1``); the score of a token is the
+largest log-lift among its prefixes in the word (0 outside it), optionally averaged over ``win`` tokens.
+
 An event can carry post-processing rules in ``meta["event_rules"][event]``: ``gap`` (largest gap,
 in tokens, merged inside one event; default 1) and ``min_tok`` (shortest event kept; default 1).
 
@@ -34,7 +39,7 @@ from typing import Dict, List
 import numpy as np
 
 TOK_S = 0.5
-_ARRAYS = ("mean", "unmix", "mix", "loglift")
+_ARRAYS = ("mean", "unmix", "mix", "loglift", "pref_keys0", "pref_w0", "pref_keys1", "pref_w1")
 
 
 def ctx3(f: np.ndarray) -> np.ndarray:
@@ -117,6 +122,22 @@ class Lexicon:
         win = int(w.get("win", 1))
         return window_mean(v, win, T) if win > 1 else v
 
+    def prefix_values(self, codes: np.ndarray, w: dict, T: int) -> np.ndarray:
+        """Score of the compact code word ``w`` on ``codes`` (``(n, T, L)`` P codes)."""
+        b = self.bases[w["basis"]]
+        c = codes.reshape(-1, codes.shape[-1]).astype(np.int64)
+        nc = int(w["n_codes"])
+        v = np.zeros(len(c), np.float32)
+        for lvl in (0, 1):
+            keys = b.get(f"pref_keys{lvl}")
+            if keys is None or not len(keys) or c.shape[1] <= lvl:
+                continue
+            k = c[:, 0] if lvl == 0 else c[:, 0] * nc + c[:, 1]
+            pos = np.searchsorted(keys, k).clip(0, len(keys) - 1)
+            v = np.maximum(v, np.where(keys[pos] == k, b[f"pref_w{lvl}"][pos], np.float32(0)))
+        win = int(w.get("win", 1))
+        return window_mean(v.astype(np.float64), win, T) if win > 1 else v
+
     def fire(self, pq, continuous: bool = True, codes=None) -> Dict[str, np.ndarray]:
         """Word masks over the ``n*T`` tokens of ``pq`` (``(n, T, d_p)``, or ``{mod: (n, T, d_p)}`` for a
         multimodal lexicon: the words of a missing modality are left out). ``codes``: the P codes
@@ -128,19 +149,20 @@ class Lexicon:
 
         def have(w):
             m = self.mod_of(w["basis"])
-            if w.get("kind") == "code":
+            if w.get("kind") in ("code", "code_prefix"):
                 return codes is not None and (cds is None or m in cds)
             return pq is not None and (pqs is None or m in pqs)
 
         words = [w for w in self.words if have(w)]
         src = {b: (pqs[self.mod_of(b)] if pqs is not None else pq)
-               for b in {w["basis"] for w in words if w.get("kind") != "code"}}
+               for b in {w["basis"] for w in words if w.get("kind") not in ("code", "code_prefix")}}
         Zc = {b: self.coords(x, b) for b, x in src.items()}
         out = {}
         for w in words:
-            if w.get("kind") == "code":
+            if w.get("kind") in ("code", "code_prefix"):
                 c = cds[self.mod_of(w["basis"])] if cds is not None else codes
-                v = self.code_values(c, w, c.shape[0] * c.shape[1] if continuous else c.shape[1])
+                fn = self.code_values if w["kind"] == "code" else self.prefix_values
+                v = fn(c, w, c.shape[0] * c.shape[1] if continuous else c.shape[1])
             else:
                 n, T, _ = src[w["basis"]].shape
                 v = self.word_values(Zc[w["basis"]], w, n * T if continuous else T)

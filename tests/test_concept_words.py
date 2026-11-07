@@ -16,7 +16,7 @@ def _setup(seed=0, n_rows=400, D=8):
     ref &= y == 2
     Z[ref, 3] += 3.0
     night = np.repeat(np.arange(n_rows) // 40, W.T)
-    grp = np.array(["a", "b", "c", "d"])[night % 4]
+    grp = np.array(list("abcdefgh"))[night % 8]
     bases = {"pq1": {"groups": {"kurt4": [0, 1, 2, 3], "all": list(range(D))}}}
     refs = {"spindle_rule": (ref, np.ones(n, bool))}
     return {"pq1": Z}, bases, y, grp, night, refs
@@ -144,25 +144,104 @@ def _codes_setup(seed=0, n_rows=400, L=2, n_codes=64):
 
 def test_code_word_finds_planted_family_and_beats_nulls():
     Zs, bases, y, grp, night, refs, C, n_codes = _codes_setup()
-    r = W.scan_concept("spindle", Zs, bases, y, grp, night, refs, n_rot=2, n_shift=2, codes=C, n_codes=n_codes)
+    r = W.scan_concept("spindle", Zs, bases, y, grp, night, refs, n_rot=2, n_shift=19, codes=C, n_codes=n_codes)
     c = r["code"]
-    assert c["loo_ap"] > 0.5 > max(c["null_shift_q95"], c["null_perm_q95"])
-    assert c["family_size"] >= 2 and c["family_jaccard"] >= 0.5
+    assert c["loo_ap"] > 0.5 > c["null_shift"]["q95"] and c["null_shift"]["p"] <= 0.05
+    assert c["k"] <= 10 and {(f["level"], f["codes"][0]) for f in c["family"][:2]} == {(0, 5), (0, 6)}
+    assert c["stability_split"] >= 0.7 and c["p_vs_base"] < 0.05
+    cand = W.candidates(r)["code"]
+    assert W.gates("spindle", cand)["verdict"] == "valida"
 
 
-def test_stage_only_code_fails_the_permutation_null():
+def test_stage_only_code_is_rejected():
     Zs, bases, y, grp, night, refs, C, n_codes = _codes_setup()
     ref = refs["spindle_rule"][0]
     C[:, 0] = np.where(y == 2, 5, 9)  # the code says the stage, not the event
     C[ref, 0] = 5
-    r = W.scan_concept("spindle", Zs, bases, y, grp, night, refs, n_rot=2, n_shift=2, codes=C, n_codes=n_codes)
+    r = W.scan_concept("spindle", Zs, bases, y, grp, night, refs, n_rot=2, n_shift=19, codes=C, n_codes=n_codes)
     cand = W.candidates(r)["code"]
-    assert W.gates("spindle", cand)["verdict"] == "bocciata"
+    assert W.gates("spindle", cand)["verdict"] in ("bocciata", "ampiezza")
 
 
-def test_gates_ignore_the_stager():
-    c = {"loo_ap": 0.5, "nulls": [0.1, 0.2], "amp": False, "stable": True, "within": 5.0}
+def test_amplitude_baseline_catches_an_energy_reference():
+    """When the token RMS of the raw signal predicts the reference as well as the word, the word only
+    says amplitude, whatever its AP."""
+    Zs, bases, y, grp, night, refs = _setup()
+    ref = refs["spindle_rule"][0]
+    rng = np.random.default_rng(5)
+    F = rng.normal(0, 1, (len(y), len(W.FEATS))).astype(np.float32)
+    F[:, 0] += 6 * ref
+    F[:, 1] += 6 * ref
+    r = W.scan_concept("spindle", Zs, bases, y, grp, night, refs, n_rot=2, n_shift=19, F=F)
+    assert r["baseline"]["loo_ap"] > 0.95 and r["ceiling"]["loo_ap"] > 0.95
+    v = W.gates("spindle", W.candidates(r)["ica"])
+    assert v["verdict"] == "ampiezza" and v["p_vs_base"] > 0.05
+
+
+def test_planted_ica_word_beats_the_baselines():
+    Zs, bases, y, grp, night, refs = _setup()
+    F = np.random.default_rng(6).normal(0, 1, (len(y), len(W.FEATS))).astype(np.float32)
+    r = W.scan_concept("spindle", Zs, bases, y, grp, night, refs, n_rot=2, n_shift=19, F=F)
+    c = W.candidates(r)["ica"]
+    assert c["null_p"] <= 0.05 and c["p_vs_base"] < 0.05 and c["margin_nap"] > 0.3 and c["stable"]
+    assert W.gates("spindle", c)["verdict"] == "valida" and r["ica"]["retention"] > 1
+
+
+def test_shift_within_runs_keeps_the_stage():
+    rng = np.random.default_rng(0)
+    y = np.repeat([1, 2, 2, 3], 30)
+    night = np.repeat([0, 0, 1, 1], 30)
+    ref = rng.random(120) < 0.3
+    s = W.shift_within_runs(ref, night, y, rng)
+    for a in range(0, 120, 30):  # every (night, stage) run keeps its count
+        assert s[a:a + 30].sum() == ref[a:a + 30].sum()
+
+
+def test_gates_ignore_the_stager_and_use_q():
+    c = {"null_p": 0.01, "p_vs_base": 0.001, "margin_nap": 0.3, "amp": False, "stable": True, "within": 5.0}
     assert W.gates("spindle", c)["verdict"] == "valida" and "L3" not in W.gates("spindle", c)
+    assert W.gates("spindle", c, q=0.2)["verdict"] == "ampiezza"
+    assert W.gates("spindle", {**c, "null_p": 0.2})["verdict"] == "bocciata"
+    assert W.gates("spindle", {**c, "margin_nap": 0.02})["verdict"] == "debole"
+
+
+def test_bh_and_choice():
+    q = W.bh([0.01, 0.04, 0.03, 0.5])
+    np.testing.assert_allclose(q, [0.04, 0.16 / 3, 0.16 / 3, 0.5])
+    ica, code = {"loo_ap": 0.5}, {"loo_ap": 0.52}
+    assert W.choose({"ica": ica, "code": code}, 0.2) == "ica" and W.choose({"ica": ica, "code": code}, 0.01) == "code"
+
+
+def test_compact_word_lexicon_round_trip(tmp_path):
+    vql = _lexicon_mod()
+    rng = np.random.default_rng(4)
+    n_codes = 16
+    C = rng.integers(0, n_codes, (5, W.T, 3)).astype(np.int16)
+    K = W.prefix_keys(C.reshape(-1, 3), n_codes)
+    ref = (C.reshape(-1, 3)[:, 0] == 3) | ((C.reshape(-1, 3)[:, 0] == 7) & (C.reshape(-1, 3)[:, 1] == 2))
+    word = W.compact_word(W.prefix_table(K, ref, min_n=5), 5)
+    assert 0 in word and 3 in word[0][0]
+    for win in (1, 3):
+        s = W.compact_score(K, word, win)
+        thr = float(np.quantile(s, 0.8)) - 1e-6
+        lex = vql.Lexicon({"eeg_code_x": {"rep": "code_prefix", "mod": "eeg",
+                                          **{f"pref_keys{l}": word[l][0] for l in word},
+                                          **{f"pref_w{l}": word[l][1] for l in word}}},
+                          [{"name": "x", "event": "x", "basis": "eeg_code_x", "kind": "code_prefix", "n_codes": n_codes,
+                            "win": win, "side": 1, "threshold": thr}])
+        lex.save(str(tmp_path))
+        back = vql.Lexicon.load(str(tmp_path))
+        np.testing.assert_array_equal(back.fire(None, continuous=False, codes={"eeg": C})["x"], s >= thr)
+
+
+def test_token_features_shapes_and_bands():
+    fs = 100
+    t = np.arange(4 * 3000) / fs
+    x = (np.sin(2 * np.pi * 13.5 * t) * (t > 60)).reshape(4, 3000)  # sigma in the last two epochs
+    F = W.token_features(x, fs)
+    assert F.shape == (4 * W.T, len(W.FEATS))
+    sig = W.FEATS.index("sigma")
+    assert F[3 * W.T:, sig].mean() > F[:W.T, sig].mean() + 5
 
 
 def test_code_word_lexicon_round_trip(tmp_path):
