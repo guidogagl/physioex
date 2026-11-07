@@ -81,3 +81,52 @@ def test_fidelity_detects_a_word_the_stager_reads():
     lat = {"eeg": {"P": P.astype(np.float16), "y": y}}
     r = W.fidelity_night(lat, logp, ["eeg"], bases, "pq1:d0+", "eeg", (2,), (2,), 0.05, 5, rng)
     assert r["dp"] > 0.02 and r["dp"] > max(r["ctrl_dp"])
+
+
+def _lexicon_mod():
+    import importlib.util
+    import pathlib
+
+    spec = importlib.util.spec_from_file_location("vql2", pathlib.Path(W.__file__).parents[2] / "models" / "vq_lexicon.py")
+    m = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(m)
+    return m
+
+
+def test_frozen_words_fire_as_scan_scores(tmp_path):
+    """Every word kind, converted to a Lexicon word, fires exactly where the scan score passes its
+    threshold; a multimodal lexicon reads each modality's P; a single-array call still works."""
+    vql = _lexicon_mod()
+    rng = np.random.default_rng(2)
+    P = {"eeg": rng.normal(0, 1, (6, W.T, 4)).astype(np.float32), "emg": rng.normal(0, 1, (6, W.T, 2)).astype(np.float32)}
+    bases = {}
+    for m, d in (("eeg", 4), ("emg", 2)):
+        bases[m] = {"pq1": {"mean": np.zeros(d, np.float32), "unmix": rng.normal(0, 1, (d, d)).astype(np.float32),
+                            "mix": np.eye(d, dtype=np.float32), "groups": {"all": list(range(d)), "p": [0, 1]}},
+                    "pq3": {"mean": np.zeros(3 * d, np.float32), "unmix": rng.normal(0, 1, (d, 3 * d)).astype(np.float32),
+                            "mix": np.zeros((3 * d, d), np.float32), "groups": {"all": list(range(d))}}}
+    cases = [("eeg", "pq1:d1+"), ("eeg", "pq1:d2-"), ("eeg", "pq3:|d0|"), ("eeg", "pq3:E[all]~"), ("eeg", "pq1:E[p]rel"),
+             ("emg", "pq1:E[p]"), ("emg", "pq1:d0-")]
+    words, lb = [], {}
+    for i, (m, w) in enumerate(cases):
+        rep = w.split(":")[0]
+        s = W.word_score(W.transform(P[m], bases[m][rep], rep), w, bases[m][rep]["groups"])
+        thr = float(np.quantile(s, 0.9))
+        words.append((W.lexicon_word(f"w{i}", w, bases[m], m, thr, {}), s >= thr))
+        lb[f"{m}_{rep}"] = {"rep": rep, "mod": m, **{k: bases[m][rep][k] for k in ("mean", "unmix", "mix")}}
+    lex = vql.Lexicon(lb, [w for w, _ in words])
+    lex.save(str(tmp_path))
+    fired = vql.Lexicon.load(str(tmp_path)).fire(P, continuous=False)
+    for w, ref in words:
+        assert (fired[w["name"]] == ref).all(), w["word"]
+    only_eeg = vql.Lexicon({k: v for k, v in lb.items() if k.startswith("eeg")}, [w for w, _ in words if w["basis"].startswith("eeg")])
+    single = only_eeg.fire(P["eeg"], continuous=False)
+    assert all((single[w["name"]] == r).all() for w, r in words if w["basis"].startswith("eeg"))
+    assert set(lex.fire({"eeg": P["eeg"]}, continuous=False)) == {w["name"] for w, _ in words if w["basis"].startswith("eeg")}
+
+
+def test_event_f1_matching():
+    ref = np.zeros(40, bool); ref[5:8] = True; ref[20:23] = True
+    pred = np.zeros(40, bool); pred[8] = True; pred[30] = True  # first adjacent (tolerance 1 token), second false
+    r = W.event_f1(pred, ref)
+    assert r["n_pred"] == 2 and r["n_ref"] == 2 and abs(r["f1"] - 0.5) < 1e-9

@@ -305,6 +305,13 @@ def main(argv=None):
         f.add_argument("--controls", type=int, default=20)
         f.add_argument("--seed", type=int, default=0)
         return fidelity(f.parse_args(argv[1:]))
+    if argv and argv[0] == "freeze":
+        f = argparse.ArgumentParser(description="freeze the multimodal lexicon (top word per concept, gates)")
+        f.add_argument("--dump", required=True)
+        f.add_argument("--out", default=None, help="default: <combo_dir>/lexicon_v2")
+        f.add_argument("--frac", type=float, default=0.25)
+        f.add_argument("--seed", type=int, default=0)
+        return freeze(f.parse_args(argv[1:]))
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--dump", required=True)
     ap.add_argument("--mod", required=True)
@@ -475,6 +482,200 @@ def fidelity(a):
                       "ctrl_flip_mean": float(np.mean([np.mean(v["ctrl_flip"]) for v in nights.values()]))}
         print(f"[fidelity] {c}: {summary[c]}", flush=True)
     json.dump({"summary": summary, "nights": out}, open(os.path.join(a.dump, "fidelity.json"), "w"), indent=1)
+    print("DONE", flush=True)
+
+
+# ---------------------------------------------------------------------------- freeze (CPU)
+#: concepts whose word is read with the experts' events (DREAMS), tolerance +-1 token
+EVENT_EXPERT = {"spindle": ("spindle_vis1", "spindle_vis2"), "spindle_expert": ("spindle_vis1", "spindle_vis2"),
+                "k_complex": ("k_complex_vis1", "k_complex_vis2")}
+
+
+def token_runs_iv(m, tol=1):
+    """Runs of a token mask (gaps of one token merged) as ``(start, end)`` token intervals widened by ``tol``."""
+    idx = np.flatnonzero(m)
+    if not len(idx):
+        return []
+    br = np.diff(idx) > 2
+    st, en = np.r_[idx[0], idx[1:][br]], np.r_[idx[:-1][br], idx[-1]]
+    return [(a - tol, b + 1 + tol) for a, b in zip(st, en)]
+
+
+def event_f1(pred, ref, tol=1):
+    """Event F1 with one-to-one matching by overlap (``vq_event_lexicon2.match_count`` rule)."""
+    P, R = token_runs_iv(pred, tol), token_runs_iv(ref, 0)
+    tp = 0
+    if P and R:
+        Pa, Ra = np.asarray(P), np.asarray(R)
+        ov = np.minimum(Pa[:, None, 1], Ra[None, :, 1]) - np.maximum(Pa[:, None, 0], Ra[None, :, 0])
+        i, j = np.nonzero(ov > 0)
+        up, ur = set(), set()
+        for k in np.argsort(-ov[i, j], kind="stable"):
+            if i[k] in up or j[k] in ur:
+                continue
+            up.add(i[k]); ur.add(j[k]); tp += 1
+    p = tp / len(P) if P else 0.0
+    r = tp / len(R) if R else 0.0
+    return {"f1": 2 * p * r / (p + r) if p + r else 0.0, "purity": p, "coverage": r, "n_pred": len(P), "n_ref": len(R)}
+
+
+def _tok_f1(m, r):
+    h = np.count_nonzero(m & r)
+    return 2 * h / (np.count_nonzero(m) + np.count_nonzero(r)) if m.any() or r.any() else 0.0
+
+
+def lexicon_word(name, word, bases_m, mod, thr, extra):
+    """Our word name (``pq3:E[d6+d7]~``) as a :class:`physioex.models.vq_lexicon.Lexicon` word."""
+    rep, w = word.split(":", 1)
+    basis = f"{mod}_{rep}"
+    out = {"name": name, "event": name, "basis": basis, "word": word}
+    if w.startswith("E["):
+        g, kind = w[2:w.index("]")], w[w.index("]") + 1:]
+        out.update(kind="energy", dirs=[int(d) for d in bases_m[rep]["groups"][g]], side=1, threshold=float(thr),
+                   win=3 if kind == "~" else 1, **({"rel": 10} if kind == "rel" else {}))
+    else:
+        d = int(w.strip("|+-d"))
+        if w.startswith("|"):
+            out.update(kind="folded", dirs=[d], side=1, threshold=float(thr))
+        elif w.endswith("+"):
+            out.update(kind="signed", dirs=[d], side=1, threshold=float(thr))
+        else:  # score -z >= thr  <=>  z <= -thr
+            out.update(kind="signed", dirs=[d], side=-1, threshold=float(-thr))
+    out.update(extra)
+    return out
+
+
+def gates(r, fid):
+    """Verdict of one concept from the scan (L1, L2) and the fidelity summary (L3)."""
+    rot, sh = r["null_rotation"]["q95"], r["null_shift"]["q95"]
+    amp = "E[all]" in r["top"][0]["word"]
+    l1 = r["loo_ap"] > sh and (amp or r["loo_ap"] > rot)
+    l1_margin = r["loo_ap"] - max(sh, rot if not amp else sh)
+    l2 = r["stability"] >= 7 / 9
+    l3 = None
+    if fid is not None:
+        l3 = bool(fid["nights_above_ctrl95"] >= 0.9 and fid["dp_minus_ctrl_median"] > 0)
+    within = r.get("best_ap_over_base_within_stage") or 0
+    if not l1:
+        verdict = "bocciata"
+    elif r["concept"] in ("atonia",) or within < 1.6:
+        verdict = "solo stadio"
+    elif amp:
+        verdict = "ampiezza"
+    elif l1_margin < 0.05 or not l2:
+        verdict = "debole"
+    else:
+        verdict = "valida"
+    return {"L1": bool(l1), "L1_margin": float(l1_margin), "L2": bool(l2), "L3": l3, "verdict": verdict}
+
+
+def freeze(a):
+    from physioex.models.vq_lexicon import Lexicon
+
+    meta = json.load(open(os.path.join(a.dump, "meta.json")))
+    fp = os.path.join(a.dump, "fidelity.json")
+    fid = json.load(open(fp))["summary"] if os.path.exists(fp) else {}
+    rng = np.random.default_rng(a.seed)
+    lex_bases, lex_words, report = {}, [], {}
+    for mod in meta["mods"]:
+        wp = os.path.join(a.dump, f"words_{mod}.json")
+        if not os.path.exists(wp):
+            continue
+        wj = json.load(open(wp))
+        bases = np.load(os.path.join(a.dump, "word_bases", f"{mod}.npz"), allow_pickle=True)["bases"].item()
+        names = [k.split("/")[0] for k, r in wj.items() if r.get("top")]
+        need = sorted({TARGETS[n][0] for n in names} | {e for n in names for e in EVENT_EXPERT.get(n, ())}
+                      | {e for n in names for e in EXPERT.get(n, ())})
+        Zs, y, G, NI, groups, refs = load_coords(a.dump, mod, bases, need, a.frac, a.seed)
+        gn = np.array(groups)[G]
+        for rep, b in bases.items():
+            lex_bases[f"{mod}_{rep}"] = {"rep": rep, "mod": mod, "mean": b["mean"], "unmix": b["unmix"], "mix": b["mix"]}
+        for n in names:
+            r = wj[f"{n}/{mod}"]
+            ref_name, _, stages, _, sel_set = TARGETS[n]
+            ref, has = refs[ref_name]
+            strat = np.isin(y, stages) & has
+            fit = strat & ((gn == "dreams") if sel_set == "dreams" else ~np.isin(gn, ["shhs", "mass_ss01", "dreams"]))
+            word = r["top"][0]["word"]
+            rows = np.flatnonzero(fit.reshape(-1, T).all(1))
+            idx = (rows[:, None] * T + np.arange(T)).reshape(-1)
+            sc = score_of(Zs, bases, word, idx)
+            rr, key = ref[idx], (gn[idx] if sel_set == "pool" else NI[idx].astype(str))
+            q = 1 - r["base_rate"]
+            thr = float(np.quantile(sc, q))
+            held = []
+            for g in sorted(set(key)):
+                tr, te = key != g, key == g
+                if rr[te].any():
+                    held.append(_tok_f1(sc[te] >= np.quantile(sc[tr], q), rr[te]))
+            rec = {"word": word, "threshold": thr, "base_rate": r["base_rate"], "token_f1_loo": float(np.mean(held)),
+                   "loo_ap": r["loo_ap"], "null_rotation_q95": r["null_rotation"]["q95"],
+                   "null_shift_q95": r["null_shift"]["q95"], "stability": r["stability"],
+                   "ap_over_base_within_stage": r.get("best_ap_over_base_within_stage"), "transfer_ap": r["transfer"]}
+            fkey = n if mod == "eeg" or n != "arousal" else f"{n}_{mod}"
+            rec.update(gates(r, fid.get(fkey) if (fkey in FIDELITY and FIDELITY[fkey][0] == mod) else None))
+            if fkey in fid and FIDELITY.get(fkey, (None,))[0] == mod:
+                rec["fidelity"] = fid[fkey]
+            # token F1 at the frozen threshold on the out-of-pool sets; event F1 against the DREAMS experts
+            tf = {}
+            for g in ("shhs", "mass_ss01", "dreams"):
+                m = strat & (gn == g)
+                rw = np.flatnonzero(m.reshape(-1, T).all(1))
+                ix = (rw[:, None] * T + np.arange(T)).reshape(-1)
+                if g != sel_set and len(ix) and ref[ix].any():
+                    tf[g] = _tok_f1(score_of(Zs, bases, word, ix) >= thr, ref[ix])
+            rec["transfer_token_f1"] = tf
+            ev = {}
+            for e in EVENT_EXPERT.get(n, ()):
+                er, eh = refs[e]
+                per = []
+                for night in np.unique(NI[(gn == "dreams") & eh]):
+                    ix = np.flatnonzero((NI == night) & eh)
+                    if not er[ix].any():
+                        continue
+                    if sel_set == "dreams":  # threshold from the other excerpts
+                        oth = np.flatnonzero(fit & (NI != night))
+                        t_ = np.quantile(score_of(Zs, bases, word, oth), q)
+                    else:
+                        t_ = thr
+                    per.append(event_f1(score_of(Zs, bases, word, ix) >= t_, er[ix]))
+                if per:
+                    tp = sum(round(p["coverage"] * p["n_ref"]) for p in per)
+                    npred, nref = sum(p["n_pred"] for p in per), sum(p["n_ref"] for p in per)
+                    pu, co = (tp / npred if npred else 0.0), (tp / nref if nref else 0.0)
+                    ev[e] = {"f1": 2 * pu * co / (pu + co) if pu + co else 0.0, "purity": pu, "coverage": co,
+                             "n_pred": npred, "n_ref": nref}
+            rec["event_f1_experts"] = ev
+            name = n if mod == "eeg" or n not in ("arousal", "resp_end", "plm_arousal") else f"{n}_{mod}"
+            report[name] = {"mod": mod, **rec}
+            lex_words.append(lexicon_word(name, word, bases, mod, thr,
+                                          {"verdict": rec["verdict"], "stages": list(stages), "base_rate": r["base_rate"]}))
+            print(f"[freeze] {name}: {rec['verdict']} thr {thr:.3f} tokF1 {rec['token_f1_loo']:.3f} "
+                  f"transfer {({k: round(v, 3) for k, v in tf.items()})} events {({k: round(v['f1'], 3) for k, v in ev.items()})}",
+                  flush=True)
+    lex = Lexicon(lex_bases, lex_words, {"continuous": False, "encoder": meta["combo_dir"], "stager": meta["stager"],
+                                         "fitted_on": "pool nights of the concept_scan dump (label-free bases)",
+                                         "threshold": "quantile of the pool stratum at the concept base rate",
+                                         "event_rules": {w["name"]: {"gap": 1, "min_tok": 1} for w in lex_words}})
+    out = a.out or os.path.join(meta["combo_dir"], "lexicon_v2")
+    lex.save(out)
+    json.dump(report, open(os.path.join(out, "gates.json"), "w"), indent=1)
+    # round trip: the saved lexicon fires as the scores of the scan on one pool night (rows, continuous=False)
+    lx = Lexicon.load(out)
+    key = next(k for k, e in sorted(meta["nights"].items()) if e["unit"] != "dreams" and set(meta["mods"]) <= set(e["mods"]))
+    z = np.load(os.path.join(a.dump, f"{key}.npz"))
+    pqs = {m: z[f"P_{m}"].astype(np.float32) for m in meta["mods"]}
+    fired = lx.fire(pqs, continuous=False)
+    bad = []
+    for w in lex_words:
+        mod, rep = w["basis"].split("_")
+        b = np.load(os.path.join(a.dump, "word_bases", f"{mod}.npz"), allow_pickle=True)["bases"].item()
+        s_ = word_score(transform(pqs[mod], b[rep], rep), w["word"], b[rep]["groups"])
+        thr = w["threshold"] if w["side"] > 0 or w["kind"] != "signed" else -w["threshold"]
+        if ((s_ >= thr) != fired[w["name"]]).mean() > 1e-3:
+            bad.append(w["name"])
+    print(f"[freeze] lexicon -> {out}, {len(lex_words)} words, round trip {'OK' if not bad else 'MISMATCH ' + str(bad)}",
+          flush=True)
     print("DONE", flush=True)
 
 

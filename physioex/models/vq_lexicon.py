@@ -74,8 +74,10 @@ def token_runs(m: np.ndarray, gap: int = 1, min_tok: int = 1) -> list:
 
 class Lexicon:
     def __init__(self, bases: Dict[str, dict], words: List[dict], meta: dict | None = None):
-        """``bases[name] = {"rep": "pq1"|"pq3", "mean": (D_in,), "unmix": (k, D_in), "mix": (D_in, k)}``;
-        ``words[i] = {"name", "event", "basis", "kind", "dirs", "threshold", "side", "smooth"}``."""
+        """``bases[name] = {"rep": "pq1"|"pq3", "mean": (D_in,), "unmix": (k, D_in), "mix": (D_in, k)}``
+        plus, for a multimodal lexicon, ``"mod"`` (the modality whose P tokens the basis reads; default
+        ``"eeg"``); ``words[i] = {"name", "event", "basis", "kind", "dirs", "threshold", "side", "smooth"}``
+        (extra keys, e.g. the gates of the word, are kept as they are)."""
         self.bases, self.words, self.meta = bases, words, meta or {}
 
     # ------------------------------------------------------------------ reading
@@ -97,13 +99,20 @@ class Lexicon:
             e = rel_change(e, int(w["rel"]), win, T)
         return e
 
-    def fire(self, pq: np.ndarray, continuous: bool = True) -> Dict[str, np.ndarray]:
-        """Word masks over the ``n*T`` tokens of ``pq`` (``(n, T, d_p)``). ``continuous``: the epochs
+    def mod_of(self, basis: str) -> str:
+        return self.bases[basis].get("mod", "eeg")
+
+    def fire(self, pq, continuous: bool = True) -> Dict[str, np.ndarray]:
+        """Word masks over the ``n*T`` tokens of ``pq`` (``(n, T, d_p)``, or ``{mod: (n, T, d_p)}`` for a
+        multimodal lexicon: the words of a missing modality are left out). ``continuous``: the epochs
         are consecutive (smoothing and 3-token context run across epoch borders)."""
-        n, T, _ = pq.shape
-        Zc = {b: self.coords(pq, b) for b in {w["basis"] for w in self.words}}
+        pqs = pq if isinstance(pq, dict) else None
+        words = [w for w in self.words if pqs is None or self.mod_of(w["basis"]) in pqs]
+        src = {b: (pqs[self.mod_of(b)] if pqs is not None else pq) for b in {w["basis"] for w in words}}
+        Zc = {b: self.coords(x, b) for b, x in src.items()}
         out = {}
-        for w in self.words:
+        for w in words:
+            n, T, _ = src[w["basis"]].shape
             v = self.word_values(Zc[w["basis"]], w, n * T if continuous else T)
             out[w["name"]] = v >= w["threshold"] if w["side"] > 0 else v <= w["threshold"]
         return out
@@ -113,8 +122,8 @@ class Lexicon:
         dropped as in ``meta["event_rules"]``, default: gaps of one token), with the words that fired inside. Times in seconds from the start of ``pq``."""
         masks = self.fire(pq, continuous)
         out = {}
-        for ev in sorted({w["event"] for w in self.words}):
-            names = [w["name"] for w in self.words if w["event"] == ev]
+        for ev in sorted({w["event"] for w in self.words if w["name"] in masks}):
+            names = [w["name"] for w in self.words if w["event"] == ev and w["name"] in masks]
             m = np.any([masks[k] for k in names], 0)
             rule = self.meta.get("event_rules", {}).get(ev, {})
             runs = []
@@ -129,12 +138,13 @@ class Lexicon:
         os.makedirs(path, exist_ok=True)
         arrays = {f"{b}__{k}": v[k] for b, v in self.bases.items() for k in ("mean", "unmix", "mix")}
         np.savez_compressed(os.path.join(path, "lexicon.npz"), **arrays)
-        json.dump({"bases": {b: {"rep": v["rep"]} for b, v in self.bases.items()}, "words": self.words, "meta": self.meta},
+        js_b = {b: {"rep": v["rep"], **({"mod": v["mod"]} if "mod" in v else {})} for b, v in self.bases.items()}
+        json.dump({"bases": js_b, "words": self.words, "meta": self.meta},
                   open(os.path.join(path, "lexicon.json"), "w"), indent=1)
 
     @classmethod
     def load(cls, path: str) -> "Lexicon":
         js = json.load(open(os.path.join(path, "lexicon.json")))
         z = np.load(os.path.join(path, "lexicon.npz"))
-        bases = {b: {"rep": v["rep"], **{k: z[f"{b}__{k}"] for k in ("mean", "unmix", "mix")}} for b, v in js["bases"].items()}
+        bases = {b: {**v, **{k: z[f"{b}__{k}"] for k in ("mean", "unmix", "mix")}} for b, v in js["bases"].items()}
         return cls(bases, js["words"], js.get("meta"))
