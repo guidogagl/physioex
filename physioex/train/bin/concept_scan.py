@@ -602,7 +602,7 @@ def scan_concept(name, D, n_codes, n_nulls=20, seed=0, min_n=50):
 def scan(a):
     meta = json.load(open(os.path.join(a.dump, "meta.json")))
     names = a.concepts.split(",") if a.concepts else list(TARGETS)
-    sp = os.path.join(a.dump, "scan.json")
+    sp = os.path.join(a.dump, f"scan{'_' + a.tag if a.tag else ''}.json")
     out = json.load(open(sp)) if os.path.exists(sp) else {}
     t0 = time.time()
     jobs = {}
@@ -661,6 +661,7 @@ def main(argv=None):
     s_.add_argument("--concepts", default=None, help="comma list of TARGETS (default: all)")
     s_.add_argument("--nulls", type=int, default=20)
     s_.add_argument("--seed", type=int, default=0)
+    s_.add_argument("--tag", default="", help="scan_<tag>.json (parallel jobs on disjoint concept lists)")
     a = ap.parse_args(argv)
     {"dump": dump, "scale": scale, "refs": refs, "scan": scan}[a.cmd](a)
 
