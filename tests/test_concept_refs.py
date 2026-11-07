@@ -140,7 +140,7 @@ def test_k_complex_isolated_vs_train():
     y = _pink(30, rms=5)
     for k in range(6):  # a train of slow waves is not a K-complex
         y[1000 + 80 * k:1080 + 80 * k] += kc
-    assert not _covers(R.detect_k_complex(y, FS), 11.6, 13.0)
+    assert not _covers(R.detect_k_complex(y, FS, iso_s=2.0), 11.6, 13.0)  # isolation is optional since 08.11
 
 
 def test_cap_a1_and_a3():

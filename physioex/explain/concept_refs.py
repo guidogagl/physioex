@@ -261,12 +261,18 @@ def detect_vertex(sig, fs, min_uv=40.0, k_mad=6.0):
     return out
 
 
-def detect_k_complex(sig, fs, k_mad=6.0, iso_s=2.0):
+def detect_k_complex(sig, fs, k_mad=15.0, iso_s=0.0):
     """K-complex rule [F1 Table 1-6, AS]: a well-delineated negative sharp wave immediately followed by a
     positive component, total >= 0.5 s, standing out of the background (no amplitude criterion). In
     0.3-4 Hz: negative half-wave 0.15-1 s then positive half-wave, together 0.5-2 s, peak-to-peak >=
     ``k_mad`` x the median absolute amplitude of its 30 s epoch (ours), with no other such wave within
-    ``iso_s`` s (isolated, not a slow-wave train; ours)."""
+    ``iso_s`` s (ours; ``iso_s > 0`` rejects slow-wave trains).
+
+    Defaults tuned on 08.11.2026 against the DREAMS experts (``concept_refs_eval``, grid k_mad 4-15 x
+    iso_s 0-2, leave-one-excerpt-out): k_mad 15, iso_s 0 give held-out precision 0.62 / recall 0.66 vs
+    scorer 1 (10 excerpts); scorer 2 marks a conservative subset (82 % of its KCs are in scorer 1, 20 %
+    of scorer 1's), so precision against it stays 0.19. The former 6 / 2 s marked 7 % of the N2 tokens
+    (precision 0.09)."""
     x = bandpass(sig, 0.3, 4, fs)
     spe = int(EPOCH_S * fs)
     mad = np.repeat([np.median(np.abs(x[i:i + spe])) + 1e-9 for i in range(0, len(x), spe)], spe)[:len(x)]
