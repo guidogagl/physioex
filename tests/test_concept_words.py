@@ -50,3 +50,34 @@ def test_rows_rel_matches_lexicon_rel_change():
     spec.loader.exec_module(vql)
     e = np.random.default_rng(1).random(3 * W.T) + 0.1
     np.testing.assert_allclose(W._rows_rel(e), vql.rel_change(e, 10, 1, W.T))
+
+
+def test_swap_tokens_uses_same_stage_donors_without_the_word():
+    rng = np.random.default_rng(0)
+    y = np.array([2, 2, 3, 2])
+    P = np.stack([np.full((W.T, 2), e, np.float32) for e in range(4)])
+    fire = np.zeros(4 * W.T, bool)
+    fire[5:8] = True  # epoch 0
+    Q = W.swap_tokens(P, y, fire, np.flatnonzero(fire), rng)
+    got = Q.reshape(-1, 2)[5:8, 0]
+    assert set(got) <= {1.0, 3.0} and (Q.reshape(-1, 2)[~fire] == P.reshape(-1, 2)[~fire]).all()
+
+
+def test_fidelity_detects_a_word_the_stager_reads():
+    """Fake stager: p(N2) = share of the epoch's tokens with d0 > 2; swapping the word must lower it more
+    than swapping random tokens."""
+    rng = np.random.default_rng(1)
+    n = 40
+    y = np.full(n, 2)
+    P = rng.normal(0, 1, (n, W.T, 2)).astype(np.float32)
+    P[::2, 10:16, 0] += 4
+    bases = {"pq1": {"mean": np.zeros(2, np.float32), "unmix": np.eye(2, dtype=np.float32), "groups": {"all": [0, 1]}}}
+
+    def logp(L):
+        f = (L["eeg"]["P"][:, :, 0].astype(np.float32) > 2).mean(1)
+        p = np.stack([0.1 + 0 * f, 0.1 + 0 * f, 0.2 + f, 0.3 - f / 2, 0.3 - f / 2], 1)
+        return np.log(p / p.sum(1, keepdims=True))
+
+    lat = {"eeg": {"P": P.astype(np.float16), "y": y}}
+    r = W.fidelity_night(lat, logp, ["eeg"], bases, "pq1:d0+", "eeg", (2,), (2,), 0.05, 5, rng)
+    assert r["dp"] > 0.02 and r["dp"] > max(r["ctrl_dp"])

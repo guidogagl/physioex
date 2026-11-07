@@ -19,6 +19,13 @@ a word of the lexicon must be one to three directions. Per modality:
   on references shifted circularly within the nights (``--shifts``).
 
     python -m physioex.train.bin.concept_words --dump DUMP --mod eeg --concepts spindle,slow_wave --tag eeg1
+
+L3 fidelity (GPU): the nights are encoded again (the dump keeps no continuous N / E); on the epochs of the
+concept's stratum where its top word fires (threshold: the quantile at the concept's base rate) the P
+tokens take donor tokens of the same stage from epochs without the word; the drop of p(expected stage)
+in the multi stager is compared with 20 swaps of as many random tokens of the same epochs.
+
+    python -m physioex.train.bin.concept_words fidelity --dump DUMP --splits SPLITS --cache-dir CACHE
 """
 from __future__ import annotations
 
@@ -286,6 +293,18 @@ def scan_concept(name, Zs, bases, y, grp_names, night, refs, n_rot=5, n_shift=5,
 
 
 def main(argv=None):
+    import sys
+
+    argv = sys.argv[1:] if argv is None else argv
+    if argv and argv[0] == "fidelity":
+        f = argparse.ArgumentParser(description="L3: stager fidelity of the top word of every concept (GPU)")
+        f.add_argument("--dump", required=True)
+        f.add_argument("--splits", required=True)
+        f.add_argument("--cache-dir", default=None)
+        f.add_argument("--per-unit", type=int, default=5)
+        f.add_argument("--controls", type=int, default=20)
+        f.add_argument("--seed", type=int, default=0)
+        return fidelity(f.parse_args(argv[1:]))
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--dump", required=True)
     ap.add_argument("--mod", required=True)
@@ -333,3 +352,130 @@ def main(argv=None):
 
 if __name__ == "__main__":
     main()
+
+
+# ---------------------------------------------------------------------------- L3 fidelity (GPU)
+#: concept -> (modality, stages the stager should lose when the concept's tokens are swapped out)
+FIDELITY = {"spindle": ("eeg", (2,)), "k_complex": ("eeg", (2,)), "slow_wave": ("eeg", (3,)),
+            "alpha": ("eeg", (0,)), "rem_eye": ("eog", (4,)), "atonia": ("emg", (4,)),
+            "arousal": ("eeg", (0, 1)), "arousal_emg": ("emg", (0, 1))}
+
+
+def swap_tokens(P, y, fire, pos, rng):
+    """Copy of ``P`` (``(n, T, d)``) where the tokens ``pos`` (flat indices) take a random donor token of
+    an epoch of the same stage in which the word does not fire (same night)."""
+    Q = P.copy().reshape(-1, P.shape[-1])
+    ep_fire = fire.reshape(-1, T).any(1)
+    yt = np.repeat(y, T)
+    donors = {s: np.flatnonzero((yt == s) & ~np.repeat(ep_fire, T)) for s in np.unique(y)}
+    for s in np.unique(yt[pos]):
+        p = pos[yt[pos] == s]
+        d = donors.get(s, np.zeros(0, int))
+        if len(d):
+            Q[p] = Q[rng.choice(d, len(p))]
+    return Q.reshape(P.shape)
+
+
+def fidelity_night(lat, logp_fn, mods, bases, word, mod, stages, lose, base_rate, n_ctrl, rng):
+    """Delta p(lose) on the epochs of ``stages`` where ``word`` fires, swapping its tokens vs swapping the same
+    number of random tokens of the same epochs."""
+    P = lat[mod]["P"].astype(np.float32)
+    y = lat["eeg"]["y"]
+    rep = word.split(":", 1)[0]
+    s = word_score(transform(P, bases[rep], rep), word, bases[rep]["groups"])
+    strat = np.repeat(np.isin(y, stages), T)
+    if not strat.any():
+        return None
+    thr = np.quantile(s[strat], 1 - base_rate)
+    fire = (s >= thr) & strat
+    pos = np.flatnonzero(fire)
+    eps = np.unique(pos // T)
+    if len(eps) < 5:
+        return None
+    p0 = np.exp(logp_fn(lat).astype(np.float32))
+
+    def drop(Pn):
+        lat2 = {**lat, mod: {**lat[mod], "P": Pn.astype(np.float16)}}
+        p1 = np.exp(logp_fn(lat2).astype(np.float32))
+        d = p0[eps][:, list(lose)].sum(1) - p1[eps][:, list(lose)].sum(1)
+        return float(d.mean()), float((p0[eps].argmax(1) != p1[eps].argmax(1)).mean())
+
+    real = drop(swap_tokens(P, y, fire, pos, rng))
+    ctrl = []
+    for _ in range(n_ctrl):
+        cpos = np.concatenate([e * T + rng.choice(T, int((pos // T == e).sum()), replace=False) for e in eps])
+        ctrl.append(drop(swap_tokens(P, y, fire, cpos, rng)))
+    return {"n_epochs": int(len(eps)), "n_tokens": int(len(pos)), "dp": real[0], "flip": real[1],
+            "ctrl_dp": [c[0] for c in ctrl], "ctrl_flip": [c[1] for c in ctrl]}
+
+
+def fidelity(a):
+    import torch
+
+    from physioex.data.merged import build_test
+    from physioex.models.recon_eval import channel_pipelines
+    from physioex.train.bin.concept_scan import _night_arrays, _pick, _stage_logp
+    from physioex.train.bin.pretrain_combo import Nights, _cache_dir, load_s2, load_stagers
+
+    dev = "cuda" if torch.cuda.is_available() else "cpu"
+    meta = json.load(open(os.path.join(a.dump, "meta.json")))
+    mods = meta["mods"]
+    models, args0 = {}, {}
+    for m in mods:
+        run, models[m] = load_s2(os.path.join(meta["combo_dir"], m, "s2"), m, dev)
+        args0[m] = run["args"]
+    stagers = load_stagers(os.path.join(meta["combo_dir"], meta["stager"]), mods, dev)
+    half_of = {m: args0[m]["seq"] // 2 for m in mods}
+    bases = {m: np.load(os.path.join(a.dump, "word_bases", f"{m}.npz"), allow_pickle=True)["bases"].item() for m in mods}
+    wj = {m: json.load(open(os.path.join(a.dump, f"words_{m}.json"))) for m in mods}
+    plan = {}
+    for c, (m, lose) in FIDELITY.items():
+        name = c.replace("_emg", "")
+        r = wj[m].get(f"{name}/{m}")
+        if r and r.get("top"):
+            plan[c] = (m, r["top"][0]["word"], TARGETS[name][2], lose, r["base_rate"])
+    print(f"[fidelity] words { {c: v[1] for c, v in plan.items()} }", flush=True)
+    by_unit = {}
+    for k, e in meta["nights"].items():
+        if e["unit"] != "dreams" and set(mods) <= set(e["mods"]):
+            by_unit.setdefault(e["unit"], []).append(k.split("/", 1)[1])
+    units = sorted(by_unit)
+    tests = {m: build_test(a.splits, [args0[m]["channel"]], channel_pipelines(args0[m]), args0[m]["seq"],
+                           _cache_dir(a.cache_dir, args0[m]), units=units, memmap_cache_size=4,
+                           trim_mode="main_period") for m in mods}
+    index = {m: {(tests[m].unit_names[d2], s2): d2 for d2, s2, _, _ in tests[m].test} for m in mods}
+    rng = np.random.default_rng(a.seed)
+    out = {c: {} for c in plan}
+    t0 = time.time()
+    for unit in units:
+        for sid in _pick(by_unit[unit], a.per_unit, a.seed):
+            readers = {m: Nights(tests[m].multi._datasets[index[m][unit, sid]], args0[m])
+                       for m in mods if (unit, sid) in index[m]}
+            if set(readers) != set(mods):
+                continue
+            _, lat, ts, y = _night_arrays(models, readers, {m: sid for m in mods}, mods, half_of)
+            if set(lat) != set(mods) or any(len(lat[m]["y"]) != len(ts) for m in mods):
+                continue
+
+            def logp_fn(L):
+                return _stage_logp(stagers, L, mods, dev)["multi"]
+
+            for c, (m, word, stages, lose, br) in plan.items():
+                r = fidelity_night(lat, logp_fn, mods, bases[m], word, m, stages, lose, br, a.controls, rng)
+                if r is not None:
+                    out[c][f"{unit}/{sid}"] = r
+            print(f"[fidelity] {unit} {sid} {(time.time() - t0) / 60:.1f} min", flush=True)
+    summary = {}
+    for c, nights in out.items():
+        if not nights:
+            continue
+        dp = np.array([v["dp"] for v in nights.values()])
+        cm = np.array([np.mean(v["ctrl_dp"]) for v in nights.values()])
+        above = np.mean([v["dp"] > np.quantile(v["ctrl_dp"], 0.95) for v in nights.values()])
+        summary[c] = {"word": plan[c][1], "n_nights": len(dp), "dp_mean": float(dp.mean()), "ctrl_dp_mean": float(cm.mean()),
+                      "dp_minus_ctrl_median": float(np.median(dp - cm)), "nights_above_ctrl95": float(above),
+                      "flip_mean": float(np.mean([v["flip"] for v in nights.values()])),
+                      "ctrl_flip_mean": float(np.mean([np.mean(v["ctrl_flip"]) for v in nights.values()]))}
+        print(f"[fidelity] {c}: {summary[c]}", flush=True)
+    json.dump({"summary": summary, "nights": out}, open(os.path.join(a.dump, "fidelity.json"), "w"), indent=1)
+    print("DONE", flush=True)
