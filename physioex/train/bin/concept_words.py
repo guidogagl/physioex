@@ -556,7 +556,7 @@ def gates(r, fid):
     if fid is not None:
         l3 = bool(fid["nights_above_ctrl95"] >= 0.9 and fid["dp_minus_ctrl_median"] > 0)
     within = r.get("best_ap_over_base_within_stage") or 0
-    if not l1:
+    if not l1 or l1_margin < 0.01:  # a hair above the null is no word
         verdict = "bocciata"
     elif r["concept"] in ("atonia",) or within < 1.6:
         verdict = "solo stadio"
