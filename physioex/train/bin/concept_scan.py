@@ -21,6 +21,17 @@ Sub-commands:
   checked against the dump (``maxerr``, fp16 rounding ~1e-2). ``<out>/scale.json``.
 
     python -m physioex.train.bin.concept_scan scale --dump OUT --cache-dir CACHE --workers 8
+
+- ``refs`` (CPU): the reference masks of every dumped night (:func:`physioex.explain.concept_refs.night_refs`,
+  uV from ``scale.json``), ``<out>/refs/<unit>/<sid>.npz``.
+- ``scan`` (CPU): discrete codebook components of every concept (:data:`TARGETS`). Within the concept's
+  stratum (its stages, so that a stage code does not pass for a concept code) every (scale, RVQ level,
+  code) gets count, hits, purity, lift; up to 3 codes are chosen greedily by token (or epoch) F1 of
+  their union. Leave-one-item-out on the pool (held-out F1, how often each chosen code comes back),
+  null = the same selection on references shifted circularly within every night (``--nulls``), the
+  within-stage lift of the chosen union, and the transfer of the pool selection to the out-of-pool
+  sets (shhs, MASS SS01, DREAMS: expert spindles / K-complexes against the rule-based selection).
+  ``<out>/scan.json``.
 """
 from __future__ import annotations
 
@@ -35,6 +46,36 @@ import numpy as np
 UNITS = ("ccshs", "dcsm", "hmc", "hpap_lab_full", "mass_ss02", "mass_ss03", "mass_ss04", "mass_ss05", "mesa", "mros",
          "sleepedf", "wsc_visit1", "shhs_visit1", "mass_ss01")
 MODS = ("eeg", "eog", "emg")
+#: out-of-pool units: transfer only, never in the selection
+EXTERNAL = ("shhs_visit1", "mass_ss01", "dreams")
+_ALL = (0, 1, 2, 3, 4)
+_SLEEP = (1, 2, 3, 4)
+#: concept -> (reference mask, modalities scanned, stages of the stratum (W 0, N1 1, N2 2, N3 3, R 4),
+#: level "tok" (P codes, 0.5 s) or "epoch" (N / E codes), selection set "pool" or "dreams")
+TARGETS = {
+    "spindle": ("spindle_rule", ("eeg",), (2,), "tok", "pool"),
+    "spindle_expert": ("spindle_vis1", ("eeg",), (2, 3), "tok", "dreams"),
+    "k_complex": ("k_complex_vis1", ("eeg",), (2, 3), "tok", "dreams"),
+    "slow_wave": ("slow_wave", ("eeg",), (2, 3), "tok", "pool"),
+    "delta": ("delta", ("eeg",), (2, 3), "tok", "pool"),
+    "delta_epoch": ("delta_epoch", ("eeg",), _ALL, "epoch", "pool"),
+    "vertex": ("vertex", ("eeg",), (1, 2), "tok", "pool"),
+    "sawtooth": ("sawtooth", ("eeg",), (4,), "tok", "pool"),
+    "alpha": ("alpha", ("eeg",), (0, 1), "tok", "pool"),
+    "alpha_epoch": ("alpha_epoch", ("eeg",), _ALL, "epoch", "pool"),
+    "lamf": ("lamf", ("eeg",), (1, 4), "tok", "pool"),
+    "arousal": ("arousal_ann", ("eeg", "emg"), _SLEEP, "tok", "pool"),
+    "resp_end": ("resp_end", ("eeg", "emg"), _SLEEP, "tok", "pool"),
+    "plm_arousal": ("plm_arousal", ("eeg", "emg"), _SLEEP, "tok", "pool"),
+    "rem_eye": ("rem_eye", ("eog",), (0, 4), "tok", "pool"),
+    "sem": ("sem", ("eog",), (0, 1), "tok", "pool"),
+    "blink": ("blink", ("eog",), (0,), "tok", "pool"),
+    "atonia": ("atonia", ("emg",), _ALL, "tok", "pool"),
+    "atonia_epoch": ("atonia_epoch", ("emg",), _ALL, "epoch", "pool"),
+    "tma": ("tma", ("emg",), (4,), "tok", "pool"),
+    "emg_rise": ("emg_rise", ("emg",), _ALL, "tok", "pool"),
+    "artifact": ("artifact_eeg", ("eeg",), _ALL, "tok", "pool"),
+}
 
 
 def _pick(ids, k, seed):
@@ -255,6 +296,259 @@ def scale(a):
     print("DONE", flush=True)
 
 
+#: expert references the selection is also scored against (transfer), and the scorer pair of the ceiling
+EXPERT = {"spindle": ("spindle_vis1", "spindle_vis2"), "spindle_expert": ("spindle_vis2",),
+          "k_complex": ("k_complex_vis2",)}
+EXPERT_PAIR = {"spindle": ("spindle_vis1", "spindle_vis2"), "spindle_expert": ("spindle_vis1", "spindle_vis2"),
+               "k_complex": ("k_complex_vis1", "k_complex_vis2")}
+
+
+def _refs_night(job):
+    from physioex.explain.concept_refs import night_refs
+
+    key, dump_dir, entry = job
+    z = dict(np.load(os.path.join(dump_dir, f"{key}.npz")))
+    r = night_refs(z, entry)
+    out = os.path.join(dump_dir, "refs", f"{key}.npz")
+    os.makedirs(os.path.dirname(out), exist_ok=True)
+    np.savez_compressed(out, **{k: np.packbits(v) for k, v in r.items()}, **{f"_len_{k}": len(v) for k, v in r.items()})
+    return key, sorted(r)
+
+
+def refs(a):
+    from concurrent.futures import ProcessPoolExecutor
+
+    meta = json.load(open(os.path.join(a.dump, "meta.json")))
+    sc = json.load(open(os.path.join(a.dump, "scale.json")))
+    jobs = []
+    for k, v in meta["nights"].items():
+        if os.path.exists(os.path.join(a.dump, "refs", f"{k}.npz")):
+            continue
+        e = dict(v, fs=meta["fs"], scale={m: [o["median"], o["scale"]] for m, o in sc.get(k, {}).items()})
+        jobs.append((k, a.dump, e))
+    t0 = time.time()
+    with ProcessPoolExecutor(a.workers) as ex:
+        for i, (key, names) in enumerate(ex.map(_refs_night, jobs, chunksize=2)):
+            if i % 20 == 0:
+                print(f"[refs] {i + 1}/{len(jobs)} {key} {len(names)} masks, {(time.time() - t0) / 60:.1f} min", flush=True)
+    print(f"[refs] done after {(time.time() - t0) / 60:.1f} min", flush=True)
+    print("DONE", flush=True)
+
+
+def load_refs(path):
+    z = np.load(path)
+    return {k: np.unpackbits(z[k])[: int(z[f"_len_{k}"])].astype(bool) for k in z.files if not k.startswith("_len_")}
+
+
+def _group(unit):
+    from physioex.data.merged import BY_NAME
+
+    return "dreams" if unit == "dreams" else (BY_NAME[unit].get("item") or unit)
+
+
+def load_scan_data(dump_dir, mod, level, ref_names):
+    """Codes, stage, night and group of every token (``level="tok"``: P codes, ``(n*60, L)``) or epoch
+    (``"epoch"``: N and E codes side by side) of ``mod``, and the reference masks (``None`` where a
+    night has no such reference)."""
+    meta = json.load(open(os.path.join(dump_dir, "meta.json")))
+    C, Y, G, NI, R = [], [], [], [], {r: [] for r in ref_names}
+    groups, cols = [], None
+    for i, (key, e) in enumerate(sorted(meta["nights"].items())):
+        if mod not in e["mods"]:
+            continue
+        z = np.load(os.path.join(dump_dir, f"{key}.npz"))
+        rf = load_refs(os.path.join(dump_dir, "refs", f"{key}.npz"))
+        y = z["y"].astype(np.int8)
+        if level == "tok":
+            c = z[f"codes_{mod}_P"]
+            c = c.reshape(-1, c.shape[-1])
+            cols = cols or [f"P{l}" for l in range(c.shape[1])]
+            y = np.repeat(y, c.shape[0] // len(y))
+        else:
+            sc = [k for k in ("N", "E") if f"codes_{mod}_{k}" in z.files]
+            c = np.concatenate([z[f"codes_{mod}_{k}"] for k in sc], 1)
+            cols = cols or [f"{k}{l}" for k in sc for l in range(z[f"codes_{mod}_{k}"].shape[1])]
+        g = _group(e["unit"])
+        if g not in groups:
+            groups.append(g)
+        C.append(c.astype(np.int16))
+        Y.append(y)
+        G.append(np.full(len(c), groups.index(g), np.int16))
+        NI.append(np.full(len(c), i, np.int32))
+        for r in ref_names:
+            R[r].append(rf[r] if r in rf and len(rf[r]) == len(c) else None)
+    out_r = {}
+    for r, parts in R.items():
+        has = np.concatenate([np.full(len(c), p is not None) for c, p in zip(C, parts)])
+        val = np.concatenate([p if p is not None else np.zeros(len(c), bool) for c, p in zip(C, parts)])
+        out_r[r] = (val, has)
+    return {"codes": np.concatenate(C), "y": np.concatenate(Y), "group": np.concatenate(G),
+            "night": np.concatenate(NI), "groups": groups, "cols": cols, "refs": out_r}
+
+
+def _f1(sel_mask, ref):
+    h = np.count_nonzero(sel_mask & ref)
+    n, H = np.count_nonzero(sel_mask), np.count_nonzero(ref)
+    return 2 * h / (n + H) if n + H else 0.0
+
+
+def greedy_codes(codes, ref, n_codes, k=3, n_cand=30, min_n=50, min_gain=0.005):
+    """Up to ``k`` (column, code) pairs whose union maximizes F1 against ``ref`` (tokens already
+    restricted to the stratum). Candidates: the ``n_cand`` best single codes by F1 with >= ``min_n`` uses."""
+    H = np.count_nonzero(ref)
+    if H == 0:
+        return [], 0.0
+    cand = []
+    for l in range(codes.shape[1]):
+        n = np.bincount(codes[:, l], minlength=n_codes)
+        h = np.bincount(codes[:, l], weights=ref, minlength=n_codes)
+        f = np.where(n >= min_n, 2 * h / (n + H), 0)
+        for c in np.argsort(f)[::-1][:n_cand]:
+            if f[c] > 0:
+                cand.append((float(f[c]), l, int(c)))
+    cand = sorted(cand, reverse=True)[:n_cand]
+    masks = {(l, c): codes[:, l] == c for _, l, c in cand}
+    sel, cur, best = [], np.zeros(len(ref), bool), 0.0
+    for _ in range(k):
+        scores = {lc: _f1(cur | m, ref) for lc, m in masks.items() if lc not in sel}
+        if not scores:
+            break
+        lc, f = max(scores.items(), key=lambda t: t[1])
+        if f - best < min_gain:
+            break
+        sel.append(lc)
+        cur |= masks[lc]
+        best = f
+    return sel, best
+
+
+def union_mask(codes, sel):
+    m = np.zeros(len(codes), bool)
+    for l, c in sel:
+        m |= codes[:, l] == c
+    return m
+
+
+def _describe(codes, ref, y, sel, stages):
+    """Purity, coverage, lift in the stratum and the within-stage lift (mean over the stratum's stages,
+    weighted by the reference) of the union and of every chosen code."""
+    def one(m):
+        base = ref.mean() if len(ref) else 0.0
+        h, n, H = np.count_nonzero(m & ref), np.count_nonzero(m), np.count_nonzero(ref)
+        lw, wsum = 0.0, 0
+        for s in stages:
+            k = y == s
+            hs = np.count_nonzero(ref & k)
+            if hs == 0 or not (m & k).any():
+                continue
+            lw += hs * ((m & k & ref).sum() / (m & k).sum()) / (hs / k.sum())
+            wsum += hs
+        return {"n": int(n), "purity": h / n if n else 0.0, "coverage": h / H if H else 0.0,
+                "lift": (h / n) / base if n and base else 0.0, "lift_within": lw / wsum if wsum else None,
+                "f1": _f1(m, ref)}
+    return {"union": one(union_mask(codes, sel)), "codes": [one(union_mask(codes, [lc])) for lc in sel]}
+
+
+def _shift_within_nights(ref, night, rng):
+    """Circular shift of the reference within every night (``night``: contiguous blocks)."""
+    out = np.empty_like(ref)
+    e = np.concatenate([[0], np.flatnonzero(np.diff(night)) + 1, [len(night)]])
+    for a, b in zip(e[:-1], e[1:]):
+        out[a:b] = np.roll(ref[a:b], rng.integers(1, max(2, b - a)))
+    return out
+
+
+def scan_concept(name, D, n_codes, n_nulls=20, seed=0):
+    ref_name, _, stages, _, sel_set = TARGETS[name]
+    ref, has = D["refs"][ref_name]
+    grp = np.array(D["groups"])[D["group"]]
+    ext = np.isin(grp, ["shhs", "mass_ss01", "dreams"])
+    strat = np.isin(D["y"], stages) & has
+    fit = strat & ((grp == "dreams") if sel_set == "dreams" else ~ext)
+    if not fit.any() or not ref[fit].any():
+        return {"concept": name, "ref": ref_name, "status": "no reference in the selection set"}
+    codes, y, night = D["codes"], D["y"], D["night"]
+    sel, f1 = greedy_codes(codes[fit], ref[fit], n_codes)
+    res = {"concept": name, "ref": ref_name, "stages": list(stages), "cols": D["cols"], "selection_set": sel_set,
+           "base_rate": float(ref[fit].mean()), "n_units": int(fit.sum()),
+           "selected": [{"col": D["cols"][l], "code": c} for l, c in sel], "f1": f1,
+           "describe": _describe(codes[fit], ref[fit], y[fit], sel, stages)}
+    # held-out folds: groups of the pool (items) or DREAMS excerpts
+    folds = sorted(set(grp[fit])) if sel_set == "pool" else sorted(set(night[fit]))
+    key = grp if sel_set == "pool" else night
+    loo, back = [], {f"{D['cols'][l]}:{c}": 0 for l, c in sel}
+    for f in folds:
+        tr, te = fit & (key != f), fit & (key == f)
+        if not ref[te].any():
+            continue
+        s2, _ = greedy_codes(codes[tr], ref[tr], n_codes)
+        loo.append({"fold": str(f), "f1": _f1(union_mask(codes[te], s2), ref[te]),
+                    "f1_full_sel": _f1(union_mask(codes[te], sel), ref[te])})
+        for l, c in s2:
+            k = f"{D['cols'][l]}:{c}"
+            if k in back:
+                back[k] += 1
+    res["loo"] = loo
+    res["stability"] = {k: v / max(1, len(loo)) for k, v in back.items()}
+    rng = np.random.default_rng(seed)
+    nulls = []
+    for _ in range(n_nulls):
+        rs = _shift_within_nights(ref[fit], night[fit], rng)
+        nulls.append(greedy_codes(codes[fit], rs, n_codes)[1])
+    res["null_f1"] = {"q95": float(np.quantile(nulls, 0.95)) if nulls else None, "max": max(nulls, default=None)}
+    # transfer of the selection to the out-of-pool units with this reference
+    tr_out = {}
+    for g in ("shhs", "mass_ss01", "dreams"):
+        m = strat & (grp == g)
+        if g == sel_set or not m.any() or not ref[m].any():
+            continue
+        tr_out[g] = _describe(codes[m], ref[m], y[m], sel, stages)["union"]
+    # expert references of the same concept (DREAMS): the selection against each scorer, and the
+    # ceiling = agreement between the two scorers on the same tokens
+    for e in EXPERT.get(name, ()):
+        if e not in D["refs"]:
+            continue
+        er, eh = D["refs"][e]
+        m = np.isin(y, stages) & eh
+        if m.any() and er[m].any():
+            tr_out[f"expert:{e}"] = _describe(codes[m], er[m], y[m], sel, stages)["union"]
+    pair = EXPERT_PAIR.get(name)
+    if pair and all(p in D["refs"] for p in pair):
+        (r1, h1), (r2, h2) = D["refs"][pair[0]], D["refs"][pair[1]]
+        m = np.isin(y, stages) & h1 & h2
+        if m.any():
+            res["ceiling_f1"] = _f1(r1[m], r2[m])
+    res["transfer"] = tr_out
+    return res
+
+
+def scan(a):
+    meta = json.load(open(os.path.join(a.dump, "meta.json")))
+    names = a.concepts.split(",") if a.concepts else list(TARGETS)
+    sp = os.path.join(a.dump, "scan.json")
+    out = json.load(open(sp)) if os.path.exists(sp) else {}
+    t0 = time.time()
+    jobs = {}
+    for name in names:
+        ref_name, mods, _, level, _ = TARGETS[name]
+        for m in mods:
+            jobs.setdefault((m, level), []).append((name, ref_name))
+    for (m, level), items in jobs.items():
+        refs_needed = {r for _, r in items} | {e for n, _ in items for e in EXPERT.get(n, ())}
+        D = load_scan_data(a.dump, m, level, sorted(refs_needed))
+        print(f"[scan] {m}/{level}: {len(D['codes'])} units, groups {D['groups']}, {(time.time() - t0) / 60:.1f} min", flush=True)
+        for name, _ in items:
+            r = scan_concept(name, D, meta["n_codes"][m]["P" if level == "tok" else "E"], a.nulls, a.seed)
+            out[f"{name}/{m}"] = r
+            json.dump(out, open(sp, "w"), indent=1)
+            u = r.get("describe", {}).get("union", {})
+            print(f"[scan] {name}/{m}: sel {r.get('selected')} f1 {r.get('f1', 0):.3f} null95 "
+                  f"{r.get('null_f1', {}).get('q95')} lift {u.get('lift', 0):.2f} within {u.get('lift_within')} "
+                  f"loo {np.mean([f['f1'] for f in r.get('loo', [])] or [np.nan]):.3f} "
+                  f"{(time.time() - t0) / 60:.1f} min", flush=True)
+    print("DONE", flush=True)
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sp = ap.add_subparsers(dest="cmd", required=True)
@@ -273,8 +567,16 @@ def main(argv=None):
     c.add_argument("--dump", required=True)
     c.add_argument("--cache-dir", default=None)
     c.add_argument("--workers", type=int, default=8)
+    r = sp.add_parser("refs", help="reference masks of every dumped night (CPU)")
+    r.add_argument("--dump", required=True)
+    r.add_argument("--workers", type=int, default=8)
+    s_ = sp.add_parser("scan", help="codebook components of every concept (CPU)")
+    s_.add_argument("--dump", required=True)
+    s_.add_argument("--concepts", default=None, help="comma list of TARGETS (default: all)")
+    s_.add_argument("--nulls", type=int, default=20)
+    s_.add_argument("--seed", type=int, default=0)
     a = ap.parse_args(argv)
-    {"dump": dump, "scale": scale}[a.cmd](a)
+    {"dump": dump, "scale": scale, "refs": refs, "scan": scan}[a.cmd](a)
 
 
 if __name__ == "__main__":
