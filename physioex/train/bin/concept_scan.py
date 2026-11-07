@@ -458,13 +458,30 @@ def nb_score(codes, lift, cols=None):
     return sum(np.log(lift[l][codes[:, l]]) for l in cols)
 
 
-def family(codes, ref, n_codes, min_lift=2.0, min_n=50):
-    """Codes with lift >= ``min_lift`` and >= ``min_n`` uses, per column: the concept's code family."""
+def family(codes, ref, n_codes, min_lift=2.0, min_n=50, fdr=0.01):
+    """The concept's code family, per column: codes with lift >= ``min_lift``, >= ``min_n`` uses and an
+    enrichment that survives a one-sided binomial test (hits given uses at the base rate) with
+    Benjamini-Hochberg at ``fdr`` over the column's tested codes (the rare codes of the deep RVQ levels
+    pass the lift alone by chance)."""
+    from scipy.stats import binom
+
+    b = max(ref.mean(), 1e-9)
     lift = code_lift(codes, ref, n_codes)
     fam = []
     for l in range(codes.shape[1]):
         n = np.bincount(codes[:, l], minlength=n_codes)
-        fam += [(l, int(c)) for c in np.flatnonzero((lift[l] >= min_lift) & (n >= min_n))]
+        h = np.bincount(codes[:, l], weights=ref, minlength=n_codes).round().astype(int)
+        cand = np.flatnonzero((lift[l] >= min_lift) & (n >= min_n))
+        if not len(cand):
+            continue
+        tested = np.flatnonzero(n >= min_n)
+        p = binom.sf(h[tested] - 1, n[tested], b)
+        order = np.argsort(p)
+        thr = fdr * np.arange(1, len(p) + 1) / len(p)
+        ok = p[order] <= thr
+        k = np.flatnonzero(ok).max() + 1 if ok.any() else 0
+        sig = set(tested[order[:k]].tolist())
+        fam += [(l, int(c)) for c in cand if int(c) in sig]
     return fam, lift
 
 
