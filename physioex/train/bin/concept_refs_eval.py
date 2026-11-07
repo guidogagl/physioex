@@ -156,8 +156,10 @@ def kc_tuning(excerpts, grid=KC_GRID):
     names = [e[0] for e in excerpts]
     scorers = sorted({sc for _, _, sc in C})
 
+    has = {sc: [n for n in names if (keys[0], n, sc) in C] for sc in scorers}  # vis2 scored fewer excerpts
+
     def score(p, ns):
-        return np.mean([prf([C[p, n, sc] for n in ns])[2] for sc in scorers])
+        return np.nanmean([prf([C[p, n, sc] for n in ns if n in has[sc]] or [(0, 0, 0)])[2] for sc in scorers])
 
     held = {sc: [] for sc in scorers}
     picks = {}
@@ -166,9 +168,10 @@ def kc_tuning(excerpts, grid=KC_GRID):
         best = max(keys, key=lambda p: score(p, rest))
         picks[n] = list(best)
         for sc in scorers:
-            held[sc].append(C[best, n, sc])
+            if n in has[sc]:
+                held[sc].append(C[best, n, sc])
     full = max(keys, key=lambda p: score(p, names))
-    return {"grid": {f"{k}_{i}": {sc: dict(zip(("precision", "recall", "f1"), map(float, prf([C[(k, i), n, sc] for n in names]))))
+    return {"grid": {f"{k}_{i}": {sc: dict(zip(("precision", "recall", "f1"), map(float, prf([C[(k, i), n, sc] for n in has[sc]]))))
                                   for sc in scorers} for k, i in keys},
             "loo_picks": picks, "best_all": {"k_mad": full[0], "iso_s": full[1]},
             "heldout": {sc: {**bootstrap(held[sc]), "verdict": accept(*prf(held[sc])[:2])} for sc in scorers}}

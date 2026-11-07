@@ -59,7 +59,8 @@ def test_kc_tuning_picks_a_threshold_that_rejects_small_waves():
             if big:
                 ref[s // 50:(s + 100) // 50] = True
         exc.append((f"e{e}", x.reshape(n_ep, 3000), np.arange(n_ep), np.full(n_ep, 2, np.int8), FS,
-                    {"vis1": ref, "vis2": ref}))
+                    {"vis1": ref, "vis2": ref} if e < 2 else {"vis1": ref}))
     out = E.kc_tuning(exc, grid={"k_mad": (2.0, 15.0), "iso_s": (0.0,)})
     assert out["best_all"]["k_mad"] == 15.0
+    assert out["heldout"]["vis2"]["n_nights"] == 2
     assert out["heldout"]["vis1"]["precision"] > 0.8 and out["heldout"]["vis1"]["recall"] > 0.8
