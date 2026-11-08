@@ -166,7 +166,7 @@ def _wake_clauses(src, st, y):
     return out
 
 
-def battery_kc(D, n_null=200, n_null_pool=20, seed=0, swa_source="eq", wake=False, n3_first=False):
+def battery_kc(D, n_null=200, n_null_pool=20, seed=0, swa_source="eq", wake=False, n3_first=False, eye_eeg=False):
     """``swa_source``: ``eq`` = ridge on the epoch latents; ``words`` = fraction of the epoch's tokens where the
     slow-transient word fires (the predicate read on the word sequence, C1b). ``wake``: the alpha clause becomes
     the AASM wake rule on lexicon words (alpha, blink and rapid-eye words on ``P@eog``, atonia word on ``P@emg``;
@@ -190,6 +190,8 @@ def battery_kc(D, n_null=200, n_null_pool=20, seed=0, swa_source="eq", wake=Fals
     if wake:
         fr, fo = {}, {}
         for name, wc in cfg["wake_words"].items():
+            if eye_eeg and name in ("blink", "rem_eye"):  # C1e: the eye words also read the EEG, as their reference
+                wc = {**wc, "inputs": wc["inputs"] + ["P"]}  # (deflection >= 2x larger on the EOG than on the EEG)
             w_, v1x[name], fin = _word(D, wc, seed)
             avail = fin.reshape(-1, T).all(1)
             fr[name] = np.where(avail, w_.reshape(-1, T).mean(1), np.nan)
@@ -351,8 +353,8 @@ def battery(a):
                             opt_mods=("eog", "emg") if a.wake else ())
     print(f"[compose] loaded {len(keys)} nights, {len(D['y'])} tokens, {time.time() - t0:.0f} s", flush=True)
     res = battery_kc(D, n_null=a.n_null, n_null_pool=a.n_null_pool, seed=a.seed, swa_source=a.swa_source, wake=a.wake,
-                     n3_first=a.n3_first)
-    out = {"iteration": a.iter, "concept": a.concept, "rule": cfg["rule"], "swa_source": a.swa_source, "wake": a.wake, "n3_first": a.n3_first,
+                     n3_first=a.n3_first, eye_eeg=a.eye_eeg)
+    out = {"iteration": a.iter, "concept": a.concept, "rule": cfg["rule"], "swa_source": a.swa_source, "wake": a.wake, "n3_first": a.n3_first, "eye_eeg": a.eye_eeg,
            "thresholds": {"N3_SWA": CR.N3_SWA, "W_ALPHA": CR.W_ALPHA, "EYE_PRESENT": CR.EYE_PRESENT,
                           "ATONIA_EPOCH": CR.ATONIA_EPOCH, "KC_ISO_TOK": CR.KC_ISO_TOK,
                           "MERGE_GAP": CR.MERGE_GAP},
@@ -380,6 +382,7 @@ def main(argv=None):
     b.add_argument("--swa-source", default="eq", choices=["eq", "words"])
     b.add_argument("--wake", action="store_true", help="C1c: AASM wake rule on lexicon words (needs EOG / EMG)")
     b.add_argument("--n3-first", action="store_true", help="C1d: AASM precedence, slow waves >= 20 %% is N3, never W")
+    b.add_argument("--eye-eeg", action="store_true", help="C1e: blink / rem_eye words read P@eog and P (EEG)")
     a = ap.parse_args(argv)
     battery(a)
 

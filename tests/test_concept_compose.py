@@ -126,3 +126,9 @@ def test_battery_kc_n3_first_keeps_n3():
     assert set(wc) == {"alpha", "blink", "eye_tone", "swa_ge_20"} and wc["swa_ge_20"]["N3"] > 0.8
     n3 = out["V2"]["pool"]["n3_vs_slow_wave_in_swa_epochs"]["lexicon"]
     assert n3["coverage"] > 0.8
+
+
+def test_battery_kc_eye_eeg_runs():
+    D = _toy_wake(seed=4)
+    out = cc.battery_kc(D, n_null=2, n_null_pool=2, swa_source="words", wake=True, n3_first=True, eye_eeg=True)
+    assert out["V1"]["blink"]["ap_pool_loso"] > 0.5
