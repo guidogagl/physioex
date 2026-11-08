@@ -369,7 +369,8 @@ def baselines(Zs, bases, names, idx, r, key, groups, y, A, gs, F=None):
     (raw and over +-1 token); ``amp+stadio``, a logistic regression on the stage and those amplitudes
     fitted on the other groups. The baseline of a held-out group is the row chosen on the other groups
     (as the ICA word). Ceiling: logistic regression on all the raw-signal features (reported as the
-    retention of the definition, not a gate)."""
+    retention of the definition, not a gate). The ceiling sees the stage too (since 08.11.2026), as the
+    amplitude baseline does."""
     rows = {"stadio": per_group_ap(_stage_heldout(y, r, key, groups), r, key, groups)}
     amp_names = [n for n in names if ":E[all]" in n]
     for n in amp_names:
@@ -390,7 +391,7 @@ def baselines(Zs, bases, names, idx, r, key, groups, y, A, gs, F=None):
             "picks": [keys[p] for p in picks], "rows_mean": {k: float(np.nanmean(M[i])) for i, k in enumerate(keys)}}
     ceil = None
     if F is not None:
-        c = per_group_ap(_fold_logistic(F, r, key, groups), r, key, groups)
+        c = per_group_ap(_fold_logistic(np.column_stack([st, F]), r, key, groups), r, key, groups)
         ceil = {"per_group": c, "loo_ap": float(np.nanmean(list(c.values())))}
     return base, ceil
 
@@ -1022,7 +1023,8 @@ def freeze(a):
         names = [k.split("/")[0] for k, r in wj.items() if r.get("top") and k.endswith(f"/{mod}")]
         need = sorted({TARGETS[n][0] for n in names} | {e for n in names for e in EVENT_EXPERT.get(n, ())}
                       | {e for n in names for e in EXPERT.get(n, ())})
-        Zs, y, G, NI, groups, refs, C = load_coords(a.dump, mod, bases, need, a.frac, a.seed, with_codes=True)
+        Zs, y, G, NI, groups, refs, C, F = load_coords(a.dump, mod, bases, need, a.frac, a.seed, with_codes=True,
+                                                       with_signal=True)
         n_codes = meta["n_codes"][mod]["P"]
         gn = np.array(groups)[G]
         for rep, b in bases.items():
@@ -1045,6 +1047,14 @@ def freeze(a):
             idx = (rows[:, None] * T + np.arange(T)).reshape(-1)
             rr, key, yi = ref[idx], (gn[idx] if sel_set == "pool" else NI[idx].astype(str)), y[idx]
             cands = candidates(r)
+            # ceiling with the stage (the words of 08.11 fitted it on the signal alone): raw-signal features
+            # + stage one-hot, leave-group-out on the freeze tokens; retention = AP / ceiling, reported only
+            gk = sorted(set(key))
+            st = np.stack([yi == s_ for s_ in np.unique(yi)], 1).astype(np.float32)
+            cp = per_group_ap(_fold_logistic(np.column_stack([st, F[idx]]), rr, key, gk), rr, key, gk)
+            r["ceiling"] = {"per_group": cp, "loo_ap": float(np.nanmean(list(cp.values()))), "with_stage": True}
+            for c_ in cands.values():
+                c_["retention"] = c_["loo_ap"] / max(r["ceiling"]["loo_ap"], 1e-9)
             p_ci = r.get("code_vs_ica_p", 1.0)
             excl = None
             if "code" in cands and state & fams.get(n, set()):
@@ -1059,7 +1069,8 @@ def freeze(a):
                     p_vs_base=paired_p(held, bpg), margin_nap=nap_margin(held, bpg, r["group_base"]),
                     family=[{"level": l, "codes": decode_prefix(l, p, n_codes), "log_lift": round(ll, 4)}
                             for l, p, ll, _ in tab[:k]],
-                    family_size=len(tab[:k]), distributed=bool(k > 50), state_removed=len(state & fams[n]))
+                    family_size=len(tab[:k]), distributed=bool(k > 50), state_removed=len(state & fams[n]),
+                    retention=float(np.nanmean(list(held.values()))) / max(r["ceiling"]["loo_ap"], 1e-9))
                 p_ci = paired_p(held, cands["ica"]["per_group"]) if "ica" in cands else 0.0
             win_kind = choose(cands, p_ci)
             cw = cands[win_kind]
