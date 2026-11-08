@@ -53,6 +53,13 @@ CONCEPTS = {
         "rule": "rem = rem_eye word event AND atonia_frac > 0.50 (night-relative chin tone) AND alpha_frac <= 0.50; "
                 "wake = rem_eye word event AND NOT rem",
     },
+    "alpha_ctx": {
+        "refs": ["alpha", "alpha_rem", "alpha_nrem", "delta", "blink", "rem_eye", "atonia"],
+        "word": {"ref": "alpha", "inputs": ["P", "P_ctx±2"]},
+        "rule": "alpha word event labelled by the lexicon state of its epoch: W = AASM wake rule (alpha > 0.50, "
+                "blinks, rapid eyes with tone); REM = not W, atonia > 0.50, swa < 0.20; NREM = the rest "
+                "(alpha intrusion / alpha-delta)",
+    },
 }
 
 
@@ -363,6 +370,67 @@ def battery_rem(D, n_null=0, n_null_pool=20, seed=0, eye_eeg=False):
     return out
 
 
+def _lex_state(D, seed=0, eye_eeg=True):
+    """Per-epoch lexicon predicates shared by the rules: alpha (ridge on Eq+Nq), slow-wave fraction (delta word),
+    eye and tone word fractions, AASM wake (C1e) and coarse state; the same from the references (oracle)."""
+    cfg = CONCEPTS["kc"]
+    dword, _, _ = _word(D, cfg["word"], seed)
+    swa = dword.reshape(-1, T).mean(1)
+    swa_t, _ = RA.epoch_target(D, "delta")
+    alpha, alpha_t, v1a = _pred(D, cfg["preds"]["alpha"], seed)
+    fr, fo, v1 = {}, {}, {"alpha": v1a}
+    for name, wc in cfg["wake_words"].items():
+        if eye_eeg and name in ("blink", "rem_eye"):
+            wc = {**wc, "inputs": wc["inputs"] + ["P"]}
+        w_, v1[name], fin = _word(D, wc, seed)
+        fr[name] = np.where(fin.reshape(-1, T).all(1), w_.reshape(-1, T).mean(1), np.nan)
+        rr, hh = RA.ref_mask(D, wc["ref"])
+        fo[name] = np.where(hh.reshape(-1, T).all(1), rr.reshape(-1, T).mean(1), np.nan)
+    out = {}
+    for k, (a, f, sw) in {"lexicon": (alpha, fr, swa), "oracle": (alpha_t, fo, swa_t)}.items():
+        wk = CR.wake_rule(a, f["blink"], f["rem_eye"], f["atonia"]) & ~(sw >= CR.N3_SWA)
+        out[k] = {"wake": wk, "state": CR.state_rule(wk, f["atonia"], sw), "aton": f["atonia"], "alpha": a, "swa": sw}
+    return out, v1
+
+
+def battery_alpha(D, n_null_pool=20, seed=0):
+    """C3: alpha in context. The alpha word's events labelled W / REM / NREM by the lexicon state of their epoch,
+    against the alpha reference in W, in REM (``alpha_rem``) and in N2/N3 (``alpha_nrem``) of the hypnogram
+    (declared: the stage defines the targets, the rule uses no stage). Pool only (the state needs EOG / EMG)."""
+    cfg = CONCEPTS["alpha_ctx"]
+    night = D["night"]
+    word, v1w, fin = _word(D, cfg["word"], seed)
+    S, v1 = _lex_state(D, seed)
+    ar, ah = RA.ref_mask(D, "alpha")
+    y = np.repeat(D["y"][::T], T)
+    tgt = {"W": ar & (y == 0), "REM": RA.ref_mask(D, "alpha_rem")[0], "NREM": RA.ref_mask(D, "alpha_nrem")[0]}
+    avail = np.repeat(np.isfinite(S["lexicon"]["aton"]), T)
+    sel = (D["set"] == "pool") & ah & fin & avail
+    lex = CR.in_state(word, night, S["lexicon"]["state"])
+    ora = CR.in_state(ar, night, S["oracle"]["state"])
+    st_ep = D["y"][::T]
+    out = {"V1": {"word": v1w, **v1,
+                  "state_vs_stage": {k: {CR.STATES[i]: {nm: float((S[k]["state"][(st_ep == s) & np.isfinite(S[k]["aton"])] == i).mean())
+                                                        for s, nm in ((0, "W"), (4, "R"), (2, "N2"), (3, "N3"))}
+                                         for i in range(3)} for k in ("lexicon", "oracle")}},
+           "V2": {"pool": {}}, "V3": {}}
+    en = night[::T]
+    for k, r in tgt.items():
+        rng = np.random.default_rng(seed)
+        nul = [CR.event_agreement(CR.in_state(word, night, CR.permute_epochs(S["lexicon"]["state"], en, rng))[k],
+                                  r, night, sel)["f1"] for _ in range(n_null_pool)]
+        e = {"lexicon": _agree(lex[k], r, night, sel, seed), "oracle": _agree(ora[k], r, night, sel, seed),
+             "word_only": CR.event_agreement(word, r, night, sel),
+             "nulls": {"state_perm_q95": float(np.quantile(nul, 0.95)) if nul else None, "n": n_null_pool},
+             "stage_of_detections": _stage_mix(D, lex[k], sel),
+             "circularity": "target = alpha reference in the hypnogram stage; the rule uses no stage"}
+        fo = e["oracle"]["f1"]
+        e["ret_vs_oracle"] = e["lexicon"]["f1"] / fo if fo else None
+        out["V2"]["pool"][k] = e
+        out["V3"][f"pool:{k}"] = {"no_state": e["lexicon"]["f1"] - e["word_only"]["f1"]}
+    return out
+
+
 def _split(D, o, word, ref, y, sel):
     """Of the word events in R or W epochs that hit a reference eye event: share called REM in R, called wake
     in W, and their mean (balanced accuracy of the R / W distinction)."""
@@ -430,12 +498,14 @@ def _jsonable(x):
 def battery(a):
     t0 = time.time()
     cfg = CONCEPTS[a.concept]
-    rem = a.concept == "rem_eye"
+    rem = a.concept in ("rem_eye", "alpha_ctx")
     refs = cfg["refs"] + (cfg["wake_refs"] if a.wake else [])
     D, keys, sets = RA.load(a.dump, "eeg", refs, frac=a.frac, n_ss01=a.n_ss01, seed=a.seed,
                             opt_mods=("eog", "emg") if (a.wake or rem) else ())
     print(f"[compose] loaded {len(keys)} nights, {len(D['y'])} tokens, {time.time() - t0:.0f} s", flush=True)
-    if rem:
+    if a.concept == "alpha_ctx":
+        res = battery_alpha(D, n_null_pool=a.n_null_pool, seed=a.seed)
+    elif rem:
         res = battery_rem(D, n_null_pool=a.n_null_pool, seed=a.seed, eye_eeg=a.eye_eeg)
     else:
         res = battery_kc(D, n_null=a.n_null, n_null_pool=a.n_null_pool, seed=a.seed, swa_source=a.swa_source,

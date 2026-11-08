@@ -156,3 +156,40 @@ def test_rem_w_rule_split():
     assert sp["lexicon"]["balanced"] > 0.8 and sp["no_tone"]["balanced"] < sp["lexicon"]["balanced"] - 0.2
     assert out["V2"]["pool"]["rem"]["lexicon"]["f1"] > out["V2"]["pool"]["rem"]["word_only"]["f1"] + 0.1
     assert cc._jsonable(out)
+
+
+def test_alpha_in_context():
+    """Alpha bursts: in eyes-closed W (alpha > 50 %) they are W alpha; a short burst in a low-tone REM epoch is
+    REM alpha; in an N2 epoch with high tone it is an NREM intrusion."""
+    D = _toy_wake(seed=6)
+    rng = np.random.default_rng(6)
+    n = len(D["y"])
+    ye = D["y"][::T].copy()
+    ye[(ye == 2) & (rng.random(len(ye)) < 0.5)] = 4
+    D["y"] = np.repeat(ye, T).astype(np.int8)
+    alpha = D["refs"]["alpha"][0].copy()
+    aton = D["refs"]["atonia"][0].copy()
+    pm = D["P@emg"].copy()
+    for e in np.flatnonzero(ye == 2):  # N2: tone high (no atonia), short alpha burst
+        aton[e * T:(e + 1) * T] = False
+        t = e * T + int(rng.integers(5, 50))
+        alpha[t:t + 3] = True
+    for e in np.flatnonzero(ye == 4):
+        t = e * T + int(rng.integers(5, 50))
+        alpha[t:t + 3] = True
+    dre = D["set"] == "dreams"
+    pm[~dre, 0] = aton[~dre] + 0.2 * rng.normal(size=(~dre).sum())
+    D["P@emg"] = pm
+    D["P"][:, 1] = alpha + 0.2 * rng.normal(size=n)
+    ones = np.ones(n, bool)
+    y = D["y"]
+    D["refs"]["alpha"] = (alpha, ones)
+    D["refs"]["atonia"] = (aton, ~dre)
+    D["refs"]["alpha_rem"] = (alpha & (y == 4), ones)
+    D["refs"]["alpha_nrem"] = (alpha & ((y == 2) | (y == 3)), ones)
+    out = cc.battery_alpha(D, n_null_pool=3)
+    p = out["V2"]["pool"]
+    assert set(p) == {"W", "REM", "NREM"}
+    assert p["REM"]["lexicon"]["f1"] > p["REM"]["word_only"]["f1"] + 0.2
+    assert p["NREM"]["lexicon"]["f1"] > p["NREM"]["nulls"]["state_perm_q95"]
+    assert cc._jsonable(out)

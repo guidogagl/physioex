@@ -145,6 +145,29 @@ def rem_w_rule(word: np.ndarray, night: np.ndarray, aton_ep: np.ndarray, alpha_e
             "wake": runs_to_mask([r for r, k in zip(runs, wake) if k], n), "runs": runs}
 
 
+STATES = ("W", "REM", "NREM")
+
+
+def state_rule(wake_ep: np.ndarray, aton_ep: np.ndarray, swa_ep: np.ndarray) -> np.ndarray:
+    """Coarse state per epoch from lexicon predicates (C3): 0 = W (``wake_rule``), 1 = REM (not wake, atonia
+    > ``ATONIA_EPOCH``, slow waves < ``N3_SWA``), 2 = NREM (the rest). No stage enters."""
+    low = np.nan_to_num(aton_ep, nan=0.0) > ATONIA_EPOCH
+    st = np.full(len(wake_ep), 2, np.int8)
+    st[~wake_ep & low & (swa_ep < N3_SWA)] = 1
+    st[wake_ep] = 0
+    return st
+
+
+def in_state(word: np.ndarray, night: np.ndarray, state_ep: np.ndarray) -> Dict[str, np.ndarray]:
+    """Word events labelled by the state of their epoch: one token mask per state in ``STATES``."""
+    runs = event_runs(word, night)
+    n = len(word)
+    if not runs:
+        return {k: np.zeros(n, bool) for k in STATES}
+    ep = epoch_of(runs)
+    return {k: runs_to_mask([r for r, e in zip(runs, ep) if state_ep[e] == i], n) for i, k in enumerate(STATES)}
+
+
 # ---------------------------------------------------------------------------- event metrics
 def event_agreement(det: np.ndarray, ref: np.ndarray, night: np.ndarray, sel: np.ndarray = None) -> Dict:
     """Event purity (precision), coverage (recall) and F1 by overlap. ``sel``: tokens in scope (events of
