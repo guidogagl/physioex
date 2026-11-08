@@ -117,6 +117,16 @@ def test_context_twin_and_candidates():
     assert out["variants"][0]["auc_nights"] > 0.8 and out["n_tok"] < 0.55 * len(r2)
 
 
+def test_oscillation_needs_energy_terms():
+    D, p, e, r = _toy(4)
+    q = D["P"][:, 1]
+    D["refs"]["osc"] = (np.abs(q) > 1.5, np.ones(len(q), bool))  # sign-symmetric: invisible to a linear probe
+    spec = {"term": "osc", "mod": "eeg", "ref": "osc", "stages": [2], "word_variants": [["P"]],
+            "baselines": ["abs_amp"], "matched_bins": ["abs"]}
+    v = cr.run_tok(D, spec, n_null=0)["variants"][0]
+    assert v["matched"]["mean"] > 0.5
+
+
 def test_codes_enter_through_in_fold_lift():
     D, p, e, r = _toy(2)
     D["codes_E"] = np.column_stack([e * 3 + np.random.default_rng(2).integers(0, 3, len(e)), np.zeros(len(e), int)])

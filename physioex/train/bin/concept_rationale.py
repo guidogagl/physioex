@@ -369,6 +369,12 @@ def token_input(D, name):
     return out
 
 
+def _quadratic(name):
+    """Latent inputs enter with their element-wise squares: an oscillation flips sign token by token, its
+    content is the energy along a direction (the ICA words of the lexicon are energies)."""
+    return name == "P" or name.startswith("P@") or name in ("Eq", "Nq", "P_ep") or bool(CTX.fullmatch(name))
+
+
 def build(D, names, idx):
     X, codes, bad = [], [], []
     for n in names:
@@ -376,7 +382,13 @@ def build(D, names, idx):
             (codes.append(D[n][idx]) if n in D else bad.append(n))
             continue
         a = token_input(D, n)
-        (X.append(a[idx]) if a is not None else bad.append(n))
+        if a is None:
+            bad.append(n)
+            continue
+        X.append(a[idx])
+        if _quadratic(n):
+            rot = D.get("_icaP") if (n == "P" or CTX.fullmatch(n)) else None
+            X.append((rot.transform(a[idx]) if rot is not None else a[idx]) ** 2)
     X = np.column_stack(X).astype(np.float32) if X else np.zeros((len(idx), 0), np.float32)
     return X, codes, bad
 
@@ -605,7 +617,12 @@ def run_epoch(D, spec, n_null=5, seed=0):
                 (cs.append(D[n][::T][idx]) if n in D else out["skipped_inputs"].append(n))
                 continue
             a = epoch_input(D, n)
-            (X.append(a[idx]) if a is not None else out["skipped_inputs"].append(n))
+            if a is None:
+                out["skipped_inputs"].append(n)
+                continue
+            X.append(a[idx])
+            if _quadratic(n):
+                X.append(a[idx] ** 2)
         if not X and not cs:
             return None
         X = np.column_stack(X).astype(np.float32) if X else np.zeros((len(idx), 0), np.float32)
@@ -790,6 +807,20 @@ def finish(D, seed=0):
     D["perm"] = epoch_perm(D["y"], D["night"], np.random.default_rng(seed + 11))
     D["_cache"] = {}
     _latent_views(D, seed)
+    _p_ica(D, seed)
+
+
+def _p_ica(D, seed=0, n_fit=200_000):
+    """Label-free FastICA of P on pool tokens: the squares of P (and of its context means) are taken in this
+    basis, the one of the lexicon's ICA words (energy along independent directions)."""
+    from sklearn.decomposition import FastICA
+
+    pool = np.flatnonzero(D["set"] == "pool")
+    if len(pool) < 10 * D["P"].shape[1]:
+        return
+    rng = np.random.default_rng(seed + 5)
+    fit = D["P"][rng.choice(pool, min(n_fit, len(pool)), replace=False)]
+    D["_icaP"] = FastICA(D["P"].shape[1], random_state=seed, max_iter=400, whiten="unit-variance").fit(fit)
 
 
 def _latent_views(D, seed=0):
