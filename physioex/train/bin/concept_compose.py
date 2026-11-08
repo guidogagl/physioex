@@ -45,6 +45,14 @@ CONCEPTS = {
         "rule": "kc = delta word event AND swa_frac < 0.20 AND alpha_frac <= 0.50 AND isolated +-4 tokens; "
                 "n3 = delta word event AND swa_frac >= 0.20",
     },
+    "rem_eye": {
+        "refs": ["alpha", "rem_eye", "atonia"],
+        "word": {"ref": "rem_eye", "inputs": ["P@eog"]},
+        "tone": {"ref": "atonia", "inputs": ["P@emg"]},
+        "preds": {"alpha": {"ref": "alpha", "inputs": ["Eq", "Nq"]}},
+        "rule": "rem = rem_eye word event AND atonia_frac > 0.50 (night-relative chin tone) AND alpha_frac <= 0.50; "
+                "wake = rem_eye word event AND NOT rem",
+    },
 }
 
 
@@ -295,6 +303,80 @@ def battery_kc(D, n_null=200, n_null_pool=20, seed=0, swa_source="eq", wake=Fals
     return out
 
 
+def battery_rem(D, n_null=0, n_null_pool=20, seed=0, eye_eeg=False):
+    """C2: rapid eye movements of REM against those of wake. Targets on the pool (DREAMS has no EOG): reference
+    eye events in R epochs and in W epochs of the hypnogram (declared: the stage defines the target, the rule
+    uses no stage). Measures: event agreement of the REM / wake calls, and the split accuracy on the word events
+    that hit a reference eye event in R or W (the rem_eye_R_vs_W distinction that failed as a P word)."""
+    cfg = CONCEPTS["rem_eye"]
+    night = D["night"]
+    wc = dict(cfg["word"])
+    if eye_eeg:
+        wc["inputs"] = wc["inputs"] + ["P"]
+    word, v1w, fin = _word(D, wc, seed)
+    tw, v1t, fin_t = _word(D, cfg["tone"], seed)
+    aton = np.where(fin_t.reshape(-1, T).all(1), tw.reshape(-1, T).mean(1), np.nan)
+    alpha, alpha_t, v1a = _pred(D, cfg["preds"]["alpha"], seed)
+    er, eh = RA.ref_mask(D, "rem_eye")
+    ar, ah = RA.ref_mask(D, "atonia")
+    aton_t = np.where(ah.reshape(-1, T).all(1), ar.reshape(-1, T).mean(1), np.nan)
+    from scipy.stats import spearmanr
+
+    ok = np.isfinite(aton) & np.isfinite(aton_t)
+    v1t["spearman_epoch_frac"] = float(spearmanr(aton[ok], aton_t[ok])[0]) if ok.sum() > 2 else None
+    lex = CR.rem_w_rule(word, night, aton, alpha)
+    ora = CR.rem_w_rule(er, night, aton_t, alpha_t)
+    abl = {"no_tone": CR.rem_w_rule(word, night, aton, alpha, use_tone=False),
+           "no_alpha": CR.rem_w_rule(word, night, aton, alpha, use_alpha=False)}
+    abl_o = {"no_tone": CR.rem_w_rule(er, night, aton_t, alpha_t, use_tone=False),
+             "no_alpha": CR.rem_w_rule(er, night, aton_t, alpha_t, use_alpha=False)}
+    y = np.repeat(D["y"][::T], T)
+    sel = (D["set"] == "pool") & eh & fin & fin_t
+    tgt = {"rem": er & (y == 4), "wake": er & (y == 0)}
+    out = {"V1": {"word": v1w, "tone": v1t, "alpha": v1a}, "V2": {"pool": {}}, "V3": {}}
+    for k, r in tgt.items():
+        rng = np.random.default_rng(seed)
+        en = night[::T]
+        nul_p, nul_w = [], []
+        for _ in range(n_null_pool):
+            o = CR.rem_w_rule(word, night, CR.permute_epochs(aton, en, rng), CR.permute_epochs(alpha, en, rng))
+            nul_p.append(CR.event_agreement(o[k], r, night, sel)["f1"])
+            o = CR.rem_w_rule(CR.shift_within_nights(word, night, rng), night, aton, alpha)
+            nul_w.append(CR.event_agreement(o[k], r, night, sel)["f1"])
+        e = {"lexicon": _agree(lex[k], r, night, sel, seed), "oracle": _agree(ora[k], r, night, sel, seed),
+             "word_only": CR.event_agreement(word, r, night, sel),
+             "nulls": {"pred_perm_q95": float(np.quantile(nul_p, 0.95)) if nul_p else None,
+                       "word_roll_q95": float(np.quantile(nul_w, 0.95)) if nul_w else None, "n": n_null_pool},
+             "ablations": {a: CR.event_agreement(o[k], r, night, sel) for a, o in abl.items()},
+             "ablations_oracle": {a: CR.event_agreement(o[k], r, night, sel) for a, o in abl_o.items()},
+             "stage_of_detections": _stage_mix(D, lex[k], sel),
+             "circularity": "target = reference eye events in the hypnogram stage; the rule uses no stage"}
+        fo = e["oracle"]["f1"]
+        e["ret_vs_oracle"] = e["lexicon"]["f1"] / fo if fo else None
+        out["V2"]["pool"][k] = e
+        out["V3"][f"pool:{k}"] = {a: e["lexicon"]["f1"] - v["f1"] for a, v in e["ablations"].items()}
+        out["V3"][f"pool:{k}:oracle"] = {a: e["oracle"]["f1"] - v["f1"] for a, v in e["ablations_oracle"].items()}
+    out["V2"]["pool"]["split_R_vs_W"] = {"lexicon": _split(D, lex, word, er, y, sel),
+                                         "oracle": _split(D, ora, er, er, y, sel),
+                                         "no_tone": _split(D, abl["no_tone"], word, er, y, sel),
+                                         "no_alpha": _split(D, abl["no_alpha"], word, er, y, sel)}
+    return out
+
+
+def _split(D, o, word, ref, y, sel):
+    """Of the word events in R or W epochs that hit a reference eye event: share called REM in R, called wake
+    in W, and their mean (balanced accuracy of the R / W distinction)."""
+    runs = CR.event_runs(word & sel, D["night"], gap=0)
+    res = {}
+    for st, k in ((4, "rem"), (0, "wake")):
+        hit = [r for r in runs if y[(r[0] + r[1] - 1) // 2] == st and ref[r[0]:r[1]].any()]
+        res[f"n_{k}"] = len(hit)
+        res[f"acc_{k}"] = float(np.mean([o[k][a:b].any() for a, b in hit])) if hit else None
+    if res["acc_rem"] is not None and res["acc_wake"] is not None:
+        res["balanced"] = (res["acc_rem"] + res["acc_wake"]) / 2
+    return res
+
+
 def _stage_mix(D, det, sel):
     runs = CR.event_runs(det & sel, D["night"], gap=0)
     if not runs:
@@ -348,12 +430,16 @@ def _jsonable(x):
 def battery(a):
     t0 = time.time()
     cfg = CONCEPTS[a.concept]
+    rem = a.concept == "rem_eye"
     refs = cfg["refs"] + (cfg["wake_refs"] if a.wake else [])
     D, keys, sets = RA.load(a.dump, "eeg", refs, frac=a.frac, n_ss01=a.n_ss01, seed=a.seed,
-                            opt_mods=("eog", "emg") if a.wake else ())
+                            opt_mods=("eog", "emg") if (a.wake or rem) else ())
     print(f"[compose] loaded {len(keys)} nights, {len(D['y'])} tokens, {time.time() - t0:.0f} s", flush=True)
-    res = battery_kc(D, n_null=a.n_null, n_null_pool=a.n_null_pool, seed=a.seed, swa_source=a.swa_source, wake=a.wake,
-                     n3_first=a.n3_first, eye_eeg=a.eye_eeg)
+    if rem:
+        res = battery_rem(D, n_null_pool=a.n_null_pool, seed=a.seed, eye_eeg=a.eye_eeg)
+    else:
+        res = battery_kc(D, n_null=a.n_null, n_null_pool=a.n_null_pool, seed=a.seed, swa_source=a.swa_source,
+                         wake=a.wake, n3_first=a.n3_first, eye_eeg=a.eye_eeg)
     out = {"iteration": a.iter, "concept": a.concept, "rule": cfg["rule"], "swa_source": a.swa_source, "wake": a.wake, "n3_first": a.n3_first, "eye_eeg": a.eye_eeg,
            "thresholds": {"N3_SWA": CR.N3_SWA, "W_ALPHA": CR.W_ALPHA, "EYE_PRESENT": CR.EYE_PRESENT,
                           "ATONIA_EPOCH": CR.ATONIA_EPOCH, "KC_ISO_TOK": CR.KC_ISO_TOK,

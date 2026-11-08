@@ -132,3 +132,27 @@ def test_battery_kc_eye_eeg_runs():
     D = _toy_wake(seed=4)
     out = cc.battery_kc(D, n_null=2, n_null_pool=2, swa_source="words", wake=True, n3_first=True, eye_eeg=True)
     assert out["V1"]["blink"]["ap_pool_loso"] > 0.5
+
+
+def test_rem_w_rule_split():
+    """Rapid eye movements in R (low chin tone) are called REM, the same movements in W (tone high) wake."""
+    D = _toy_wake(seed=5)
+    rng = np.random.default_rng(5)
+    n = len(D["y"])
+    ye = D["y"][::T].copy()
+    ye[(ye == 2) & (rng.random(len(ye)) < 0.5)] = 4  # half of the N2-like epochs become REM (atonia already low)
+    D["y"] = np.repeat(ye, T).astype(np.int8)
+    eye = np.zeros(n, bool)
+    for e in np.flatnonzero((ye == 4) | (ye == 0)):
+        t = e * T + int(rng.integers(5, 50))
+        eye[t:t + 3] = True
+    dre = D["set"] == "dreams"
+    pe = D["P@eog"].copy()
+    pe[~dre, 1] = eye[~dre] + 0.2 * rng.normal(size=(~dre).sum())
+    D["P@eog"] = pe
+    D["refs"]["rem_eye"] = (eye, ~dre)
+    out = cc.battery_rem(D, n_null_pool=3)
+    sp = out["V2"]["pool"]["split_R_vs_W"]
+    assert sp["lexicon"]["balanced"] > 0.8 and sp["no_tone"]["balanced"] < sp["lexicon"]["balanced"] - 0.2
+    assert out["V2"]["pool"]["rem"]["lexicon"]["f1"] > out["V2"]["pool"]["rem"]["word_only"]["f1"] + 0.1
+    assert cc._jsonable(out)

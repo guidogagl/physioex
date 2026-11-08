@@ -122,6 +122,29 @@ def kc_n3_rule(word: np.ndarray, night: np.ndarray, swa_ep: np.ndarray, alpha_ep
             "n3": runs_to_mask([r for r, k in zip(runs, n3) if k], n), "runs": runs}
 
 
+def rem_w_rule(word: np.ndarray, night: np.ndarray, aton_ep: np.ndarray, alpha_ep: np.ndarray,
+               use_tone: bool = True, use_alpha: bool = True) -> Dict[str, np.ndarray]:
+    """Rapid eye movement of REM against the same movement in wake (C2), from the rapid-eye word (token mask),
+    the epoch atonia fraction (chin tone low relative to the night) and the epoch alpha fraction.
+
+    - ``rem``: eye-word event in an epoch with atonia > ``ATONIA_EPOCH`` and alpha <= ``W_ALPHA``;
+    - ``wake``: eye-word event in an epoch with tone not low or alpha > ``W_ALPHA`` (AASM wake).
+
+    A dropped component (``use_*``, V3) counts as satisfied for REM and as absent for wake."""
+    runs = event_runs(word, night)
+    n = len(word)
+    if not runs:
+        z = np.zeros(n, bool)
+        return {"rem": z, "wake": z.copy(), "runs": []}
+    ep = epoch_of(runs)
+    low = np.nan_to_num(aton_ep[ep], nan=0.0) > ATONIA_EPOCH if use_tone else np.ones(len(runs), bool)
+    hi_a = np.nan_to_num(alpha_ep[ep], nan=0.0) > W_ALPHA if use_alpha else np.zeros(len(runs), bool)
+    rem = low & ~hi_a
+    wake = ~rem
+    return {"rem": runs_to_mask([r for r, k in zip(runs, rem) if k], n),
+            "wake": runs_to_mask([r for r, k in zip(runs, wake) if k], n), "runs": runs}
+
+
 # ---------------------------------------------------------------------------- event metrics
 def event_agreement(det: np.ndarray, ref: np.ndarray, night: np.ndarray, sel: np.ndarray = None) -> Dict:
     """Event purity (precision), coverage (recall) and F1 by overlap. ``sel``: tokens in scope (events of
