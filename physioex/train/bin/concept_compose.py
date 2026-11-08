@@ -544,7 +544,10 @@ def battery_cap(D, n_null_pool=20, seed=0, tone_source="word", blink_tone=False,
     return out
 
 
-def battery_arousal(D, n_null_pool=20, seed=0, tone_source="eq", blink_tone=False, band_ctx=False):
+AR_RATIOS = (4 / 3, 1.5, 2.0, 2.5, 3.0, 4.0)  # RMS ratios tried in C6b (fixed before the run)
+
+
+def battery_arousal(D, n_null_pool=20, seed=0, tone_source="eq", blink_tone=False, band_ctx=False, select_ratio=False):
     """C5 + C6: the fast-band reading (beta included, C5 = its Spearman in V1) and the AASM arousal rule on it,
     against the MASS SS01 experts and the NSRR / WSC technicians of the pool. The ``arousal`` reference is
     stage-free (annotations), so no circularity here."""
@@ -557,17 +560,25 @@ def battery_arousal(D, n_null_pool=20, seed=0, tone_source="eq", blink_tone=Fals
     fast_l, fast_t = _lse(R, cfg["bands"]["fast"]), _lse(S, cfg["bands"]["fast"])
     sl = {k: np.repeat(St[k]["state"] != 0, T) for k in ("lexicon", "oracle")}
     rm = {k: np.repeat(St[k]["state"] == 1, T) for k in ("lexicon", "oracle")}
-    lex = CR.arousal_rule(fast_l, night, sl["lexicon"], rm["lexicon"], ew)
-    ora = CR.arousal_rule(fast_t, night, sl["oracle"], rm["oracle"], er & eh)
+    r, h = RA.ref_mask(D, "arousal_ann")
+    ratio, grid = CR.CAP_RATIO, None
+    if select_ratio:  # C6b: the threshold is chosen on the pool technicians with the true bands (oracle) only
+        psel = (D["set"] == "pool") & h & np.repeat(np.isfinite(St["oracle"]["aton"]), T)
+        grid = {f"{q:.3f}": CR.event_agreement(CR.arousal_rule(fast_t, night, sl["oracle"], rm["oracle"], er & eh,
+                                                                ratio=q), r, night, psel)["f1"]
+                for q in AR_RATIOS}
+        ratio = float(max(grid, key=grid.get))
+    lex = CR.arousal_rule(fast_l, night, sl["lexicon"], rm["lexicon"], ew, ratio=ratio)
+    ora = CR.arousal_rule(fast_t, night, sl["oracle"], rm["oracle"], er & eh, ratio=ratio)
     abl = {"no_bg": CR.arousal_rule(fast_l, night, sl["lexicon"], rm["lexicon"], ew, use_bg=False),
            "no_prev": CR.arousal_rule(fast_l, night, sl["lexicon"], rm["lexicon"], ew, use_prev=False),
            "no_emg": CR.arousal_rule(fast_l, night, sl["lexicon"], rm["lexicon"], ew, use_emg=False),
-           "no_state": CR.arousal_rule(fast_l, night, np.ones(len(night), bool), None, None)}
+           "no_state": CR.arousal_rule(fast_l, night, np.ones(len(night), bool), None, None, ratio=ratio)}
     abl_o = {"no_bg": CR.arousal_rule(fast_t, night, sl["oracle"], rm["oracle"], er & eh, use_bg=False),
              "no_prev": CR.arousal_rule(fast_t, night, sl["oracle"], rm["oracle"], er & eh, use_prev=False),
-             "no_state": CR.arousal_rule(fast_t, night, np.ones(len(night), bool), None, None)}
-    out = {"V1": {"bands_spearman_pool_loso": v1b, "emg_rise": v1e, **v1}, "V2": {}, "V3": {}}
-    r, h = RA.ref_mask(D, "arousal_ann")
+             "no_state": CR.arousal_rule(fast_t, night, np.ones(len(night), bool), None, None, ratio=ratio)}
+    out = {"V1": {"bands_spearman_pool_loso": v1b, "emg_rise": v1e, **v1}, "V2": {}, "V3": {},
+           "ratio": ratio, "ratio_grid_pool_oracle_f1": grid}
     avail = np.repeat(np.isfinite(St["lexicon"]["aton"]), T)
     en = night[::T]
     for setname in sorted(set(D["set"])):
@@ -579,7 +590,7 @@ def battery_arousal(D, n_null_pool=20, seed=0, tone_source="eq", blink_tone=Fals
         for _ in range(n_null_pool):
             st_p = CR.permute_epochs(St["lexicon"]["state"], en, rng)
             nul.append(CR.event_agreement(CR.arousal_rule(fast_l, night, np.repeat(st_p != 0, T),
-                                                          np.repeat(st_p == 1, T), ew), r, night, sel)["f1"])
+                                                          np.repeat(st_p == 1, T), ew, ratio=ratio), r, night, sel)["f1"])
         e = {"n_units": int(len(set(night[sel]))),
              "lexicon": _agree(lex, r, night, sel, seed), "oracle": _agree(ora, r, night, sel, seed),
              "nulls": {"state_perm_q95": float(np.quantile(nul, 0.95)) if nul else None, "n": n_null_pool},
@@ -668,7 +679,7 @@ def battery(a):
     print(f"[compose] loaded {len(keys)} nights, {len(D['y'])} tokens, {time.time() - t0:.0f} s", flush=True)
     if a.concept == "arousal":
         res = battery_arousal(D, n_null_pool=a.n_null_pool, seed=a.seed, tone_source=a.tone_source,
-                              blink_tone=a.blink_tone, band_ctx=a.band_ctx)
+                              blink_tone=a.blink_tone, band_ctx=a.band_ctx, select_ratio=a.select_ratio)
     elif a.concept == "cap_a1":
         res = battery_cap(D, n_null_pool=a.n_null_pool, seed=a.seed, tone_source=a.tone_source,
                           blink_tone=a.blink_tone, band_ctx=a.band_ctx)
@@ -710,6 +721,7 @@ def main(argv=None):
     b.add_argument("--n3-first", action="store_true", help="C1d: AASM precedence, slow waves >= 20 %% is N3, never W")
     b.add_argument("--tone-source", default="word", choices=["word", "eq"], help="C2b: chin tone from the EMG epoch latent")
     b.add_argument("--blink-tone", action="store_true", help="C3b: blinks are wake only on a chin tone not low")
+    b.add_argument("--select-ratio", action="store_true", help="C6b: arousal threshold chosen on the pool oracle")
     b.add_argument("--band-ctx", action="store_true", help="C4b: band powers read from P and P_ctx+-2")
     b.add_argument("--eye-eeg", action="store_true", help="C1e: blink / rem_eye words read P@eog and P (EEG)")
     a = ap.parse_args(argv)

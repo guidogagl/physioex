@@ -231,12 +231,13 @@ def prev_median(v: np.ndarray, night: np.ndarray, k: int = AR_PRE_TOK) -> np.nda
 
 def arousal_rule(fast: np.ndarray, night: np.ndarray, sleep_tok: np.ndarray, rem_tok: np.ndarray = None,
                  emg_tok: np.ndarray = None, use_bg: bool = True, use_prev: bool = True,
-                 use_emg: bool = True) -> np.ndarray:
+                 use_emg: bool = True, ratio: float = CAP_RATIO) -> np.ndarray:
     """AASM arousal from the token log power of the fast bands (theta + alpha + beta, spindles excluded):
     a rise >= ``CAP_RATIO``**2 over the median of the previous 10 s, lasting 3-60 s, preceded by >= 10 s of
     sleep (lexicon state), and in REM with a chin EMG rise overlapping it. ``use_*`` switches (V3): the night
-    median as background, no sleep-before condition, no EMG condition in REM."""
-    thr = 2 * np.log(CAP_RATIO)
+    median as background, no sleep-before condition, no EMG condition in REM. ``ratio``: RMS ratio over the
+    background (C6b: chosen on the pool technicians with the true bands, tested on MASS SS01)."""
+    thr = 2 * np.log(ratio)
     if use_bg:
         bg = prev_median(fast, night)
     else:
