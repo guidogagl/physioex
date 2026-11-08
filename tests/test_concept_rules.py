@@ -75,3 +75,11 @@ def test_shift_keeps_events_and_bootstrap_ci():
     counts = CR.per_unit_counts(m, m, night)
     lo, hi = CR.bootstrap_f1(counts, n_boot=50)
     assert lo == hi == 1.0
+
+
+def test_wake_rule_blink_needs_tone():
+    alpha = np.zeros(3)
+    blink = np.array([0.1, 0.1, 0.0])
+    aton = np.array([0.9, 0.1, 0.9])
+    assert CR.wake_rule(alpha, blink, None, aton).tolist() == [True, True, False]
+    assert CR.wake_rule(alpha, blink, None, aton, blink_needs_tone=True).tolist() == [False, True, False]

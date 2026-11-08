@@ -77,15 +77,15 @@ def epoch_of(runs: List[Tuple[int, int]]) -> np.ndarray:
 
 # ---------------------------------------------------------------------------- composite rules
 def wake_rule(alpha_ep: np.ndarray, blink_ep: np.ndarray = None, eye_ep: np.ndarray = None,
-              atonia_ep: np.ndarray = None) -> np.ndarray:
+              atonia_ep: np.ndarray = None, blink_needs_tone: bool = False) -> np.ndarray:
     """AASM wake per epoch from lexicon fractions: alpha > ``W_ALPHA``, or eye blinks present, or rapid eye
     movements present with a chin tone that is not low. Missing modalities (NaN) drop their clause, so a night
     without EOG / EMG falls back to the alpha clause."""
     w = np.nan_to_num(alpha_ep, nan=0.0) > W_ALPHA
-    if blink_ep is not None:
-        w |= np.nan_to_num(blink_ep, nan=0.0) >= EYE_PRESENT
+    tone_low = np.nan_to_num(atonia_ep, nan=1.0) > ATONIA_EPOCH if atonia_ep is not None else np.zeros(len(w), bool)
+    if blink_ep is not None:  # C3b: with blink_needs_tone, blinks on a low chin tone (REM) are not wake
+        w |= (np.nan_to_num(blink_ep, nan=0.0) >= EYE_PRESENT) & (~tone_low if blink_needs_tone else True)
     if eye_ep is not None:
-        tone_low = np.nan_to_num(atonia_ep, nan=1.0) > ATONIA_EPOCH if atonia_ep is not None else np.zeros(len(w), bool)
         w |= (np.nan_to_num(eye_ep, nan=0.0) >= EYE_PRESENT) & ~tone_low
     return w
 

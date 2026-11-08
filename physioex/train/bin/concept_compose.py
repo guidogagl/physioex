@@ -411,7 +411,7 @@ def battery_rem(D, n_null=0, n_null_pool=20, seed=0, eye_eeg=False, tone_source=
     return out
 
 
-def _lex_state(D, seed=0, eye_eeg=True, tone_source="word"):
+def _lex_state(D, seed=0, eye_eeg=True, tone_source="word", blink_tone=False):
     """Per-epoch lexicon predicates shared by the rules: alpha (ridge on Eq+Nq), slow-wave fraction (delta word),
     eye and tone word fractions, AASM wake (C1e) and coarse state; the same from the references (oracle)."""
     cfg = CONCEPTS["kc"]
@@ -431,19 +431,19 @@ def _lex_state(D, seed=0, eye_eeg=True, tone_source="word"):
         fr["atonia"], v1["atonia_eq"] = _tone(D, "eq", seed)
     out = {}
     for k, (a, f, sw) in {"lexicon": (alpha, fr, swa), "oracle": (alpha_t, fo, swa_t)}.items():
-        wk = CR.wake_rule(a, f["blink"], f["rem_eye"], f["atonia"]) & ~(sw >= CR.N3_SWA)
+        wk = CR.wake_rule(a, f["blink"], f["rem_eye"], f["atonia"], blink_needs_tone=blink_tone) & ~(sw >= CR.N3_SWA)
         out[k] = {"wake": wk, "state": CR.state_rule(wk, f["atonia"], sw), "aton": f["atonia"], "alpha": a, "swa": sw}
     return out, v1
 
 
-def battery_alpha(D, n_null_pool=20, seed=0, tone_source="word"):
+def battery_alpha(D, n_null_pool=20, seed=0, tone_source="word", blink_tone=False):
     """C3: alpha in context. The alpha word's events labelled W / REM / NREM by the lexicon state of their epoch,
     against the alpha reference in W, in REM (``alpha_rem``) and in N2/N3 (``alpha_nrem``) of the hypnogram
     (declared: the stage defines the targets, the rule uses no stage). Pool only (the state needs EOG / EMG)."""
     cfg = CONCEPTS["alpha_ctx"]
     night = D["night"]
     word, v1w, fin = _word(D, cfg["word"], seed)
-    S, v1 = _lex_state(D, seed, tone_source=tone_source)
+    S, v1 = _lex_state(D, seed, tone_source=tone_source, blink_tone=blink_tone)
     ar, ah = RA.ref_mask(D, "alpha")
     y = np.repeat(D["y"][::T], T)
     tgt = {"W": ar & (y == 0), "REM": RA.ref_mask(D, "alpha_rem")[0], "NREM": RA.ref_mask(D, "alpha_nrem")[0]}
@@ -474,12 +474,12 @@ def battery_alpha(D, n_null_pool=20, seed=0, tone_source="word"):
     return out
 
 
-def _band_read(D, seed=0, max_fit=200_000):
+def _band_read(D, seed=0, max_fit=200_000, ctx=False):
     """Lexicon reading of the token log band powers: ridge from P (LOSO on the pool, one pool fit elsewhere) to
     each column of ``S``; returns the read and the true matrices and the per-band Spearman (pool, LOSO)."""
     from scipy.stats import spearmanr
 
-    X, _, _ = RA.build(D, ["P"], np.arange(len(D["y"])))
+    X, _, _ = RA.build(D, ["P", "P_ctx±2"] if ctx else ["P"], np.arange(len(D["y"])))  # C4b: the band windows span 3-4 tokens
     st, gn = D["set"], D["gname"]
     ip = np.flatnonzero(st == "pool")
     groups = sorted(set(gn[ip]))
@@ -501,13 +501,13 @@ def _lse(M, cols):
     return np.logaddexp.reduce(M[:, idx], axis=1)
 
 
-def battery_cap(D, n_null_pool=20, seed=0, tone_source="word"):
+def battery_cap(D, n_null_pool=20, seed=0, tone_source="word", blink_tone=False, band_ctx=False):
     """C4: CAP phase A1 (and A3) from the lexicon's band reading with the background relation of the manual,
     against the reference rule (stage-gated N1-N3 by the hypnogram; declared circularity)."""
     cfg = CONCEPTS["cap_a1"]
     night = D["night"]
-    R, S, v1b = _band_read(D, seed)
-    St, v1 = _lex_state(D, seed, tone_source=tone_source)
+    R, S, v1b = _band_read(D, seed, ctx=band_ctx)
+    St, v1 = _lex_state(D, seed, tone_source=tone_source, blink_tone=blink_tone)
     nrem_l = np.repeat(St["lexicon"]["state"] == 2, T)
     nrem_o = np.repeat(St["oracle"]["state"] == 2, T)
     lo_l, hi_l = _lse(R, cfg["bands"]["lo"]), _lse(R, cfg["bands"]["hi"])
@@ -544,14 +544,14 @@ def battery_cap(D, n_null_pool=20, seed=0, tone_source="word"):
     return out
 
 
-def battery_arousal(D, n_null_pool=20, seed=0, tone_source="eq"):
+def battery_arousal(D, n_null_pool=20, seed=0, tone_source="eq", blink_tone=False, band_ctx=False):
     """C5 + C6: the fast-band reading (beta included, C5 = its Spearman in V1) and the AASM arousal rule on it,
     against the MASS SS01 experts and the NSRR / WSC technicians of the pool. The ``arousal`` reference is
     stage-free (annotations), so no circularity here."""
     cfg = CONCEPTS["arousal"]
     night = D["night"]
-    R, S, v1b = _band_read(D, seed)
-    St, v1 = _lex_state(D, seed, tone_source=tone_source)
+    R, S, v1b = _band_read(D, seed, ctx=band_ctx)
+    St, v1 = _lex_state(D, seed, tone_source=tone_source, blink_tone=blink_tone)
     ew, v1e, fin_e = _word(D, cfg["emg"], seed)
     er, eh = RA.ref_mask(D, "emg_rise")
     fast_l, fast_t = _lse(R, cfg["bands"]["fast"]), _lse(S, cfg["bands"]["fast"])
@@ -667,17 +667,20 @@ def battery(a):
                             opt_mods=("eog", "emg") if (a.wake or rem) else ())
     print(f"[compose] loaded {len(keys)} nights, {len(D['y'])} tokens, {time.time() - t0:.0f} s", flush=True)
     if a.concept == "arousal":
-        res = battery_arousal(D, n_null_pool=a.n_null_pool, seed=a.seed, tone_source=a.tone_source)
+        res = battery_arousal(D, n_null_pool=a.n_null_pool, seed=a.seed, tone_source=a.tone_source,
+                              blink_tone=a.blink_tone, band_ctx=a.band_ctx)
     elif a.concept == "cap_a1":
-        res = battery_cap(D, n_null_pool=a.n_null_pool, seed=a.seed, tone_source=a.tone_source)
+        res = battery_cap(D, n_null_pool=a.n_null_pool, seed=a.seed, tone_source=a.tone_source,
+                          blink_tone=a.blink_tone, band_ctx=a.band_ctx)
     elif a.concept == "alpha_ctx":
-        res = battery_alpha(D, n_null_pool=a.n_null_pool, seed=a.seed, tone_source=a.tone_source)
+        res = battery_alpha(D, n_null_pool=a.n_null_pool, seed=a.seed, tone_source=a.tone_source,
+                            blink_tone=a.blink_tone)
     elif rem:
         res = battery_rem(D, n_null_pool=a.n_null_pool, seed=a.seed, eye_eeg=a.eye_eeg, tone_source=a.tone_source)
     else:
         res = battery_kc(D, n_null=a.n_null, n_null_pool=a.n_null_pool, seed=a.seed, swa_source=a.swa_source,
                          wake=a.wake, n3_first=a.n3_first, eye_eeg=a.eye_eeg)
-    out = {"iteration": a.iter, "concept": a.concept, "rule": cfg["rule"], "swa_source": a.swa_source, "wake": a.wake, "n3_first": a.n3_first, "eye_eeg": a.eye_eeg, "tone_source": a.tone_source,
+    out = {"iteration": a.iter, "concept": a.concept, "rule": cfg["rule"], "swa_source": a.swa_source, "wake": a.wake, "n3_first": a.n3_first, "eye_eeg": a.eye_eeg, "tone_source": a.tone_source, "blink_tone": a.blink_tone, "band_ctx": a.band_ctx,
            "thresholds": {"N3_SWA": CR.N3_SWA, "W_ALPHA": CR.W_ALPHA, "EYE_PRESENT": CR.EYE_PRESENT,
                           "ATONIA_EPOCH": CR.ATONIA_EPOCH, "KC_ISO_TOK": CR.KC_ISO_TOK,
                           "MERGE_GAP": CR.MERGE_GAP},
@@ -706,6 +709,8 @@ def main(argv=None):
     b.add_argument("--wake", action="store_true", help="C1c: AASM wake rule on lexicon words (needs EOG / EMG)")
     b.add_argument("--n3-first", action="store_true", help="C1d: AASM precedence, slow waves >= 20 %% is N3, never W")
     b.add_argument("--tone-source", default="word", choices=["word", "eq"], help="C2b: chin tone from the EMG epoch latent")
+    b.add_argument("--blink-tone", action="store_true", help="C3b: blinks are wake only on a chin tone not low")
+    b.add_argument("--band-ctx", action="store_true", help="C4b: band powers read from P and P_ctx+-2")
     b.add_argument("--eye-eeg", action="store_true", help="C1e: blink / rem_eye words read P@eog and P (EEG)")
     a = ap.parse_args(argv)
     battery(a)
