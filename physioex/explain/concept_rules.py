@@ -168,6 +168,48 @@ def in_state(word: np.ndarray, night: np.ndarray, state_ep: np.ndarray) -> Dict[
     return {k: runs_to_mask([r for r, e in zip(runs, ep) if state_ep[e] == i], n) for i, k in enumerate(STATES)}
 
 
+CAP_RATIO = 4 / 3     # CAP phase A: activity >= 1/3 larger than the background (RMS) [AS p265-266]
+CAP_BG_TOK = 120      # background: moving median over 60 s
+CAP_MIN_TOK, CAP_MAX_TOK = 4, 120  # phase A lasts 2-60 s
+
+
+def moving_median(v: np.ndarray, night: np.ndarray, size: int = CAP_BG_TOK, step: int = 4) -> np.ndarray:
+    """Per-night moving median of a token series over ``size`` tokens (computed every ``step`` tokens)."""
+    from scipy.ndimage import median_filter
+
+    out = np.empty_like(v, dtype=np.float64)
+    for n in np.unique(night):
+        m = np.flatnonzero(night == n)
+        x = v[m]
+        sub = median_filter(x[::step], size=max(3, size // step), mode="nearest")
+        out[m] = np.repeat(sub, step)[:len(m)]
+    return out
+
+
+def cap_a_rule(lo: np.ndarray, hi: np.ndarray, night: np.ndarray, nrem_tok: np.ndarray = None,
+               use_bg: bool = True) -> Dict[str, np.ndarray]:
+    """CAP phase A from log band powers per token (``lo`` = 0.5-4 Hz, ``hi`` = 8-30 Hz), the rule of the
+    reference detector read on tokens: power >= ``CAP_RATIO``**2 x the 60 s moving median (log difference),
+    ``a1`` = slow rise without fast rise, ``a3`` = fast rise; runs of 2-60 s; in NREM (``nrem_tok``).
+    ``use_bg=False`` (V3) replaces the moving background with the night median."""
+    thr = 2 * np.log(CAP_RATIO)
+    if use_bg:
+        b_lo, b_hi = moving_median(lo, night), moving_median(hi, night)
+    else:
+        b_lo, b_hi = np.empty_like(lo), np.empty_like(hi)
+        for n in np.unique(night):
+            m = night == n
+            b_lo[m], b_hi[m] = np.median(lo[m]), np.median(hi[m])
+    up_lo, up_hi = lo - b_lo >= thr, hi - b_hi >= thr
+    out = {}
+    for k, m in (("a1", up_lo & ~up_hi), ("a3", up_hi)):
+        if nrem_tok is not None:
+            m = m & nrem_tok
+        runs = [(a, b) for a, b in event_runs(m, night) if CAP_MIN_TOK <= b - a <= CAP_MAX_TOK]
+        out[k] = runs_to_mask(runs, len(m))
+    return out
+
+
 # ---------------------------------------------------------------------------- event metrics
 def event_agreement(det: np.ndarray, ref: np.ndarray, night: np.ndarray, sel: np.ndarray = None) -> Dict:
     """Event purity (precision), coverage (recall) and F1 by overlap. ``sel``: tokens in scope (events of

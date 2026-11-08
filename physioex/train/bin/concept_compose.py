@@ -61,6 +61,12 @@ CONCEPTS = {
                 "blinks, rapid eyes with tone); REM = not W, atonia > 0.50, swa < 0.20; NREM = the rest "
                 "(alpha intrusion / alpha-delta)",
     },
+    "cap_a1": {
+        "refs": ["alpha", "delta", "blink", "rem_eye", "atonia", "cap_a1", "cap_a3"],
+        "bands": {"lo": ["so", "delta"], "hi": ["alpha", "sigma", "beta"]},
+        "rule": "CAP A1 = 0.5-4 Hz token power (read from P) >= (4/3)^2 x its 60 s moving median, 8-30 Hz not, "
+                "runs 2-60 s, in lexicon NREM; A3 = 8-30 Hz rise",
+    },
 }
 
 
@@ -461,6 +467,76 @@ def battery_alpha(D, n_null_pool=20, seed=0, tone_source="word"):
     return out
 
 
+def _band_read(D, seed=0, max_fit=200_000):
+    """Lexicon reading of the token log band powers: ridge from P (LOSO on the pool, one pool fit elsewhere) to
+    each column of ``S``; returns the read and the true matrices and the per-band Spearman (pool, LOSO)."""
+    from scipy.stats import spearmanr
+
+    X, _, _ = RA.build(D, ["P"], np.arange(len(D["y"])))
+    st, gn = D["set"], D["gname"]
+    ip = np.flatnonzero(st == "pool")
+    groups = sorted(set(gn[ip]))
+    rng = np.random.default_rng(seed)
+    S = D["S"][:, :len(RA.SPEC_WIN)]
+    R = np.empty_like(S, dtype=np.float64)
+    info = {}
+    sub = rng.choice(len(ip), min(200_000, len(ip)), replace=False)
+    for j, b in enumerate(RA.SPEC_WIN):
+        t = S[:, j].astype(np.float64)
+        R[:, j] = RA._fit_predict(X, [], t, ip, np.arange(len(t)), max_fit, rng, ridge=True)
+        R[ip, j] = RA.fold_probe(X[ip], [], t[ip], gn[ip], groups, max_fit=max_fit, seed=seed, ridge=True)
+        info[b] = float(spearmanr(R[ip[sub], j], t[ip[sub]])[0])
+    return R, S, info
+
+
+def _lse(M, cols):
+    idx = [list(RA.SPEC_WIN).index(c) for c in cols]
+    return np.logaddexp.reduce(M[:, idx], axis=1)
+
+
+def battery_cap(D, n_null_pool=20, seed=0, tone_source="word"):
+    """C4: CAP phase A1 (and A3) from the lexicon's band reading with the background relation of the manual,
+    against the reference rule (stage-gated N1-N3 by the hypnogram; declared circularity)."""
+    cfg = CONCEPTS["cap_a1"]
+    night = D["night"]
+    R, S, v1b = _band_read(D, seed)
+    St, v1 = _lex_state(D, seed, tone_source=tone_source)
+    nrem_l = np.repeat(St["lexicon"]["state"] == 2, T)
+    nrem_o = np.repeat(St["oracle"]["state"] == 2, T)
+    lo_l, hi_l = _lse(R, cfg["bands"]["lo"]), _lse(R, cfg["bands"]["hi"])
+    lo_t, hi_t = _lse(S, cfg["bands"]["lo"]), _lse(S, cfg["bands"]["hi"])
+    lex = CR.cap_a_rule(lo_l, hi_l, night, nrem_l)
+    ora = CR.cap_a_rule(lo_t, hi_t, night, nrem_o)
+    abl = {"no_bg": CR.cap_a_rule(lo_l, hi_l, night, nrem_l, use_bg=False),
+           "no_state": CR.cap_a_rule(lo_l, hi_l, night, None)}
+    abl_o = {"no_bg": CR.cap_a_rule(lo_t, hi_t, night, nrem_o, use_bg=False),
+             "no_state": CR.cap_a_rule(lo_t, hi_t, night, None)}
+    avail = np.repeat(np.isfinite(St["lexicon"]["aton"]), T)
+    out = {"V1": {"bands_spearman_pool_loso": v1b, **v1}, "V2": {"pool": {}}, "V3": {}}
+    en = night[::T]
+    for k in ("a1", "a3"):
+        r, h = RA.ref_mask(D, f"cap_{k}")
+        sel = (D["set"] == "pool") & h & avail
+        rng = np.random.default_rng(seed)
+        nul = []
+        for _ in range(n_null_pool):
+            st_p = CR.permute_epochs(St["lexicon"]["state"], en, rng)
+            nul.append(CR.event_agreement(CR.cap_a_rule(lo_l, hi_l, night, np.repeat(st_p == 2, T))[k],
+                                          r, night, sel)["f1"])
+        e = {"lexicon": _agree(lex[k], r, night, sel, seed), "oracle": _agree(ora[k], r, night, sel, seed),
+             "nulls": {"state_perm_q95": float(np.quantile(nul, 0.95)) if nul else None, "n": n_null_pool},
+             "ablations": {a: CR.event_agreement(o[k], r, night, sel) for a, o in abl.items()},
+             "ablations_oracle": {a: CR.event_agreement(o[k], r, night, sel) for a, o in abl_o.items()},
+             "stage_of_detections": _stage_mix(D, lex[k], sel),
+             "circularity": "reference gated on N1-N3 of the hypnogram; the rule uses the lexicon state"}
+        fo = e["oracle"]["f1"]
+        e["ret_vs_oracle"] = e["lexicon"]["f1"] / fo if fo else None
+        out["V2"]["pool"][k] = e
+        out["V3"][f"pool:{k}"] = {a: e["lexicon"]["f1"] - v["f1"] for a, v in e["ablations"].items()}
+        out["V3"][f"pool:{k}:oracle"] = {a: e["oracle"]["f1"] - v["f1"] for a, v in e["ablations_oracle"].items()}
+    return out
+
+
 def _split(D, o, word, ref, y, sel):
     """Of the word events in R or W epochs that hit a reference eye event: share called REM in R, called wake
     in W, and their mean (balanced accuracy of the R / W distinction)."""
@@ -528,12 +604,14 @@ def _jsonable(x):
 def battery(a):
     t0 = time.time()
     cfg = CONCEPTS[a.concept]
-    rem = a.concept in ("rem_eye", "alpha_ctx")
+    rem = a.concept in ("rem_eye", "alpha_ctx", "cap_a1")
     refs = cfg["refs"] + (cfg["wake_refs"] if a.wake else [])
     D, keys, sets = RA.load(a.dump, "eeg", refs, frac=a.frac, n_ss01=a.n_ss01, seed=a.seed,
                             opt_mods=("eog", "emg") if (a.wake or rem) else ())
     print(f"[compose] loaded {len(keys)} nights, {len(D['y'])} tokens, {time.time() - t0:.0f} s", flush=True)
-    if a.concept == "alpha_ctx":
+    if a.concept == "cap_a1":
+        res = battery_cap(D, n_null_pool=a.n_null_pool, seed=a.seed, tone_source=a.tone_source)
+    elif a.concept == "alpha_ctx":
         res = battery_alpha(D, n_null_pool=a.n_null_pool, seed=a.seed, tone_source=a.tone_source)
     elif rem:
         res = battery_rem(D, n_null_pool=a.n_null_pool, seed=a.seed, eye_eeg=a.eye_eeg, tone_source=a.tone_source)

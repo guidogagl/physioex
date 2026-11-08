@@ -220,3 +220,37 @@ def test_rem_tone_from_epoch_latent():
     out = cc.battery_rem(D, n_null_pool=2, tone_source="eq")
     assert out["V1"]["tone"]["spearman_epoch_frac"] > 0.8
     assert out["V2"]["pool"]["split_R_vs_W"]["lexicon"]["balanced"] > 0.8
+
+
+def test_cap_a1_from_band_reading():
+    """A 3 s rise of slow power over its 60 s background in NREM is a CAP A1 phase; the lexicon reads the band
+    powers from P."""
+    D = _toy_wake(seed=8)
+    rng = np.random.default_rng(8)
+    n = len(D["y"])
+    ye = D["y"][::T]
+    burst = np.zeros(n, bool)
+    for e in np.flatnonzero(ye == 2):
+        if rng.random() < 0.5:
+            t = e * T + int(rng.integers(5, 45))
+            burst[t:t + 6] = True
+    S = D["S"].copy()
+    S[:, 0] = 0.1 * rng.normal(size=n) + 2.0 * burst
+    S[:, 1:6] = 0.1 * rng.normal(size=(n, 5))
+    D["S"] = S.astype(np.float32)
+    D["P"][:, 2] = S[:, 0] + 0.05 * rng.normal(size=n)
+    ones = np.ones(n, bool)
+    aton = D["refs"]["atonia"][0].copy()
+    aton[np.repeat(ye == 2, T)] = False  # NREM: chin tone not low (else the lexicon state calls it REM)
+    dre = D["set"] == "dreams"
+    pm = D["P@emg"].copy()
+    pm[~dre, 0] = aton[~dre] + 0.2 * rng.normal(size=(~dre).sum())
+    D["P@emg"] = pm
+    D["refs"]["atonia"] = (aton, ~dre)
+    D["refs"]["cap_a1"] = (burst, ones)
+    D["refs"]["cap_a3"] = (np.zeros(n, bool), ones)
+    out = cc.battery_cap(D, n_null_pool=3)
+    a1 = out["V2"]["pool"]["a1"]
+    assert a1["oracle"]["f1"] > 0.8 and a1["lexicon"]["f1"] > 0.6
+    assert out["V1"]["bands_spearman_pool_loso"]["so"] > 0.8
+    assert cc._jsonable(out)
