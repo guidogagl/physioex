@@ -121,10 +121,18 @@ def iso(F0, night, half=4):
     return _filt(F0, night, _fp(half, half, 0), "max") - F0
 
 
-def ctx_mean(P, night, k, back=False):
-    """Mean of the P of the ``k`` tokens before and after (or only before, ``back``), token excluded; the
-    first token of a night has no past and keeps its own P under ``back``."""
+def ctx_mean(P, night, k, back=False, fwd=False):
+    """Mean of the P of the ``k`` tokens before and after (only before, ``back``; only after, ``fwd``), token
+    excluded; with no token on that side (night edge) the token keeps its own P under ``back`` / ``fwd``."""
     out = np.zeros_like(P)
+    if fwd:
+        for a, b in _runs(night):
+            c = np.cumsum(np.vstack([np.zeros((1, P.shape[1]), P.dtype), P[a:b]]), 0)
+            i = np.arange(b - a)
+            lo, hi = i + 1, np.minimum(i + k + 1, b - a)
+            n = hi - lo
+            out[a:b] = np.where(n[:, None] > 0, (c[hi] - c[lo]) / np.maximum(n, 1)[:, None], P[a:b])
+        return out
     for a, b in _runs(night):
         c = np.cumsum(np.vstack([np.zeros((1, P.shape[1]), P.dtype), P[a:b]]), 0)
         i = np.arange(b - a)
@@ -332,7 +340,7 @@ def summary(md, site_of):
 
 
 # ---------------------------------------------------------------------------- inputs
-CTX = re.compile(r"(?:P_ctx(?:\+-|±|\+/-)?(\d+)|P_back(\d+))(_perm)?")
+CTX = re.compile(r"(?:P_ctx(?:\+-|±|\+/-)?(\d+)|P_back(\d+)|P_fwd(\d+))(_perm)?")
 
 
 def token_input(D, name):
@@ -344,23 +352,26 @@ def token_input(D, name):
     m = CTX.fullmatch(name)
     out = None
     if m:
-        if m.group(3):
+        if m.group(4):
             out = token_input(D, name[: -len("_perm")])[D["perm"]]
         else:
-            out = ctx_mean(D["P"], D["night"], int(m.group(1) or m.group(2)), back=m.group(2) is not None)
+            out = ctx_mean(D["P"], D["night"], int(m.group(1) or m.group(2) or m.group(3)),
+                           back=m.group(2) is not None, fwd=m.group(3) is not None)
     elif name.startswith("P@") or name.startswith("rel_back@"):
         out = D.get(name)
         if out is not None and out.ndim == 1:
             out = out[:, None]
     elif name in ("rel_bg", "rel_back", "iso"):
         out = D[name][:, None]
-    elif name in ("Eq", "Nq", "spec_ep", "spec_back", "spec_nb") and name in D:
+    elif name in ("Eq", "Nq", "spec_ep", "spec_back", "spec_nb", "spec_nb_lab") and name in D:
         out = D[name]
     elif re.fullmatch(r"spec_ctx(\d+)", name):
         k = int(name[8:])
         out = (ctx_mean(D["S"], D["night"], k) * 2 * k + D["S"]) / (2 * k + 1)  # token and its +-k, edges approx.
     elif re.fullmatch(r"spec_back(\d+)", name):
         out = ctx_mean(D["S"], D["night"], int(name[9:]), back=True)
+    elif re.fullmatch(r"spec_fwd(\d+)", name):
+        out = ctx_mean(D["S"], D["night"], int(name[8:]), fwd=True)
     elif name in ("ICA_E", "ICA_N") and name in D:
         out = np.hstack([D[name], np.abs(D[name])])
     elif name == "spec_tok":
@@ -426,18 +437,23 @@ def ref_mask(D, expr):
     return D["refs"][expr]
 
 
-def twins(variants, multi_stage):
+def twins(variants, multi_stage, stage_label=False):
     """Twin variants: latent inputs replaced by the epoch spectrum (+ stage when the stratum has several stages
-    and the label is not the stage itself); N inputs alone replaced by the neighbourhood summary ``spec_nb``
-    (spectrum of the +-20 epochs and their stage fractions: what N could know without being N); context by its
-    permuted copy."""
+    and the label is not the stage itself); N inputs replaced by the label-free neighbourhood summary ``spec_nb``
+    (mean, sd and mean step of the epoch spectrum over the +-20 epochs, + the epoch spectrum when the variant
+    reads no E latent: what N could know without being N; ``spec_nb_lab`` with the stage fractions is too strong,
+    the neighbours' stages alone predict the stage better than N); context by its permuted copy, except when the
+    label is the stage (the permutation stays inside the stage and keeps the label)."""
     out = []
     for v in variants:
         if any(i in LATENT for i in v):
             t = [i for i in v if i not in LATENT] + ["spec_ep"] + (["stage"] if multi_stage else [])
             out.append((v, "twin_ep", t))
-        if any(i in N_LATENT for i in v):
-            out.append((v, "twin_N", [i for i in v if i not in N_LATENT] + ["spec_nb"]))
+        if any(i in N_LATENT for i in v):  # label-free neighbourhood; + the epoch spectrum when E is not read
+            e_in = any(i in LATENT and i not in N_LATENT for i in v)
+            out.append((v, "twin_N", [i for i in v if i not in N_LATENT] + ["spec_nb"] + ([] if e_in else ["spec_ep"])))
+        if stage_label:  # the permutation stays inside the stage: it keeps the label, no valid context twin
+            continue
         if any(CTX.fullmatch(i) and not i.endswith("_perm") for i in v):
             out.append((v, "twin_perm", [i + "_perm" if CTX.fullmatch(i) else i for i in v]))
     return out
@@ -456,6 +472,8 @@ def run_tok(D, spec, n_null=5, seed=0):
     sets = spec.get("sets", ["pool"])
     st_ok = np.isin(y, spec["stages"])
     sel = np.isin(D["set"], sets) & has & st_ok
+    for x in spec.get("exclude_sites", []):  # sites whose reference is unusable (point annotations, none)
+        sel &= ~np.char.startswith(D["gname"].astype(str), x)
     tr_rows = None
     if spec.get("train_ref"):
         rt, ht = ref_mask(D, spec["train_ref"])
@@ -525,7 +543,8 @@ def run_tok(D, spec, n_null=5, seed=0):
     sc = probe(ceil_in)
     ceil_res, _ = score(sc) if sc is not None else ({}, {})
     out["ceiling"] = {"inputs": ceil_in, **ceil_res}
-    todo = [(v, None, None) for v in vs] + twins(vs, len(spec["stages"]) > 1 and not spec["ref"].startswith("y=="))
+    todo = [(v, None, None) for v in vs] + twins(vs, len(spec["stages"]) > 1 and not spec["ref"].startswith("y=="),
+                                                   stage_label=spec["ref"].startswith("y=="))
     done, res, scores = {}, [], {}
     for v, kind, t in todo:
         inputs = t if kind else v
@@ -583,10 +602,13 @@ def ceiling_inputs(spec, variants):
     flat = {i for v in variants for i in v}
     ks = [int(m.group(1)) for i in flat for m in [CTX.fullmatch(i)] if m and m.group(1)]
     kb = [int(m.group(2)) for i in flat for m in [CTX.fullmatch(i)] if m and m.group(2)]
+    kf = [int(m.group(3)) for i in flat for m in [CTX.fullmatch(i)] if m and m.group(3)]
     if ks:
         out.append(f"spec_ctx{max(ks)}")
     if kb:
         out.append(f"spec_back{max(kb)}")
+    if kf:
+        out.append(f"spec_fwd{max(kf)}")
     if flat & set(LATENT) or any(i.startswith("P@") for i in flat):
         out.append("spec_ep")
     if flat & set(N_LATENT):
@@ -633,7 +655,7 @@ def epoch_input(D, name):
         return D["P"].reshape(-1, T, D["P"].shape[1]).mean(1)
     if name == "abs_ep":
         return D["spec_ep"][::T, -1:]
-    if name in ("Eq", "Nq", "spec_ep", "spec_nb") and name in D:
+    if name in ("Eq", "Nq", "spec_ep", "spec_nb", "spec_nb_lab") and name in D:
         return D[name][::T]
     if name in ("ICA_E", "ICA_N") and name in D:
         return np.hstack([D[name][::T], np.abs(D[name][::T])])
@@ -654,7 +676,8 @@ def run_epoch(D, spec, n_null=5, seed=0):
     tt, yy, night, key = t[idx], ey[idx], en[idx], eg[idx]
     groups = sorted(set(key))
     site_of = {int(n): g for n, g in zip(night, key)}
-    ctrl = np.column_stack([epoch_input(D, c)[idx] for c in spec.get("controls", ["abs_ep"])])
+    cl = spec.get("controls", ["abs_ep"])
+    ctrl = np.column_stack([epoch_input(D, c)[idx] for c in cl]) if cl else np.zeros((len(idx), 0))
     out = {"term": spec["term"], "mod": spec.get("mod"), "ref": spec["ref"], "level": "epoch",
            "n_ep": int(len(idx)), "target_mean": float(tt.mean()) if len(tt) else None, "groups": len(groups),
            "skipped_inputs": []}
@@ -867,8 +890,14 @@ def finish(D, seed=0):
     D["spec_ep"] = np.repeat(ep, T, 0).astype(np.float32)
     en = D["night"][::T]
     st = np.stack([D["y"][::T] == s for s in range(5)], 1).astype(np.float32)
-    nb = ctx_mean(np.column_stack([ep, st]).astype(np.float32), en, NB_EPOCHS)  # +-20 epochs, the epoch excluded
+    ep32 = ep.astype(np.float32)
+    mu = ctx_mean(ep32, en, NB_EPOCHS)  # +-20 epochs, the epoch excluded
+    sd = np.sqrt(np.maximum(ctx_mean(ep32 ** 2, en, NB_EPOCHS) - mu ** 2, 0))
+    dif = np.abs(ep32 - np.r_[ep32[:1], ep32[:-1]]) * np.r_[False, en[1:] == en[:-1]][:, None]
+    nb = np.column_stack([mu, sd, ctx_mean(dif, en, NB_EPOCHS)])  # label-free: what N could know without labels
     D["spec_nb"] = np.repeat(nb, T, 0).astype(np.float32)
+    lab = ctx_mean(np.column_stack([ep32, st]), en, NB_EPOCHS)  # with the stage fractions: a declared ceiling only
+    D["spec_nb_lab"] = np.repeat(lab, T, 0).astype(np.float32)
     yp = np.r_[D["y"][:T], D["y"][:-T]]
     same = np.r_[np.zeros(T, bool), D["night"][T:] == D["night"][:-T]]
     D["yprev"] = np.where(same, yp, D["y"])

@@ -158,10 +158,24 @@ def test_onset_takes_first_two_tokens_per_run_and_night():
 
 def test_twin_n_and_spec_nb():
     D, p, e, r = _toy(5)
-    assert D["spec_nb"].shape == (len(p), D["spec_ep"].shape[1] + 5)
+    assert D["spec_nb"].shape == (len(p), 3 * D["spec_ep"].shape[1])  # label-free: mean, sd, step
+    assert D["spec_nb_lab"].shape == (len(p), D["spec_ep"].shape[1] + 5)
     tw = cr.twins([["P", "Eq", "Nq"]], False)
     tn = [x for x in tw if x[1] == "twin_N"]
-    assert tn and "Nq" not in tn[0][2] and "spec_nb" in tn[0][2] and "Eq" in tn[0][2]
+    assert tn and "Nq" not in tn[0][2] and "spec_nb" in tn[0][2] and "Eq" in tn[0][2] and "spec_ep" not in tn[0][2]
+    tn = [x for x in cr.twins([["P", "Nq"]], False) if x[1] == "twin_N"]
+    assert "spec_ep" in tn[0][2]  # N alone also carries the centre epoch
+
+
+def test_forward_context_and_stage_label_twins():
+    night = np.repeat([0, 1], 50).astype(np.int32)
+    P = np.repeat(np.arange(100, dtype=np.float32)[:, None], 2, 1)
+    f = cr.ctx_mean(P, night, 3, fwd=True)
+    assert np.isclose(f[10, 0], 12) and np.isclose(f[49, 0], 49) and np.isclose(f[48, 0], 49)
+    assert cr.CTX.fullmatch("P_fwd6") and cr.CTX.fullmatch("P_fwd6_perm")
+    c = cr.ceiling_inputs({"baselines": ["abs_amp"], "stages": [2], "ref": "a"}, [["P", "P_fwd6", "P_back20"]])
+    assert "spec_fwd6" in c and "spec_back20" in c
+    assert not [x for x in cr.twins([["P", "P_ctx±1"]], True, stage_label=True) if x[1] == "twin_perm"]
 
 
 def test_ceiling_reads_same_context_as_words():
@@ -177,3 +191,11 @@ def test_match_across_stages_pools_cells():
             "baselines": ["abs_amp"], "matched_bins": ["abs"], "match_across_stages": True}
     v = cr.run_tok(D, spec, n_null=0)["variants"][0]
     assert v["matched"]["mean"] > 0.3 and v["vs_baseline"]["mean"] > 0.1
+
+
+def test_epoch_without_controls():
+    D, p, e, r = _toy(7)
+    spec = {"term": "frac", "mod": "eeg", "ref": "toy", "level": "epoch", "stages": [2], "controls": [],
+            "word_variants": [["Eq"]], "baselines": ["abs_ep"]}
+    out = cr.run_epoch(D, spec, n_null=0)
+    assert out["variants"][0]["rho"]["mean"] > 0.5
