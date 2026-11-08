@@ -193,3 +193,30 @@ def test_alpha_in_context():
     assert p["REM"]["lexicon"]["f1"] > p["REM"]["word_only"]["f1"] + 0.2
     assert p["NREM"]["lexicon"]["f1"] > p["NREM"]["nulls"]["state_perm_q95"]
     assert cc._jsonable(out)
+
+
+def test_rem_tone_from_epoch_latent():
+    """C2b: the chin tone read from the EMG epoch latent (absolute and relative to the night)."""
+    D = _toy_wake(seed=7)
+    rng = np.random.default_rng(7)
+    n = len(D["y"])
+    ye = D["y"][::T].copy()
+    ye[(ye == 2) & (rng.random(len(ye)) < 0.5)] = 4
+    D["y"] = np.repeat(ye, T).astype(np.int8)
+    eye = np.zeros(n, bool)
+    for e in np.flatnonzero((ye == 4) | (ye == 0)):
+        t = e * T + int(rng.integers(5, 50))
+        eye[t:t + 3] = True
+    dre = D["set"] == "dreams"
+    pe = D["P@eog"].copy()
+    pe[~dre, 1] = eye[~dre] + 0.2 * rng.normal(size=(~dre).sum())
+    D["P@eog"] = pe
+    D["refs"]["rem_eye"] = (eye, ~dre)
+    a_ep = D["refs"]["atonia"][0].reshape(-1, T).mean(1)
+    q = np.column_stack([a_ep + 0.05 * rng.normal(size=len(a_ep)), rng.normal(size=len(a_ep))])
+    q = np.repeat(q, T, 0).astype(np.float32)
+    q[dre] = np.nan
+    D["Eq@emg"] = q
+    out = cc.battery_rem(D, n_null_pool=2, tone_source="eq")
+    assert out["V1"]["tone"]["spearman_epoch_frac"] > 0.8
+    assert out["V2"]["pool"]["split_R_vs_W"]["lexicon"]["balanced"] > 0.8

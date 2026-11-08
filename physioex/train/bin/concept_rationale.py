@@ -657,6 +657,8 @@ def epoch_input(D, name):
         return D["spec_ep"][::T, -1:]
     if name in ("Eq", "Nq", "spec_ep", "spec_nb", "spec_nb_lab") and name in D:
         return D[name][::T]
+    if "@" in name and name in D:  # per-modality epoch latents (Eq@emg, Eq@emg_rel)
+        return D[name][::T]
     if name in ("ICA_E", "ICA_N") and name in D:
         return np.hstack([D[name][::T], np.abs(D[name][::T])])
     if name == "stage":
@@ -830,6 +832,7 @@ def load(dump, mod, refs_needed, extra_mods=(), frac=0.15, min_n=3, n_ss01=10, s
                          "Eq", "Nq")}
     X = {f"P@{m}": [] for m in tuple(extra_mods) + tuple(opt_mods)}
     X.update({f"rel_back@{m}": [] for m in extra_mods})
+    X.update({f"Eq@{m}": [] for m in opt_mods})
     R = {r: [] for r in refs_needed}
     lens = []
     for i, k in enumerate(keys):
@@ -862,17 +865,20 @@ def load(dump, mod, refs_needed, extra_mods=(), frac=0.15, min_n=3, n_ss01=10, s
             X[f"P@{m}"].append(z[f"P_{m}"].reshape(n * T, -1).astype(np.float32))
             f0 = token_features(z[f"x_{m}"].astype(np.float32), meta["fs"][m])[:, 0]
             X[f"rel_back@{m}"].append(rel_back(f0, np.zeros(len(f0), np.int32)))
+        qm = np.load(eqp) if os.path.exists(eqp) else None
         for m in opt_mods:
             X[f"P@{m}"].append(z[f"P_{m}"].reshape(n * T, -1).astype(np.float32) if f"P_{m}" in z.files else n * T)
+            ok = qm is not None and f"Eq_{m}" in qm.files and len(qm[f"Eq_{m}"]) == n
+            X[f"Eq@{m}"].append(np.repeat(qm[f"Eq_{m}"].astype(np.float32), T, 0) if ok else n * T)
         for r in refs_needed:
             R[r].append(rf[r] if r in rf and len(rf[r]) == n * T else None)
         if i % 20 == 0:
             print(f"[load] {i + 1}/{len(keys)} {k}", flush=True)
-    for m in opt_mods:  # nights without the modality: NaN rows of the right width
-        parts = X[f"P@{m}"]
+    for key in [f"{a}@{m}" for m in opt_mods for a in ("P", "Eq")]:  # nights without it: NaN rows
+        parts = X[key]
         w = next((p.shape[1] for p in parts if not isinstance(p, int)), None)
-        X[f"P@{m}"] = [] if w is None else [np.full((p, w), np.nan, np.float32) if isinstance(p, int) else p
-                                            for p in parts]
+        X[key] = [] if w is None else [np.full((p, w), np.nan, np.float32) if isinstance(p, int) else p
+                                       for p in parts]
     D = {k: np.concatenate(v) for k, v in A.items() if v and len(v) == len(keys)}
     D.update({k: np.concatenate(v) for k, v in X.items() if v})
     D["gname"] = D["gname"].astype(str)

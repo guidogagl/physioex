@@ -49,6 +49,7 @@ CONCEPTS = {
         "refs": ["alpha", "rem_eye", "atonia"],
         "word": {"ref": "rem_eye", "inputs": ["P@eog"]},
         "tone": {"ref": "atonia", "inputs": ["P@emg"]},
+        "tone_eq": {"ref": "atonia", "inputs": ["Eq@emg", "Eq@emg_rel"]},
         "preds": {"alpha": {"ref": "alpha", "inputs": ["Eq", "Nq"]}},
         "rule": "rem = rem_eye word event AND atonia_frac > 0.50 (night-relative chin tone) AND alpha_frac <= 0.50; "
                 "wake = rem_eye word event AND NOT rem",
@@ -115,10 +116,12 @@ def _pred(D, cfg, seed=0):
     X = np.hstack([np.hstack([RA.epoch_input(D, n), RA.epoch_input(D, n) ** 2]) for n in cfg["inputs"]])
     st = D["set"][::T]
     gn = D["gname"][::T]
-    pool = (st == "pool") & h
+    fin = np.isfinite(X).all(1)  # optional modalities: NaN epochs stay NaN
+    pool = (st == "pool") & h & fin
     ip = np.flatnonzero(pool)
     rng = np.random.default_rng(seed)
-    full = RA._fit_predict(X, [], t, ip, np.arange(len(t)), 200_000, rng, ridge=True)
+    full = np.full(len(t), np.nan)
+    full[fin] = RA._fit_predict(X, [], t, ip, np.flatnonzero(fin), 200_000, rng, ridge=True)
     loso = RA.fold_probe(X[ip], [], t[ip], gn[ip], sorted(set(gn[ip])), max_fit=200_000, seed=seed, ridge=True)
     v = full.copy()
     v[ip] = loso
@@ -127,7 +130,7 @@ def _pred(D, cfg, seed=0):
     rho = lambda a, b: float(spearmanr(a, b)[0]) if len(a) > 2 else None
     return v, t, {"ref": cfg["ref"], "inputs": cfg["inputs"],
                   "spearman_pool_loso": rho(loso[ok], t[ip][ok]),
-                  "spearman_dreams": rho(full[dre], t[dre]) if dre.any() else None,
+                  "spearman_dreams": rho(full[dre & fin], t[dre & fin]) if (dre & fin).any() else None,
                   "mean_pred_vs_true": {k: [float(np.nanmean(v[st == k])), float(np.nanmean(t[st == k]))]
                                         for k in sorted(set(st))}}
 
@@ -310,7 +313,32 @@ def battery_kc(D, n_null=200, n_null_pool=20, seed=0, swa_source="eq", wake=Fals
     return out
 
 
-def battery_rem(D, n_null=0, n_null_pool=20, seed=0, eye_eeg=False):
+def _night_rel(D, key):
+    """``key`` minus its per-night median (epoch rows): the chin tone relative to the night (C2b)."""
+    if f"{key}_rel" in D or key not in D:
+        return
+    x = D[key]
+    out = np.full_like(x, np.nan)
+    for n in np.unique(D["night"]):
+        m = D["night"] == n
+        if np.isfinite(x[m]).all():
+            out[m] = x[m] - np.median(x[m][::T], 0)
+    D[f"{key}_rel"] = out
+
+
+def _tone(D, source, seed=0):
+    """Epoch atonia fraction from the lexicon: ``word`` = fraction of tokens of the P@emg atonia word (C2);
+    ``eq`` = ridge on the EMG epoch latent, absolute and relative to the night (C2b)."""
+    cfg = CONCEPTS["rem_eye"]
+    if source == "eq":
+        _night_rel(D, "Eq@emg")
+        v, _, info = _pred(D, cfg["tone_eq"], seed)
+        return v, info
+    tw, info, fin_t = _word(D, cfg["tone"], seed)
+    return np.where(fin_t.reshape(-1, T).all(1), tw.reshape(-1, T).mean(1), np.nan), info
+
+
+def battery_rem(D, n_null=0, n_null_pool=20, seed=0, eye_eeg=False, tone_source="word"):
     """C2: rapid eye movements of REM against those of wake. Targets on the pool (DREAMS has no EOG): reference
     eye events in R epochs and in W epochs of the hypnogram (declared: the stage defines the target, the rule
     uses no stage). Measures: event agreement of the REM / wake calls, and the split accuracy on the word events
@@ -321,8 +349,8 @@ def battery_rem(D, n_null=0, n_null_pool=20, seed=0, eye_eeg=False):
     if eye_eeg:
         wc["inputs"] = wc["inputs"] + ["P"]
     word, v1w, fin = _word(D, wc, seed)
-    tw, v1t, fin_t = _word(D, cfg["tone"], seed)
-    aton = np.where(fin_t.reshape(-1, T).all(1), tw.reshape(-1, T).mean(1), np.nan)
+    aton, v1t = _tone(D, tone_source, seed)
+    fin_t = np.repeat(np.isfinite(aton), T)
     alpha, alpha_t, v1a = _pred(D, cfg["preds"]["alpha"], seed)
     er, eh = RA.ref_mask(D, "rem_eye")
     ar, ah = RA.ref_mask(D, "atonia")
@@ -370,7 +398,7 @@ def battery_rem(D, n_null=0, n_null_pool=20, seed=0, eye_eeg=False):
     return out
 
 
-def _lex_state(D, seed=0, eye_eeg=True):
+def _lex_state(D, seed=0, eye_eeg=True, tone_source="word"):
     """Per-epoch lexicon predicates shared by the rules: alpha (ridge on Eq+Nq), slow-wave fraction (delta word),
     eye and tone word fractions, AASM wake (C1e) and coarse state; the same from the references (oracle)."""
     cfg = CONCEPTS["kc"]
@@ -386,6 +414,8 @@ def _lex_state(D, seed=0, eye_eeg=True):
         fr[name] = np.where(fin.reshape(-1, T).all(1), w_.reshape(-1, T).mean(1), np.nan)
         rr, hh = RA.ref_mask(D, wc["ref"])
         fo[name] = np.where(hh.reshape(-1, T).all(1), rr.reshape(-1, T).mean(1), np.nan)
+    if tone_source == "eq":
+        fr["atonia"], v1["atonia_eq"] = _tone(D, "eq", seed)
     out = {}
     for k, (a, f, sw) in {"lexicon": (alpha, fr, swa), "oracle": (alpha_t, fo, swa_t)}.items():
         wk = CR.wake_rule(a, f["blink"], f["rem_eye"], f["atonia"]) & ~(sw >= CR.N3_SWA)
@@ -393,14 +423,14 @@ def _lex_state(D, seed=0, eye_eeg=True):
     return out, v1
 
 
-def battery_alpha(D, n_null_pool=20, seed=0):
+def battery_alpha(D, n_null_pool=20, seed=0, tone_source="word"):
     """C3: alpha in context. The alpha word's events labelled W / REM / NREM by the lexicon state of their epoch,
     against the alpha reference in W, in REM (``alpha_rem``) and in N2/N3 (``alpha_nrem``) of the hypnogram
     (declared: the stage defines the targets, the rule uses no stage). Pool only (the state needs EOG / EMG)."""
     cfg = CONCEPTS["alpha_ctx"]
     night = D["night"]
     word, v1w, fin = _word(D, cfg["word"], seed)
-    S, v1 = _lex_state(D, seed)
+    S, v1 = _lex_state(D, seed, tone_source=tone_source)
     ar, ah = RA.ref_mask(D, "alpha")
     y = np.repeat(D["y"][::T], T)
     tgt = {"W": ar & (y == 0), "REM": RA.ref_mask(D, "alpha_rem")[0], "NREM": RA.ref_mask(D, "alpha_nrem")[0]}
@@ -504,13 +534,13 @@ def battery(a):
                             opt_mods=("eog", "emg") if (a.wake or rem) else ())
     print(f"[compose] loaded {len(keys)} nights, {len(D['y'])} tokens, {time.time() - t0:.0f} s", flush=True)
     if a.concept == "alpha_ctx":
-        res = battery_alpha(D, n_null_pool=a.n_null_pool, seed=a.seed)
+        res = battery_alpha(D, n_null_pool=a.n_null_pool, seed=a.seed, tone_source=a.tone_source)
     elif rem:
-        res = battery_rem(D, n_null_pool=a.n_null_pool, seed=a.seed, eye_eeg=a.eye_eeg)
+        res = battery_rem(D, n_null_pool=a.n_null_pool, seed=a.seed, eye_eeg=a.eye_eeg, tone_source=a.tone_source)
     else:
         res = battery_kc(D, n_null=a.n_null, n_null_pool=a.n_null_pool, seed=a.seed, swa_source=a.swa_source,
                          wake=a.wake, n3_first=a.n3_first, eye_eeg=a.eye_eeg)
-    out = {"iteration": a.iter, "concept": a.concept, "rule": cfg["rule"], "swa_source": a.swa_source, "wake": a.wake, "n3_first": a.n3_first, "eye_eeg": a.eye_eeg,
+    out = {"iteration": a.iter, "concept": a.concept, "rule": cfg["rule"], "swa_source": a.swa_source, "wake": a.wake, "n3_first": a.n3_first, "eye_eeg": a.eye_eeg, "tone_source": a.tone_source,
            "thresholds": {"N3_SWA": CR.N3_SWA, "W_ALPHA": CR.W_ALPHA, "EYE_PRESENT": CR.EYE_PRESENT,
                           "ATONIA_EPOCH": CR.ATONIA_EPOCH, "KC_ISO_TOK": CR.KC_ISO_TOK,
                           "MERGE_GAP": CR.MERGE_GAP},
@@ -538,6 +568,7 @@ def main(argv=None):
     b.add_argument("--swa-source", default="eq", choices=["eq", "words"])
     b.add_argument("--wake", action="store_true", help="C1c: AASM wake rule on lexicon words (needs EOG / EMG)")
     b.add_argument("--n3-first", action="store_true", help="C1d: AASM precedence, slow waves >= 20 %% is N3, never W")
+    b.add_argument("--tone-source", default="word", choices=["word", "eq"], help="C2b: chin tone from the EMG epoch latent")
     b.add_argument("--eye-eeg", action="store_true", help="C1e: blink / rem_eye words read P@eog and P (EEG)")
     a = ap.parse_args(argv)
     battery(a)
