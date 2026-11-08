@@ -962,7 +962,7 @@ def run(a):
     extra = sorted({i.split("@")[1] for s in specs for v in s["word_variants"] + [s["baselines"]] for i in v if "@" in i})
     t0 = time.time()
     shhs = any("shhs" in s.get("sets", []) for s in specs)
-    D, keys, sets = load(a.dump, a.mod, refs, extra, a.frac, seed=a.seed, with_shhs=shhs)
+    D, keys, sets = load(a.dump, a.mod, refs, extra, a.frac, n_ss01=a.n_ss01, seed=a.seed, with_shhs=shhs)
     print(f"[rationale] {a.mod}: {len(D['y'])} tokens, {len(keys)} nights "
           f"({sum(v == 'pool' for v in sets.values())} pool), refs {sorted(D['refs'])}, extra {extra}, "
           f"{(time.time() - t0) / 60:.1f} min", flush=True)
@@ -1012,6 +1012,7 @@ def main(argv=None):
     r.add_argument("--tag", required=True)
     r.add_argument("--frac", type=float, default=0.15)
     r.add_argument("--nulls", type=int, default=5)
+    r.add_argument("--n-ss01", type=int, default=10)
     r.add_argument("--seed", type=int, default=0)
     a = ap_.parse_args(argv)
     {"embed": embed, "run": run}[a.cmd](a)
