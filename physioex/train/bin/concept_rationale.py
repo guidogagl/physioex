@@ -414,7 +414,8 @@ def ref_mask(D, expr):
 
 
 def twins(variants, multi_stage):
-    """Twin variants: latent inputs replaced by the epoch spectrum (+ stage), context by its permuted copy."""
+    """Twin variants: latent inputs replaced by the epoch spectrum (+ stage when the stratum has several stages
+    and the label is not the stage itself), context by its permuted copy."""
     out = []
     for v in variants:
         if any(i in LATENT for i in v):
@@ -501,7 +502,7 @@ def run_tok(D, spec, n_null=5, seed=0):
     base_res, base_md = score(sb) if sb is not None else ({}, {})
     out["baseline"] = {"inputs": spec["baselines"], **base_res}
     vs = [list(v) for v in spec["word_variants"]]
-    todo = [(v, None, None) for v in vs] + twins(vs, len(spec["stages"]) > 1)
+    todo = [(v, None, None) for v in vs] + twins(vs, len(spec["stages"]) > 1 and not spec["ref"].startswith("y=="))
     done, res, scores = {}, [], {}
     for v, kind, t in todo:
         inputs = t if kind else v
