@@ -150,7 +150,23 @@ def _nulls(D, word, swa, alpha, ref, sel, key, n_null, seed, wake=None):
             "n": n_null}
 
 
-def battery_kc(D, n_null=200, n_null_pool=20, seed=0, swa_source="eq", wake=False):
+def _wake_clauses(src, st, y):
+    """Diagnostic: share of epochs per stage (pool) where each wake clause fires, lexicon and oracle."""
+    out = {}
+    names = ["W", "N1", "N2", "N3", "R"]
+    for k, (a, f, sw) in src.items():
+        tone_low = np.nan_to_num(f["atonia"], nan=1.0) > CR.ATONIA_EPOCH
+        cl = {"alpha": np.nan_to_num(a, nan=0.0) > CR.W_ALPHA,
+              "blink": np.nan_to_num(f["blink"], nan=0.0) >= CR.EYE_PRESENT,
+              "eye_tone": (np.nan_to_num(f["rem_eye"], nan=0.0) >= CR.EYE_PRESENT) & ~tone_low,
+              "swa_ge_20": sw >= CR.N3_SWA}
+        m = st == "pool"
+        out[k] = {c: {names[s]: float(v[m & (y == s)].mean()) for s in range(5) if (m & (y == s)).any()}
+                  for c, v in cl.items()}
+    return out
+
+
+def battery_kc(D, n_null=200, n_null_pool=20, seed=0, swa_source="eq", wake=False, n3_first=False):
     """``swa_source``: ``eq`` = ridge on the epoch latents; ``words`` = fraction of the epoch's tokens where the
     slow-transient word fires (the predicate read on the word sequence, C1b). ``wake``: the alpha clause becomes
     the AASM wake rule on lexicon words (alpha, blink and rapid-eye words on ``P@eog``, atonia word on ``P@emg``;
@@ -183,6 +199,10 @@ def battery_kc(D, n_null=200, n_null_pool=20, seed=0, swa_source="eq", wake=Fals
         wo = CR.wake_rule(alpha_t, fo["blink"], fo["rem_eye"], fo["atonia"])
         st = D["set"][::T]
         y = D["y"][::T]
+        if n3_first:  # AASM precedence (C1d): an epoch with slow waves over >= 20 % is N3, never W
+            wl = wl & ~(swa >= CR.N3_SWA)
+            wo = wo & ~(swa_t >= CR.N3_SWA)
+        v1x["wake_clauses"] = _wake_clauses({"lexicon": (alpha, fr, swa), "oracle": (alpha_t, fo, swa_t)}, st, y)
         v1x["wake_epochs"] = {k: {"lexicon": float(wl[st == k].mean()), "oracle": float(wo[st == k].mean()),
                                   "lexicon_in_W": float(wl[(st == k) & (y == 0)].mean()) if ((st == k) & (y == 0)).any() else None,
                                   "lexicon_in_sleep": float(wl[(st == k) & (y > 0)].mean()) if ((st == k) & (y > 0)).any() else None}
@@ -330,8 +350,9 @@ def battery(a):
     D, keys, sets = RA.load(a.dump, "eeg", refs, frac=a.frac, n_ss01=a.n_ss01, seed=a.seed,
                             opt_mods=("eog", "emg") if a.wake else ())
     print(f"[compose] loaded {len(keys)} nights, {len(D['y'])} tokens, {time.time() - t0:.0f} s", flush=True)
-    res = battery_kc(D, n_null=a.n_null, n_null_pool=a.n_null_pool, seed=a.seed, swa_source=a.swa_source, wake=a.wake)
-    out = {"iteration": a.iter, "concept": a.concept, "rule": cfg["rule"], "swa_source": a.swa_source, "wake": a.wake,
+    res = battery_kc(D, n_null=a.n_null, n_null_pool=a.n_null_pool, seed=a.seed, swa_source=a.swa_source, wake=a.wake,
+                     n3_first=a.n3_first)
+    out = {"iteration": a.iter, "concept": a.concept, "rule": cfg["rule"], "swa_source": a.swa_source, "wake": a.wake, "n3_first": a.n3_first,
            "thresholds": {"N3_SWA": CR.N3_SWA, "W_ALPHA": CR.W_ALPHA, "EYE_PRESENT": CR.EYE_PRESENT,
                           "ATONIA_EPOCH": CR.ATONIA_EPOCH, "KC_ISO_TOK": CR.KC_ISO_TOK,
                           "MERGE_GAP": CR.MERGE_GAP},
@@ -358,6 +379,7 @@ def main(argv=None):
     b.add_argument("--seed", type=int, default=0)
     b.add_argument("--swa-source", default="eq", choices=["eq", "words"])
     b.add_argument("--wake", action="store_true", help="C1c: AASM wake rule on lexicon words (needs EOG / EMG)")
+    b.add_argument("--n3-first", action="store_true", help="C1d: AASM precedence, slow waves >= 20 %% is N3, never W")
     a = ap.parse_args(argv)
     battery(a)
 

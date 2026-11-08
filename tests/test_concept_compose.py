@@ -117,3 +117,12 @@ def test_battery_kc_wake_removes_w_transients():
     assert pb["stage_of_detections"]["W"] > 0.2 and pw["stage_of_detections"]["W"] < 0.05
     assert pw["lexicon"]["purity"] > pb["lexicon"]["purity"] + 0.2
     assert wake["V1"]["wake_epochs"]["dreams"]["lexicon"] < 0.5  # alpha fallback only
+
+
+def test_battery_kc_n3_first_keeps_n3():
+    D = _toy_wake(seed=3)
+    out = cc.battery_kc(D, n_null=3, n_null_pool=2, swa_source="words", wake=True, n3_first=True)
+    wc = out["V1"]["wake_clauses"]["lexicon"]
+    assert set(wc) == {"alpha", "blink", "eye_tone", "swa_ge_20"} and wc["swa_ge_20"]["N3"] > 0.8
+    n3 = out["V2"]["pool"]["n3_vs_slow_wave_in_swa_epochs"]["lexicon"]
+    assert n3["coverage"] > 0.8
