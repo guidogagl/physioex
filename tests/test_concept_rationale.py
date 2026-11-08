@@ -146,3 +146,34 @@ def test_epoch_level_partial_spearman():
     assert out["null_rho"]["p"] <= 1 / 3
     t, _ = cr.epoch_target(D, "post:toy:1")
     assert t[0] == 0 and set(np.unique(t)) <= {0.0, 1.0}
+
+
+def test_onset_takes_first_two_tokens_per_run_and_night():
+    night = np.array([0] * 6 + [1] * 4, np.int32)
+    r = np.array([0, 1, 1, 1, 1, 0, 1, 1, 1, 0], bool)  # night 1 starts inside a run
+    D = {"night": night, "refs": {"a": (r, np.ones(len(r), bool))}}
+    o, _ = cr.ref_mask(D, "onset:a")
+    assert o.tolist() == [0, 1, 1, 0, 0, 0, 1, 1, 0, 0]
+
+
+def test_twin_n_and_spec_nb():
+    D, p, e, r = _toy(5)
+    assert D["spec_nb"].shape == (len(p), D["spec_ep"].shape[1] + 5)
+    tw = cr.twins([["P", "Eq", "Nq"]], False)
+    tn = [x for x in tw if x[1] == "twin_N"]
+    assert tn and "Nq" not in tn[0][2] and "spec_nb" in tn[0][2] and "Eq" in tn[0][2]
+
+
+def test_ceiling_reads_same_context_as_words():
+    spec = {"baselines": ["abs_amp"], "stages": [2, 3], "ref": "toy"}
+    c = cr.ceiling_inputs(spec, [["P", "P_ctx±2"], ["P", "P_back20", "Nq"]])
+    assert c[:1] == ["abs_amp"] and {"spec_ctx2", "spec_back20", "spec_ep", "spec_nb", "stage"} <= set(c)
+
+
+def test_match_across_stages_pools_cells():
+    D, p, e, r = _toy(6)
+    D["y"] = np.where(e == 1, 4, 0).astype(np.int8)  # the stage separates the event: within stage it is the amplitude
+    spec = {"term": "toy", "mod": "eeg", "ref": "toy", "stages": [0, 4], "word_variants": [["P", "Eq"]],
+            "baselines": ["abs_amp"], "matched_bins": ["abs"], "match_across_stages": True}
+    v = cr.run_tok(D, spec, n_null=0)["variants"][0]
+    assert v["matched"]["mean"] > 0.3 and v["vs_baseline"]["mean"] > 0.1

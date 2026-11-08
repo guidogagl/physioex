@@ -72,6 +72,8 @@ N_PERM = 2000
 SPEC_WIN = {"so": (0.5, 2, 2.0), "delta": (2, 4, 2.0), "theta": (4, 7, 1.5), "alpha": (8, 13, 2.0),
             "sigma": (11, 16, 1.5), "beta": (16, 30, 1.5)}
 LATENT = ("Eq", "Nq", "ICA_E", "ICA_N", "codes_E", "codes_N")
+N_LATENT = ("Nq", "ICA_N", "codes_N")
+NB_EPOCHS = 20  # the N context of the encoder: 40 neighbouring epochs
 
 
 # ---------------------------------------------------------------------------- context features
@@ -352,8 +354,13 @@ def token_input(D, name):
             out = out[:, None]
     elif name in ("rel_bg", "rel_back", "iso"):
         out = D[name][:, None]
-    elif name in ("Eq", "Nq", "spec_ep", "spec_back") and name in D:
+    elif name in ("Eq", "Nq", "spec_ep", "spec_back", "spec_nb") and name in D:
         out = D[name]
+    elif re.fullmatch(r"spec_ctx(\d+)", name):
+        k = int(name[8:])
+        out = (ctx_mean(D["S"], D["night"], k) * 2 * k + D["S"]) / (2 * k + 1)  # token and its +-k, edges approx.
+    elif re.fullmatch(r"spec_back(\d+)", name):
+        out = ctx_mean(D["S"], D["night"], int(name[9:]), back=True)
     elif name in ("ICA_E", "ICA_N") and name in D:
         out = np.hstack([D[name], np.abs(D[name])])
     elif name == "spec_tok":
@@ -398,9 +405,15 @@ MATCH = {"abs": lambda D: D["F"][:, 0], "rel": lambda D: D["rel_bg"], "iso": lam
 
 
 def ref_mask(D, expr):
-    """Reference mask and availability: a name, ``y==k``, ``a&b`` (intersection), ``a|b`` (union)."""
+    """Reference mask and availability: a name, ``y==k``, ``a&b`` (intersection), ``a|b`` (union),
+    ``onset:<name>`` (first 2 tokens of every event run, 1 s)."""
     if expr.startswith("y=="):
         return D["y"] == int(expr[3:]), np.ones(len(D["y"]), bool)
+    if expr.startswith("onset:"):
+        r, h = ref_mask(D, expr[6:])
+        same = np.r_[False, D["night"][1:] == D["night"][:-1]]
+        first = r & ~(np.r_[False, r[:-1]] & same)
+        return first | (r & np.r_[False, first[:-1]] & same), h
     for op, f in (("|", np.logical_or), ("&", np.logical_and)):
         if op in expr:
             parts = [ref_mask(D, p) for p in expr.split(op)]
@@ -415,12 +428,16 @@ def ref_mask(D, expr):
 
 def twins(variants, multi_stage):
     """Twin variants: latent inputs replaced by the epoch spectrum (+ stage when the stratum has several stages
-    and the label is not the stage itself), context by its permuted copy."""
+    and the label is not the stage itself); N inputs alone replaced by the neighbourhood summary ``spec_nb``
+    (spectrum of the +-20 epochs and their stage fractions: what N could know without being N); context by its
+    permuted copy."""
     out = []
     for v in variants:
         if any(i in LATENT for i in v):
             t = [i for i in v if i not in LATENT] + ["spec_ep"] + (["stage"] if multi_stage else [])
             out.append((v, "twin_ep", t))
+        if any(i in N_LATENT for i in v):
+            out.append((v, "twin_N", [i for i in v if i not in N_LATENT] + ["spec_nb"]))
         if any(CTX.fullmatch(i) and not i.endswith("_perm") for i in v):
             out.append((v, "twin_perm", [i + "_perm" if CTX.fullmatch(i) else i for i in v]))
     return out
@@ -472,7 +489,9 @@ def run_tok(D, spec, n_null=5, seed=0):
     site_of = {int(n): (str(n) if dreams_eval else g) for n, g in zip(night, gn)}
     M = np.column_stack([MATCH[m](D)[idx] for m in spec.get("matched_bins") or ["abs"]])
     ck = np.zeros(len(idx), int).astype(str) if dreams_eval else gn
-    cell = cells(np.where(train, "_train", ck) if train is not None else ck, yy, M)  # cells of the evaluated tokens
+    across = bool(spec.get("match_across_stages"))  # the label is the stage: cells pool the stages
+    ycell = np.zeros(len(idx), np.int8) if across else yy
+    cell = cells(np.where(train, "_train", ck) if train is not None else ck, ycell, M)  # cells of the evaluated tokens
     ev = ~train if train is not None else np.ones(len(idx), bool)
     out = {"term": spec["term"], "mod": spec.get("mod"), "ref": spec["ref"], "gate": spec.get("gate", "content"),
            "n_tok": int(ev.sum()), "base_rate": float(r[ev].mean()) if ev.any() else None, "groups": len(groups),
@@ -489,7 +508,7 @@ def run_tok(D, spec, n_null=5, seed=0):
         return np.where(ev, fold_probe(X, cs, rr, key, groups, seed=sd, train=train), np.nan)
 
     def score(s, rr=r):
-        md = matched_nights(s, rr & ev, night, yy, cell)
+        md = matched_nights(s, rr & ev, night, ycell, cell)
         ok = ev & np.isfinite(s)
         res = {"ap": ap(s[ok], rr[ok]) if rr[ok].any() else None, "matched": summary(md, site_of)}
         if cand:
@@ -502,6 +521,10 @@ def run_tok(D, spec, n_null=5, seed=0):
     base_res, base_md = score(sb) if sb is not None else ({}, {})
     out["baseline"] = {"inputs": spec["baselines"], **base_res}
     vs = [list(v) for v in spec["word_variants"]]
+    ceil_in = spec.get("ceiling") or ceiling_inputs(spec, vs)
+    sc = probe(ceil_in)
+    ceil_res, _ = score(sc) if sc is not None else ({}, {})
+    out["ceiling"] = {"inputs": ceil_in, **ceil_res}
     todo = [(v, None, None) for v in vs] + twins(vs, len(spec["stages"]) > 1 and not spec["ref"].startswith("y=="))
     done, res, scores = {}, [], {}
     for v, kind, t in todo:
@@ -519,6 +542,8 @@ def run_tok(D, spec, n_null=5, seed=0):
             rr["vs_baseline"] = compare(md, base_md, site_of)
         if base_res.get("ap") and rr["ap"] is not None:
             rr["retention"] = rr["ap"] / base_res["ap"]
+        if ceil_res.get("ap") and rr["ap"] is not None:
+            rr["retention_ceiling"] = rr["ap"] / ceil_res["ap"]
         res.append(rr)
     for rr in res:
         k = "+".join(rr["inputs"])
@@ -535,14 +560,40 @@ def run_tok(D, spec, n_null=5, seed=0):
         for i in range(n_null):
             rs = r.copy()
             rs[ev] = shift_within_runs(r[ev], night[ev], yy[ev], rng)
-            md = matched_nights(probe(best["inputs"], rs, seed + i + 1), rs & ev, night, yy, cell)
+            md = matched_nights(probe(best["inputs"], rs, seed + i + 1), rs & ev, night, ycell, cell)
             nulls.append(float(np.mean([x[0] for x in md.values()])) if md else 0.0)
         obs = best["matched"]["mean"]
         out["null_matched"] = {"inputs": best["inputs"], "values": nulls,
                                "p": (1 + sum(n >= obs for n in nulls)) / (len(nulls) + 1)}
         out["_best_scores"] = (idx[ev], scores["+".join(best["inputs"])][ev])
+    if dreams_eval:  # excerpts are not sites: no sign criterion
+        for rr in res:
+            for c in [rr.get("vs_baseline")] + list((rr.get("vs_twins") or {}).values()) + list((rr.get("added") or {}).values()):
+                if c:
+                    c["sign_ok"] = None
     out["skipped_inputs"] = sorted(set(out["skipped_inputs"]))
     return out
+
+
+def ceiling_inputs(spec, variants):
+    """Signal ceiling with the same context as the words: the baseline inputs plus the spectrum over the widest
+    context window of the variants, the epoch spectrum when a variant reads E / N and the neighbourhood summary
+    when it reads N."""
+    out = list(spec["baselines"])
+    flat = {i for v in variants for i in v}
+    ks = [int(m.group(1)) for i in flat for m in [CTX.fullmatch(i)] if m and m.group(1)]
+    kb = [int(m.group(2)) for i in flat for m in [CTX.fullmatch(i)] if m and m.group(2)]
+    if ks:
+        out.append(f"spec_ctx{max(ks)}")
+    if kb:
+        out.append(f"spec_back{max(kb)}")
+    if flat & set(LATENT) or any(i.startswith("P@") for i in flat):
+        out.append("spec_ep")
+    if flat & set(N_LATENT):
+        out.append("spec_nb")
+    if len(spec["stages"]) > 1 and not spec["ref"].startswith("y==") and "stage" not in out:
+        out.append("stage")
+    return list(dict.fromkeys(out))
 
 
 # ---------------------------------------------------------------------------- one epoch spec
@@ -582,7 +633,7 @@ def epoch_input(D, name):
         return D["P"].reshape(-1, T, D["P"].shape[1]).mean(1)
     if name == "abs_ep":
         return D["spec_ep"][::T, -1:]
-    if name in ("Eq", "Nq", "spec_ep") and name in D:
+    if name in ("Eq", "Nq", "spec_ep", "spec_nb") and name in D:
         return D[name][::T]
     if name in ("ICA_E", "ICA_N") and name in D:
         return np.hstack([D[name][::T], np.abs(D[name][::T])])
@@ -644,9 +695,13 @@ def run_epoch(D, spec, n_null=5, seed=0):
     sb = probe(spec["baselines"])
     bmd = rho_nights(sb) if sb is not None else {}
     out["baseline"] = {"inputs": spec["baselines"], "rho": summary(bmd, site_of)}
+    if sb is not None:  # diagnostic: the baseline without the RMS control
+        raw = [partial_spearman(sb[m], tt[m], np.zeros((m.sum(), 0))) for n in np.unique(night)
+               for m in [(night == n) & np.isfinite(sb)] if m.sum() >= 20]
+        out["baseline"]["rho_uncontrolled"] = float(np.nanmean(raw)) if raw else None
     res, done = [], {}
     vs = [list(v) for v in spec["word_variants"]]
-    todo = [(v, None, None) for v in vs] + [x for x in twins(vs, len(spec["stages"]) > 1) if x[1] == "twin_ep"]
+    todo = [(v, None, None) for v in vs] + [x for x in twins(vs, len(spec["stages"]) > 1) if x[1] in ("twin_ep", "twin_N")]
     for v, kind, tw in todo:
         inputs = tw if kind else v
         k = "+".join(inputs)
@@ -657,8 +712,11 @@ def run_epoch(D, spec, n_null=5, seed=0):
             continue
         md = rho_nights(s)
         done[k] = md
+        sm = summary(md, site_of)
+        bm = out["baseline"]["rho"]["mean"]
         res.append({"inputs": inputs, "kind": kind or "variant", "twin_of": "+".join(v) if kind else None,
-                    "rho": summary(md, site_of), "vs_baseline": compare(md, bmd, site_of) if bmd else None})
+                    "rho": sm, "vs_baseline": compare(md, bmd, site_of) if bmd else None,
+                    "retention": sm["mean"] / bm if sm["mean"] is not None and bm else None})
     for rr in res:
         k = "+".join(rr["inputs"])
         if rr["kind"] == "variant":
@@ -711,7 +769,7 @@ def cross_specificity(D, results, families):
 
 
 # ---------------------------------------------------------------------------- data
-def load(dump, mod, refs_needed, extra_mods=(), frac=0.15, min_n=3, n_ss01=10, seed=0):
+def load(dump, mod, refs_needed, extra_mods=(), frac=0.15, min_n=3, n_ss01=10, seed=0, with_shhs=False):
     """Token arrays of ``mod`` on a sample of the pool nights (``frac`` per unit, >= ``min_n``), ``n_ss01``
     MASS SS01 nights (expert arousals) and every DREAMS excerpt; shhs is left out. Nights must carry ``mod``
     and the ``extra_mods``."""
@@ -729,6 +787,11 @@ def load(dump, mod, refs_needed, extra_mods=(), frac=0.15, min_n=3, n_ss01=10, s
     keys, sets = [], {}
     for u, ks in sorted(by_unit.items()):
         if u.startswith("shhs"):
+            if not with_shhs:
+                continue
+            pick, s = ks, "shhs"
+            keys += pick
+            sets.update({k: s for k in pick})
             continue
         if u == "dreams":
             pick, s = ks, "dreams"
@@ -802,6 +865,10 @@ def finish(D, seed=0):
     D["spec_back"] = rel_back(D["S"], D["night"])
     ep = np.column_stack([D["S"][:, :6].reshape(-1, T, 6).mean(1), F0.reshape(-1, T).mean(1)])
     D["spec_ep"] = np.repeat(ep, T, 0).astype(np.float32)
+    en = D["night"][::T]
+    st = np.stack([D["y"][::T] == s for s in range(5)], 1).astype(np.float32)
+    nb = ctx_mean(np.column_stack([ep, st]).astype(np.float32), en, NB_EPOCHS)  # +-20 epochs, the epoch excluded
+    D["spec_nb"] = np.repeat(nb, T, 0).astype(np.float32)
     yp = np.r_[D["y"][:T], D["y"][:-T]]
     same = np.r_[np.zeros(T, bool), D["night"][T:] == D["night"][:-T]]
     D["yprev"] = np.where(same, yp, D["y"])
@@ -846,6 +913,7 @@ def _latent_views(D, seed=0):
 def _ref_names(expr):
     if expr.startswith("post:"):
         return [expr.split(":")[1]]
+    expr = expr.replace("onset:", "")
     return [p for p in re.split(r"[&|]", expr) if p and not p.startswith("y==")]
 
 
@@ -893,7 +961,8 @@ def run(a):
                    if e for n in _ref_names(e)})
     extra = sorted({i.split("@")[1] for s in specs for v in s["word_variants"] + [s["baselines"]] for i in v if "@" in i})
     t0 = time.time()
-    D, keys, sets = load(a.dump, a.mod, refs, extra, a.frac, seed=a.seed)
+    shhs = any("shhs" in s.get("sets", []) for s in specs)
+    D, keys, sets = load(a.dump, a.mod, refs, extra, a.frac, seed=a.seed, with_shhs=shhs)
     print(f"[rationale] {a.mod}: {len(D['y'])} tokens, {len(keys)} nights "
           f"({sum(v == 'pool' for v in sets.values())} pool), refs {sorted(D['refs'])}, extra {extra}, "
           f"{(time.time() - t0) / 60:.1f} min", flush=True)
