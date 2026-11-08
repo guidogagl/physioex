@@ -138,11 +138,21 @@ def _nulls(D, word, swa, alpha, ref, sel, key, n_null, seed):
             "n": n_null}
 
 
-def battery_kc(D, n_null=200, n_null_pool=20, seed=0):
+def battery_kc(D, n_null=200, n_null_pool=20, seed=0, swa_source="eq"):
+    """``swa_source``: ``eq`` = ridge on the epoch latents; ``words`` = fraction of the epoch's tokens where the
+    slow-transient word fires (the predicate read on the word sequence, C1b)."""
     cfg = CONCEPTS["kc"]
     night = D["night"]
     word, v1w = _word(D, cfg["word"], seed)
     swa, swa_t, v1s = _pred(D, cfg["preds"]["swa"], seed)
+    if swa_source == "words":
+        from scipy.stats import spearmanr
+
+        swa = word.reshape(-1, T).mean(1)
+        st = D["set"][::T]
+        v1s = {"source": "words", "ref": "delta",
+               "spearman_pool": float(spearmanr(swa[st == "pool"], swa_t[st == "pool"])[0]),
+               "spearman_dreams": float(spearmanr(swa[st == "dreams"], swa_t[st == "dreams"])[0])}
     alpha, alpha_t, v1a = _pred(D, cfg["preds"]["alpha"], seed)
     dref, _ = RA.ref_mask(D, "delta")
     lex = CR.kc_n3_rule(word, night, swa, alpha)
@@ -286,8 +296,8 @@ def battery(a):
     cfg = CONCEPTS[a.concept]
     D, keys, sets = RA.load(a.dump, "eeg", cfg["refs"], frac=a.frac, n_ss01=a.n_ss01, seed=a.seed)
     print(f"[compose] loaded {len(keys)} nights, {len(D['y'])} tokens, {time.time() - t0:.0f} s", flush=True)
-    res = battery_kc(D, n_null=a.n_null, n_null_pool=a.n_null_pool, seed=a.seed)
-    out = {"iteration": a.iter, "concept": a.concept, "rule": cfg["rule"],
+    res = battery_kc(D, n_null=a.n_null, n_null_pool=a.n_null_pool, seed=a.seed, swa_source=a.swa_source)
+    out = {"iteration": a.iter, "concept": a.concept, "rule": cfg["rule"], "swa_source": a.swa_source,
            "thresholds": {"N3_SWA": CR.N3_SWA, "W_ALPHA": CR.W_ALPHA, "KC_ISO_TOK": CR.KC_ISO_TOK,
                           "MERGE_GAP": CR.MERGE_GAP},
            "nights": {s: sum(v == s for v in sets.values()) for s in sorted(set(sets.values()))},
@@ -311,6 +321,7 @@ def main(argv=None):
     b.add_argument("--n-null", type=int, default=200)
     b.add_argument("--n-null-pool", type=int, default=20)
     b.add_argument("--seed", type=int, default=0)
+    b.add_argument("--swa-source", default="eq", choices=["eq", "words"])
     a = ap.parse_args(argv)
     battery(a)
 

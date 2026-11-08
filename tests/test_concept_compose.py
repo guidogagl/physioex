@@ -60,3 +60,10 @@ def test_battery_kc_planted():
     assert out["V1"]["swa"]["spearman_pool_loso"] > 0.8
     assert out["V2"]["pool"]["kc_pure_vs_sw_pure"]["kc_pure"]["called_kc"] > 0.8
     assert cc._jsonable(out)  # serialisable
+
+
+def test_battery_kc_swa_from_words():
+    D = _toy(seed=1)
+    out = cc.battery_kc(D, n_null=10, n_null_pool=3, swa_source="words")
+    assert out["V1"]["swa"]["source"] == "words" and out["V1"]["swa"]["spearman_pool"] > 0.8
+    assert out["V2"]["dreams"]["k_complex_vis1"]["lexicon"]["f1"] > 0.8
