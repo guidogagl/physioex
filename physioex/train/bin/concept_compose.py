@@ -68,7 +68,7 @@ CONCEPTS = {
                 "runs 2-60 s, in lexicon NREM; A3 = 8-30 Hz rise",
     },
     "arousal": {
-        "refs": ["alpha", "delta", "blink", "rem_eye", "atonia", "arousal", "emg_rise"],
+        "refs": ["alpha", "delta", "blink", "rem_eye", "atonia", "arousal_ann", "emg_rise"],
         "bands": {"fast": ["theta", "alpha", "beta"]},
         "emg": {"ref": "emg_rise", "inputs": ["P@emg"]},
         "rule": "arousal = theta+alpha+beta token power (read from P) >= (4/3)^2 x the median of the previous 10 s, "
@@ -567,7 +567,7 @@ def battery_arousal(D, n_null_pool=20, seed=0, tone_source="eq", blink_tone=Fals
              "no_prev": CR.arousal_rule(fast_t, night, sl["oracle"], rm["oracle"], er & eh, use_prev=False),
              "no_state": CR.arousal_rule(fast_t, night, np.ones(len(night), bool), None, None)}
     out = {"V1": {"bands_spearman_pool_loso": v1b, "emg_rise": v1e, **v1}, "V2": {}, "V3": {}}
-    r, h = RA.ref_mask(D, "arousal")
+    r, h = RA.ref_mask(D, "arousal_ann")
     avail = np.repeat(np.isfinite(St["lexicon"]["aton"]), T)
     en = night[::T]
     for setname in sorted(set(D["set"])):

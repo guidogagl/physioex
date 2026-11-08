@@ -279,7 +279,7 @@ def test_arousal_rule():
     pm[~dre, 0] = aton[~dre] + 0.2 * rng.normal(size=(~dre).sum())
     D["P@emg"] = pm
     D["refs"]["atonia"] = (aton, ~dre)
-    D["refs"]["arousal"] = (ar, np.ones(n, bool))
+    D["refs"]["arousal_ann"] = (ar, np.ones(n, bool))
     rise = np.repeat(ye == 0, T) & (rng.random(n) < 0.1)
     pm[~dre, 1] = rise[~dre] + 0.2 * rng.normal(size=(~dre).sum())
     D["P@emg"] = pm
