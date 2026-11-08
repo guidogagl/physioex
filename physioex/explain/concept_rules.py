@@ -23,6 +23,8 @@ import numpy as np
 T = 60
 N3_SWA = 0.20        # AASM: slow waves over >= 20 % of the epoch
 W_ALPHA = 0.50       # AASM: alpha over > 50 % of the epoch
+EYE_PRESENT = 0.05   # an eye-word "is present" in the epoch: >= 5 % of its tokens (1.5 s), fixed a priori
+ATONIA_EPOCH = 0.50  # low chin tone: atonia over > 50 % of the epoch (the reference's epoch rule)
 KC_ISO_TOK = 4       # isolation of a K-complex: no other slow event within +-2 s (fixed a priori)
 MERGE_GAP = 1        # word tokens closer than this gap (tokens) form one event
 
@@ -74,16 +76,32 @@ def epoch_of(runs: List[Tuple[int, int]]) -> np.ndarray:
 
 
 # ---------------------------------------------------------------------------- composite rules
+def wake_rule(alpha_ep: np.ndarray, blink_ep: np.ndarray = None, eye_ep: np.ndarray = None,
+              atonia_ep: np.ndarray = None) -> np.ndarray:
+    """AASM wake per epoch from lexicon fractions: alpha > ``W_ALPHA``, or eye blinks present, or rapid eye
+    movements present with a chin tone that is not low. Missing modalities (NaN) drop their clause, so a night
+    without EOG / EMG falls back to the alpha clause."""
+    w = np.nan_to_num(alpha_ep, nan=0.0) > W_ALPHA
+    if blink_ep is not None:
+        w |= np.nan_to_num(blink_ep, nan=0.0) >= EYE_PRESENT
+    if eye_ep is not None:
+        tone_low = np.nan_to_num(atonia_ep, nan=1.0) > ATONIA_EPOCH if atonia_ep is not None else np.zeros(len(w), bool)
+        w |= (np.nan_to_num(eye_ep, nan=0.0) >= EYE_PRESENT) & ~tone_low
+    return w
+
+
 def kc_n3_rule(word: np.ndarray, night: np.ndarray, swa_ep: np.ndarray, alpha_ep: np.ndarray,
                use_swa: bool = True, use_alpha: bool = True, use_iso: bool = True,
-               iso_k: int = KC_ISO_TOK) -> Dict[str, np.ndarray]:
+               iso_k: int = KC_ISO_TOK, wake_ep: np.ndarray = None) -> Dict[str, np.ndarray]:
     """K-complex and N3 slow wave from the slow-transient word (token mask), the epoch slow-wave fraction and
     the epoch alpha fraction (one value per epoch).
 
     - ``kc``: word event in an epoch with ``swa < N3_SWA`` and ``alpha <= W_ALPHA``, isolated (+-``iso_k``);
     - ``n3``: word event in an epoch with ``swa >= N3_SWA``.
 
-    The ``use_*`` switches drop one component (ablation, V3): the dropped predicate counts as satisfied."""
+    With ``wake_ep`` (boolean per epoch, ``wake_rule``) the alpha clause is replaced by "not wake" and applies
+    to both concepts (C1c). The ``use_*`` switches drop one component (ablation, V3): the dropped predicate
+    counts as satisfied (``use_alpha`` drops the wake clause too)."""
     runs = event_runs(word, night)
     n = len(word)
     if not runs:
@@ -91,10 +109,15 @@ def kc_n3_rule(word: np.ndarray, night: np.ndarray, swa_ep: np.ndarray, alpha_ep
         return {"kc": z, "n3": z.copy(), "runs": []}
     ep = epoch_of(runs)
     low_swa = swa_ep[ep] < N3_SWA if use_swa else np.ones(len(runs), bool)
-    no_w = alpha_ep[ep] <= W_ALPHA if use_alpha else np.ones(len(runs), bool)
+    if wake_ep is not None:
+        no_w = ~wake_ep[ep] if use_alpha else np.ones(len(runs), bool)
+    else:
+        no_w = alpha_ep[ep] <= W_ALPHA if use_alpha else np.ones(len(runs), bool)
     iso = isolated(runs, night, iso_k) if use_iso else np.ones(len(runs), bool)
     kc = low_swa & no_w & iso
     n3 = swa_ep[ep] >= N3_SWA if use_swa else np.zeros(len(runs), bool)
+    if wake_ep is not None:
+        n3 &= no_w
     return {"kc": runs_to_mask([r for r, k in zip(runs, kc) if k], n),
             "n3": runs_to_mask([r for r, k in zip(runs, n3) if k], n), "runs": runs}
 

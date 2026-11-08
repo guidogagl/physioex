@@ -67,3 +67,53 @@ def test_battery_kc_swa_from_words():
     out = cc.battery_kc(D, n_null=10, n_null_pool=3, swa_source="words")
     assert out["V1"]["swa"]["source"] == "words" and out["V1"]["swa"]["spearman_pool"] > 0.8
     assert out["V2"]["dreams"]["k_complex_vis1"]["lexicon"]["f1"] > 0.8
+
+
+def _toy_wake(seed=2):
+    """W epochs without alpha but with blinks and high tone also hold slow transients (eye / movement delta):
+    the alpha clause alone calls them K-complexes, the AASM wake rule on the EOG / EMG words does not."""
+    D = _toy(seed=seed)
+    rng = np.random.default_rng(seed)
+    n = len(D["y"])
+    w_ep = D["y"][::T] == 0
+    kind_w = w_ep & (rng.random(len(w_ep)) < 0.5)  # eyes-open W; the other W epochs keep their alpha
+    blink = np.zeros(n, bool)
+    aton = np.zeros(n, bool)
+    delta, h = D["refs"]["delta"]
+    for e in np.flatnonzero(kind_w):
+        a = e * T
+        blink[a + rng.choice(T, 8, replace=False)] = True
+        t = a + int(rng.integers(10, 50))
+        delta[t:t + 2] = True  # spurious isolated slow transient in W
+    D["refs"]["alpha"][0][np.repeat(kind_w, T)] = False  # eyes-open W: no alpha
+    for e in np.flatnonzero(~w_ep):
+        aton[e * T + rng.choice(T, 40, replace=False)] = True
+    pe = np.column_stack([blink + 0.2 * rng.normal(size=n), rng.normal(size=n)]).astype(np.float32)
+    pm = np.column_stack([aton + 0.2 * rng.normal(size=n), rng.normal(size=n)]).astype(np.float32)
+    dre = D["set"] == "dreams"
+    pe[dre], pm[dre] = np.nan, np.nan  # DREAMS: EEG only
+    D["P@eog"], D["P@emg"] = pe, pm
+    ones = np.ones(n, bool)
+    D["refs"]["blink"] = (blink, ~dre)
+    D["refs"]["rem_eye"] = (np.zeros(n, bool) | (blink & (rng.random(n) < 0.3)), ~dre)
+    D["refs"]["atonia"] = (aton, ~dre)
+    p0 = delta + 0.3 * rng.normal(size=n)
+    D["P"][:, 0] = p0
+    D["F"][:, 0] = D["F"][:, 1] = p0
+    alpha_ep = D["refs"]["alpha"][0].reshape(-1, T).mean(1)
+    Eq, Nq = D["Eq"], D["Nq"].copy()
+    Nq[:, 0] = np.repeat(alpha_ep, T)
+    cr.finish(D)  # re-derive context features and the ICA basis on the modified P
+    D["Eq"], D["Nq"] = Eq, Nq
+    return D
+
+
+def test_battery_kc_wake_removes_w_transients():
+    D = _toy_wake()
+    base = cc.battery_kc(D, n_null=5, n_null_pool=3, swa_source="words")
+    wake = cc.battery_kc(D, n_null=5, n_null_pool=3, swa_source="words", wake=True)
+    pb = base["V2"]["pool"]["kc_vs_k_complex_rule"]
+    pw = wake["V2"]["pool"]["kc_vs_k_complex_rule"]
+    assert pb["stage_of_detections"]["W"] > 0.2 and pw["stage_of_detections"]["W"] < 0.05
+    assert pw["lexicon"]["purity"] > pb["lexicon"]["purity"] + 0.2
+    assert wake["V1"]["wake_epochs"]["dreams"]["lexicon"] < 0.5  # alpha fallback only

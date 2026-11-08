@@ -39,6 +39,9 @@ CONCEPTS = {
         "refs": ["delta", "alpha", "slow_wave", "k_complex_rule", "k_complex_vis1", "k_complex_vis2"],
         "word": {"ref": "delta", "inputs": ["P", "P_ctx±2"], "ceiling": ["spec_tok", "abs_amp", "rel_bg", "spec_ctx2"]},
         "preds": {"swa": {"ref": "delta", "inputs": ["Eq"]}, "alpha": {"ref": "alpha", "inputs": ["Eq", "Nq"]}},
+        "wake_words": {"blink": {"ref": "blink", "inputs": ["P@eog"]}, "rem_eye": {"ref": "rem_eye", "inputs": ["P@eog"]},
+                       "atonia": {"ref": "atonia", "inputs": ["P@emg"]}},
+        "wake_refs": ["blink", "rem_eye", "atonia"],
         "rule": "kc = delta word event AND swa_frac < 0.20 AND alpha_frac <= 0.50 AND isolated +-4 tokens; "
                 "n3 = delta word event AND swa_frac >= 0.20",
     },
@@ -49,37 +52,44 @@ CONCEPTS = {
 def _word(D, cfg, seed=0, max_fit=100_000):
     """Token scores of the P word: LOSO on the pool, one pool fit elsewhere; threshold at the pool rate."""
     r, h = RA.ref_mask(D, cfg["ref"])
-    pool = (D["set"] == "pool") & h
-    ip = np.flatnonzero(pool)
+    X0, _, bad = RA.build(D, cfg["inputs"], np.arange(len(r)))
+    fin = np.isfinite(X0).all(1)  # optional modalities: NaN rows where the night lacks them
+    pool = (D["set"] == "pool") & h & fin
+    ip, te = np.flatnonzero(pool), np.flatnonzero(fin)
     gn = D["gname"]
     groups = sorted(set(gn[ip]))
     out = {}
 
-    def scores(inputs):
-        X, _, bad = RA.build(D, inputs, np.arange(len(r)))
+    def scores(inputs, X=None):
+        if X is None:
+            X, _, b2 = RA.build(D, inputs, np.arange(len(r)))
+            bad.extend(b2)
         full = np.full(len(r), np.nan)
         rng = np.random.default_rng(seed)
-        full[:] = RA._fit_predict(X, [], r, ip, np.arange(len(r)), max_fit, rng)
+        full[te] = RA._fit_predict(X, [], r, ip, te, max_fit, rng)
         loso = RA.fold_probe(X[ip], [], r[ip], gn[ip], groups, max_fit=max_fit, seed=seed)
-        return full, loso, bad
+        return full, loso
 
-    full, loso, bad = scores(cfg["inputs"])
-    cfull, closo, cbad = scores(cfg["ceiling"])
+    full, loso = scores(cfg["inputs"], X0)
+    del X0
+    cfull, closo = scores(cfg["ceiling"]) if cfg.get("ceiling") else (full * np.nan, loso * np.nan)
     ok = np.isfinite(loso)
     rate = float(r[ip].mean())
     thr = float(np.quantile(full[ip], 1 - rate))
     s = full.copy()
     s[ip] = loso
     word = (s >= thr) & np.isfinite(s)
-    a_w, a_c = RA.ap(loso[ok], r[ip][ok]), RA.ap(closo[ok], r[ip][ok])
+    a_w = RA.ap(loso[ok], r[ip][ok])
+    a_c = RA.ap(closo[ok], r[ip][ok]) if cfg.get("ceiling") else np.nan
     dre = (D["set"] == "dreams") & h
-    out = {"ref": cfg["ref"], "inputs": cfg["inputs"], "ceiling_inputs": cfg["ceiling"], "skipped": bad + cbad,
+    out = {"ref": cfg["ref"], "inputs": cfg["inputs"], "ceiling_inputs": cfg.get("ceiling"), "skipped": bad,
            "pool_rate": rate, "threshold": thr, "ap_pool_loso": a_w, "ap_ceiling_loso": a_c,
            "retC": a_w / a_c if a_c else np.nan,
            "ap_dreams": RA.ap(full[dre], r[dre]) if dre.any() and r[dre].any() else None,
-           "ap_ceiling_dreams": RA.ap(cfull[dre], r[dre]) if dre.any() and r[dre].any() else None,
+           "ap_ceiling_dreams": RA.ap(cfull[dre], r[dre]) if cfg.get("ceiling") and dre.any() and r[dre].any() else None,
+           "available_frac": {k: float(fin[D["set"] == k].mean()) for k in sorted(set(D["set"]))},
            "fire_rate": {k: float(word[D["set"] == k].mean()) for k in sorted(set(D["set"]))}}
-    return word, out
+    return word, out, fin
 
 
 def _pred(D, cfg, seed=0):
@@ -119,18 +129,20 @@ def _counts(det, ref, night, sel):
     return CR.per_unit_counts(det[ix], ref[ix], night[ix])
 
 
-def _nulls(D, word, swa, alpha, ref, sel, key, n_null, seed):
+def _nulls(D, word, swa, alpha, ref, sel, key, n_null, seed, wake=None):
     """Nulls on the whole nights that hold ``sel`` (tokens and epochs sliced together)."""
     rng = np.random.default_rng(seed + 7)
     ix = np.flatnonzero(np.isin(D["night"], np.unique(D["night"][sel])))
     ep = ix[::T] // T
     night, en = D["night"][ix], D["night"][ix][::T]
     word, ref, sel, swa, alpha = word[ix], ref[ix], sel[ix], swa[ep], alpha[ep]
+    wake = None if wake is None else wake[ep]
     f_pred, f_word = [], []
     for _ in range(n_null):
-        o = CR.kc_n3_rule(word, night, CR.permute_epochs(swa, en, rng), CR.permute_epochs(alpha, en, rng))
+        o = CR.kc_n3_rule(word, night, CR.permute_epochs(swa, en, rng), CR.permute_epochs(alpha, en, rng),
+                          wake_ep=None if wake is None else CR.permute_epochs(wake, en, rng))
         f_pred.append(CR.event_agreement(o[key], ref, night, sel)["f1"])
-        o = CR.kc_n3_rule(CR.shift_within_nights(word, night, rng), night, swa, alpha)
+        o = CR.kc_n3_rule(CR.shift_within_nights(word, night, rng), night, swa, alpha, wake_ep=wake)
         f_word.append(CR.event_agreement(o[key], ref, night, sel)["f1"])
     q = lambda f: float(np.nanquantile(f, 0.95)) if f else None
     return {"pred_perm_q95": q(f_pred), "pred_perm_mean": float(np.nanmean(f_pred)) if f_pred else None,
@@ -138,12 +150,14 @@ def _nulls(D, word, swa, alpha, ref, sel, key, n_null, seed):
             "n": n_null}
 
 
-def battery_kc(D, n_null=200, n_null_pool=20, seed=0, swa_source="eq"):
+def battery_kc(D, n_null=200, n_null_pool=20, seed=0, swa_source="eq", wake=False):
     """``swa_source``: ``eq`` = ridge on the epoch latents; ``words`` = fraction of the epoch's tokens where the
-    slow-transient word fires (the predicate read on the word sequence, C1b)."""
+    slow-transient word fires (the predicate read on the word sequence, C1b). ``wake``: the alpha clause becomes
+    the AASM wake rule on lexicon words (alpha, blink and rapid-eye words on ``P@eog``, atonia word on ``P@emg``;
+    C1c), applied to KC and N3."""
     cfg = CONCEPTS["kc"]
     night = D["night"]
-    word, v1w = _word(D, cfg["word"], seed)
+    word, v1w, _ = _word(D, cfg["word"], seed)
     swa, swa_t, v1s = _pred(D, cfg["preds"]["swa"], seed)
     if swa_source == "words":
         from scipy.stats import spearmanr
@@ -155,17 +169,35 @@ def battery_kc(D, n_null=200, n_null_pool=20, seed=0, swa_source="eq"):
                "spearman_dreams": float(spearmanr(swa[st == "dreams"], swa_t[st == "dreams"])[0])}
     alpha, alpha_t, v1a = _pred(D, cfg["preds"]["alpha"], seed)
     dref, _ = RA.ref_mask(D, "delta")
-    lex = CR.kc_n3_rule(word, night, swa, alpha)
-    ora = CR.kc_n3_rule(dref, night, swa_t, alpha_t)
-    abl = {"no_swa": CR.kc_n3_rule(word, night, swa, alpha, use_swa=False),
-           "no_alpha": CR.kc_n3_rule(word, night, swa, alpha, use_alpha=False),
-           "no_iso": CR.kc_n3_rule(word, night, swa, alpha, use_iso=False),
-           "word_only": CR.kc_n3_rule(word, night, swa, alpha, use_swa=False, use_alpha=False, use_iso=False)}
-    abl_o = {"no_swa": CR.kc_n3_rule(dref, night, swa_t, alpha_t, use_swa=False),  # does the rule itself need it?
-             "no_alpha": CR.kc_n3_rule(dref, night, swa_t, alpha_t, use_alpha=False),
-             "no_iso": CR.kc_n3_rule(dref, night, swa_t, alpha_t, use_iso=False),
-             "word_only": CR.kc_n3_rule(dref, night, swa_t, alpha_t, use_swa=False, use_alpha=False, use_iso=False)}
-    out = {"V1": {"word": v1w, "swa": v1s, "alpha": v1a}, "V2": {}, "V3": {}}
+    wl = wo = None
+    v1x = {}
+    if wake:
+        fr, fo = {}, {}
+        for name, wc in cfg["wake_words"].items():
+            w_, v1x[name], fin = _word(D, wc, seed)
+            avail = fin.reshape(-1, T).all(1)
+            fr[name] = np.where(avail, w_.reshape(-1, T).mean(1), np.nan)
+            rr, hh = RA.ref_mask(D, wc["ref"])
+            fo[name] = np.where(hh.reshape(-1, T).all(1), rr.reshape(-1, T).mean(1), np.nan)
+        wl = CR.wake_rule(alpha, fr["blink"], fr["rem_eye"], fr["atonia"])
+        wo = CR.wake_rule(alpha_t, fo["blink"], fo["rem_eye"], fo["atonia"])
+        st = D["set"][::T]
+        y = D["y"][::T]
+        v1x["wake_epochs"] = {k: {"lexicon": float(wl[st == k].mean()), "oracle": float(wo[st == k].mean()),
+                                  "lexicon_in_W": float(wl[(st == k) & (y == 0)].mean()) if ((st == k) & (y == 0)).any() else None,
+                                  "lexicon_in_sleep": float(wl[(st == k) & (y > 0)].mean()) if ((st == k) & (y > 0)).any() else None}
+                              for k in sorted(set(st))}
+    lex = CR.kc_n3_rule(word, night, swa, alpha, wake_ep=wl)
+    ora = CR.kc_n3_rule(dref, night, swa_t, alpha_t, wake_ep=wo)
+    abl = {"no_swa": CR.kc_n3_rule(word, night, swa, alpha, wake_ep=wl, use_swa=False),
+           "no_alpha": CR.kc_n3_rule(word, night, swa, alpha, wake_ep=wl, use_alpha=False),
+           "no_iso": CR.kc_n3_rule(word, night, swa, alpha, wake_ep=wl, use_iso=False),
+           "word_only": CR.kc_n3_rule(word, night, swa, alpha, wake_ep=wl, use_swa=False, use_alpha=False, use_iso=False)}
+    abl_o = {"no_swa": CR.kc_n3_rule(dref, night, swa_t, alpha_t, wake_ep=wo, use_swa=False),  # does the rule itself need it?
+             "no_alpha": CR.kc_n3_rule(dref, night, swa_t, alpha_t, wake_ep=wo, use_alpha=False),
+             "no_iso": CR.kc_n3_rule(dref, night, swa_t, alpha_t, wake_ep=wo, use_iso=False),
+             "word_only": CR.kc_n3_rule(dref, night, swa_t, alpha_t, wake_ep=wo, use_swa=False, use_alpha=False, use_iso=False)}
+    out = {"V1": {"word": v1w, "swa": v1s, "alpha": v1a, **v1x}, "V2": {}, "V3": {}}
 
     # DREAMS experts
     dre = D["set"] == "dreams"
@@ -194,7 +226,7 @@ def battery_kc(D, n_null=200, n_null_pool=20, seed=0, swa_source="eq"):
              "lexicon": _agree(lex["kc"], r, night, sel, seed),
              "oracle": _agree(ora["kc"], r, night, sel, seed),
              "lexicon_central20": _agree(lex["kc"], r, night, sel & central, seed),
-             "nulls": _nulls(D, word, swa, alpha, r, sel, "kc", n_null, seed),
+             "nulls": _nulls(D, word, swa, alpha, r, sel, "kc", n_null, seed, wl),
              "ablations": {k: CR.event_agreement(o["kc"], r, night, sel) for k, o in abl.items()},
              "ablations_oracle": {k: CR.event_agreement(o["kc"], r, night, sel) for k, o in abl_o.items()},
              "stage_of_detections": _stage_mix(D, lex["kc"], sel),
@@ -212,7 +244,7 @@ def battery_kc(D, n_null=200, n_null_pool=20, seed=0, swa_source="eq"):
         sel = pool & hk
         pp["kc_vs_k_complex_rule"] = {
             "lexicon": _agree(lex["kc"], krule, night, sel, seed), "oracle": _agree(ora["kc"], krule, night, sel, seed),
-            "nulls": _nulls(D, word, swa, alpha, krule, sel, "kc", n_null_pool, seed),
+            "nulls": _nulls(D, word, swa, alpha, krule, sel, "kc", n_null_pool, seed, wl),
             "ablations": {k: CR.event_agreement(o["kc"], krule, night, sel) for k, o in abl.items()},
             "ablations_oracle": {k: CR.event_agreement(o["kc"], krule, night, sel) for k, o in abl_o.items()},
             "per_site_f1": _per_site(D, lex["kc"], krule, sel),
@@ -294,11 +326,14 @@ def _jsonable(x):
 def battery(a):
     t0 = time.time()
     cfg = CONCEPTS[a.concept]
-    D, keys, sets = RA.load(a.dump, "eeg", cfg["refs"], frac=a.frac, n_ss01=a.n_ss01, seed=a.seed)
+    refs = cfg["refs"] + (cfg["wake_refs"] if a.wake else [])
+    D, keys, sets = RA.load(a.dump, "eeg", refs, frac=a.frac, n_ss01=a.n_ss01, seed=a.seed,
+                            opt_mods=("eog", "emg") if a.wake else ())
     print(f"[compose] loaded {len(keys)} nights, {len(D['y'])} tokens, {time.time() - t0:.0f} s", flush=True)
-    res = battery_kc(D, n_null=a.n_null, n_null_pool=a.n_null_pool, seed=a.seed, swa_source=a.swa_source)
-    out = {"iteration": a.iter, "concept": a.concept, "rule": cfg["rule"], "swa_source": a.swa_source,
-           "thresholds": {"N3_SWA": CR.N3_SWA, "W_ALPHA": CR.W_ALPHA, "KC_ISO_TOK": CR.KC_ISO_TOK,
+    res = battery_kc(D, n_null=a.n_null, n_null_pool=a.n_null_pool, seed=a.seed, swa_source=a.swa_source, wake=a.wake)
+    out = {"iteration": a.iter, "concept": a.concept, "rule": cfg["rule"], "swa_source": a.swa_source, "wake": a.wake,
+           "thresholds": {"N3_SWA": CR.N3_SWA, "W_ALPHA": CR.W_ALPHA, "EYE_PRESENT": CR.EYE_PRESENT,
+                          "ATONIA_EPOCH": CR.ATONIA_EPOCH, "KC_ISO_TOK": CR.KC_ISO_TOK,
                           "MERGE_GAP": CR.MERGE_GAP},
            "nights": {s: sum(v == s for v in sets.values()) for s in sorted(set(sets.values()))},
            "V0": None, "V4": None, **res, "minutes": (time.time() - t0) / 60}
@@ -322,6 +357,7 @@ def main(argv=None):
     b.add_argument("--n-null-pool", type=int, default=20)
     b.add_argument("--seed", type=int, default=0)
     b.add_argument("--swa-source", default="eq", choices=["eq", "words"])
+    b.add_argument("--wake", action="store_true", help="C1c: AASM wake rule on lexicon words (needs EOG / EMG)")
     a = ap.parse_args(argv)
     battery(a)
 

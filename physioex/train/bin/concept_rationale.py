@@ -792,10 +792,10 @@ def cross_specificity(D, results, families):
 
 
 # ---------------------------------------------------------------------------- data
-def load(dump, mod, refs_needed, extra_mods=(), frac=0.15, min_n=3, n_ss01=10, seed=0, with_shhs=False):
+def load(dump, mod, refs_needed, extra_mods=(), frac=0.15, min_n=3, n_ss01=10, seed=0, with_shhs=False, opt_mods=()):
     """Token arrays of ``mod`` on a sample of the pool nights (``frac`` per unit, >= ``min_n``), ``n_ss01``
     MASS SS01 nights (expert arousals) and every DREAMS excerpt; shhs is left out. Nights must carry ``mod``
-    and the ``extra_mods``."""
+    and the ``extra_mods``; the ``opt_mods`` enter as ``P@<mod>`` where the night has them, NaN elsewhere."""
     from physioex.train.bin.concept_scan import _group, load_refs
     from physioex.train.bin.concept_words import token_features
 
@@ -828,7 +828,7 @@ def load(dump, mod, refs_needed, extra_mods=(), frac=0.15, min_n=3, n_ss01=10, s
     keys = sorted(keys)
     A = {k: [] for k in ("P", "F", "S", "y", "night", "gname", "set", "logscale", "codes_P", "codes_E", "codes_N",
                          "Eq", "Nq")}
-    X = {f"P@{m}": [] for m in extra_mods}
+    X = {f"P@{m}": [] for m in tuple(extra_mods) + tuple(opt_mods)}
     X.update({f"rel_back@{m}": [] for m in extra_mods})
     R = {r: [] for r in refs_needed}
     lens = []
@@ -862,10 +862,17 @@ def load(dump, mod, refs_needed, extra_mods=(), frac=0.15, min_n=3, n_ss01=10, s
             X[f"P@{m}"].append(z[f"P_{m}"].reshape(n * T, -1).astype(np.float32))
             f0 = token_features(z[f"x_{m}"].astype(np.float32), meta["fs"][m])[:, 0]
             X[f"rel_back@{m}"].append(rel_back(f0, np.zeros(len(f0), np.int32)))
+        for m in opt_mods:
+            X[f"P@{m}"].append(z[f"P_{m}"].reshape(n * T, -1).astype(np.float32) if f"P_{m}" in z.files else n * T)
         for r in refs_needed:
             R[r].append(rf[r] if r in rf and len(rf[r]) == n * T else None)
         if i % 20 == 0:
             print(f"[load] {i + 1}/{len(keys)} {k}", flush=True)
+    for m in opt_mods:  # nights without the modality: NaN rows of the right width
+        parts = X[f"P@{m}"]
+        w = next((p.shape[1] for p in parts if not isinstance(p, int)), None)
+        X[f"P@{m}"] = [] if w is None else [np.full((p, w), np.nan, np.float32) if isinstance(p, int) else p
+                                            for p in parts]
     D = {k: np.concatenate(v) for k, v in A.items() if v and len(v) == len(keys)}
     D.update({k: np.concatenate(v) for k, v in X.items() if v})
     D["gname"] = D["gname"].astype(str)
