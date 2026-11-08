@@ -210,6 +210,54 @@ def cap_a_rule(lo: np.ndarray, hi: np.ndarray, night: np.ndarray, nrem_tok: np.n
     return out
 
 
+AR_PRE_TOK = 20       # arousal: compared with, and preceded by, >= 10 s of sleep (AASM)
+AR_MIN_TOK = 6        # arousal lasts >= 3 s (AASM)
+AR_MAX_TOK = 120      # longer than 60 s it is wake, not an arousal (ours, as the CAP bound)
+
+
+def prev_median(v: np.ndarray, night: np.ndarray, k: int = AR_PRE_TOK) -> np.ndarray:
+    """Median of the ``k`` tokens before each token, inside its night (the first tokens use what exists)."""
+    from scipy.ndimage import median_filter
+
+    out = np.empty_like(v, dtype=np.float64)
+    for n in np.unique(night):
+        m = np.flatnonzero(night == n)
+        x = v[m].astype(np.float64)
+        c = median_filter(x, size=k, mode="nearest")  # c[j]: window [j - k//2, j - k//2 + k - 1]
+        h = k // 2  # window [i - k, i - 1] = c[i - h]
+        out[m] = np.r_[np.full(min(h, len(x)), c[0]), c[:max(0, len(x) - h)]]
+    return out
+
+
+def arousal_rule(fast: np.ndarray, night: np.ndarray, sleep_tok: np.ndarray, rem_tok: np.ndarray = None,
+                 emg_tok: np.ndarray = None, use_bg: bool = True, use_prev: bool = True,
+                 use_emg: bool = True) -> np.ndarray:
+    """AASM arousal from the token log power of the fast bands (theta + alpha + beta, spindles excluded):
+    a rise >= ``CAP_RATIO``**2 over the median of the previous 10 s, lasting 3-60 s, preceded by >= 10 s of
+    sleep (lexicon state), and in REM with a chin EMG rise overlapping it. ``use_*`` switches (V3): the night
+    median as background, no sleep-before condition, no EMG condition in REM."""
+    thr = 2 * np.log(CAP_RATIO)
+    if use_bg:
+        bg = prev_median(fast, night)
+    else:
+        bg = np.empty_like(fast, dtype=np.float64)
+        for n in np.unique(night):
+            m = night == n
+            bg[m] = np.median(fast[m])
+    up = (fast - bg >= thr) & sleep_tok
+    runs = [(a, b) for a, b in event_runs(up, night) if AR_MIN_TOK <= b - a <= AR_MAX_TOK]
+    keep = []
+    for a, b in runs:
+        if use_prev:
+            p0 = max(0, a - AR_PRE_TOK)
+            if a - p0 < AR_PRE_TOK or night[p0] != night[a] or not sleep_tok[p0:a].all():
+                continue
+        if use_emg and rem_tok is not None and emg_tok is not None and rem_tok[a:b].any() and not emg_tok[a:b].any():
+            continue
+        keep.append((a, b))
+    return runs_to_mask(keep, len(fast))
+
+
 # ---------------------------------------------------------------------------- event metrics
 def event_agreement(det: np.ndarray, ref: np.ndarray, night: np.ndarray, sel: np.ndarray = None) -> Dict:
     """Event purity (precision), coverage (recall) and F1 by overlap. ``sel``: tokens in scope (events of

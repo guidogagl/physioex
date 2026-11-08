@@ -254,3 +254,37 @@ def test_cap_a1_from_band_reading():
     assert a1["oracle"]["f1"] > 0.8 and a1["lexicon"]["f1"] > 0.6
     assert out["V1"]["bands_spearman_pool_loso"]["so"] > 0.8
     assert cc._jsonable(out)
+
+
+def test_arousal_rule():
+    """A 4 s rise of fast power after >= 10 s of sleep is an arousal; the same rise in W is not."""
+    D = _toy_wake(seed=9)
+    rng = np.random.default_rng(9)
+    n = len(D["y"])
+    ye = D["y"][::T]
+    ar = np.zeros(n, bool)
+    S = D["S"].copy()
+    S[:, :6] = 0.1 * rng.normal(size=(n, 6))
+    for e in np.flatnonzero(ye == 2):
+        if rng.random() < 0.5:
+            t = e * T + int(rng.integers(25, 50))
+            ar[t:t + 8] = True
+    S[ar, 3] += 2.0  # alpha band
+    D["S"] = S.astype(np.float32)
+    D["P"][:, 3] = S[:, 3] + 0.05 * rng.normal(size=n)
+    aton = D["refs"]["atonia"][0].copy()
+    aton[np.repeat(ye == 2, T)] = False
+    dre = D["set"] == "dreams"
+    pm = D["P@emg"].copy()
+    pm[~dre, 0] = aton[~dre] + 0.2 * rng.normal(size=(~dre).sum())
+    D["P@emg"] = pm
+    D["refs"]["atonia"] = (aton, ~dre)
+    D["refs"]["arousal"] = (ar, np.ones(n, bool))
+    rise = np.repeat(ye == 0, T) & (rng.random(n) < 0.1)
+    pm[~dre, 1] = rise[~dre] + 0.2 * rng.normal(size=(~dre).sum())
+    D["P@emg"] = pm
+    D["refs"]["emg_rise"] = (rise, ~dre)
+    out = cc.battery_arousal(D, n_null_pool=3, tone_source="word")
+    p = out["V2"]["pool"]
+    assert p["oracle"]["f1"] > 0.8 and p["lexicon"]["f1"] > 0.6
+    assert cc._jsonable(out)

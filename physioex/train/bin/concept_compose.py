@@ -67,6 +67,13 @@ CONCEPTS = {
         "rule": "CAP A1 = 0.5-4 Hz token power (read from P) >= (4/3)^2 x its 60 s moving median, 8-30 Hz not, "
                 "runs 2-60 s, in lexicon NREM; A3 = 8-30 Hz rise",
     },
+    "arousal": {
+        "refs": ["alpha", "delta", "blink", "rem_eye", "atonia", "arousal", "emg_rise"],
+        "bands": {"fast": ["theta", "alpha", "beta"]},
+        "emg": {"ref": "emg_rise", "inputs": ["P@emg"]},
+        "rule": "arousal = theta+alpha+beta token power (read from P) >= (4/3)^2 x the median of the previous 10 s, "
+                "3-60 s, preceded by >= 10 s of lexicon sleep; in lexicon REM with an EMG rise word overlapping",
+    },
 }
 
 
@@ -537,6 +544,56 @@ def battery_cap(D, n_null_pool=20, seed=0, tone_source="word"):
     return out
 
 
+def battery_arousal(D, n_null_pool=20, seed=0, tone_source="eq"):
+    """C5 + C6: the fast-band reading (beta included, C5 = its Spearman in V1) and the AASM arousal rule on it,
+    against the MASS SS01 experts and the NSRR / WSC technicians of the pool. The ``arousal`` reference is
+    stage-free (annotations), so no circularity here."""
+    cfg = CONCEPTS["arousal"]
+    night = D["night"]
+    R, S, v1b = _band_read(D, seed)
+    St, v1 = _lex_state(D, seed, tone_source=tone_source)
+    ew, v1e, fin_e = _word(D, cfg["emg"], seed)
+    er, eh = RA.ref_mask(D, "emg_rise")
+    fast_l, fast_t = _lse(R, cfg["bands"]["fast"]), _lse(S, cfg["bands"]["fast"])
+    sl = {k: np.repeat(St[k]["state"] != 0, T) for k in ("lexicon", "oracle")}
+    rm = {k: np.repeat(St[k]["state"] == 1, T) for k in ("lexicon", "oracle")}
+    lex = CR.arousal_rule(fast_l, night, sl["lexicon"], rm["lexicon"], ew)
+    ora = CR.arousal_rule(fast_t, night, sl["oracle"], rm["oracle"], er & eh)
+    abl = {"no_bg": CR.arousal_rule(fast_l, night, sl["lexicon"], rm["lexicon"], ew, use_bg=False),
+           "no_prev": CR.arousal_rule(fast_l, night, sl["lexicon"], rm["lexicon"], ew, use_prev=False),
+           "no_emg": CR.arousal_rule(fast_l, night, sl["lexicon"], rm["lexicon"], ew, use_emg=False),
+           "no_state": CR.arousal_rule(fast_l, night, np.ones(len(night), bool), None, None)}
+    abl_o = {"no_bg": CR.arousal_rule(fast_t, night, sl["oracle"], rm["oracle"], er & eh, use_bg=False),
+             "no_prev": CR.arousal_rule(fast_t, night, sl["oracle"], rm["oracle"], er & eh, use_prev=False),
+             "no_state": CR.arousal_rule(fast_t, night, np.ones(len(night), bool), None, None)}
+    out = {"V1": {"bands_spearman_pool_loso": v1b, "emg_rise": v1e, **v1}, "V2": {}, "V3": {}}
+    r, h = RA.ref_mask(D, "arousal")
+    avail = np.repeat(np.isfinite(St["lexicon"]["aton"]), T)
+    en = night[::T]
+    for setname in sorted(set(D["set"])):
+        sel = (D["set"] == setname) & h & avail
+        if not r[sel].any():
+            continue
+        rng = np.random.default_rng(seed)
+        nul = []
+        for _ in range(n_null_pool):
+            st_p = CR.permute_epochs(St["lexicon"]["state"], en, rng)
+            nul.append(CR.event_agreement(CR.arousal_rule(fast_l, night, np.repeat(st_p != 0, T),
+                                                          np.repeat(st_p == 1, T), ew), r, night, sel)["f1"])
+        e = {"n_units": int(len(set(night[sel]))),
+             "lexicon": _agree(lex, r, night, sel, seed), "oracle": _agree(ora, r, night, sel, seed),
+             "nulls": {"state_perm_q95": float(np.quantile(nul, 0.95)) if nul else None, "n": n_null_pool},
+             "ablations": {a: CR.event_agreement(o, r, night, sel) for a, o in abl.items()},
+             "ablations_oracle": {a: CR.event_agreement(o, r, night, sel) for a, o in abl_o.items()},
+             "stage_of_detections": _stage_mix(D, lex, sel), "stage_of_reference": _stage_mix(D, r, sel)}
+        fo = e["oracle"]["f1"]
+        e["ret_vs_oracle"] = e["lexicon"]["f1"] / fo if fo else None
+        out["V2"][setname] = e
+        out["V3"][setname] = {a: e["lexicon"]["f1"] - v["f1"] for a, v in e["ablations"].items()}
+        out["V3"][f"{setname}:oracle"] = {a: e["oracle"]["f1"] - v["f1"] for a, v in e["ablations_oracle"].items()}
+    return out
+
+
 def _split(D, o, word, ref, y, sel):
     """Of the word events in R or W epochs that hit a reference eye event: share called REM in R, called wake
     in W, and their mean (balanced accuracy of the R / W distinction)."""
@@ -604,12 +661,14 @@ def _jsonable(x):
 def battery(a):
     t0 = time.time()
     cfg = CONCEPTS[a.concept]
-    rem = a.concept in ("rem_eye", "alpha_ctx", "cap_a1")
+    rem = a.concept in ("rem_eye", "alpha_ctx", "cap_a1", "arousal")
     refs = cfg["refs"] + (cfg["wake_refs"] if a.wake else [])
     D, keys, sets = RA.load(a.dump, "eeg", refs, frac=a.frac, n_ss01=a.n_ss01, seed=a.seed,
                             opt_mods=("eog", "emg") if (a.wake or rem) else ())
     print(f"[compose] loaded {len(keys)} nights, {len(D['y'])} tokens, {time.time() - t0:.0f} s", flush=True)
-    if a.concept == "cap_a1":
+    if a.concept == "arousal":
+        res = battery_arousal(D, n_null_pool=a.n_null_pool, seed=a.seed, tone_source=a.tone_source)
+    elif a.concept == "cap_a1":
         res = battery_cap(D, n_null_pool=a.n_null_pool, seed=a.seed, tone_source=a.tone_source)
     elif a.concept == "alpha_ctx":
         res = battery_alpha(D, n_null_pool=a.n_null_pool, seed=a.seed, tone_source=a.tone_source)
