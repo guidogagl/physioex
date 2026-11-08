@@ -151,6 +151,10 @@ def battery_kc(D, n_null=200, n_null_pool=20, seed=0):
            "no_alpha": CR.kc_n3_rule(word, night, swa, alpha, use_alpha=False),
            "no_iso": CR.kc_n3_rule(word, night, swa, alpha, use_iso=False),
            "word_only": CR.kc_n3_rule(word, night, swa, alpha, use_swa=False, use_alpha=False, use_iso=False)}
+    abl_o = {"no_swa": CR.kc_n3_rule(dref, night, swa_t, alpha_t, use_swa=False),  # does the rule itself need it?
+             "no_alpha": CR.kc_n3_rule(dref, night, swa_t, alpha_t, use_alpha=False),
+             "no_iso": CR.kc_n3_rule(dref, night, swa_t, alpha_t, use_iso=False),
+             "word_only": CR.kc_n3_rule(dref, night, swa_t, alpha_t, use_swa=False, use_alpha=False, use_iso=False)}
     out = {"V1": {"word": v1w, "swa": v1s, "alpha": v1a}, "V2": {}, "V3": {}}
 
     # DREAMS experts
@@ -182,7 +186,9 @@ def battery_kc(D, n_null=200, n_null_pool=20, seed=0):
              "lexicon_central20": _agree(lex["kc"], r, night, sel & central, seed),
              "nulls": _nulls(D, word, swa, alpha, r, sel, "kc", n_null, seed),
              "ablations": {k: CR.event_agreement(o["kc"], r, night, sel) for k, o in abl.items()},
-             "stage_of_detections": _stage_mix(D, lex["kc"], sel)}
+             "ablations_oracle": {k: CR.event_agreement(o["kc"], r, night, sel) for k, o in abl_o.items()},
+             "stage_of_detections": _stage_mix(D, lex["kc"], sel),
+             "stage_of_reference": _stage_mix(D, r, sel)}
         fo = e["oracle"]["f1"]
         e["ret_vs_oracle"] = e["lexicon"]["f1"] / fo if fo else None
         dd[name] = e
@@ -198,6 +204,7 @@ def battery_kc(D, n_null=200, n_null_pool=20, seed=0):
             "lexicon": _agree(lex["kc"], krule, night, sel, seed), "oracle": _agree(ora["kc"], krule, night, sel, seed),
             "nulls": _nulls(D, word, swa, alpha, krule, sel, "kc", n_null_pool, seed),
             "ablations": {k: CR.event_agreement(o["kc"], krule, night, sel) for k, o in abl.items()},
+            "ablations_oracle": {k: CR.event_agreement(o["kc"], krule, night, sel) for k, o in abl_o.items()},
             "per_site_f1": _per_site(D, lex["kc"], krule, sel),
             "stage_of_detections": _stage_mix(D, lex["kc"], sel),
             "circularity": "reference gated on the N2 hypnogram, amplitude relative to the epoch; the composite "
@@ -218,6 +225,9 @@ def battery_kc(D, n_null=200, n_null_pool=20, seed=0):
             if "ablations" in e and "lexicon" in e:
                 f = e["lexicon"]["f1"]
                 out["V3"][f"{k}:{name}"] = {a: (f - v["f1"]) for a, v in e["ablations"].items()}
+            if "ablations_oracle" in e and "oracle" in e:
+                f = e["oracle"]["f1"]
+                out["V3"][f"{k}:{name}:oracle"] = {a: (f - v["f1"]) for a, v in e["ablations_oracle"].items()}
     return out
 
 
