@@ -132,7 +132,8 @@ def probes(V, seed=0, n_folds=5):
         for ev, (fr, h) in V["frac"].items():
             t = fr[pool]
             hv = h[pool] & fin
-            s = RA.fold_probe(X[hv], [], t[hv], gname[hv], sites, max_fit=100_000, seed=seed, ridge=True)
+            s = RA.fold_probe(X[hv], [], t[hv], gname[hv], sorted(set(gname[hv].tolist())), max_fit=100_000, seed=seed,
+                              ridge=True)
             ok = np.isfinite(s)
             row[f"event_{ev}_spearman"] = float(spearmanr(s[ok], t[hv][ok])[0]) if ok.sum() > 10 and np.ptp(t[hv][ok]) > 0 else None
         out["levels"][lev] = row

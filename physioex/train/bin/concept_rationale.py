@@ -296,6 +296,8 @@ def fold_probe(X, codes, r, key, groups, max_fit=30_000, seed=0, train=None, rid
         return out
     for g in groups:
         tr, te = np.flatnonzero(key != g), np.flatnonzero(key == g)
+        if not len(te) or not len(tr):
+            continue
         if ridge:
             if np.ptp(r[tr]) == 0:
                 continue
