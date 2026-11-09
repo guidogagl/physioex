@@ -321,7 +321,14 @@ def channel_pipelines(a: dict) -> dict:
 
 
 def model_from_args(a: dict):
-    """Untrained MSAE / MSVQ built from the ``args`` of a run's ``run.json``."""
+    """Untrained MSAE / MSVQ / MSAEFactor built from the ``args`` of a run's ``run.json``."""
+    if a.get("model") == "msae_factor":
+        from physioex.models.msae_factor import MSAEFactor
+
+        return MSAEFactor(a["seq"], width=a["width"], dim=a["dim"], n_atoms=a["n_atoms"], atom_sec=a["atom_sec"],
+                          sub=a["sub"], top_k=a["top_k"], d_s=a["d_s"], d_n=a["d_n"], token_sec=a["token_sec"],
+                          fs=a.get("fs") or 100, low_hz=a["low_hz"], pow_hz=a["pow_hz"], n_sites=a.get("n_sites", 1),
+                          use_n=not a.get("no_n", False))
     if a.get("model", "msvq") in ("msae", "msae_vq"):
         from physioex.models.msae import MSAE
         from physioex.models.msae_vq import MSAEVQ
