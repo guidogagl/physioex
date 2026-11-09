@@ -160,6 +160,7 @@ def main(argv=None):
     scale = json.load(open(os.path.join(a.dump, "scale.json")))
     fs = float(meta["fs"]["eeg"])
     stagers = load_stagers(os.path.join(a.combo_dir, meta["stager"]), ["eeg"], dev)
+    stagers[0].pop("multi", None)  # EEG-only replay: the multimodal stager would need EOG / EMG latents
     codec = Codec(a.combo_dir, dev)
     rng = np.random.default_rng(a.seed)
     pool = sorted(k for k, e in meta["nights"].items() if e["unit"] not in ("dreams", "mass_ss01")

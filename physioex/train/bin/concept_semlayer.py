@@ -135,7 +135,8 @@ def _site_acc(Z, gname, night, rng, max_fit=60_000):
     return float(balanced_accuracy_score(gname[te], m.predict((Z[te] - mu) / sd)))
 
 
-def run(D, input_mode="spec", units=32, epochs=3, n_train=400_000, max_fit=30_000, seed=0, n_folds=3, hidden=128):
+def run(D, input_mode="spec", units=32, epochs=3, n_train=400_000, max_fit=30_000, seed=0, n_folds=3, hidden=128,
+        l_sp=0.02, l_dec=0.1, l_adv=0.1):
     rng = np.random.default_rng(seed)
     n = len(D["y"])
     names = TWIN + (LATENT if input_mode == "spec+P" else [])
@@ -162,7 +163,7 @@ def run(D, input_mode="spec", units=32, epochs=3, n_train=400_000, max_fit=30_00
         Xs = (X - mu) / sd
         site_codes = {s: i for i, s in enumerate(sorted(set(D["gname"][tr].tolist())))}
         enc, log = train_layer(Xs[tr], Y[tr], H[tr], np.array([site_codes[g] for g in D["gname"][tr]]), units=units,
-                               hidden=hidden, epochs=epochs, seed=seed + fi)
+                               hidden=hidden, epochs=epochs, seed=seed + fi, l_sp=l_sp, l_dec=l_dec, l_adv=l_adv)
         U = units_of(enc, Xs)
         fold = {"held_out": held, "n_train": int(len(tr)), "log": log, "refs": {}, "train_sec": round(time.time() - t0, 1)}
         act = U[te_mask].mean(0) if te_mask.any() else U[tr].mean(0)
@@ -179,12 +180,17 @@ def run(D, input_mode="spec", units=32, epochs=3, n_train=400_000, max_fit=30_00
             trn = np.flatnonzero(tr_mask & h)
             trn = rng.choice(trn, min(max_fit, len(trn)), replace=False) if len(trn) else trn
             for name, Z in (("probe_units_ap", U), ("probe_twin_ap", Xtwin)):
-                if len(trn) and r[trn].any() and not r[trn].all():
+                if where == "dreams":  # expert references: leave one excerpt out inside DREAMS
+                    key = D["night"][te]
+                    s = RA.fold_probe(Z[te], [], r[te], key, sorted(set(key.tolist())), max_fit=max_fit, seed=seed)
+                    ok = np.isfinite(s)
+                    row[name] = RA.ap(s[ok], r[te][ok]) if r[te][ok].any() else None
+                elif len(trn) and r[trn].any() and not r[trn].all():
                     idx = np.r_[trn, te]
                     train = np.r_[np.ones(len(trn), bool), np.zeros(len(te), bool)]
                     s = RA.fold_probe(Z[idx], [], r[idx], None, None, max_fit=max_fit, seed=seed, train=train)
                     row[name] = RA.ap(s[~train], r[te])
-            if "probe_units_ap" in row and "probe_twin_ap" in row:
+            if row.get("probe_units_ap") is not None and row.get("probe_twin_ap") is not None:
                 row["units_minus_twin"] = row["probe_units_ap"] - row["probe_twin_ap"]
             fold["refs"][ref] = row
         trn_rows = np.flatnonzero(tr_mask)
@@ -220,12 +226,18 @@ def main(argv=None):
     ap.add_argument("--frac", type=float, default=0.15)
     ap.add_argument("--n-ss01", type=int, default=0)
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--l-sp", type=float, default=0.02, help="sparsity weight (mean activation)")
+    ap.add_argument("--l-dec", type=float, default=0.1, help="decorrelation weight")
+    ap.add_argument("--l-adv", type=float, default=0.1, help="site adversary weight")
+    ap.add_argument("--tag", default="", help="suffix of the run in the JSON")
     a = ap.parse_args(argv)
     t0 = time.time()
     RA.SPEC_FINE = True
     D, keys, sets = RA.load(a.dump, "eeg", RULES + list(EXPERT), frac=a.frac, n_ss01=a.n_ss01, seed=a.seed)
     print(f"[semlayer] loaded {len(keys)} nights, {len(D['y'])} tokens, refs {sorted(D['refs'])}, {time.time() - t0:.0f} s", flush=True)
-    res = run(D, a.input, units=a.units, epochs=a.epochs, n_train=a.n_train, seed=a.seed)
+    res = run(D, a.input, units=a.units, epochs=a.epochs, n_train=a.n_train, seed=a.seed, l_sp=a.l_sp, l_dec=a.l_dec,
+              l_adv=a.l_adv)
+    res["penalties"] = {"l_sp": a.l_sp, "l_dec": a.l_dec, "l_adv": a.l_adv}
     res["nights"] = {s: sum(v == s for v in sets.values()) for s in sorted(set(sets.values()))}
     res["minutes"] = (time.time() - t0) / 60
     os.makedirs(os.path.dirname(os.path.abspath(a.out)), exist_ok=True)
