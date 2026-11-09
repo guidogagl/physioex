@@ -77,6 +77,17 @@ CONCEPTS = {
 }
 
 
+# ---------------------------------------------------------------------------- export (page examples)
+_EXP = None  # dict while ``battery --export`` runs: the per-token / per-epoch arrays of the kept rules
+EXPORT_WORDS = {"spindle": {"ref": "spindle_rule", "inputs": ["P", "P_ctx±1"]}}  # words shown, not composed
+
+
+def _x(**kw):
+    if _EXP is not None:
+        for k, v in kw.items():
+            _EXP[k] = np.asarray(v)
+
+
 # ---------------------------------------------------------------------------- components
 def _word(D, cfg, seed=0, max_fit=100_000):
     """Token scores of the P word: LOSO on the pool, one pool fit elsewhere; threshold at the pool rate."""
@@ -224,6 +235,7 @@ def battery_kc(D, n_null=200, n_null_pool=20, seed=0, swa_source="eq", wake=Fals
             if eye_eeg and name in ("blink", "rem_eye"):  # C1e: the eye words also read the EEG, as their reference
                 wc = {**wc, "inputs": wc["inputs"] + ["P"]}  # (deflection >= 2x larger on the EOG than on the EEG)
             w_, v1x[name], fin = _word(D, wc, seed)
+            _x(**{f"word_{name}": w_ & fin})
             avail = fin.reshape(-1, T).all(1)
             fr[name] = np.where(avail, w_.reshape(-1, T).mean(1), np.nan)
             rr, hh = RA.ref_mask(D, wc["ref"])
@@ -242,6 +254,14 @@ def battery_kc(D, n_null=200, n_null_pool=20, seed=0, swa_source="eq", wake=Fals
                               for k in sorted(set(st))}
     lex = CR.kc_n3_rule(word, night, swa, alpha, wake_ep=wl)
     ora = CR.kc_n3_rule(dref, night, swa_t, alpha_t, wake_ep=wo)
+    _x(word_delta=word, swa_ep=swa, alpha_ep=alpha, lex_kc=lex["kc"], lex_n3=lex["n3"], ora_kc=ora["kc"])
+    if wl is not None:
+        _x(wake_ep=wl)
+    if _EXP is not None:
+        for name, wc in EXPORT_WORDS.items():
+            if wc["ref"] in D["refs"]:
+                w_, _, fin = _word(D, wc, seed)
+                _x(**{f"word_{name}": w_ & fin})
     abl = {"no_swa": CR.kc_n3_rule(word, night, swa, alpha, wake_ep=wl, use_swa=False),
            "no_alpha": CR.kc_n3_rule(word, night, swa, alpha, wake_ep=wl, use_alpha=False),
            "no_iso": CR.kc_n3_rule(word, night, swa, alpha, wake_ep=wl, use_iso=False),
@@ -374,6 +394,7 @@ def battery_rem(D, n_null=0, n_null_pool=20, seed=0, eye_eeg=False, tone_source=
     v1t["spearman_epoch_frac"] = float(spearmanr(aton[ok], aton_t[ok])[0]) if ok.sum() > 2 else None
     lex = CR.rem_w_rule(word, night, aton, alpha)
     ora = CR.rem_w_rule(er, night, aton_t, alpha_t)
+    _x(word_rem_eye=word & fin, aton_ep=aton, alpha_ep=alpha, lex_rem=lex["rem"], lex_wake=lex["wake"])
     abl = {"no_tone": CR.rem_w_rule(word, night, aton, alpha, use_tone=False),
            "no_alpha": CR.rem_w_rule(word, night, aton, alpha, use_alpha=False)}
     abl_o = {"no_tone": CR.rem_w_rule(er, night, aton_t, alpha_t, use_tone=False),
@@ -451,6 +472,8 @@ def battery_alpha(D, n_null_pool=20, seed=0, tone_source="word", blink_tone=Fals
     sel = (D["set"] == "pool") & ah & fin & avail
     lex = CR.in_state(word, night, S["lexicon"]["state"])
     ora = CR.in_state(ar, night, S["oracle"]["state"])
+    _x(word_alpha=word & fin, state_ep=S["lexicon"]["state"], wake_ep=S["lexicon"]["wake"], aton_ep=S["lexicon"]["aton"],
+       **{f"lex_alpha_{k}": v for k, v in lex.items()})
     st_ep = D["y"][::T]
     out = {"V1": {"word": v1w, **v1,
                   "state_vs_stage": {k: {CR.STATES[i]: {nm: float((S[k]["state"][(st_ep == s) & np.isfinite(S[k]["aton"])] == i).mean())
@@ -514,6 +537,9 @@ def battery_cap(D, n_null_pool=20, seed=0, tone_source="word", blink_tone=False,
     lo_t, hi_t = _lse(S, cfg["bands"]["lo"]), _lse(S, cfg["bands"]["hi"])
     lex = CR.cap_a_rule(lo_l, hi_l, night, nrem_l)
     ora = CR.cap_a_rule(lo_t, hi_t, night, nrem_o)
+    _x(state_ep=St["lexicon"]["state"], lex_a1=lex["a1"], lex_a3=lex["a3"], ora_a1=ora["a1"], ora_a3=ora["a3"],
+       lo_lex=lo_l.astype(np.float32), hi_lex=hi_l.astype(np.float32),
+       lo_true=lo_t.astype(np.float32), hi_true=hi_t.astype(np.float32))
     abl = {"no_bg": CR.cap_a_rule(lo_l, hi_l, night, nrem_l, use_bg=False),
            "no_state": CR.cap_a_rule(lo_l, hi_l, night, None)}
     abl_o = {"no_bg": CR.cap_a_rule(lo_t, hi_t, night, nrem_o, use_bg=False),
@@ -570,6 +596,8 @@ def battery_arousal(D, n_null_pool=20, seed=0, tone_source="eq", blink_tone=Fals
         ratio = float(max(grid, key=grid.get))
     lex = CR.arousal_rule(fast_l, night, sl["lexicon"], rm["lexicon"], ew, ratio=ratio)
     ora = CR.arousal_rule(fast_t, night, sl["oracle"], rm["oracle"], er & eh, ratio=ratio)
+    _x(state_ep=St["lexicon"]["state"], lex_arousal=lex, ora_arousal=ora, word_emg_rise=ew & fin_e,
+       fast_lex=fast_l.astype(np.float32), fast_true=fast_t.astype(np.float32), ratio=ratio)
     abl = {"no_bg": CR.arousal_rule(fast_l, night, sl["lexicon"], rm["lexicon"], ew, use_bg=False),
            "no_prev": CR.arousal_rule(fast_l, night, sl["lexicon"], rm["lexicon"], ew, use_prev=False),
            "no_emg": CR.arousal_rule(fast_l, night, sl["lexicon"], rm["lexicon"], ew, use_emg=False),
@@ -670,10 +698,15 @@ def _jsonable(x):
 
 
 def battery(a):
+    global _EXP
     t0 = time.time()
     cfg = CONCEPTS[a.concept]
     rem = a.concept in ("rem_eye", "alpha_ctx", "cap_a1", "arousal")
     refs = cfg["refs"] + (cfg["wake_refs"] if a.wake else [])
+    if a.export:
+        _EXP = {}
+        if a.concept == "kc":
+            refs = refs + [w["ref"] for w in EXPORT_WORDS.values() if w["ref"] not in refs]
     D, keys, sets = RA.load(a.dump, "eeg", refs, frac=a.frac, n_ss01=a.n_ss01, seed=a.seed,
                             opt_mods=("eog", "emg") if (a.wake or rem) else ())
     print(f"[compose] loaded {len(keys)} nights, {len(D['y'])} tokens, {time.time() - t0:.0f} s", flush=True)
@@ -701,6 +734,13 @@ def battery(a):
     p = os.path.join(a.out, f"{a.iter}_{a.concept}.json")
     json.dump(_jsonable(out), open(p, "w"), indent=1)
     print(f"[compose] wrote {p} ({out['minutes']:.1f} min)", flush=True)
+    if _EXP is not None:
+        q = os.path.join(a.out, f"{a.iter}_{a.concept}_masks.npz")
+        en = D["night"][::T]
+        np.savez_compressed(q, keys=np.array(keys), night_ep=en.astype(np.int32), y_ep=D["y"][::T].astype(np.int8),
+                            set_ep=np.asarray(D["set"][::T]).astype(str), **_EXP)
+        print(f"[compose] wrote {q} ({len(_EXP)} arrays)", flush=True)
+        _EXP = None
 
 
 def main(argv=None):
@@ -721,6 +761,7 @@ def main(argv=None):
     b.add_argument("--n3-first", action="store_true", help="C1d: AASM precedence, slow waves >= 20 %% is N3, never W")
     b.add_argument("--tone-source", default="word", choices=["word", "eq"], help="C2b: chin tone from the EMG epoch latent")
     b.add_argument("--blink-tone", action="store_true", help="C3b: blinks are wake only on a chin tone not low")
+    b.add_argument("--export", action="store_true", help="save the per-token masks of the rule (page examples)")
     b.add_argument("--select-ratio", action="store_true", help="C6b: arousal threshold chosen on the pool oracle")
     b.add_argument("--band-ctx", action="store_true", help="C4b: band powers read from P and P_ctx+-2")
     b.add_argument("--eye-eeg", action="store_true", help="C1e: blink / rem_eye words read P@eog and P (EEG)")

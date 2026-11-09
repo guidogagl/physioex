@@ -288,3 +288,17 @@ def test_arousal_rule():
     p = out["V2"]["pool"]
     assert p["oracle"]["f1"] > 0.8 and p["lexicon"]["f1"] > 0.6
     assert cc._jsonable(out)
+
+
+def test_export_masks_kc():
+    D = _toy_wake()
+    cc._EXP = {}
+    try:
+        cc.battery_kc(D, n_null=2, n_null_pool=2, swa_source="words", wake=True, n3_first=True)
+        exp = cc._EXP
+    finally:
+        cc._EXP = None
+    n = len(D["y"])
+    for k in ("lex_kc", "lex_n3", "word_delta", "word_blink", "word_rem_eye"):
+        assert exp[k].shape == (n,) and exp[k].dtype == bool
+    assert exp["swa_ep"].shape == (n // cc.T,) and exp["wake_ep"].shape == (n // cc.T,)

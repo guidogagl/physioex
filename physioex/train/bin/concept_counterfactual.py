@@ -62,10 +62,10 @@ def _hit(a: np.ndarray, b: np.ndarray) -> float:
 
 
 class Codec:
-    def __init__(self, combo_dir, dev):
+    def __init__(self, combo_dir, dev, mod="eeg"):
         from physioex.train.bin.pretrain_combo import load_s2
 
-        run, self.m = load_s2(os.path.join(combo_dir, "eeg", "s2"), "eeg", dev)
+        run, self.m = load_s2(os.path.join(combo_dir, mod, "s2"), mod, dev)
         self.half = run["args"]["seq"] // 2
         self.dev = dev
 
