@@ -103,7 +103,8 @@ def plot(path, o_br, dec_br, c, fs, title, marks=()):
     ax.axhline(0, color="#d0d7de", lw=0.6)
     ax.set_xlim(-SHOW_S, SHOW_S)
     ax.set_xlabel("s from the negative peak of the original (0.3-30 Hz); shaded = analysis window")
-    ax.set_ylabel("µV (positive up)")
+    ax.invert_yaxis()  # clinical EEG convention: negative up
+    ax.set_ylabel("µV (negative up)")
     ax.legend(loc="upper right", fontsize=8, frameon=False, ncol=3)
     ax.set_title(title, fontsize=9, loc="left")
     fig.tight_layout()
