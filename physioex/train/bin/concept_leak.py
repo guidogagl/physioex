@@ -174,7 +174,7 @@ def swaps(codec, dump, meta, scale, keys, fs, n_ep=40, seed=0):
         pick = np.sort(rng.choice(n, min(n_ep, n), replace=False))
         lat = codec.encode(x[reflect_index(n, codec.half)], pick + codec.half)
         Z[k] = {"pick": pick, "y": y[pick], "lat": lat, "scale": float(scale[k]["eeg"]["scale"]),
-                "site": meta["nights"][k]["site"]}
+                "site": meta["nights"][k]["unit"]}
     for k in keys:
         zk = Z[k]
         lat, y, sc = zk["lat"], zk["y"], zk["scale"]

@@ -67,7 +67,7 @@ def test_leak_probes_toy():
 def test_leak_swaps_toy(tmp_path):
     rng = np.random.default_rng(0)
     keys = ["a", "b"]
-    meta = {"nights": {k: {"site": s} for k, s in zip(keys, ("s0", "s1"))}, "fs": {"eeg": 100.0}}
+    meta = {"nights": {k: {"unit": s} for k, s in zip(keys, ("s0", "s1"))}, "fs": {"eeg": 100.0}}
     scale = {k: {"eeg": {"scale": 50.0}} for k in keys}
     n = 12
     for k in keys:
