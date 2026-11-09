@@ -122,7 +122,8 @@ def _word(D, cfg, seed=0, max_fit=100_000):
     a_w = RA.ap(loso[ok], r[ip][ok])
     a_c = RA.ap(closo[ok], r[ip][ok]) if cfg.get("ceiling") else np.nan
     dre = (D["set"] == "dreams") & h
-    out = {"ref": cfg["ref"], "inputs": cfg["inputs"], "ceiling_inputs": cfg.get("ceiling"), "skipped": bad,
+    out = {"ref": cfg["ref"], "inputs": cfg["inputs"], "inputs_used": RA.mapped(D, cfg["inputs"]),
+           "ceiling_inputs": cfg.get("ceiling"), "skipped": bad,
            "pool_rate": rate, "threshold": thr, "ap_pool_loso": a_w, "ap_ceiling_loso": a_c,
            "retC": a_w / a_c if a_c else np.nan,
            "ap_dreams": RA.ap(full[dre], r[dre]) if dre.any() and r[dre].any() else None,
@@ -137,7 +138,7 @@ def _pred(D, cfg, seed=0):
     from scipy.stats import spearmanr
 
     t, h = RA.epoch_target(D, cfg["ref"])
-    X = np.hstack([np.hstack([RA.epoch_input(D, n), RA.epoch_input(D, n) ** 2]) for n in cfg["inputs"]])
+    X = np.hstack([np.hstack([RA.epoch_input(D, n), RA.epoch_input(D, n) ** 2]) for n in RA.mapped(D, cfg["inputs"])])
     st = D["set"][::T]
     gn = D["gname"][::T]
     fin = np.isfinite(X).all(1)  # optional modalities: NaN epochs stay NaN
@@ -707,9 +708,12 @@ def battery(a):
         _EXP = {}
         if a.concept == "kc":
             refs = refs + [w["ref"] for w in EXPORT_WORDS.values() if w["ref"] not in refs]
+    RA.SPEC_FINE = a.input == "specfine"
     D, keys, sets = RA.load(a.dump, "eeg", refs, frac=a.frac, n_ss01=a.n_ss01, seed=a.seed,
                             opt_mods=("eog", "emg") if (a.wake or rem) else ())
-    print(f"[compose] loaded {len(keys)} nights, {len(D['y'])} tokens, {time.time() - t0:.0f} s", flush=True)
+    if a.input != "latent":
+        D["_map"] = a.input  # D1: the EEG latents replaced by their spectral twins in every reader
+    print(f"[compose] loaded {len(keys)} nights, {len(D['y'])} tokens, input {a.input}, {time.time() - t0:.0f} s", flush=True)
     if a.concept == "arousal":
         res = battery_arousal(D, n_null_pool=a.n_null_pool, seed=a.seed, tone_source=a.tone_source,
                               blink_tone=a.blink_tone, band_ctx=a.band_ctx, select_ratio=a.select_ratio)
@@ -724,7 +728,7 @@ def battery(a):
     else:
         res = battery_kc(D, n_null=a.n_null, n_null_pool=a.n_null_pool, seed=a.seed, swa_source=a.swa_source,
                          wake=a.wake, n3_first=a.n3_first, eye_eeg=a.eye_eeg)
-    out = {"iteration": a.iter, "concept": a.concept, "rule": cfg["rule"], "swa_source": a.swa_source, "wake": a.wake, "n3_first": a.n3_first, "eye_eeg": a.eye_eeg, "tone_source": a.tone_source, "blink_tone": a.blink_tone, "band_ctx": a.band_ctx,
+    out = {"iteration": a.iter, "concept": a.concept, "rule": cfg["rule"], "input": a.input, "swa_source": a.swa_source, "wake": a.wake, "n3_first": a.n3_first, "eye_eeg": a.eye_eeg, "tone_source": a.tone_source, "blink_tone": a.blink_tone, "band_ctx": a.band_ctx,
            "thresholds": {"N3_SWA": CR.N3_SWA, "W_ALPHA": CR.W_ALPHA, "EYE_PRESENT": CR.EYE_PRESENT,
                           "ATONIA_EPOCH": CR.ATONIA_EPOCH, "KC_ISO_TOK": CR.KC_ISO_TOK,
                           "MERGE_GAP": CR.MERGE_GAP},
@@ -765,6 +769,8 @@ def main(argv=None):
     b.add_argument("--select-ratio", action="store_true", help="C6b: arousal threshold chosen on the pool oracle")
     b.add_argument("--band-ctx", action="store_true", help="C4b: band powers read from P and P_ctx+-2")
     b.add_argument("--eye-eeg", action="store_true", help="C1e: blink / rem_eye words read P@eog and P (EEG)")
+    b.add_argument("--input", default="latent", choices=["latent", "spec", "specfine"],
+                   help="D1: EEG latents replaced by band powers (spec) or 1 Hz bins + bands (specfine)")
     a = ap.parse_args(argv)
     battery(a)
 

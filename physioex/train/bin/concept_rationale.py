@@ -183,6 +183,56 @@ def spec_windows(x, fs):
     return np.stack(out, 1).astype(np.float32)
 
 
+SPEC_FINE = False  # ``load`` also computes ``spec_fine`` (D1 of the critical evaluation: a richer spectral twin)
+FINE_WIN, FINE_HZ = 2.0, (0.5, 30.5)
+
+
+def spec_fine(x, fs, wsec=FINE_WIN, lo=FINE_HZ[0], hi=FINE_HZ[1]):
+    """Log power in 1 Hz bins (``lo``..``hi``) of a ``wsec`` Hann window centred on every token: ``(n * 60, 30)``.
+    The spectral twin of P at a comparable width (P has 64 numbers per token)."""
+    from numpy.lib.stride_tricks import sliding_window_view
+
+    tok = int(round(0.5 * fs))
+    v = x.reshape(-1).astype(np.float32)
+    n = len(v) // tok
+    wl = int(round(wsec * fs))
+    pad = (wl - tok) // 2 + 1
+    vp = np.concatenate([v[:pad][::-1], v, v[-(pad + wl):][::-1]])
+    w = sliding_window_view(vp, wl)[pad - (wl - tok) // 2::tok][:n]
+    p = np.abs(np.fft.rfft((w - w.mean(1, keepdims=True)) * np.hanning(wl).astype(np.float32), axis=1)) ** 2
+    f = np.fft.rfftfreq(wl, 1 / fs)
+    edges = np.arange(lo, hi + 1e-6, 1.0)
+    return np.stack([np.log(p[:, (f >= a) & (f < b)].sum(1) + 1e-6) for a, b in zip(edges[:-1], edges[1:])], 1).astype(np.float32)
+
+
+INPUT_MAPS = {"spec": {"P": ["spec_tok"], "Eq": ["spec_ep"], "Nq": ["spec_nb"]},
+              "specfine": {"P": ["spec_tok", "spec_fine"], "Eq": ["spec_ep"], "Nq": ["spec_nb"]}}
+
+
+def mapped(D, names):
+    """Input names after ``D["_map"]`` (``"spec"`` / ``"specfine"``, D1): every latent of this modality replaced
+    by its spectral twin at the same context (``P`` -> token spectrum, ``P_ctx±k`` -> ``spec_ctx{k}``, ``Eq`` ->
+    epoch spectrum, ``Nq`` -> neighbourhood summary); other modalities (``P@eog``...) stay latent, declared."""
+    mode = D.get("_map")
+    if not mode:
+        return list(names)
+    tab = INPUT_MAPS[mode]
+    out = []
+    for n in names:
+        m = CTX.fullmatch(n)
+        if n in tab:
+            out += tab[n]
+        elif m and not m.group(4):
+            k = int(m.group(1) or m.group(2) or m.group(3))
+            kind = "ctx" if m.group(1) else ("back" if m.group(2) else "fwd")
+            out.append(f"spec_{kind}{k}")
+            if mode == "specfine" and kind == "ctx":
+                out.append(f"spec_fine_ctx{k}")
+        else:
+            out.append(n)
+    return list(dict.fromkeys(out))
+
+
 # ---------------------------------------------------------------------------- probes
 def lift_feature(k_tr, r_tr, k_te, prior=20.0):
     """log-lift of the keys (shrunk with ``prior`` pseudo-uses) fitted on train, 0 for unseen keys; ``r_tr`` may
@@ -204,31 +254,45 @@ def _code_keys(codes):
     return keys
 
 
-def _fit_predict(X, keys, r, tr, te, max_fit, rng, ridge=False):
+def _fit_predict(X, keys, r, tr, te, max_fit, rng, ridge=False, mlp=0):
+    """``mlp`` > 0: a two-layer MLP of that width instead of the logistic (D2: non-linear content), balanced by
+    subsampling the negatives to at most 4 x the positives before ``max_fit``."""
     from sklearn.linear_model import LogisticRegression, Ridge
 
     lf = [(lift_feature(k[tr], r[tr], k[tr]), lift_feature(k[tr], r[tr], k[te])) for k in keys]
     Xtr = np.column_stack([X[tr]] + [a for a, _ in lf]) if lf else X[tr]
     Xte = np.column_stack([X[te]] + [b for _, b in lf]) if lf else X[te]
-    sub = rng.choice(len(tr), min(max_fit, len(tr)), replace=False)
+    if mlp:
+        pos, neg = np.flatnonzero(r[tr] > 0), np.flatnonzero(r[tr] <= 0)
+        neg = rng.choice(neg, min(len(neg), 4 * len(pos)), replace=False)
+        cand = np.r_[pos, neg]
+        sub = cand[rng.choice(len(cand), min(max_fit, len(cand)), replace=False)]
+    else:
+        sub = rng.choice(len(tr), min(max_fit, len(tr)), replace=False)
     mu, sd = Xtr[sub].mean(0), Xtr[sub].std(0) + 1e-6
     if ridge:
         return Ridge(alpha=1.0).fit((Xtr[sub] - mu) / sd, r[tr][sub]).predict((Xte - mu) / sd)
+    if mlp:
+        from sklearn.neural_network import MLPClassifier
+
+        m = MLPClassifier((mlp, mlp), early_stopping=True, max_iter=200, random_state=int(rng.integers(1 << 30)))
+        m.fit((Xtr[sub] - mu) / sd, r[tr][sub] > 0)
+        return m.predict_proba((Xte - mu) / sd)[:, 1]
     m = LogisticRegression(max_iter=300).fit((Xtr[sub] - mu) / sd, r[tr][sub])
     return m.decision_function((Xte - mu) / sd)
 
 
-def fold_probe(X, codes, r, key, groups, max_fit=30_000, seed=0, train=None, ridge=False):
-    """Held-out scores of a logistic (``ridge``: ridge regression, continuous targets) on ``X`` plus the
-    in-fold log-lift of the code arrays. Leave-one-group-out; with a boolean ``train`` mask instead one fit on
-    the ``train`` rows that scores the others (transfer)."""
+def fold_probe(X, codes, r, key, groups, max_fit=30_000, seed=0, train=None, ridge=False, mlp=0):
+    """Held-out scores of a logistic (``ridge``: ridge regression, continuous targets; ``mlp``: two-layer MLP of
+    that width) on ``X`` plus the in-fold log-lift of the code arrays. Leave-one-group-out; with a boolean
+    ``train`` mask instead one fit on the ``train`` rows that scores the others (transfer)."""
     rng = np.random.default_rng(seed)
     keys = _code_keys(codes)
     out = np.full(len(r), np.nan)
     if train is not None:
         tr, te = np.flatnonzero(train), np.flatnonzero(~train)
         if r[tr].any() and not r[tr].all():
-            out[te] = _fit_predict(X, keys, r, tr, te, max_fit, rng, ridge)
+            out[te] = _fit_predict(X, keys, r, tr, te, max_fit, rng, ridge, mlp)
         return out
     for g in groups:
         tr, te = np.flatnonzero(key != g), np.flatnonzero(key == g)
@@ -237,7 +301,7 @@ def fold_probe(X, codes, r, key, groups, max_fit=30_000, seed=0, train=None, rid
                 continue
         elif not r[te].any() or not r[tr].any() or r[tr].all():
             continue
-        out[te] = _fit_predict(X, keys, r, tr, te, max_fit, rng, ridge)
+        out[te] = _fit_predict(X, keys, r, tr, te, max_fit, rng, ridge, mlp)
     return out
 
 
@@ -376,6 +440,11 @@ def token_input(D, name):
         out = np.hstack([D[name], np.abs(D[name])])
     elif name == "spec_tok":
         out = D["S"]
+    elif name == "spec_fine" and "SF" in D:
+        out = D["SF"]
+    elif re.fullmatch(r"spec_fine_ctx(\d+)", name) and "SF" in D:
+        k = int(name[13:])
+        out = (ctx_mean(D["SF"], D["night"], k) * 2 * k + D["SF"]) / (2 * k + 1)
     elif name == "abs_amp":
         out = D["F"][:, :2]
     elif name == "abs_uv":
@@ -395,7 +464,7 @@ def _quadratic(name):
 
 def build(D, names, idx):
     X, codes, bad = [], [], []
-    for n in names:
+    for n in mapped(D, names):
         if n in ("codes_E", "codes_N", "codes_P"):
             (codes.append(D[n][idx]) if n in D else bad.append(n))
             continue
@@ -828,7 +897,7 @@ def load(dump, mod, refs_needed, extra_mods=(), frac=0.15, min_n=3, n_ss01=10, s
         keys += pick
         sets.update({k: s for k in pick})
     keys = sorted(keys)
-    A = {k: [] for k in ("P", "F", "S", "y", "night", "gname", "set", "logscale", "codes_P", "codes_E", "codes_N",
+    A = {k: [] for k in ("P", "F", "S", "SF", "y", "night", "gname", "set", "logscale", "codes_P", "codes_E", "codes_N",
                          "Eq", "Nq")}
     X = {f"P@{m}": [] for m in tuple(extra_mods) + tuple(opt_mods)}
     X.update({f"rel_back@{m}": [] for m in extra_mods})
@@ -844,6 +913,8 @@ def load(dump, mod, refs_needed, extra_mods=(), frac=0.15, min_n=3, n_ss01=10, s
         A["P"].append(z[f"P_{mod}"].reshape(n * T, -1).astype(np.float32))
         A["F"].append(token_features(x, fs))
         A["S"].append(spec_windows(x, fs))
+        if SPEC_FINE:
+            A["SF"].append(spec_fine(x, fs))
         A["y"].append(np.repeat(z["y"].astype(np.int8), T))
         A["night"].append(np.full(n * T, i, np.int32))
         A["gname"].append(np.full(n * T, _group(meta["nights"][k]["unit"]), object))
