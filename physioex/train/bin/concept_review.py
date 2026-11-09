@@ -192,13 +192,13 @@ def render(path_npz, path_png, cname, rule_panel, dpi=110):
             fs = float(z[f"fs_{m}"])
             t = np.arange(len(x)) / fs
             k = (t >= t_lo) & (t < t_hi)
-            ax.plot(t[k], x[k] - np.median(x[k]), lw=0.6, color="#1f2328")
+            ax.plot(t[k] - t_lo, x[k] - np.median(x[k]), lw=0.6, color="#1f2328")  # axis = s from window start
             for c, d in _runs(mask):
                 s0, s1 = max(c * 0.5, t_lo), min(d * 0.5, t_hi)
                 if s1 > s0:
-                    ax.axvspan(s0, s1, color="#e8590c", alpha=0.28, lw=0)
+                    ax.axvspan(s0 - t_lo, s1 - t_lo, color="#e8590c", alpha=0.28, lw=0)
             ax.set_ylim(-span[m], span[m])
-            ax.set_xlim(t_lo, t_hi)
+            ax.set_xlim(0, t_hi - t_lo)
             ax.xaxis.set_major_locator(MultipleLocator(1.0))
             ax.xaxis.set_minor_locator(MultipleLocator(0.2))
             ax.grid(True, which="major", color="#c9ced3", lw=0.6)
@@ -207,16 +207,16 @@ def render(path_npz, path_png, cname, rule_panel, dpi=110):
             ax.set_ylabel(f"{pname}\n{m.upper()}", rotation=0, ha="right", va="center", fontsize=11,
                           fontweight="bold" if r_i == 0 else "normal")
             bar = _bar(span[m])
-            xb = t_hi + (t_hi - t_lo) * 0.008  # scale bar outside the trace, right margin
+            xb = (t_hi - t_lo) * 1.008  # scale bar outside the trace, right margin
             ax.plot([xb, xb], [-bar / 2, bar / 2], color="#1f2328", lw=2, clip_on=False)
             ax.text(xb + (t_hi - t_lo) * 0.004, 0, f"{bar:g} µV", ha="left", va="center", fontsize=9)
             for s in (EP_S, 2 * EP_S):
                 if t_lo < s < t_hi:
-                    ax.axvline(s, color="#57606a", lw=1.0, ls="--")
+                    ax.axvline(s - t_lo, color="#57606a", lw=1.0, ls="--")
             ax.tick_params(axis="x", which="both", labelbottom=False, length=0)
     ax = axes[-1]
     ax.tick_params(axis="x", which="major", labelbottom=True, length=3)
-    ax.xaxis.set_major_formatter(lambda v, _: f"{v - t_lo:.0f}" if abs((v - t_lo) % 5) < 1e-6 else "")
+    ax.xaxis.set_major_formatter(lambda v, _: f"{v:.0f}" if abs(v % 5) < 1e-6 or abs(v % 5 - 5) < 1e-6 else "")
     ax.set_xlabel("time (s); grid: 1 s major, 0.2 s minor; dashed line = epoch boundary; positive voltage UP")
     y = z["y_ep"]
     hyp = " | ".join(f"{'▶ ' if j == 1 else ''}epoch {j - 1:+d}: {STAGES[int(v)] if 0 <= int(v) < 5 else '?'}"
