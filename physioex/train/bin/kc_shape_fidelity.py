@@ -83,7 +83,8 @@ def fidelity(o_low, o_br, d_low, d_br, c, fs, fo, fd):
             "ptp_ratio": fd["lo_ptp"] / (fo["lo_ptp"] + 1e-6), "lat_ms": 1000 * (fd["neg_i"] - fo["neg_i"]) / fs}
 
 
-def plot(path, o_br, dec_br, c, fs, title):
+def plot(path, o_br, dec_br, c, fs, title, marks=()):
+    """``marks``: (start s, end s, colour, label) relative to the negative peak, e.g. the expert intervals."""
     import matplotlib
 
     matplotlib.use("Agg")
@@ -93,6 +94,9 @@ def plot(path, o_br, dec_br, c, fs, title):
     t = (np.arange(c - h, c + h) - c) / fs
     fig, ax = plt.subplots(figsize=(10, 2.8), dpi=100)
     ax.axvspan(-W_S, W_S, color="#eceff1", lw=0)
+    for k, (m0, m1, col, lab) in enumerate(marks):
+        y0, y1 = (0.0, 0.5) if k else (0.5, 1.0)
+        ax.axvspan(m0, m1, ymin=y0 if len(marks) > 1 else 0, ymax=y1 if len(marks) > 1 else 1, color=col, alpha=0.22, lw=0, label=lab)
     ax.plot(t, dec_br["NE"][c - h:c + h], color="#8c959f", lw=0.8, ls="--", label="N+E (P zeroed)")
     ax.plot(t, o_br[c - h:c + h], color="#1f2328", lw=1.1, label="original")
     ax.plot(t, dec_br["NEP"][c - h:c + h], color="#e8590c", lw=1.1, label="decoded N+E+P")
@@ -132,7 +136,8 @@ def events_night(meta_n, o_low, n_samp, fs):
         if i1 <= i0 or i1 >= n_samp:
             continue
         c = i0 + int(np.argmin(o_low[i0:i1]))
-        out.append({"kind": "kc", "t": c / fs, "c": c, "cons": bool(v1 and ov(a, b, v2)), "scorer": "vis1" if v1 else "vis2"})
+        out.append({"kind": "kc", "t": c / fs, "c": c, "cons": bool(v1 and ov(a, b, v2)), "scorer": "vis1" if v1 else "vis2",
+                    "iv": [a, b], "iv2": [[x, y] for x, y in v2 if v1 and a < y and x < b]})
     allkc = v1 + v2
     for a, b in CRF.detect_delta_waves(o_low_raw_cache[0], fs):
         ta, tb = a / fs, b / fs
@@ -247,6 +252,7 @@ def main(argv=None):
     ap.add_argument("--out", required=True)
     ap.add_argument("--pool-nights", type=int, default=10)
     ap.add_argument("--png-per-kind", type=int, default=6)
+    ap.add_argument("--png-kinds", default="kc,sw,sw_pool", help="event kinds that get PNGs")
     ap.add_argument("--seed", type=int, default=0)
     a = ap.parse_args(argv)
     t0 = time.time()
@@ -329,7 +335,7 @@ def main(argv=None):
                        "scorer": ev["scorer"], "stage": stage, "crosses_epoch": bool(cross), "orig": fo, **fd, "fid": fid}
                 rows.append(row)
                 kept += 1
-                if n_png[ev["kind"]] < a.png_per_kind:
+                if ev["kind"] in a.png_kinds.split(",") and n_png[ev["kind"]] < a.png_per_kind:
                     n_png[ev["kind"]] += 1
                     lab = {"kc": "K-complex (expert" + (", both scorers" if ev["cons"] else f", {ev['scorer']}") + ")",
                            "sw": "slow wave, no expert KC", "sw_pool": "slow wave, pool N3"}[ev["kind"]]
@@ -337,10 +343,14 @@ def main(argv=None):
                     title = (f"{lab} · {k} t={ev['t']:.1f}s · stage {stage} · r={f['r_broad']:.2f} (0.3-4 Hz {f['r_low']:.2f})"
                              f" · p-p dec/orig {f['ptp_ratio']:.2f} · peak shift {f['lat_ms']:+.0f} ms · N+E r={fid['NE']['r_broad']:.2f}")
                     fn = f"{len(prog['examples']):03d}_{ev['kind']}_{k.split('/')[-1]}_{int(ev['t'])}.png"
-                    plot(os.path.join(a.out, "examples", fn), o_br, d_br, c, fs, title)
+                    marks = []
+                    if ev.get("iv"):
+                        marks.append((ev["iv"][0] - c / fs, ev["iv"][1] - c / fs, "#0969da", f"marked by {ev['scorer']}"))
+                        marks += [(x - c / fs, y - c / fs, "#8250df", "marked by vis2") for x, y in ev["iv2"][:1]]
+                    plot(os.path.join(a.out, "examples", fn), o_br, d_br, c, fs, title, marks)
                     prog["examples"].append({"file": fn, "kind": ev["kind"], "night": k, "t": ev["t"], "stage": stage,
                                              "cons": ev["cons"], "fid_NEP": f, "fid_NE": fid["NE"],
-                                             "orig": {kk: fo[kk] for kk in SHAPE + ["ptp"]},
+                                             "orig": {kk: fo[kk] for kk in SHAPE + ["ptp"]}, "scorer": ev["scorer"],
                                              "NEP": {kk: fd["NEP"][kk] for kk in SHAPE + ["ptp"]}})
             prog["nights"].append({"night": k, "set": setname, "events": kept})
             save_prog()
