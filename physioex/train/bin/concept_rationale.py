@@ -923,7 +923,8 @@ def load(dump, mod, refs_needed, extra_mods=(), frac=0.15, min_n=3, n_ss01=10, s
         A["set"].append(np.full(n * T, sets[k], object))
         sc = scale.get(k, {}).get(mod, {}).get("scale")
         A["logscale"].append(np.full(n * T, np.log(sc) if sc else np.nan, np.float32))
-        A["codes_P"].append(z[f"codes_{mod}_P"].reshape(n * T, -1)[:, :2].astype(np.int64))
+        if f"codes_{mod}_P" in z.files:  # absent for an encoder without a codebook
+            A["codes_P"].append(z[f"codes_{mod}_P"].reshape(n * T, -1)[:, :2].astype(np.int64))
         for s in ("E", "N"):
             c = f"codes_{mod}_{s}"
             if c in z.files:
@@ -1056,6 +1057,8 @@ def embed(a):
                     c = f"codes_{m}_{s}"
                     if c in z.files:
                         arr[f"{s}q_{m}"] = models[m].rvq[s].lookup(torch.from_numpy(z[c].astype(np.int64))).numpy().astype(np.float16)
+                    elif f"{s}_{m}" in z.files:  # continuous factors: requantization is the identity
+                        arr[f"{s}q_{m}"] = z[f"{s}_{m}"].astype(np.float16)
         os.makedirs(os.path.dirname(out), exist_ok=True)
         np.savez_compressed(out, **arr)
         if i % 25 == 0:

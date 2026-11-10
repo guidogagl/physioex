@@ -139,6 +139,8 @@ def _night_arrays(models, readers, sid_of, mods, half_of):
         arr[f"P_{m}"] = z["P"]
         for k, c in z["codes"].items():
             arr[f"codes_{m}_{k}"] = c.astype(np.int16)
+        if not z["codes"]:  # continuous factors (no codebook): the epoch latents themselves
+            arr[f"N_{m}"], arr[f"E_{m}"] = z["N"], z["E"]
         lat[m] = {"N": z["N"], "E": z["E"], "P": z["P"], "y": y[ts].astype(np.int64),
                   "night": np.zeros(len(ts), np.int64), "epoch": ts.astype(np.int64)}
     return arr, lat, ts_ref, y_ref
