@@ -89,6 +89,7 @@ class MSAEFactor(nn.Module):
         self.low_hz, self.pow_hz, self.band_weight, self.low_weight = low_hz, pow_hz, band_weight, low_weight
         self.l_sparse, self.l_ctr, self.l_adv, self.l_bg, self.l_rule = l_sparse, l_ctr, l_adv, l_bg, l_rule
         self.temperature, self.use_n, self.n_sites = temperature, use_n, n_sites
+        self.ctx_chunk = 1024  # epochs per forward pass of the neighbours' features (memory only)
         self.strides = (2,) * (fs // 100 - 1) + STRIDES[token_sec]
         self.n_tok = self.epoch // math.prod(self.strides)
         self.n_atoms, self.sub, self.top_k = n_atoms, sub, top_k
@@ -143,8 +144,9 @@ class MSAEFactor(nn.Module):
         if not self.use_n:
             return x.new_zeros(B, self.d_n)
         idx = [i for i in range(L) if i != self.c]
-        with torch.no_grad():
-            f = self.features(x[:, idx].reshape(-1, self.epoch)).mean(1)
+        with torch.no_grad():  # chunked: a whole-night extraction sends thousands of epochs at once
+            xs = x[:, idx].reshape(-1, self.epoch)
+            f = torch.cat([self.features(xs[i:i + self.ctx_chunk]).mean(1) for i in range(0, len(xs), self.ctx_chunk)])
         z = self.n_in(f).reshape(B, L - 1, -1)
         z = torch.cat([z[:, :self.c], self.mask_token.expand(B, 1, -1), z[:, self.c:]], 1)
         return torch.tanh(self.n_out(self.enc_n(z + self.pos_epoch)[:, self.c]))
