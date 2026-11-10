@@ -251,18 +251,20 @@ def _ctx_max(v: torch.Tensor, w: int) -> torch.Tensor:
 
 
 @torch.no_grad()
-def rule_masks(x: torch.Tensor, fs: int, n_tok: int) -> torch.Tensor:
-    """``(B, epoch) uV -> (B, n_tok, 4)`` float token masks of the weak rules, mirrors of
-    :mod:`physioex.explain.concept_refs` thresholds on the token grid:
+def rule_masks(x: torch.Tensor, fs: int, n_tok: int, swa_p2p: float = 3.0) -> torch.Tensor:
+    """``(B, epoch) -> (B, n_tok, 4)`` float token masks of the weak rules, mirrors of
+    :mod:`physioex.explain.concept_refs` thresholds on the token grid. The cached clean EEG is
+    ``RobustScale``-normalized per night (``x_uV = x * scale + median``, scale ~ 15-30 uV on EEG), so
+    the one absolute threshold is given in those units: ``swa_p2p`` 3.0 ~ 75 uV at a night scale of 25 uV.
     ``kc`` 0.3-4 Hz peak-to-peak over ±1 token >= 15 x the epoch's median |x|;
-    ``swa`` 0.5-2 Hz peak-to-peak over ±1 token >= 75 uV;
+    ``swa`` 0.5-2 Hz peak-to-peak over ±1 token >= ``swa_p2p``;
     ``spindle`` 12-15 Hz RMS >= trimmed mean + 1.5 sd of the epoch and relative sigma power >= 0.2;
     ``alpha`` 8-13 Hz relative power >= 0.3, above theta (4-7) and beta (13-30)."""
     x = x.float()
     x_kc, x_sw = _bandpass(x, 0.3, 4, fs), _bandpass(x, 0.5, 2, fs)
     mad = x_kc.abs().median(-1).values[:, None] + 1e-9
     kc = _ctx_max(_tok_reduce(x_kc, n_tok, "p2p"), 1) >= 15 * mad
-    swa = _ctx_max(_tok_reduce(x_sw, n_tok, "p2p"), 1) >= 75
+    swa = _ctx_max(_tok_reduce(x_sw, n_tok, "p2p"), 1) >= swa_p2p
     sig = _bandpass(x, 12, 15, fs)
     rms = _tok_reduce(sig, n_tok, "rms")
     lo, hi = rms.quantile(0.1, dim=-1, keepdim=True), rms.quantile(0.9, dim=-1, keepdim=True)

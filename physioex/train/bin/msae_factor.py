@@ -102,7 +102,9 @@ def _run(a, t0):
         for name in ("train_idx", "valid_idx"):
             idx = np.asarray(getattr(md, name))
             d, s = _window_owner(md.multi, idx)
-            keep = s < a.max_subjects
+            key = d * 10 ** 6 + s
+            rank = {k: i for i, k in enumerate(sorted(set(key.tolist())))}  # first nights of the index, per item
+            keep = np.array([rank[k] < a.max_subjects * len(md.item_of_dataset) for k in key])
             setattr(md, name, idx[keep])
     tr, n_tr, va, n_va = _merged_loaders(a, md, ds)
     sites = sorted(set(it if it is not None else "_none" for it in md.item_of_dataset))
