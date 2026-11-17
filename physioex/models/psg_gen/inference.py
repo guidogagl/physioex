@@ -471,6 +471,15 @@ def counts(ev: Events, B: int, exclude_periodic: bool = True) -> Tensor:
 
 def decompose(x: Tensor, d: Dictionary, thresholds: Tensor, budget: dict[int, int],
               fs: int = FS, passes: int = 2, bands=BG_BANDS, whiten: bool = True, **kw) -> dict:
+    """:func:`_decompose` in float32 with autocast off: the joint LS (``linalg.solve``) and the
+    thresholds need full precision, and the trainer runs the model under bf16 autocast on H200."""
+    with torch.autocast(x.device.type, enabled=False):
+        return _decompose(x.float(), d, thresholds.float(), budget, fs=fs, passes=passes, bands=bands,
+                          whiten=whiten, **kw)
+
+
+def _decompose(x: Tensor, d: Dictionary, thresholds: Tensor, budget: dict[int, int],
+               fs: int = FS, passes: int = 2, bands=BG_BANDS, whiten: bool = True, **kw) -> dict:
     """The full sequential pipeline (R1) on an epoch batch: whitening from the robust PSD ->
     sparse_events -> background estimate on the masked residual -> re-whitening with the new
     background; ``passes`` times. ``kw`` is forwarded to :func:`sparse_events` (``sw_p2p_min``
