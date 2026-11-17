@@ -124,21 +124,23 @@ def test_03_background_bias():
     bg = synth.epochs("pink", B, seed=1)  # the floor, RMS 1
     x = bg.clone()
     mask = torch.zeros(B, T, dtype=torch.bool)
-    for b in range(B):  # dense N3: 12 slow waves per epoch, ~90 % of the time covered
-        jit = torch.rand(11, generator=torch.Generator().manual_seed(10 + b)) * 0.1 - 0.05
-        # 11 slow waves on a 2.3 s grid (~80 % of the epoch): rejection sampling of 12 onsets
-        # 2.2 s apart in 27 s almost never terminates
-        for t0 in (2.5 + 2.3 * torch.arange(11) + jit).tolist():
+    for b in range(B):  # N3: 6 slow waves on a 4.5 s grid, ~50 % of the epoch on event supports
+        # (at ~85 % no event-free 1 s segment is left and the floor is not observable)
+        jit = torch.rand(6, generator=torch.Generator().manual_seed(10 + b)) * 0.1 - 0.05
+        for t0 in (2.5 + 4.5 * torch.arange(6) + jit).tolist():
             synth.plant(x[b], synth.slow_wave(2.2), t0, amp=2.0)  # peak-to-peak 4 units
             lo, hi = synth.support_span(t0, 2.2, pad=0.15)
             mask[b, lo:hi] = True
     est_m = background.background_estimate(x, mask, correct=True)["logP"]
     est_u = background.background_estimate(x, None, correct=True)["logP"]
-    true_d = background.seg_band_logpow(bg)[..., bi].mean(1)  # (B,) per-epoch floor
-    masked_bias = (est_m[:, 3:-3, bi].mean(1) - true_d).abs()
-    unmasked_bias = est_u[:, 3:-3, bi].mean(1) - true_d
-    assert float(masked_bias.max()) < 1.5  # masked estimate tracks the floor in 0.5-2 Hz
-    assert float(unmasked_bias.min()) > 3.0  # without the mask the slow waves bias it
+    # truth = log10 of the mean floor power (what the corrected q20 estimates), per epoch
+    true_d = (10 ** background.seg_band_logpow(bg)[..., bi]).mean(1).log10()
+    # biases averaged over epochs (log10 units, 0.1 = 1 dB): one 0.5-2 Hz bin per 1 s segment
+    # gives a single epoch a +-0.2 spread even without events
+    masked_bias = (est_m[:, 3:-3, bi].mean(1) - true_d).mean()
+    unmasked_bias = (est_u[:, 3:-3, bi].mean(1) - true_d).mean()
+    assert abs(float(masked_bias)) < 0.1  # masked estimate tracks the floor in 0.5-2 Hz
+    assert float(unmasked_bias) > 0.15  # without the mask the slow waves bias it upwards
 
 
 # ---------------------------------------------------------------------------
@@ -152,10 +154,11 @@ def test_04_planted_spindles():
     x = synth.epochs("pink", B, seed=2)
     planted = []
     for b in range(B):
-        for f in (11.0, 13.0, 15.0):
-            for t0 in synth.random_onsets(2, seed=20 + 3 * b + int(f), lo=2.0, hi=28.0, min_gap=3.0):
-                synth.plant(x[b], synth.gabor_spindle(f, cycles=8), t0, amp=2.0)
-                planted.append((b, t0, f))
+        # 6 non-overlapping spindles (same-class NMS over +-d/2 is by design, R5), 2 per frequency
+        onsets = synth.random_onsets(6, seed=20 + b, lo=2.0, hi=28.0, min_gap=3.0)
+        for t0, f in zip(onsets, (11.0, 13.0, 15.0) * 2):
+            synth.plant(x[b], synth.gabor_spindle(f, cycles=8), t0, amp=2.0)
+            planted.append((b, t0, f))
     d, thr = _dict_and_thresholds()
     dec = inference.decompose(x, d, thr, BUDGET)
     ev = dec["events"]
@@ -167,8 +170,10 @@ def test_04_planted_spindles():
             continue
         best = int((ev.onset[sel] - t0).abs().argmin())
         i = int(ev.atom[sel][best])
-        if int(d.band[i]) == sigma and abs(float(d.freq[i]) - f) <= 1.0:
-            matched += 1  # right band (sigma) and the planted frequency on the 1 Hz grid
+        # right frequency on the 1 Hz grid; the band label must be sigma except at 11 Hz, which is
+        # the alpha/sigma boundary (alpha 10.5 and sigma 11.5 Hz are equally close)
+        if abs(float(d.freq[i]) - f) <= 1.0 and (int(d.band[i]) == sigma or f == 11.0):
+            matched += 1
     assert matched / len(planted) >= 0.8
 
 
@@ -205,20 +210,44 @@ def test_06_absorption():
 
 
 def test_07_ecg():
-    pytest.importorskip("physioex.models.psg_gen.dicts")
+    dicts = pytest.importorskip("physioex.models.psg_gen.dicts")
     inference = pytest.importorskip("physioex.models.psg_gen.inference")
     B = 8
     x = synth.epochs("pink", B, seed=5)
     for b in range(B):
         x[b] += synth.ecg_train(bpm=60.0, amp=2.0)
     d, thr = _dict_and_thresholds()
+    # (a) fixed dictionary: transients are K-complex shapes (energy < 5 Hz), a QRS is not one of
+    # them, so the train does not inflate the transient counts
     ev, _ = inference.sparse_events(x, d, thr, BUDGET)
+    assert int((ev.cls == dicts.CLS_TRANSIENT).sum()) <= B // 2
+    # (b) a learned transient that captured the QRS (P2/P3 can learn one): the guard flags the
+    # train, keeps it outside the budget and out of the counts
+    beat = synth.ecg_train(bpm=60.0, amp=1.0)[50:150]
+    L = d.atoms.shape[1]
+    qrs = torch.zeros(L)
+    qrs[L // 2 - 50: L // 2 + 50] = beat - beat.mean()
+    qrs = qrs / qrs.norm()
+    k = int((d.cls == dicts.CLS_TRANSIENT).nonzero()[0, 0])
+    dq = dicts.replace(
+        d, atoms=torch.cat([d.atoms, qrs[None]]), quad=torch.cat([d.quad, torch.zeros(1, L)]),
+        cls=torch.cat([d.cls, d.cls[k:k + 1]]), band=torch.cat([d.band, d.band[k:k + 1]]),
+        freq=torch.cat([d.freq, d.freq[k:k + 1]]), dur=torch.cat([d.dur, torch.tensor([1.0])]),  # 100-sample support
+        family=torch.cat([d.family, d.family.max()[None] + 1]), names=d.names + ["qrs"])
+    thr_q = inference.null_thresholds(dq, synth.epochs("pink", 16, seed=100))
+    # at amp 2 the train is in every 1 s segment, so the robust PSD absorbs it and whitening
+    # treats it as floor; a strong artefact (amp 5) is the case the guard is for
+    x5 = synth.epochs("pink", B, seed=5)
+    for b in range(B):
+        x5[b] += synth.ecg_train(bpm=60.0, amp=5.0)
+    ev, _ = inference.sparse_events(x5, dq, thr_q, BUDGET)
     pf = inference.periodic_flag(ev)
-    assert int(pf.sum()) >= B  # the 60 bpm train is flagged periodic (per epoch)
+    assert int(pf.sum()) >= B * 4  # the 60 bpm train is flagged periodic in every epoch
     c_in = inference.counts(ev, B, exclude_periodic=False)
     c_ex = inference.counts(ev, B, exclude_periodic=True)
-    assert int(c_ex.sum()) < int(c_in.sum())
     assert int(c_in.sum() - c_ex.sum()) >= int(pf.sum())  # the flagged events are excluded
+    n_tr = int(((ev.cls == dicts.CLS_TRANSIENT) & ~ev.periodic).sum())
+    assert n_tr <= B * BUDGET[dicts.CLS_TRANSIENT]  # the budget holds for the real transients
 
 
 # ---------------------------------------------------------------------------

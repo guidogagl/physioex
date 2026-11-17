@@ -155,7 +155,9 @@ def gabor_bank(bands: dict[str, tuple[float, float]] = BURST_BANDS, f_step: floa
     for bnd, (lo, hi) in bands.items():
         bi = list(bands).index(bnd)
         dmin = max(0.5, 3.0 / lo)
-        for f in torch.arange(lo, hi + 1e-6, f_step).tolist():
+        # centres at the middle of each f_step bin: an edge centre (11 Hz in sigma) loses half its
+        # energy outside the band and fails the concentration check, leaving the edge uncovered
+        for f in torch.arange(lo + f_step / 2, hi, f_step).tolist():
             ds = [c / f for c in cycles if dmin <= c / f <= d_max]
             if bnd == "alpha":
                 ds += [d for d in alpha_long if dmin <= d]
@@ -234,9 +236,28 @@ def concat(*ds: Dictionary) -> Dictionary:
                       torch.cat(freq), torch.cat(durs), torch.cat(fams), names)
 
 
-def full_dictionary(fs: int = FS, **kw) -> Dictionary:
-    """slowwave + transient + gabor (``kw`` goes to :func:`gabor_bank`)."""
-    return concat(slowwave_bank(fs=fs), transient_bank(fs=fs), gabor_bank(fs=fs, **kw))
+def full_dictionary(fs: int = FS, max_coh_bt: float = 0.3, **kw) -> Dictionary:
+    """slowwave + transient + gabor (``kw`` goes to :func:`gabor_bank`). Burst families with a
+    max normalised cross-correlation above ``max_coh_bt`` with any transient atom are dropped
+    (identifiability of bursts vs transients, R1): in practice the lowest theta centres, whose
+    few cycles look like a K-complex lobe."""
+    d = concat(slowwave_bank(fs=fs), transient_bank(fs=fs), gabor_bank(fs=fs, **kw))
+    A, Q = d.atoms, d.quad
+    L = A.shape[1]
+    tr = A[d.cls == CLS_TRANSIENT]
+    c1 = F.conv1d(tr[:, None], A[:, None], padding=L - 1)          # (n_tr, K, 2L-1)
+    c2 = F.conv1d(tr[:, None], Q[:, None], padding=L - 1)
+    coh = (c1 * c1 + c2 * c2).sqrt().amax(-1).amax(0)               # (K,)
+    bad_fam = set(d.family[(d.cls == CLS_BURST) & (coh > max_coh_bt)].tolist())
+    keep = torch.tensor([not (int(c) == CLS_BURST and int(f) in bad_fam)
+                         for c, f in zip(d.cls, d.family)], dtype=torch.bool)
+    if bool(keep.all()):
+        return d
+    idx = keep.nonzero(as_tuple=True)[0]
+    _, fam = torch.unique(d.family[idx], return_inverse=True)       # renumber families 0..n-1
+    return replace(d, atoms=A[idx], quad=Q[idx], cls=d.cls[idx], band=d.band[idx],
+                   freq=d.freq[idx], dur=d.dur[idx], family=fam,
+                   names=[d.names[i] for i in idx.tolist()])
 
 
 def random_dictionary(like: Dictionary, seed: int, fs: int = FS) -> Dictionary:

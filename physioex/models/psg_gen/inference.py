@@ -97,9 +97,8 @@ def _support_boxes(d: Dictionary, fs: int = FS) -> tuple[Tensor, Tensor]:
     L = A.shape[1]
     n_d = torch.round(d.dur * fs).long().clamp_(1, L)
     start = L // 2 - n_d // 2
-    offs = start[:, None] + torch.arange(L, device=A.device)[None, :]
-    boxes = torch.zeros_like(A)
-    boxes[torch.arange(A.shape[0], device=A.device)[:, None], offs.clamp_(0, L - 1)] = 1.0
+    j = torch.arange(L, device=A.device)[None, :]
+    boxes = ((j >= start[:, None]) & (j < (start + n_d)[:, None])).to(A.dtype)
     return n_d, boxes
 
 
@@ -348,7 +347,8 @@ def sparse_events(x: Tensor, d: Dictionary, thresholds: Tensor, budget: dict[int
                   order: Sequence[int] = (CLS_SLOWWAVE, CLS_TRANSIENT, CLS_BURST),
                   amp_cap: float = 5.0, ridge: float = 1e-3, nms: bool = True,
                   explain: bool = True, sw_p2p_min: float | None = None,
-                  chunk: int = 48) -> tuple[Events, Tensor]:
+                  chunk: int = 48, whiten: bool = True, ecg_guard: bool = True,
+                  ecg_budget: int = 40) -> tuple[Events, Tensor]:
     """One pass of the sequential selection (R1, R5) on an epoch batch x (B, T).
 
     Classes are processed in ``order`` (slow waves on the (whitened) residual, then transients,
@@ -358,51 +358,71 @@ def sparse_events(x: Tensor, d: Dictionary, thresholds: Tensor, budget: dict[int
     (``explain=True``; ``explain=False`` gives matching-pursuit projections, ablation), capped
     at ``amp_cap`` x epoch RMS. ``whiten_w`` (B, L) is the zero-phase whitening filter applied
     to the residual (and, by its median, to the atoms) for the selection; amplitudes stay in the
-    original domain. Returns (events, residual (B, T)).
+    original domain. With ``whiten_w=None`` the filter is estimated from ``x`` unless
+    ``whiten=False`` (ablation). Returns (events, residual (B, T)).
     """
     B, T = x.shape
     device = x.device
+    if whiten_w is None and whiten:
+        # the null thresholds are calibrated on whitened scores (null_thresholds): scoring the
+        # raw signal against them lets 1/f power pass as slow waves and transients
+        whiten_w, _ = whitening_filters(x, d.atoms.shape[1], fs=fs)
     evs, rs = [], []
     for i in range(0, B, chunk):
         W = None if whiten_w is None else whiten_w[i:i + chunk]
-        ev, r = _sparse_chunk(x[i:i + chunk], d, thresholds, budget, fs, W, order,
+        xi = x[i:i + chunk]
+        per = Events.empty(device)
+        if ecg_guard and int(budget.get(CLS_TRANSIENT, 0)) > 0:
+            # ECG guard: a transient-only pass with a wide budget finds a periodic train; its
+            # beats are kept as periodic events outside the transient budget and removed before
+            # the budgeted pass, so a train cannot use up the budget of the real transients
+            pe, _ = _sparse_chunk(xi, d, thresholds, {CLS_TRANSIENT: ecg_budget}, fs, W,
+                                  (CLS_TRANSIENT,), amp_cap, ridge, nms, explain, None)
+            flag = periodic_flag(pe)
+            if flag.any():
+                per = pe.select(flag)
+                per.periodic = torch.ones(len(per), dtype=torch.bool, device=device)
+                xi = xi - reconstruct(per, d, xi.shape[0], T, fs=fs)
+        ev, r = _sparse_chunk(xi, d, thresholds, budget, fs, W, order,
                               amp_cap, ridge, nms, explain, sw_p2p_min)
+        ev = _sorted_by_epoch_onset(Events.cat(per, ev)) if len(per) else ev
         ev.epoch = ev.epoch + i
         evs.append(ev)
         rs.append(r)
     ev = Events.cat(*evs) if evs else Events.empty(device)
+    if ecg_guard and len(ev):
+        ev.periodic = ev.periodic | periodic_flag(ev)  # budgeted transients on the train too
     return ev, torch.cat(rs)
 
 
-def periodic_flag(ev: Events, cv_max: float = 0.12, min_count: int = 4) -> Tensor:
-    """(n,) bool, per (epoch, atom): True on a transient atom that fires quasi-periodically
-    (>= ``min_count`` onsets in the epoch, CV of the inter-onset intervals < ``cv_max``) -- the
-    ECG guard. Non-transient events are never flagged."""
+def periodic_flag(ev: Events, cv_max: float = 0.12, min_count: int = 4,
+                  period: tuple[float, float] = (0.33, 2.0)) -> Tensor:
+    """(n,) bool: True on the transients of an epoch that form a quasi-periodic train (the ECG
+    guard). Per epoch, all transient atoms together (a beat can be fitted by different atoms),
+    sorted by onset: the median inter-onset interval must lie in ``period`` (30-180 bpm), and a
+    transient is flagged when an interval to a neighbour is within ``cv_max`` of that median;
+    the epoch needs >= ``min_count`` flagged transients, else none is flagged. Non-transient
+    events are never flagged."""
     n = len(ev)
     out = torch.zeros(n, dtype=torch.bool, device=ev.epoch.device)
-    tr = ev.cls == CLS_TRANSIENT
-    if n < min_count or not tr.any():
+    tr = (ev.cls == CLS_TRANSIENT).nonzero(as_tuple=True)[0]
+    if tr.numel() < min_count:
         return out
-    ti = tr.nonzero(as_tuple=True)[0]
-    key = ev.epoch[ti] * (int(ev.atom.max().item()) + 1) + ev.atom[ti]
-    o = ev.onset[ti]
-    _, p1 = torch.sort(o, stable=True)  # by onset
-    _, p2 = torch.sort(key[p1], stable=True)  # then by (epoch, atom); order = (epoch, atom, onset)
-    order = p1[p2]
-    sk = key[order]
-    so = o[order]
-    u, inv = torch.unique(sk, return_inverse=True)
-    boundary = sk[1:] != sk[:-1]
-    ioi = (so[1:] - so[:-1])
-    gi = inv[:-1][~boundary]
-    ioi_v = ioi[~boundary]
-    cnt = torch.bincount(inv, minlength=u.numel())
-    n_ioi = torch.bincount(gi, minlength=u.numel()).clamp_min(1)
-    mean = torch.bincount(gi, weights=ioi_v, minlength=u.numel()) / n_ioi
-    mean2 = torch.bincount(gi, weights=ioi_v * ioi_v, minlength=u.numel()) / n_ioi
-    sd = (mean2 - mean * mean).clamp_min(0).sqrt()
-    ok = (cnt >= min_count) & (mean > 0) & (sd / mean < cv_max)
-    out[ti[order]] = ok[inv]
+    for e in ev.epoch[tr].unique().tolist():
+        idx = tr[ev.epoch[tr] == e]
+        if idx.numel() < min_count:
+            continue
+        idx = idx[torch.argsort(ev.onset[idx])]
+        ioi = ev.onset[idx][1:] - ev.onset[idx][:-1]
+        med = ioi.median()
+        if not (period[0] <= float(med) <= period[1]):
+            continue
+        good = (ioi - med).abs() <= cv_max * med                 # (m-1,) interval i -> i+1
+        flag = torch.zeros(idx.numel(), dtype=torch.bool, device=out.device)
+        flag[:-1] |= good
+        flag[1:] |= good
+        if int(flag.sum()) >= min_count:
+            out[idx[flag]] = True
     return out
 
 
@@ -439,7 +459,7 @@ def decompose(x: Tensor, d: Dictionary, thresholds: Tensor, budget: dict[int, in
         bg = background_estimate(resid, mask, fs=fs, bands=bands)
         W, _ = whitening_filters(resid, L, fs=fs)  # re-whiten with the (masked) background PSD
     logP = bg["logP"]
-    ev.periodic = periodic_flag(ev)
+    ev.periodic = ev.periodic | periodic_flag(ev)  # keep the ECG-guard flags of sparse_events
     fe = floor_excess(resid, logP, fs=fs, bands=bands)
     return {
         "events": ev,

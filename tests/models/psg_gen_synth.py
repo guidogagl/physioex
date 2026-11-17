@@ -120,13 +120,13 @@ def ecg_train(bpm: float = 60.0, T=T, fs=FS, amp: float = 1.0) -> torch.Tensor:
     period = 60.0 / bpm
     n = int(round(period * fs))
     t = torch.arange(n) / fs
-    spike = (-0.35 * torch.exp(-((t - 0.045) ** 2) / (2 * 0.012 ** 2))
-             + 1.0 * torch.exp(-((t - 0.005) ** 2) / (2 * 0.016 ** 2))
-             - 0.5 * torch.exp(-((t - 0.06) ** 2) / (2 * 0.014 ** 2)))
+    spike = (-0.35 * torch.exp(-((t - 0.145) ** 2) / (2 * 0.012 ** 2))
+             + 1.0 * torch.exp(-((t - 0.105) ** 2) / (2 * 0.016 ** 2))
+             - 0.5 * torch.exp(-((t - 0.16) ** 2) / (2 * 0.014 ** 2)))
     spike -= spike.mean()
     out = torch.zeros(T)
-    t0 = 0.5
-    while t0 + n <= T - 0.5:
+    t0 = 0.5                                              # seconds; QRS ~0.1 s into each beat
+    while int(round(t0 * fs)) + n <= T:
         i = int(round(t0 * fs))
         out[i:i + n] += spike
         t0 += period
