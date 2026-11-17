@@ -156,7 +156,8 @@ def _fit(a, t0):
                 break
             xs.append(_centre(batch)[1])
         x0 = torch.cat(xs).to(device)
-        model.thresholds.copy_(null_thresholds(model.d, phase_surrogate(x0)))
+        with torch.no_grad():   # P2: model.d holds the learnable shapes; the buffer must stay a leaf
+            model.thresholds.copy_(null_thresholds(model.d, phase_surrogate(x0)))
     if a.gen_model == "p1":
         batches = []
         for i, batch in enumerate(tr):
