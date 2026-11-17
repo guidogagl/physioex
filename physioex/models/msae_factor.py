@@ -253,7 +253,8 @@ def _ctx_max(v: torch.Tensor, w: int) -> torch.Tensor:
 
 
 @torch.no_grad()
-def rule_masks(x: torch.Tensor, fs: int, n_tok: int, swa_p2p: float = 3.0) -> torch.Tensor:
+def rule_masks(x: torch.Tensor, fs: int, n_tok: int, swa_p2p: float = 3.0,
+               ref: Optional[torch.Tensor] = None) -> torch.Tensor:
     """``(B, epoch) -> (B, n_tok, 4)`` float token masks of the weak rules, mirrors of
     :mod:`physioex.explain.concept_refs` thresholds on the token grid. The cached clean EEG is
     ``RobustScale``-normalized per night (``x_uV = x * scale + median``, scale ~ 15-30 uV on EEG), so
@@ -261,19 +262,23 @@ def rule_masks(x: torch.Tensor, fs: int, n_tok: int, swa_p2p: float = 3.0) -> to
     ``kc`` 0.3-4 Hz peak-to-peak over ±1 token >= 15 x the epoch's median |x|;
     ``swa`` 0.5-2 Hz peak-to-peak over ±1 token >= ``swa_p2p``;
     ``spindle`` 12-15 Hz RMS >= trimmed mean + 1.5 sd of the epoch and relative sigma power >= 0.2;
-    ``alpha`` 8-13 Hz relative power >= 0.3, above theta (4-7) and beta (13-30)."""
+    ``alpha`` 8-13 Hz relative power >= 0.3, above theta (4-7) and beta (13-30).
+    ``ref`` (same shape as ``x``): the epoch-level statistics (KC median, spindle trimmed mean
+    and sd) are computed on ``ref`` and applied to ``x`` (frozen thresholds, e.g. ``x`` a
+    reconstruction of ``ref``); default ``None`` = on ``x`` itself."""
     x = x.float()
+    r = x if ref is None else ref.float()
     x_kc, x_sw = _bandpass(x, 0.3, 4, fs), _bandpass(x, 0.5, 2, fs)
-    mad = x_kc.abs().median(-1).values[:, None] + 1e-9
+    mad = _bandpass(r, 0.3, 4, fs).abs().median(-1).values[:, None] + 1e-9
     kc = _ctx_max(_tok_reduce(x_kc, n_tok, "p2p"), 1) >= 15 * mad
     swa = _ctx_max(_tok_reduce(x_sw, n_tok, "p2p"), 1) >= swa_p2p
-    sig = _bandpass(x, 12, 15, fs)
-    rms = _tok_reduce(sig, n_tok, "rms")
-    lo, hi = rms.quantile(0.1, dim=-1, keepdim=True), rms.quantile(0.9, dim=-1, keepdim=True)
-    keep = (rms >= lo) & (rms <= hi)
+    rms = _tok_reduce(_bandpass(x, 12, 15, fs), n_tok, "rms")
+    rr = rms if ref is None else _tok_reduce(_bandpass(r, 12, 15, fs), n_tok, "rms")
+    lo, hi = rr.quantile(0.1, dim=-1, keepdim=True), rr.quantile(0.9, dim=-1, keepdim=True)
+    keep = (rr >= lo) & (rr <= hi)
     cnt = keep.sum(-1, keepdim=True).clamp_min(1)
-    mu = (rms * keep).sum(-1, keepdim=True) / cnt
-    sd = (((rms - mu) ** 2) * keep).sum(-1, keepdim=True).div(cnt).sqrt()
+    mu = (rr * keep).sum(-1, keepdim=True) / cnt
+    sd = (((rr - mu) ** 2) * keep).sum(-1, keepdim=True).div(cnt).sqrt()
     bands = {k: _tok_reduce(_bandpass(x, a, b, fs), n_tok, "rms") ** 2 for k, (a, b) in
              {"d": (0.5, 4), "t": (4, 7), "a": (8, 13), "s": (12, 15), "b": (13, 30), "w": (1, 30)}.items()}
     rel_s = F.avg_pool1d(bands["s"][:, None], 5, stride=1, padding=2)[:, 0] / (

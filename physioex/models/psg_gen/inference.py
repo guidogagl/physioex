@@ -210,6 +210,9 @@ def null_thresholds(d: Dictionary, bg: Tensor, fs: int = FS, q: float = 0.95, n_
     return best.quantile(q, dim=1)
 
 
+SW_SCORE_FLOOR = 0.35  # minimum shape correlation of a slow wave that meets the p2p rule
+
+
 def _sparse_chunk(x: Tensor, d: Dictionary, thr: Tensor, budget: dict[int, int], fs: int,
                   whiten_w: Tensor | None, order: Sequence[int], amp_cap: float,
                   ridge: float, nms: bool, explain: bool, sw_p2p_min: float | None) -> tuple[Events, Tensor]:
@@ -245,6 +248,9 @@ def _sparse_chunk(x: Tensor, d: Dictionary, thr: Tensor, budget: dict[int, int],
     ncol = torch.zeros(B, dtype=torch.long, device=device)
     tg = torch.arange(Tp, device=device) - C  # atom-centre coordinate of the conv index
     ev_b, ev_col, kk_all, tt_all, sc_all = [], [], [], [], []
+    kt = torch.nonzero(cls == CLS_TRANSIENT, as_tuple=True)[0]
+    if kt.numel() == 0 or int(budget.get(CLS_TRANSIENT, 0)) <= 0 or CLS_TRANSIENT not in tuple(order):
+        kt = None
     for ccls in order:
         bcls = int(budget.get(ccls, 0))
         ks = torch.nonzero(cls == ccls, as_tuple=True)[0]
@@ -252,6 +258,10 @@ def _sparse_chunk(x: Tensor, d: Dictionary, thr: Tensor, budget: dict[int, int],
             continue
         A_c, Q_c = A[ks], Q[ks]
         thr_c, n_d_c, boxes_c = thr[ks], n_d[ks], boxes[ks]
+        if sw_p2p_min and ccls == CLS_SLOWWAVE:
+            # AASM defines a slow wave by its amplitude: with the p2p rule active the rule is the
+            # acceptance criterion and the null threshold is capped at a shape floor
+            thr_c = thr_c.clamp_max(SW_SCORE_FLOOR)
         quad_rows = use_quad_all[ks]
         use_quad = bool(quad_rows.any())
         forbid = _edge_forbid(T, L, n_d_c)[None].expand(B, -1, -1).clone() if nms \
@@ -266,6 +276,14 @@ def _sparse_chunk(x: Tensor, d: Dictionary, thr: Tensor, budget: dict[int, int],
             if p2p_atom is not None:
                 c_o = c if whiten_w is None else F.conv1d(r[:, None], A_c[:, None], padding=L - 1)
                 s = s.masked_fill(c_o.abs() * p2p_atom[None, :, None] < sw_p2p_min, -1.0)
+            if kt is not None and ccls == CLS_SLOWWAVE:
+                # class competition by shape: a slow-wave candidate that a transient atom fits
+                # better within +-0.25 s (a K-complex meeting the p2p rule) is left to the
+                # transient pass
+                st = _score_maps(rw, Aw[kt], Qw[kt], boxes[kt], L, False)[2].amax(1, keepdim=True)
+                hw = int(0.25 * fs)
+                st = F.max_pool1d(st, 2 * hw + 1, 1, hw)
+                s = s.masked_fill(score < st, -1.0)
             best, idx = s.reshape(B, -1).max(-1)
             k_loc = idx // Tp
             t = idx % Tp
@@ -441,7 +459,7 @@ def counts(ev: Events, B: int, exclude_periodic: bool = True) -> Tensor:
 
 
 def decompose(x: Tensor, d: Dictionary, thresholds: Tensor, budget: dict[int, int],
-              fs: int = FS, passes: int = 2, bands=BG_BANDS, **kw) -> dict:
+              fs: int = FS, passes: int = 2, bands=BG_BANDS, whiten: bool = True, **kw) -> dict:
     """The full sequential pipeline (R1) on an epoch batch: whitening from the robust PSD ->
     sparse_events -> background estimate on the masked residual -> re-whitening with the new
     background; ``passes`` times. ``kw`` is forwarded to :func:`sparse_events` (``sw_p2p_min``
@@ -451,13 +469,14 @@ def decompose(x: Tensor, d: Dictionary, thresholds: Tensor, budget: dict[int, in
     kw.setdefault("sw_p2p_min", 3.0)
     B, T = x.shape
     L = d.atoms.shape[1]
-    W, _ = whitening_filters(x, L, fs=fs)
+    W = whitening_filters(x, L, fs=fs)[0] if whiten else None  # whiten=False: ablation
     ev, resid = Events.empty(x.device), x
     for _ in range(max(int(passes), 1)):
-        ev, resid = sparse_events(x, d, thresholds, budget, fs=fs, whiten_w=W, **kw)
+        ev, resid = sparse_events(x, d, thresholds, budget, fs=fs, whiten_w=W, whiten=whiten, **kw)
         mask = support_mask(ev, d, B, T, fs=fs)
         bg = background_estimate(resid, mask, fs=fs, bands=bands)
-        W, _ = whitening_filters(resid, L, fs=fs)  # re-whiten with the (masked) background PSD
+        if whiten:
+            W, _ = whitening_filters(resid, L, fs=fs)  # re-whiten with the (masked) background PSD
     logP = bg["logP"]
     ev.periodic = ev.periodic | periodic_flag(ev)  # keep the ECG-guard flags of sparse_events
     fe = floor_excess(resid, logP, fs=fs, bands=bands)

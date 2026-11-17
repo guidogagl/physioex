@@ -165,7 +165,7 @@ def synth_background(logP: torch.Tensor, fs: int = FS, T: int = EPOCH, win: floa
                      hop: float = 1.0, bands=BG_BANDS, seed: int | None = None) -> torch.Tensor:
     """Band-shaped noise floor with the powers 10**logP (B, n_win, n_bands) -> (B, T): per
     window a random band-limited Gaussian with the target powers (calibrated on the windowed
-    segment), Hann-windowed and overlap-added with normalised weights."""
+    segment), Hann-windowed and overlap-added, normalised by sqrt(sum w^2)."""
     B, n_win, nb = logP.shape
     dev, dt = logP.device, logP.dtype
     gen = torch.Generator(device=dev.type).manual_seed(0 if seed is None else int(seed))
@@ -188,11 +188,13 @@ def synth_background(logP: torch.Tensor, fs: int = FS, T: int = EPOCH, win: floa
         Sp[..., m] = S
         z = torch.fft.irfft(Sp, n=W) * w                  # (B, n_win, W) windowed segment
         cur = (torch.fft.rfft(z, n=W).abs() ** 2 / (w ** 2).sum())[..., m].mean(-1)
-        z = z * torch.sqrt(P[:, :, bnd:bnd + 1] * W2.mean() / cur.unsqueeze(-1).clamp_min(1e-12))
+        z = z * torch.sqrt(P[:, :, bnd:bnd + 1] / cur.unsqueeze(-1).clamp_min(1e-12))
         Z = torch.zeros(B, n_win, T, device=dev, dtype=dt)
         Z[:, rows, idx] = z
         y += Z.sum(1)
-    return y / W2.clamp_min(1e-6)[None]
+    # independent segments s_i windowed once (z_i = w s_i): sum_i w s_i / sqrt(sum_i w^2) has the
+    # power of s at every sample, and stays finite at the epoch edges where w -> 0
+    return y / W2.clamp_min(1e-12).sqrt()[None]
 
 
 def floor_excess(resid: torch.Tensor, logP: torch.Tensor, fs: int = FS, bands=BG_BANDS,
