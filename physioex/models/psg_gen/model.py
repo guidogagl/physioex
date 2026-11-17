@@ -50,6 +50,8 @@ class PSGGenBase(nn.Module):
         self.d_e = len(BG_BANDS) + len(CLASSES) + 2
         self.d_n = 4
         self.vq_levels, self.n_codes, self.site_of_dataset = {}, {}, None
+        # device anchor: P1 has no parameters, and the dump tools read the device from them
+        self._anchor = nn.Parameter(torch.zeros(()), requires_grad=False)
 
     # ------------------------------------------------------------------ dictionary
     @property
@@ -193,3 +195,32 @@ def fidelity_gate(x: Tensor, x_hat: Tensor, fs: int = FS, n_tok: int = 60) -> di
         out[r] = {"f1": f1, "n_ref": int(a.sum()), "n_hat": int(b.sum())}
     out["resid_share"] = float((x - x_hat).pow(2).sum() / x.pow(2).sum().clamp_min(1e-12))
     return out
+
+
+def build_from_args(a: dict) -> PSGGenBase:
+    """psg_gen model from the ``args`` of a run's ``run.json`` (``model: psg_gen``): the
+    dictionary metadata are rebuilt deterministically, the atoms and thresholds come from the
+    state dict (buffers)."""
+    from physioex.models.psg_gen.dicts import full_dictionary, random_dictionary
+
+    budget = {int(k): int(v) for k, v in (a.get("budget") or {0: 14, 1: 4, 2: 20}).items()}
+    d = full_dictionary(fs=a.get("fs") or FS)
+    if a.get("variant") == "random":
+        d = random_dictionary(d, seed=int(a.get("fold", 0)))
+    thr = torch.zeros(len(d))
+    kind, var = a.get("gen_model", "p1"), a.get("variant", "full")
+    common = dict(sequence_length=a["seq"], fs=a.get("fs") or FS)
+    if kind == "p1":
+        from physioex.models.psg_gen.p1 import PSGGenP1
+
+        return PSGGenP1(d, budget, thr, fixed_dict=var in ("fixed", "random"), **common)
+    if kind == "p2":
+        from physioex.models.psg_gen.p2 import PSGGenP2
+
+        return PSGGenP2(d, budget, thr, fixed_dict=var in ("fixed", "random"), no_adv=var == "noadv",
+                        events_only=var == "events_only", **common)
+    if kind == "p3":
+        from physioex.models.psg_gen.p3 import PSGGenP3
+
+        return PSGGenP3(d, budget, thr, no_adv=var == "noadv", **common)
+    raise ValueError(f"unknown psg_gen model {kind!r}")

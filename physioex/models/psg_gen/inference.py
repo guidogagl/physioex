@@ -112,6 +112,17 @@ def _edge_forbid(T: int, L: int, n_d: Tensor) -> Tensor:
     return (t[None, :] < lo[:, None]) | (t[None, :] > hi[:, None])
 
 
+def _xcorr(r: Tensor, A: Tensor) -> Tensor:
+    """``F.conv1d(r[:, None], A[:, None], padding=L - 1)`` by FFT: (B, T) x (K, L) -> (B, K, T + L - 1).
+    The atoms are long (8 s): the direct convolution dominated the CPU time (~20x)."""
+    T, L = r.shape[-1], A.shape[-1]
+    n = T + L - 1
+    nf = 1 << (n - 1).bit_length()
+    R = torch.fft.rfft(r.float(), n=nf)
+    K = torch.fft.rfft(A.float().flip(-1), n=nf)
+    return torch.fft.irfft(R[:, None, :] * K[None], n=nf)[..., :n]
+
+
 def _score_maps(r: Tensor, A: Tensor, Q: Tensor, boxes: Tensor, L: int, use_quad: bool):
     """Correlation maps of the residual with the (centred) atoms.
 
@@ -120,14 +131,14 @@ def _score_maps(r: Tensor, A: Tensor, Q: Tensor, boxes: Tensor, L: int, use_quad
     normalised correlation (Cauchy-Schwarz cosine, cos/sin combined for pairs).
     """
     Tp = r.shape[1] + L - 1
-    c = F.conv1d(r[:, None], A[:, None], padding=L - 1)
+    c = _xcorr(r, A)
     if use_quad:
-        c2 = F.conv1d(r[:, None], Q[:, None], padding=L - 1)
+        c2 = _xcorr(r, Q)
         mag = (c * c + c2 * c2).sqrt()
     else:
         c2 = None
         mag = c.abs()
-    e = F.conv1d((r * r)[:, None], boxes[:, None], padding=L - 1).clamp_min(1e-6)
+    e = _xcorr(r * r, boxes.float()).clamp_min(1e-6)
     return c, c2, mag / e.sqrt()
 
 
@@ -274,7 +285,7 @@ def _sparse_chunk(x: Tensor, d: Dictionary, thr: Tensor, budget: dict[int, int],
             s = score.masked_fill(forbid, -1.0)
             s = s.masked_fill(count[:, None, None] >= bcls, -1.0)
             if p2p_atom is not None:
-                c_o = c if whiten_w is None else F.conv1d(r[:, None], A_c[:, None], padding=L - 1)
+                c_o = c if whiten_w is None else _xcorr(r, A_c)
                 s = s.masked_fill(c_o.abs() * p2p_atom[None, :, None] < sw_p2p_min, -1.0)
             if kt is not None and ccls == CLS_SLOWWAVE:
                 # class competition by shape: a slow-wave candidate that a transient atom fits

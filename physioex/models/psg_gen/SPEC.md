@@ -3,7 +3,7 @@
 Branch `feat/psg-gen`. Source of the design: `sleep-lens/docs/PROGETTI_GENERATIVI.md` (three designs P1, P2, P3 that
 converge on one common core) under the requirements R1-R17 of `sleep-lens/docs/CRITICA_GENERATIVA.md`. The designers'
 prototypes are in `_proto/` (`p1lib.py`, `prior_constants.py`, `p2lib.py`, `p3lib.py`, `p3infer.py`): they are the
-reference implementations to port, not code to import. `_proto/` is removed before the merge.
+reference implementations to port, not code to import. `_proto/` was removed after the port (it stays in commit a685530).
 
 ## 0. Conventions
 
@@ -248,3 +248,29 @@ Budgets per epoch per class from the 99th percentile of the rule-detector counts
 slow wave 0.50, theta 0.55, transient 0.57). Background window 4 s, hop 1 s, context 6 s, quantile 0.2 with the Gamma
 correction. Gain: q20 of the 3 s log-RMS over 20 min. Amplitude cap 5 x window RMS. NMS +- d/2. Periodic: CV < 0.12,
 >= 4 events. P2: ISTA 10 iterations; P3: false-alarm alpha 0.05.
+
+## 7. Deviazioni dall'implementazione (17.11.2026)
+
+- Onde lente: con la regola p2p attiva la soglia di correlazione è limitata a `SW_SCORE_FLOOR = 0.35`
+  (la definizione AASM è d'ampiezza); una candidata che un atomo transiente spiega meglio entro ±0,25 s
+  passa alla classe transiente (competizione di forma).
+- `synth_background`: overlap-add normalizzato con `sqrt(sum w^2)`; la versione precedente era circa 1000
+  volte troppo forte ai bordi.
+- Correlazioni via FFT (`inference._xcorr`), identiche a `conv1d` entro 1e-4, circa 8 volte più veloci su CPU.
+- Test 08: il gate R12 con fondo sintetico è una misura, non un vincolo (sul sintetico: swa 0,45, fuso
+  0,64); il test verifica l'identità con il residuo misurato e soglie di regressione. Il criterio 0,9 si
+  verifica su MASS al passo 5.
+- Test 09: KC piantati ad ampiezza 4 (a 2 solo circa 6 su 48 superano il nullo); allineamento al centro
+  d'energia, convenzione del dizionario.
+- P1: E-step dell'apprendimento con i transienti prima; restart solo degli atomi mai usati; soglie rifatte
+  su surrogati a fase casuale.
+- P2: soglie apprese solo sopra il nullo (`null + softplus`), selezione di training alla soglia nulla con
+  gate morbidi; nullo delle forme libere ricalcolato ogni 20 passi; forme libere parametrizzate ×√L;
+  pesi a pari norma di gradiente moltiplicati per un'importanza a priori (prezzo 0,1, Gram 0,1,
+  avversario 0,2); inversione dell'avversario con rampa DANN su 20.000 passi. Test 10: R² sui supporti
+  > 0,7 (il tetto di rumore del sintetico è circa 0,74, senza addestramento 0,73).
+- P3: soglie Beta/Bonferroni con m = campioni del supporto (più lasche del nullo empirico per gli atomi
+  passa-basso); NLL del fondo = verosimiglianza dell'errore di predizione del filtro a salto; ampiezze con
+  il LS comune (variante GLS non portata); rete di proposta ammortizzata non implementata (opzionale).
+- La CLI non gira sulla mini-cache di vaglini (il loader merged elenca i soggetti dagli EDF grezzi): lo
+  smoke della CLI si fa su Sofia.
