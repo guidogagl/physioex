@@ -263,7 +263,14 @@ def main(argv=None):
         pool = [k for k in keys if sets[k] == "pool" and scale.get(k, {}).get("eeg", {}).get("scale")]
         pick = [pool[i] for i in sorted(rng.choice(len(pool), min(a.n_nights, len(pool)), replace=False))]
         dev = "cuda" if torch.cuda.is_available() else "cpu"
-        codec = Codec(a.combo_dir, dev)
+        run_args = json.load(open(os.path.join(a.combo_dir, "eeg", "s2", "run.json")))["args"]
+        if run_args.get("model") == "psg_gen" or run_args.get("gen_model"):
+            # generative models: the swaps act on components (gain, background, events), see codec_adapter
+            from physioex.models.psg_gen.codec_adapter import GenCodec
+
+            codec = GenCodec(a.combo_dir, dev)
+        else:
+            codec = Codec(a.combo_dir, dev)
         rows = swaps(codec, a.dump, meta, scale, pick, float(meta["fs"]["eeg"]), n_ep=a.n_ep, seed=a.seed)
         out["swaps"] = summarize_swaps(rows)
         out["swap_nights"] = pick
