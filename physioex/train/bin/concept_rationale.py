@@ -899,7 +899,7 @@ def load(dump, mod, refs_needed, extra_mods=(), frac=0.15, min_n=3, n_ss01=10, s
         keys += pick
         sets.update({k: s for k in pick})
     keys = sorted(keys)
-    A = {k: [] for k in ("P", "F", "S", "SF", "y", "night", "gname", "set", "logscale", "codes_P", "codes_E", "codes_N",
+    A = {k: [] for k in ("P", "F", "S", "SF", "y", "night", "gname", "unit", "set", "logscale", "codes_P", "codes_E", "codes_N",
                          "Eq", "Nq")}
     X = {f"P@{m}": [] for m in tuple(extra_mods) + tuple(opt_mods)}
     X.update({f"rel_back@{m}": [] for m in extra_mods})
@@ -920,6 +920,7 @@ def load(dump, mod, refs_needed, extra_mods=(), frac=0.15, min_n=3, n_ss01=10, s
         A["y"].append(np.repeat(z["y"].astype(np.int8), T))
         A["night"].append(np.full(n * T, i, np.int32))
         A["gname"].append(np.full(n * T, _group(meta["nights"][k]["unit"]), object))
+        A["unit"].append(np.full(n * T, meta["nights"][k]["unit"], object))
         A["set"].append(np.full(n * T, sets[k], object))
         sc = scale.get(k, {}).get(mod, {}).get("scale")
         A["logscale"].append(np.full(n * T, np.log(sc) if sc else np.nan, np.float32))
@@ -957,6 +958,11 @@ def load(dump, mod, refs_needed, extra_mods=(), frac=0.15, min_n=3, n_ss01=10, s
     D.update({k: np.concatenate(v) for k, v in X.items() if v})
     D["gname"] = D["gname"].astype(str)
     D["set"] = D["set"].astype(str)
+    pool = D["set"] == "pool"
+    if "unit" in D and len(np.unique(D["gname"][pool])) == 1:
+        # one pool item (e.g. MASS only): the units (SS02-05) are the sites of the leave-one-site-out folds
+        D["gname"] = np.where(pool, D["unit"].astype(str), D["gname"])
+        print(f"[load] one pool item: sites = units {sorted(set(D['gname'][pool].tolist()))}", flush=True)
     D["refs"] = {}
     for r, parts in R.items():
         if any(p is not None for p in parts):
