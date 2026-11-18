@@ -87,7 +87,7 @@ def stage_model(ev, logP, n, d, fs=100):
     sw = np.zeros(n)
     sel = ok & (ev["cls"] == 2)
     np.add.at(sw, ev["epoch"][sel], ev["dur"][sel])
-    freq = d.freq.numpy()[ev["atom"]]
+    freq = d.freq.cpu().numpy()[ev["atom"]]
     burst = ok & (ev["cls"] == 0)
     al_b = np.zeros(n)
     sa = burst & (freq >= 8) & (freq < 11)
@@ -216,7 +216,7 @@ def lexicon(a):
                     dct[t] = v
         n_tok[s] += n * TOK
         print(f"[lexicon] {k}: {int(ok.sum())} events", flush=True)
-    cls, freq, names = d.cls.numpy(), d.freq.numpy(), list(d.names)
+    cls, freq, names = d.cls.cpu().numpy(), d.freq.cpu().numpy(), list(d.names)
     out = {"n_atoms": K, "n_tokens": n_tok, "refs": {}}
     for r, s in LEX_REFS.items():
         p = np.concatenate(pos[r]) if pos[r] else np.zeros(0, int)
