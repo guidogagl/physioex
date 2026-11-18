@@ -273,7 +273,8 @@ def test_08_encode_shapes():
     x[:, L // 2] = xc[:, None]
     with torch.no_grad():
         dec = m.encode(x)
-    assert dec["N"].shape == (B, 4)
+    assert dec["N"].shape == (B, m.d_e)          # d_n = 4 informative columns, zero-padded to d_e
+    assert float(dec["N"][:, m.d_n:].abs().sum()) == 0.0
     assert dec["E"].shape == (B, m.d_e)
     assert dec["P"].shape == (B, 60, m.d_p)
     w = m.decode(dec)

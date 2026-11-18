@@ -99,8 +99,9 @@ class PSGGenBase(nn.Module):
                           dec["eps"].float().mean(1, keepdim=True)], -1)
 
     def night_state(self, x_ctx: Tensor) -> Tensor:
-        """(B, L, T) -> (B, 4): [log10 g of the context; 20/50/80 % quantiles of the per-window
-        (3 s) log10 RMS]."""
+        """(B, L, T) -> (B, d_e): [log10 g of the context; 20/50/80 % quantiles of the per-window
+        (3 s) log10 RMS], zero-padded from ``d_n`` = 4 to ``d_e`` columns: the stager of
+        ``qformer_stager`` (and the concept_* tools) take N and E of the same width."""
         out = []
         n = 3 * self.fs
         for v in x_ctx.float():
@@ -108,7 +109,8 @@ class PSGGenBase(nn.Module):
             m = v.numel() // n
             lr = v.reshape(-1)[:m * n].reshape(m, n).pow(2).mean(-1).sqrt().clamp_min(1e-9).log10()
             out.append(torch.cat([g[None].to(v.device), lr.quantile(torch.tensor([0.2, 0.5, 0.8], device=v.device))]))
-        return torch.stack(out)
+        N = torch.stack(out)
+        return torch.nn.functional.pad(N, (0, self.d_e - N.shape[1]))
 
     # ------------------------------------------------------------------ codec surface
     def encode(self, x: Tensor) -> dict:
