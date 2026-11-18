@@ -1019,9 +1019,14 @@ def _latent_views(D, seed=0):
         if f"{s}q" not in D:
             continue
         Z = D[f"{s}q"]
+        # constant columns (the zero padding of psg_gen N) and rank deficiency make the ICA whitening
+        # divide by zero: drop them and cap the components at the numerical rank
+        keep = Z[first & pool].astype(np.float64).std(0) > 1e-8
+        Z = Z[:, keep]
         fit = Z[first & pool]
-        pca = PCA(min(PCA_DIM, Z.shape[1]), random_state=seed).fit(fit)
-        ica = FastICA(min(ICA_DIM, Z.shape[1]), random_state=seed, max_iter=500, whiten="unit-variance").fit(fit)
+        rank = int(np.linalg.matrix_rank((fit - fit.mean(0)) / fit.std(0), tol=1e-6))
+        pca = PCA(min(PCA_DIM, rank), random_state=seed).fit(fit)
+        ica = FastICA(min(ICA_DIM, rank), random_state=seed, max_iter=500, whiten="unit-variance").fit(fit)
         D[f"ICA_{s}"] = ica.transform(Z).astype(np.float32)
         D[f"{s}q"] = pca.transform(Z).astype(np.float32)
 
