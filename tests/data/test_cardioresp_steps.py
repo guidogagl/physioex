@@ -24,6 +24,7 @@ from physioex.data.steps import (
     ChebyshevLowpass,
     FFTResample,
     FixedLength,
+    Identity,
     InterpResample,
     Clip,
     ZScore,
@@ -175,7 +176,7 @@ def test_interp_resample_length_and_fs(rng):
     x = rng.standard_normal(n).astype(np.float32)
     cs = InterpResample(1024).compile(fs)
     assert cs.fs_out == 1024.0 / 30.0
-    out = cs(x)
+    out = cs.apply(x)
     # 8 h at 34.133 samples/s -> floor(n/fs * 1024/30)
     expected = int(np.floor(n / fs * (1024.0 / 30.0)))
     assert out.shape == (expected,), f"got {out.shape}, want ({expected},)"
@@ -559,8 +560,6 @@ def test_epoch_slicing_fs_1024_over_30():
     x = np.arange(n, dtype=np.float32)
     out = _EpochSlicer.epoch(x, fs)
     assert out.shape == (1200, 1024), f"fs=1024/30 must give 1024 samples/epoch, got {out.shape}"
-    # The int() cast would have given 1023 samples/epoch and misaligned epochs.
-    assert int(30.0 * (1024.0 / 30.0)) == 1023, "sanity: int() truncates"
     assert int(round(30.0 * (1024.0 / 30.0))) == 1024
 
 

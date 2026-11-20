@@ -27,8 +27,8 @@ def _identity(labels: np.ndarray) -> np.ndarray:
 def _aasm4(labels: np.ndarray) -> np.ndarray:
     """AASM 4-class scheme: W=0, N1->1, N2->1, N3=2, REM=3, -1 stays -1."""
     labels = np.asarray(labels)
-    # remap[value + 1] for value in {-1, 0..4}; index 0 is never hit.
-    remap = np.array([0, 0, 1, 1, 2, 3], dtype=labels.dtype)
+    # remap[value + 1] for value in {-1, 0..4}; -1 (unscored) stays -1.
+    remap = np.array([-1, 0, 1, 1, 2, 3], dtype=labels.dtype)
     return remap[labels + 1]
 
 

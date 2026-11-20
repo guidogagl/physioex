@@ -101,7 +101,7 @@ class ZScore(PreprocessingStep):
     def spec(self) -> str:
         return self._build_spec(ddof=self.ddof, eps=self.eps)
 
-    def compile(self, fs_in: float) -> CompiledStep:
+    def compile(self, fs_in: float, header: Optional[dict] = None) -> CompiledStep:
         ddof = self.ddof
         eps = self.eps
 
