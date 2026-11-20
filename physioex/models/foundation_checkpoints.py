@@ -26,7 +26,7 @@ import subprocess
 import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union
 
 logger = logging.getLogger("physioex.foundation.checkpoints")
 
@@ -62,6 +62,7 @@ class CheckpointSource:
 
     # "huggingface_repo"  — full model directory, use snapshot_download / from_pretrained
     # "huggingface_file"  — single file in a HF repo, use hf_hub_download()
+    # "raw_url"           — direct file download from raw URLs (one per filename)
     # "github"            — shallow-clone a GitHub repo and extract a file
     # "none"              — no checkpoint needed (handled by from_pretrained inside wrapper)
     source_type: str
@@ -70,7 +71,11 @@ class CheckpointSource:
     repo_id: str = ""
 
     # For huggingface_file: remote filename(s) to download (may include subdirs)
+    # For raw_url: filename(s) in the local cache, one per URL
     filenames: List[str] = field(default_factory=list)
+
+    # For raw_url: URL(s) to download, positionally paired with filenames
+    raw_urls: List[str] = field(default_factory=list)
 
     # For github: path inside the cloned repo to the checkpoint file
     github_internal_path: str = ""
@@ -150,6 +155,16 @@ REVE_POSITIONS_SOURCE = CheckpointSource(
     is_directory=True,
     required_files=["config.json", "model.safetensors"],
 )
+
+
+def _register_checkpoint_source(name: str, source: CheckpointSource) -> None:
+    """Register (or replace) a checkpoint source under *name*.
+
+    Foundation models (biometric encoders, etc.) ship a static registry;
+    third-party sleep-staging models (see ``physioex.models.pretrained``)
+    register their sources here at import time.
+    """
+    CHECKPOINT_REGISTRY[name] = source
 
 
 # ── Public API ───────────────────────────────────────────────────────
@@ -232,6 +247,15 @@ def ensure_checkpoint(
             logger.info(f"[{model_name}] Checkpoint cached at {model_dir}")
             return str(model_dir)
         return _download_hf_repo(model_name, source, model_dir)
+
+    elif source.source_type == "raw_url":
+        primary = model_dir / (source.local_filename or Path(source.filenames[0]).name)
+        if primary.exists() and all(
+            (model_dir / f).exists() for f in source.filenames
+        ):
+            logger.info(f"[{model_name}] Checkpoint cached at {model_dir}")
+            return str(primary)
+        return _download_raw_url(model_name, source, model_dir)
 
     elif source.source_type == "github":
         local_name = source.local_filename or Path(source.github_internal_path).name
@@ -325,6 +349,44 @@ def _download_hf_repo(
         ) from e
 
     return str(model_dir)
+
+
+def _download_raw_url(
+    model_name: str, source: CheckpointSource, model_dir: Path
+) -> Union[str, List[str]]:
+    """Download file(s) from raw URLs (one file per URL, e.g. GitHub raw).
+
+    Each file is written to a ``<name>.part`` and atomically renamed, so a
+    cache hit never contains a truncated download.
+    """
+    import urllib.request
+
+    model_dir.mkdir(parents=True, exist_ok=True)
+    if len(source.raw_urls) != len(source.filenames):
+        raise ValueError(
+            f"raw_url source for {model_name!r} needs one URL per filename "
+            f"(got {len(source.raw_urls)} URLs, {len(source.filenames)} filenames)"
+        )
+    targets = [model_dir / f for f in source.filenames]
+    for url, target in zip(source.raw_urls, targets):
+        if target.exists():
+            logger.info(f"[{model_name}] Checkpoint cached at {target}")
+            continue
+        part = target.with_name(target.name + ".part")
+        logger.info(f"[{model_name}] Downloading {url} ...")
+        try:
+            with urllib.request.urlopen(url, timeout=300) as resp, open(part, "wb") as f:
+                shutil.copyfileobj(resp, f)
+            os.replace(part, target)
+        except Exception as e:
+            if part.exists():
+                part.unlink(missing_ok=True)
+            raise RuntimeError(
+                f"Failed to download {url}: {e}\n"
+                f"You can manually place the file at {target}"
+            ) from e
+        logger.info(f"[{model_name}] Cached at {target}")
+    return [str(t) for t in targets]
 
 
 def _download_github(model_name: str, source: CheckpointSource, model_dir: Path) -> str:
