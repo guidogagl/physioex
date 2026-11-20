@@ -2,7 +2,7 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 import hashlib
-from typing import Callable, List
+from typing import Any, Callable, Dict, List, Optional
 import numpy as np
 
 
@@ -32,8 +32,18 @@ class PreprocessingStep(ABC):
         ...
 
     @abstractmethod
-    def compile(self, fs_in: float) -> CompiledStep:
-        """Precompute any expensive state and return a callable specialized for fs_in."""
+    def compile(
+        self, fs_in: float, header: Optional[Dict[str, Any]] = None
+    ) -> CompiledStep:
+        """Precompute any expensive state and return a callable specialized
+        for fs_in.
+
+        ``header`` is an optional per-channel metadata dict (physical
+        dimension, physical min/max, ...) forwarded to steps that declare
+        they need it (``needs_header`` attribute, e.g. ``PhysicalScale``).
+        Steps that ignore it simply do not read it; the signature default
+        keeps every existing ``compile(fs)`` call site working.
+        """
         ...
 
     def _format_param(self, v) -> str:
@@ -77,11 +87,15 @@ class PreprocessingPipeline:
         joined = "|".join(self.spec())
         return hashlib.sha256(joined.encode("utf-8")).hexdigest()[:16]
 
-    def compile(self, fs_in: float) -> CompiledPipeline:
+    def compile(
+        self, fs_in: float, header: Optional[Dict[str, Any]] = None
+    ) -> CompiledPipeline:
+        """Compile every step for ``fs_in``, threading the per-channel
+        ``header`` (optional) through to the steps that need it."""
         compiled = []
         fs = fs_in
         for step in self.steps:
-            cs = step.compile(fs)
+            cs = step.compile(fs, header)
             compiled.append(cs)
             if cs.fs_out > 0:  # 0 = fs-not-meaningful (e.g. spectrogram)
                 fs = cs.fs_out

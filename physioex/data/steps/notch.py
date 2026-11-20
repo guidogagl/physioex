@@ -1,4 +1,6 @@
 import logging
+from typing import Optional
+
 import numpy as np
 from scipy.signal import iirnotch, sosfilt, sosfiltfilt
 from physioex.data.pipeline import PreprocessingStep, CompiledStep
@@ -22,7 +24,7 @@ class NotchFilter(PreprocessingStep):
     def spec(self) -> str:
         return self._build_spec(freq=self.freq, quality=self.quality)
 
-    def compile(self, fs_in: float) -> CompiledStep:
+    def compile(self, fs_in: float, header: Optional[dict] = None) -> CompiledStep:
         nyq = 0.5 * fs_in
         if not 0 < self.freq < nyq:
             logger.warning(

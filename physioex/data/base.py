@@ -39,6 +39,7 @@ from physioex.data.events import (
     events_to_dicts,
     dicts_to_events,
 )
+from physioex.data.labels import get_label_transform
 from physioex.data.modality import infer_channel_modality, ModalityType, MODALITY_TYPES
 
 logger = logging.getLogger("physioex.data")
@@ -122,7 +123,7 @@ class BasePhysioDataset(Dataset):
         cache_dir: Optional[str] = None,
         cache_enabled: bool = True,
         epoch_length_sec: Optional[float] = None,
-        label_transform: Optional[Callable] = None,
+        label_transform: Union[str, Callable, None] = None,
         skip_corrupt: bool = True,
         skip_subjects_without_channels: bool = True,
         stage_map: Optional[Dict] = None,
@@ -147,7 +148,14 @@ class BasePhysioDataset(Dataset):
             if epoch_length_sec is not None
             else self.DEFAULT_EPOCH_LENGTH_SEC
         )
-        self.label_transform = label_transform
+        # ``label_transform`` accepts a named label scheme (e.g. ``"aasm4"``)
+        # as well as a callable: string names are resolved through
+        # ``physioex.data.labels.get_label_transform``.
+        self.label_transform = (
+            get_label_transform(label_transform)
+            if isinstance(label_transform, str)
+            else label_transform
+        )
         self.skip_corrupt = bool(skip_corrupt)
         self.skip_subjects_without_channels = bool(skip_subjects_without_channels)
         self.stage_map = stage_map
@@ -232,6 +240,53 @@ class BasePhysioDataset(Dataset):
 
         with pyedflib.EdfReader(str(spec.edf_path)) as f:
             return read_channel(f, resolved)
+
+    def _channel_header(self, spec: SubjectSpec, resolved: ResolvedChannel) -> Dict:
+        """Per-channel header metadata for header-aware pipeline steps.
+
+        Returns a dict with ``physical_dimension`` and, for differential
+        pairs, the combined ``physical_min`` / ``physical_max`` (the
+        min/max of the wider channel, since ``|A - B| <= max_range``).
+        Subclasses reading non-EDF sources should override this to provide
+        their own header fields; on any failure it returns ``{}`` so that
+        header-aware steps (``PhysicalScale``) degrade to passthrough with
+        a warning.
+        """
+        import pyedflib
+
+        indices = resolved._indices
+        if not indices:
+            return {}
+        try:
+            with pyedflib.EdfReader(str(spec.edf_path)) as f:
+                if resolved.is_differential:
+                    if len(indices) != 2:
+                        return {}
+                    i0, i1 = indices
+                    unit0 = f.getPhysicalDimension(i0)
+                    unit1 = f.getPhysicalDimension(i1)
+                    min0, max0 = f.getPhysicalMinimum(i0), f.getPhysicalMaximum(i0)
+                    min1, max1 = f.getPhysicalMinimum(i1), f.getPhysicalMaximum(i1)
+                    pmin = min(float(min0), float(min1))
+                    pmax = max(float(max0), float(max1))
+                    return {
+                        "physical_dimension": str(unit0).strip(),
+                        "physical_min": pmin,
+                        "physical_max": pmax,
+                    }
+                i0 = indices[0]
+                return {
+                    "physical_dimension": str(f.getPhysicalDimension(i0)).strip(),
+                    "physical_min": float(f.getPhysicalMinimum(i0)),
+                    "physical_max": float(f.getPhysicalMaximum(i0)),
+                }
+        except Exception as exc:
+            logger.warning(
+                f"[{self.DATASET_NAME}] {spec.subject_id}: could not read the "
+                f"channel header ({type(exc).__name__}: {exc}); header-aware "
+                f"steps (PhysicalScale) will pass the signal through"
+            )
+            return {}
 
     def _filter_subset(
         self, subjects: List[SubjectSpec], subset: str
@@ -872,12 +927,15 @@ class BasePhysioDataset(Dataset):
                         f"Corrupt signal cache {signal_path}: {exc}; recomputing"
                     )
 
-        # Compile pipeline for this subject's channel fs
+        # Compile pipeline for this subject's channel fs. The per-channel
+        # header (physical dimension / range) reaches header-aware steps
+        # (PhysicalScale) through ``compile(header=...)``.
         fs_in = resolved.fs_in
+        header = self._channel_header(spec, resolved)
         compile_key = (pipeline_hash, fs_in, spec.subject_id)
         compiled = self._compiled_pipelines.get(compile_key)
         if compiled is None:
-            compiled = pipeline.compile(fs_in)
+            compiled = pipeline.compile(fs_in, header=header)
             self._compiled_pipelines[compile_key] = compiled
 
         # Read raw signal
@@ -975,6 +1033,12 @@ class BasePhysioDataset(Dataset):
 
         After all steps, if the signal is still 1D it is reshaped to
         ``(n_epochs, samples_per_epoch)``.
+
+        The samples-per-epoch count is ``int(round(epoch_length_sec * fs))``
+        (never a bare ``int()`` cast): for fractional rates such as
+        ``fs = 1024 / 30`` (30-s epochs of 1024 samples) a truncating
+        ``int(30 * (1024/30))`` rounds down and silently shifts every
+        epoch boundary.
         """
         x = np.asarray(raw, dtype=np.float32)
         fs = fs_in
@@ -987,6 +1051,11 @@ class BasePhysioDataset(Dataset):
                 # not already
                 if not epoched:
                     sps = int(round(self.epoch_length_sec * fs))
+                    if sps <= 0:
+                        raise ValueError(
+                            f"epoch_length_sec={self.epoch_length_sec} at fs={fs} "
+                            f"yields 0 samples per epoch"
+                        )
                     n_full = (x.shape[-1] // sps) * sps
                     x = x[..., :n_full].reshape(-1, sps)
                     epoched = True
@@ -998,6 +1067,11 @@ class BasePhysioDataset(Dataset):
         if not epoched:
             # No domain-changing step; epoch at the end
             sps = int(round(self.epoch_length_sec * fs))
+            if sps <= 0:
+                raise ValueError(
+                    f"epoch_length_sec={self.epoch_length_sec} at fs={fs} "
+                    f"yields 0 samples per epoch"
+                )
             n_full = (x.shape[-1] // sps) * sps
             x = x[..., :n_full].reshape(-1, sps)
 

@@ -1,4 +1,6 @@
 import logging
+from typing import Optional
+
 import numpy as np
 from scipy.signal import butter, sosfiltfilt
 from physioex.data.pipeline import PreprocessingStep, CompiledStep
@@ -39,7 +41,7 @@ class BandpassFilter(PreprocessingStep):
             ftype=self.ftype, high=self.high, low=self.low, order=self.order
         )
 
-    def compile(self, fs_in: float) -> CompiledStep:
+    def compile(self, fs_in: float, header: Optional[dict] = None) -> CompiledStep:
         nyq = 0.5 * fs_in
         if not (0 < self.low < nyq and self.low < self.high < nyq):
             logger.warning(

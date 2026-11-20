@@ -1,0 +1,62 @@
+[... 189 lines omitted]
+>       assert list(out) == [0, 1, 1, 2, 3, -1, 0, 2]
+E       assert [np.int16(1),...int16(0), ...] == [0, 1, 1, 2, 3, -1, ...]
+E         
+E         At index 0 diff: np.int16(1) != 0
+E         Use -v to get more diff
+
+tests/data/test_cardioresp_steps.py:485: AssertionError
+______________________ test_epoch_slicing_fs_1024_over_30 ______________________
+
+    def test_epoch_slicing_fs_1024_over_30():
+        fs = 1024.0 / 30.0
+        n = int(round(30.0 * fs)) * 1200  # exactly 1200 epochs' worth
+        x = np.arange(n, dtype=np.float32)
+        out = _EpochSlicer.epoch(x, fs)
+        assert out.shape == (1200, 1024), f"fs=1024/30 must give 1024 samples/epoch, got {out.shape}"
+        # The int() cast would have given 1023 samples/epoch and misaligned epochs.
+>       assert int(30.0 * (1024.0 / 30.0)) == 1023, "sanity: int() truncates"
+E       AssertionError: sanity: int() truncates
+E       assert 1024 == 1023
+E        +  where 1024 = int((30.0 * (1024.0 / 30.0)))
+
+tests/data/test_cardioresp_steps.py:557: AssertionError
+__________________ test_epoch_slicing_via_real_dataset_method __________________
+
+    def test_epoch_slicing_via_real_dataset_method():
+        """Exercise the actual ``BasePhysioDataset._epoch_and_run_pipeline`` with
+        fs = 1024/30 to prove the fix lives in the dataset, not a test stand-in."""
+        from physioex.data.base import BasePhysioDataset
+    
+        # Bypass Dataset.__init__ entirely; the method under test only reads
+        # ``self.epoch_length_sec``.
+        stub = BasePhysioDataset.__new__(BasePhysioDataset)
+        stub.epoch_length_sec = 30.0
+>       compiled = PreprocessingPipeline([Identity()]).compile(1024.0 / 30.0)
+                                          ^^^^^^^^
+E       NameError: name 'Identity' is not defined
+
+tests/data/test_cardioresp_steps.py:578: NameError
+=============================== warnings summary ===============================
+../../../sofia/projects/2026_101/WORK/.venv/physioex-pip/lib/python3.13/site-packages/anyio/pytest_plugin.py:14
+  /sofia/projects/2026_101/WORK/.venv/physioex-pip/lib/python3.13/site-packages/anyio/pytest_plugin.py:14: PytestRemovedIn10Warning: _pytest.python.CallSpec2 has been renamed to CallSpec.
+  The CallSpec2 alias will be removed in pytest 10.
+  Update imports to use CallSpec instead.
+  See https://docs.pytest.org/en/stable/deprecations.html#callspec2-renamed
+    from _pytest.python import CallSpec2
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/data/test_cardioresp_steps.py::test_interp_resample_matches_pandas[clean]
+FAILED tests/data/test_cardioresp_steps.py::test_interp_resample_matches_pandas[few-nans]
+FAILED tests/data/test_cardioresp_steps.py::test_interp_resample_matches_pandas[many-nans]
+FAILED tests/data/test_cardioresp_steps.py::test_interp_resample_length_and_fs
+FAILED tests/data/test_cardioresp_steps.py::test_physical_scale_needs_header_flag
+FAILED tests/data/test_cardioresp_steps.py::test_wav2sleep_preset_end_to_end
+FAILED tests/data/test_cardioresp_steps.py::test_sleepppgnet_preset_end_to_end
+FAILED tests/data/test_cardioresp_steps.py::test_aasm4_mapping - assert [np.i...
+FAILED tests/data/test_cardioresp_steps.py::test_epoch_slicing_fs_1024_over_30
+FAILED tests/data/test_cardioresp_steps.py::test_epoch_slicing_via_real_dataset_method
+=================== 10 failed, 49 passed, 1 warning in 4.78s ===================
+srun: error: acc004: task 0: Exited with exit code 1
+[qwen test on sofia: rc=1, 8s total, 1.0s sync]
