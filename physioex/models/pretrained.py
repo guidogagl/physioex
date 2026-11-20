@@ -122,15 +122,17 @@ def _third_party_registry() -> dict:
             "license": "MIT",
             "license_note": "MIT license from the authors' repository.",
             "reference": (
-                "Carter, J. & Tarassenko, L. (2024). Cardiorespiratory signals "
-                "enable fast and robust sleep staging across sleep settings. "
-                "Nature Communications. https://github.com/joncarter/wav2sleep"
+                "Carter, J. F. & Tarassenko, L. (2024). wav2sleep: A Unified "
+                "Multi-Modal Approach to Sleep Stage Classification from "
+                "Physiological Signals. arXiv:2411.04644. "
+                "https://github.com/joncarter1/wav2sleep"
             ),
             "n_classes": 4,
             "class_names": ("W", "Light", "Deep", "REM"),
             "input": (
-                "Per-epoch signals in order [ABD, ECG, PPG, THX], 4 channels "
-                "(ABD/THX 256 Hz, ECG/PPG 1 kHz); preset \"wav2sleep\""
+                "Whole night (1200 x 30-s epochs) of any subset of ECG, PPG "
+                "(1024 samples/epoch) and ABD, THX (256 samples/epoch); absent "
+                "signals = -inf; preset \"wav2sleep\""
             ),
         },
         "wav2sleep-eog": {
@@ -143,14 +145,14 @@ def _third_party_registry() -> dict:
             "license": "MIT",
             "license_note": "MIT license from the authors' repository.",
             "reference": (
-                "Carter, J. & Tarassenko, L. (2024), EOG variant. "
-                "https://github.com/joncarter/wav2sleep-eog"
+                "Carter, J. F. & Tarassenko, L. (2024), wav2sleep EOG release. "
+                "https://huggingface.co/joncarter/wav2sleep-eog"
             ),
             "n_classes": 5,
-            "class_names": ("W", "Light", "Deep", "REM", "EOG"),
+            "class_names": _AASM_CLASS_NAMES,
             "input": (
-                "Per-epoch signals in order [EOG-L, EOG-R], 2 channels at 4096 Hz; "
-                "preset \"wav2sleep\""
+                "Whole night (1200 x 30-s epochs) of EOG-L, EOG-R at 4096 "
+                "samples/epoch; preset \"wav2sleep\""
             ),
         },
         "sleepppgnet-replica": {
@@ -168,14 +170,15 @@ def _third_party_registry() -> dict:
                 "see the SPPPPG-Net repository."
             ),
             "reference": (
-                "Kotzen, B. (2023). Sleep-PPG: Sleep staging from photoplethysmography "
-                "using deep neural networks. Frontiers in Physiology. "
-                "https://github.com/sleep-is-all-you-need/SPPPPG-Net"
+                "Architecture: Kotzen, K. et al. (2023). SleepPPG-Net: a deep "
+                "learning algorithm for robust sleep staging from continuous "
+                "photoplethysmography. IEEE JBHI, arXiv:2202.05735. Weights: "
+                "third-party replica https://huggingface.co/sleep-is-all-you-need/SPPPPG-Net"
             ),
             "n_classes": 4,
             "class_names": ("W", "Light", "Deep", "REM"),
             "input": (
-                "Per-epoch PPG, 1 channel at 512 Hz (30 s epochs = 15360 samples); "
+                "Whole night PPG, 1 channel, 1200 x 1024 samples (34.13 Hz); "
                 "preset \"sleepppgnet\""
             ),
         },
@@ -190,14 +193,17 @@ def _third_party_registry() -> dict:
                 "may propagate to derivative works."
             ),
             "reference": (
-                "Jones, S., Itti, L. & Sheth, B. (2024). Sleep staging from ECG "
-                "using deep learning. https://github.com/adammj/ecg-sleep-staging"
+                "Jones, A. M., Itti, L. & Sheth, B. R. (2024). Expert-level sleep "
+                "staging using an electrocardiography-only feed-forward neural "
+                "network. Computers in Biology and Medicine. "
+                "doi:10.1016/j.compbiomed.2024.108545. "
+                "https://github.com/adammj/ecg-sleep-staging"
             ),
             "n_classes": 5,
             "class_names": _AASM_CLASS_NAMES,
             "input": (
-                "Per-epoch ECG, 1 channel at 256 Hz (30 s epochs = 7680 samples); "
-                "preset \"ecg\""
+                "Whole night ECG, 1 channel at 256 Hz (7680 samples/epoch) plus "
+                "per-epoch additional features; preset \"jones_ecg\""
             ),
         }
     # Alias: the paper's primary checkpoint.
