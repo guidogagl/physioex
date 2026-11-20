@@ -12,6 +12,7 @@ from physioex.models.reve import REVEEncoder
 from physioex.models.sjepa import SJEEncoder
 from physioex.models.neurolm import NeuroLMEncoder
 from physioex.models.foundation_base import FoundationEncoder
+from physioex.models.sleepppgnet import SleepPPGNet
 
 # Cardiorespiratory sleep staging
 from physioex.models.wav2sleep import Wav2Sleep
@@ -34,4 +35,5 @@ __all__ = [
     "NeuroLMEncoder",
     # Cardiorespiratory sleep staging
     "Wav2Sleep",
+    "SleepPPGNet",
 ]
