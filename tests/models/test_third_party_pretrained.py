@@ -212,18 +212,13 @@ def test_non_registry_name_keeps_4rooms_behaviour(monkeypatch, tmp_path):
         p.parent.mkdir(parents=True, exist_ok=True)
         if filename.endswith("config.json"):
             p.write_text(
-                '{"model_class": "physioex.models.chambon2018:Chambon2018Net", '
-                '"model_kwargs": {"n_classes": 5, "in_channels": 2, "sf": 100, '
-                '"n_times": 3000}}'
+                '{"model_class": "torch.nn:Linear", '
+                '"model_kwargs": {"in_features": 4, "out_features": 5}}'
             )
         else:
-            # Real state dict so torch.load succeeds.
-            from physioex.models.chambon2018 import Chambon2018Net
-            torch.save(
-                Chambon2018Net(n_classes=5, in_channels=2, sf=100, n_times=3000)
-                .state_dict(),
-                p,
-            )
+            # Real state dict so torch.load succeeds (a light torch.nn
+            # module: the 4rooms path is model-agnostic).
+            torch.save(nn.Linear(4, 5).state_dict(), p)
         return str(p)
 
     monkeypatch.setattr(
