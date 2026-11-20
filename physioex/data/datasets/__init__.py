@@ -16,6 +16,8 @@ from physioex.data.datasets.parkinsons import ParkinsonsDataset
 from physioex.data.datasets.shhs import SHHSDataset
 from physioex.data.datasets.stages import STAGESDataset
 from physioex.data.datasets.ccshs import CCSHSDataset
+from physioex.data.datasets.cfs import CFSDataset
+from physioex.data.datasets.chat import CHATDataset
 
 REGISTRY = {
     "hmc": HMCDataset,
@@ -31,6 +33,8 @@ REGISTRY = {
     "shhs": SHHSDataset,
     "stages": STAGESDataset,
     "ccshs": CCSHSDataset,
+    "cfs": CFSDataset,
+    "chat": CHATDataset,
 }
 
 
@@ -58,6 +62,8 @@ __all__ = [
     "SHHSDataset",
     "STAGESDataset",
     "CCSHSDataset",
+    "CFSDataset",
+    "CHATDataset",
     "REGISTRY",
     "get_dataset",
     "available_datasets",

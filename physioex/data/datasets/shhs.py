@@ -65,6 +65,11 @@ class SHHSDataset(_NSRRBaseDataset):
 
     DATASET_NAME = "shhs_visit1"  # overridden dynamically in __init__
     DATASET_SUBDIR = "shhs"
+    DATASET_PREFIX = "shhs"
+    #: Both visits share the ``shhs`` wav2sleep split directory.
+    DATASET_SPLIT_KEY = "shhs"
+    HARMONIZED_CSV_GLOB = "shhs-harmonized-dataset-*.csv"
+    CSV_ID_COLUMN = "nsrrid"
 
     # Channels present across both visits.
     #   EEG:  "EEG" = C4/A1 primary, "EEG(sec)" = C3/A2 secondary
@@ -87,6 +92,38 @@ class SHHSDataset(_NSRRBaseDataset):
         ],
         "ECG": [
             "ECG",
+            "EKG",
+            "ECG1",
+            "ECG L",
+            "ECGL",
+            "ECG L-ECG R",
+        ],
+        "PPG": [
+            "Pleth",
+            "PlethWV",
+            "PWF",
+            "PlethMasimo",
+            "PletMasimo",
+            "PlethMasino",
+            "PLETHMASIMO",
+        ],
+        "ABD": [
+            "ABD",
+            "Abdo",
+            "ABDO RES",
+            "ABDO EFFORT",
+            "Abdominal",
+            "abdomen",
+        ],
+        "THX": [
+            "THX",
+            "Thor",
+            "THOR RES",
+            "THOR EFFORT",
+            "Thoracic",
+            "Chest",
+            "thorax",
+            "CHEST",
         ],
     }
 
@@ -111,41 +148,41 @@ class SHHSDataset(_NSRRBaseDataset):
     # Metadata
     # ------------------------------------------------------------------
 
-    @staticmethod
-    def _load_metadata(root: str, visit: int) -> Dict[str, Dict[str, Any]]:
+    @classmethod
+    def _load_metadata(cls, root: str, visit: int) -> Dict[str, Dict[str, Any]]:
         """Load harmonized CSV into a dict keyed by nsrrid (as string).
 
         The harmonized CSV contains rows for both visits.  We filter to
         the requested ``visitnumber`` so that metadata lookups are
         unambiguous.
         """
-        csv_path = Path(root) / "datasets" / "shhs-harmonized-dataset-0.21.0.csv"
-        if not csv_path.exists():
-            logger.warning("SHHS metadata CSV not found: %s", csv_path)
-            return {}
         import pandas as pd
 
-        df = pd.read_csv(csv_path)
-        df = df[df["visitnumber"] == visit]
-        meta: Dict[str, Dict[str, Any]] = {}
-        for _, row in df.iterrows():
-            key = str(int(row["nsrrid"]))
-            meta[key] = {
-                col: (None if pd.isna(val) else val) for col, val in row.items()
-            }
-        return meta
+        meta = cls.load_harmonized_csv(root)
+        df_visit = {
+            k: row
+            for k, row in meta.items()
+            if row.get(cls.CSV_ID_COLUMN) is not None
+            and int(row.get("visitnumber", visit)) == visit
+        }
+        return df_visit
 
     # ------------------------------------------------------------------
     # Fixed benchmark splits (Phan / SleepTransformer)
     # ------------------------------------------------------------------
 
-    def get_splits(self, fold: int = 0):
+    def get_splits(self, fold: int = 0, split: Optional[str] = None):
         """Return fixed train/valid/test split from Phan's SleepTransformer.
+
+        ``split="wav2sleep"`` / ``"wav2sleep-census"`` select the published
+        external splits (see :meth:`_NSRRBaseDataset.get_splits`).
 
         For visit 1, fold 0 uses the benchmark split from
         ``_splits/shhs.json`` (train=4065, valid=100, test=1639).
         For other visits or folds, falls back to random 70/15/15.
         """
+        if split is not None:
+            return super().get_splits(fold=fold, split=split)
         if self._visit == 1 and fold == 0:
             split_path = Path(__file__).parent / "_splits" / "shhs.json"
             if split_path.exists():
