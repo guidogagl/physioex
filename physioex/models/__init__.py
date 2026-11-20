@@ -13,6 +13,9 @@ from physioex.models.sjepa import SJEEncoder
 from physioex.models.neurolm import NeuroLMEncoder
 from physioex.models.foundation_base import FoundationEncoder
 
+# Cardiorespiratory sleep staging
+from physioex.models.wav2sleep import Wav2Sleep
+
 __all__ = [
     "load_from_pretrained",
     "extract_embeddings",
@@ -29,4 +32,6 @@ __all__ = [
     "REVEEncoder",
     "SJEEncoder",
     "NeuroLMEncoder",
+    # Cardiorespiratory sleep staging
+    "Wav2Sleep",
 ]
