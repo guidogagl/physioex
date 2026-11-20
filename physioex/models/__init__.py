@@ -1,5 +1,6 @@
 from physioex.models.pretrained import load_from_pretrained
 from physioex.models.embed import extract_embeddings, load_embeddings, linear_probe
+from physioex.models.jones_ecg import JonesECGNet
 
 # Foundation encoders
 from physioex.models.cbramod import CBraModEncoder
@@ -22,6 +23,7 @@ __all__ = [
     "extract_embeddings",
     "load_embeddings",
     "linear_probe",
+    "JonesECGNet",
     # Foundation encoders
     "FoundationEncoder",
     "CBraModEncoder",
