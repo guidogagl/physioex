@@ -9,6 +9,7 @@ from physioex.data.steps.interp import InterpResample, FixedLength
 from physioex.data.steps.normalize import ZScoreNormalize, Clip, ZScore
 from physioex.data.steps.scale import PhysicalScale
 from physioex.data.steps.spectrogram import XSleepNetSpectrogram
+from physioex.data.steps.jones_ecg import JonesECGPreprocess
 
 __all__ = [
     "Identity",
@@ -25,4 +26,5 @@ __all__ = [
     "ZScore",
     "PhysicalScale",
     "XSleepNetSpectrogram",
+    "JonesECGPreprocess",
 ]

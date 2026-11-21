@@ -40,6 +40,7 @@ from physioex.data.steps import (
     Clip,
     ZScore,
     PhysicalScale,
+    JonesECGPreprocess,
 )
 
 
@@ -420,6 +421,19 @@ def sleepppgnet_preset() -> PreprocessingPipeline:
     )
 
 
+def jones_ecg_preset() -> PreprocessingPipeline:
+    """ECG preset for Jones, Itti & Sheth (2024).
+
+    The full reference ECG pipeline (clip-mask removal, Chebyshev-II
+    high-pass 0.5/0.25 Hz, 60 Hz line notch + iterative extra-noise
+    notches, resample to 256 Hz, R-wave normalization, clip to
+    ``[-1, 1]``) as a single step.  Output is 7680 samples per 30 s
+    epoch (256 Hz), the input layout of
+    :class:`physioex.models.jones_ecg.JonesECGNet`.
+    """
+    return PreprocessingPipeline([JonesECGPreprocess()])
+
+
 PRESETS = {
     # uniform (single-pipeline) presets
     "raw": raw_pipeline,
@@ -438,6 +452,7 @@ PRESETS = {
     # cardiorespiratory sleep-staging presets
     "wav2sleep": wav2sleep_preset,
     "sleepppgnet": sleepppgnet_preset,
+    "jones_ecg": jones_ecg_preset,
     # foundation model presets (HP 0.5Hz + Notch 50Hz + Resample, matching EEGBenchmarks)
     "biot": biot_pipeline,
     "bendr": bendr_pipeline,
