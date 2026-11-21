@@ -397,3 +397,13 @@ def test_chat_cardioresp_preferences():
     prefs = CHATDataset.CHANNEL_PREFERENCES
     res = _resolve(prefs, ["ECG", "ABD", "THX"], ["ECG L", "ABDO RES", "THOR RES"])
     assert res == ["ECG L", "ABDO RES", "THOR RES"]
+
+
+def test_sleepppgnet_replica_split_file():
+    from physioex.data.datasets._splits import load_sleepppgnet_replica_split
+
+    ids = load_sleepppgnet_replica_split("mesa", "test")
+    assert len(ids) == 204 and len(set(ids)) == 204
+    assert all(i.startswith("mesa-sleep-") for i in ids)
+    assert load_sleepppgnet_replica_split("mesa", "train") == []
+    assert load_sleepppgnet_replica_split("shhs", "test") == []

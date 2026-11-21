@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import List
 
 WAV2SLEEP_DIR = Path(__file__).parent / "_splits" / "wav2sleep"
+SLEEPPPGNET_REPLICA_DIR = Path(__file__).parent / "_splits" / "sleepppgnet-replica"
 
 
 def load_wav2sleep_split(
@@ -40,3 +41,15 @@ def load_wav2sleep_split(
         for line in path.read_text().splitlines()
         if line.strip()
     ]
+
+
+def load_sleepppgnet_replica_split(dataset: str, part: str = "test") -> List[str]:
+    """Return the session ids of the SleepPPG-Net replica split (MESA test only).
+
+    Only ``part="test"`` exists (204 MESA recordings, see the directory
+    README); other parts and datasets return an empty list.
+    """
+    path = SLEEPPPGNET_REPLICA_DIR / dataset / f"{part}.txt"
+    if not path.exists():
+        return []
+    return [line.strip() for line in path.read_text().splitlines() if line.strip()]

@@ -306,15 +306,34 @@ class _NSRRBaseDataset(BasePhysioDataset):
           train/val list (e.g. MrOS, test-only) get empty train/valid.
         - ``"wav2sleep-census"``: the census-balanced lists of Jones et al.
           (2024); ids from several datasets, only those belonging to this
-          one are returned (no train list -> train is empty).
+          one are returned (no train list -> train is empty). It is the
+          500-night test set of Jones et al. (2024).
+        - ``"sleepppgnet-replica"``: the 204 MESA test nights of the
+          third-party SleepPPG-Net replica (test only; train/valid empty).
         - ``None``: the dataset's own splitting behaviour (default random
           70/15/15, or a fixed benchmark split).
         """
         if split is None:
             return super().get_splits(fold=fold)
+        if split == "sleepppgnet-replica":
+            from physioex.data.datasets._splits import load_sleepppgnet_replica_split
+
+            split_key = self.DATASET_SPLIT_KEY or self.DATASET_NAME
+            present = {s.subject_id for s in self._subjects}
+            ids = load_sleepppgnet_replica_split(split_key, "test")
+            kept = [i for i in ids if i in present]
+            if len(kept) < len(ids):
+                logger.info(
+                    "[%s] sleepppgnet-replica: %d of %d test ids not present locally; dropped",
+                    self.DATASET_NAME,
+                    len(ids) - len(kept),
+                    len(ids),
+                )
+            return [], [], kept
         if not split.startswith("wav2sleep"):
             raise ValueError(
-                f"Unknown split {split!r}; expected 'wav2sleep' or 'wav2sleep-census'"
+                f"Unknown split {split!r}; expected 'wav2sleep', "
+                "'wav2sleep-census' or 'sleepppgnet-replica'"
             )
         from physioex.data.datasets._splits import load_wav2sleep_split
 
