@@ -1,0 +1,48 @@
+{
+  "model": "jones-ecg-primary",
+  "source": "Jones, Itti & Sheth (2024), Comput. Biol. Med., doi:10.1016/j.compbiomed.2024.108545; per-recording kappas from paper/2_intermediate_data/main_model_data.xlsx (set 3 = test)",
+  "metric": "median_record_kappa",
+  "tolerance": 0.005,
+  "split": "wav2sleep-census",
+  "reference_csv": "reference_per_record.csv",
+  "targets": [
+    {
+      "dataset": "census",
+      "condition": "ecg",
+      "value": 0.725,
+      "requires": [
+        "ccshs",
+        "cfs",
+        "chat",
+        "mesa",
+        "wsc"
+      ],
+      "note": "headline: median over the 500 test recordings (0.7248)"
+    },
+    {
+      "dataset": "ccshs",
+      "condition": "ecg",
+      "value": 0.8136
+    },
+    {
+      "dataset": "cfs",
+      "condition": "ecg",
+      "value": 0.763
+    },
+    {
+      "dataset": "chat",
+      "condition": "ecg",
+      "value": 0.7794
+    },
+    {
+      "dataset": "mesa",
+      "condition": "ecg",
+      "value": 0.675
+    },
+    {
+      "dataset": "wsc",
+      "condition": "ecg",
+      "value": 0.6141
+    }
+  ]
+}
