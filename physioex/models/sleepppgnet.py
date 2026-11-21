@@ -428,3 +428,46 @@ class SleepPPGNet(nn.Module):
         model.load_state_dict(obj, strict=True)
         model.eval()
         return model
+
+    def predict_night(self, signals: "dict[str, np.ndarray]", metadata: "dict | None" = None) -> "np.ndarray":
+        """Classify one whole night, already preprocessed by the ``sleepppgnet`` preset.
+
+        Args:
+            signals: Mapping of signal name to a ``(L, 1024)`` float array of
+                one night; the night's ``"PPG"`` channel is required. The
+                night is zero-padded (or truncated) to the model's fixed
+                ``n_epochs`` (1200 for the released model) grid before the
+                network runs, as in the authors' code for nights shorter or
+                longer than 10 h.
+            metadata: Unused (kept for a common interface with the other
+                cardiorespiratory models).
+
+        Returns:
+            int64 class indices of shape ``(L,)`` in the model's class order
+            ([W, Light, Deep, REM] for ``class_order="physioex"``). Runs under
+            ``torch.no_grad()`` in eval mode, batch of one, on the model's
+            current device.
+        """
+        import numpy as np
+
+        del metadata
+        if "PPG" not in signals:
+            raise ValueError(f"SleepPPGNet needs a 'PPG' signal, got {sorted(signals)}")
+        arr = np.asarray(signals["PPG"], dtype=np.float32)
+        if arr.ndim != 2 or arr.shape[1] != self.samples_per_epoch:
+            raise ValueError(
+                f"'PPG' must have shape (L, {self.samples_per_epoch} samples/epoch), got {arr.shape}"
+            )
+        L = arr.shape[0]
+        x = torch.from_numpy(arr).reshape(1, L, 1, self.samples_per_epoch)
+        x = x.to(next(self.parameters()).device)
+
+        was_training = self.training
+        self.eval()
+        try:
+            with torch.no_grad():
+                preds = self.forward(x)[0].argmax(dim=-1).cpu().numpy()
+        finally:
+            if was_training:
+                self.train()
+        return preds.astype(np.int64)

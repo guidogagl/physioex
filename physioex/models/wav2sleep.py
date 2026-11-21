@@ -396,6 +396,64 @@ class Wav2Sleep(nn.Module):
         logits_BSF = self.forward(x)
         return logits_BSF.argmax(axis=-1)
 
+    def predict_night(self, signals: dict[str, "np.ndarray"], metadata: Optional[dict] = None) -> "np.ndarray":
+        """Classify one whole night, already preprocessed by the ``wav2sleep`` preset.
+
+        Args:
+            signals: Mapping of signal name (ECG, PPG, ABD, THX, ...) to a
+                ``(L, T_e)`` float array of one night, with
+                ``T_e = SAMPLES_PER_EPOCH[signal]`` samples per 30-s epoch.
+                Keys the model does not know are ignored; known keys missing
+                from ``signals`` are passed to the model as absent. The night
+                is zero-padded (or truncated) to the model's fixed 1200-epoch
+                (10 h) grid only when ``L`` differs from 1200, matching the
+                authors' padding/truncation of shorter/longer nights.
+            metadata: Unused (kept for a common interface with the other
+                cardiorespiratory models).
+
+        Returns:
+            int64 class indices of shape ``(L,)`` in the model's own class
+            order ([W, N1+N2, N3, REM] for the 4-class model). Runs under
+            ``torch.no_grad()`` in eval mode, batch of one, on the model's
+            current device.
+        """
+        import numpy as np
+
+        del metadata
+        L = next(iter(signals.values())).shape[0]
+        n_epochs = 1200  # 10 h at 30-s epochs: the fixed grid the model was trained on
+        device = next(self.parameters()).device
+
+        x: dict[str, Tensor] = {}
+        for sig in self.valid_signals:
+            t_e = SAMPLES_PER_EPOCH[sig]
+            if sig not in signals:
+                x[sig] = torch.full((1, n_epochs * t_e), float("-inf"), device=device)
+                continue
+            arr = np.asarray(signals[sig], dtype=np.float32)
+            if arr.shape != (L, t_e):
+                raise ValueError(
+                    f"signal {sig!r} has shape {arr.shape}; expected (L={L}, {t_e} samples/epoch)"
+                )
+            if L != n_epochs:
+                target = n_epochs * t_e
+                if L > n_epochs:
+                    arr = arr[:n_epochs].reshape(-1)
+                else:
+                    pad = np.zeros((n_epochs - L) * t_e, dtype=np.float32)
+                    arr = np.concatenate([arr.reshape(-1), pad])
+            x[sig] = torch.from_numpy(arr.astype(np.float32, copy=False)).reshape(1, -1).to(device)
+
+        was_training = self.training
+        self.eval()
+        try:
+            with torch.no_grad():
+                preds = self.forward(x)[0, :L].argmax(dim=-1).cpu().numpy()
+        finally:
+            if was_training:
+                self.train()
+        return preds.astype(np.int64)
+
     @classmethod
     def from_original(cls, config_yaml_path: str, state_dict_path: str) -> "Wav2Sleep":
         """Build the model from the authors' ``config.yaml`` and checkpoint.

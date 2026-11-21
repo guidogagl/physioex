@@ -46,9 +46,12 @@ Inputs:
 from __future__ import annotations
 
 import datetime
+import logging
 import math
 from pathlib import Path
 from typing import Dict, Optional
+
+logger = logging.getLogger(__name__)
 
 import torch
 from torch import nn
@@ -322,6 +325,31 @@ class JonesECGNet(nn.Module):
     # ── auxiliary features ──────────────────────────────────────────
 
     @staticmethod
+    def _fallback_additional(n_epochs: int, variant: str, device: "torch.device") -> "torch.Tensor":
+        """Noise-filled (n_epochs, 4) auxiliaries for a variant whose required
+        inputs are all missing.
+
+        The draws follow :meth:`build_additional` exactly (one draw of size 2
+        for demographics per night; one draw per epoch per column for the time
+        columns), so the result is statistically identical to running the
+        authors' inference of the input-occluded models.
+        """
+        info = VARIANTS[variant]
+        generator = torch.Generator(device=device)
+        if "age" in info["needs"] and "sex" in info["needs"]:
+            demo = torch.randn(2, device=device, generator=generator)
+        else:
+            demo = torch.randn(2, device=device, generator=generator)
+        if "start_time" in info["needs"] and info["cyclic"]:
+            t = 2.0 * math.pi * torch.arange(
+                n_epochs, dtype=torch.float32, device=device
+            ) / _EPOCHS_PER_DAY
+            time = torch.stack([torch.cos(t), torch.sin(t)], dim=1)
+        else:
+            time = torch.randn(n_epochs, 2, device=device, generator=generator)
+        return torch.cat([demo.unsqueeze(0).expand(n_epochs, -1), time], dim=1)
+
+    @staticmethod
     def midnight_offset(start: "datetime.time | datetime.datetime") -> float:
         """Signed offset in days of ``start`` from the nearest midnight.
 
@@ -419,3 +447,84 @@ class JonesECGNet(nn.Module):
         model.load_state_dict(state, strict=True)
         model.eval()
         return model
+
+    # ── whole-night inference ─────────────────────────────────────────
+
+    def predict_night(self, signals: "dict[str, np.ndarray]", metadata: "dict | None" = None) -> "np.ndarray":
+        """Classify one whole night, already preprocessed by the ``jones_ecg`` preset.
+
+        Args:
+            signals: Mapping of signal name to a ``(L, 7680)`` float array of
+                one night (256 Hz, 30-s epochs, in [-1, 1]); the night's
+                ``"ECG"`` channel is required. Unlike the fixed-grid models,
+                JonesECGNet accepts any number of epochs, so the night is not
+                padded or truncated here.
+            metadata: optional dict with ``"age"`` (years), ``"sex"``
+                (``"M"``/``"F"``) and ``"recording_start"``
+                (``datetime.time``). The auxiliary features are built with
+                :meth:`build_additional` for the model's variant; a missing
+                value that the variant was not trained with (see
+                :data:`VARIANTS`) is filled with the variant's noise fallback,
+                with one warning per missing key.
+
+        Returns:
+            int64 class indices of shape ``(L,)`` in AASM 5-class order
+            [W, N1, N2, N3, REM]. Runs under ``torch.no_grad()`` in eval mode,
+            batch of one, on the model's current device.
+        """
+        import numpy as np
+
+        if "ECG" not in signals:
+            raise ValueError(f"JonesECGNet needs an 'ECG' signal, got {sorted(signals)}")
+        arr = np.asarray(signals["ECG"], dtype=np.float32)
+        if arr.ndim != 2 or arr.shape[1] != 7680:
+            raise ValueError(f"'ECG' must have shape (L, 7680 samples/epoch), got {arr.shape}")
+        L = arr.shape[0]
+
+        metadata = metadata or {}
+        age = metadata.get("age")
+        sex_raw = metadata.get("sex")
+        sex = {"M": 1.0, "F": 0.0}.get(str(sex_raw).upper()) if sex_raw is not None else None
+        start = metadata.get("recording_start")
+        if start is not None and not isinstance(start, (datetime.time, datetime.datetime)):
+            raise ValueError(
+                f"metadata['recording_start'] must be a datetime.time or datetime.datetime, "
+                f"got {type(start).__name__}"
+            )
+
+        for name, value in (("age", age), ("sex", sex), ("recording_start", start)):
+            if value is None:
+                logger.warning(
+                    "JonesECGNet.predict_night: metadata %r is missing for variant %r; "
+                    "using the variant's noise fallback for that input",
+                    name,
+                    self.variant,
+                )
+
+        device = next(self.parameters()).device
+        provided = [v is not None for v in (age, sex, start)]
+        if any(provided):
+            additional = self.build_additional(
+                L,
+                self.variant,
+                age=age,
+                sex=sex,
+                midnight_offset=self.midnight_offset(start) if start is not None else None,
+            ).unsqueeze(0)
+        else:
+            # All auxiliary inputs missing: use the variant's noise fallback
+            # (the authors' way of running input-occluded models) instead of
+            # letting build_additional raise.
+            additional = self._fallback_additional(L, self.variant, device).unsqueeze(0)
+        x = torch.from_numpy(arr).reshape(1, L, 1, arr.shape[1]).to(device)
+        additional = additional.to(device)
+
+        was_training = self.training
+        self.eval()
+        try:
+            with torch.no_grad():
+                preds = self.forward(x, additional=additional)[0].argmax(dim=-1).cpu().numpy()
+        finally:
+            if was_training:
+                self.train()
+        return preds.astype(np.int64)
