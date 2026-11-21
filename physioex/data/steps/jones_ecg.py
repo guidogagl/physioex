@@ -121,7 +121,7 @@ def _register_archetype_source() -> None:
 
 
 def _load_archetypes(archetypes_path: Optional[str]) -> Optional[np.ndarray]:
-    """Load the 8 x 256 archetype matrix; ``None`` if unavailable.
+    """Load the archetype matrix (n_archetypes x 256 in MATLAB); ``None`` if unavailable.
 
     ``archetypes_path=None`` triggers the one-shot raw-URL download
     (cached under the ``jones-ecg-archetypes`` registry name); any
@@ -144,7 +144,15 @@ def _load_archetypes(archetypes_path: Optional[str]) -> Optional[np.ndarray]:
             return None
         path = resolved[0] if isinstance(resolved, (list, tuple)) else resolved
 
-    mat = loadmat(path)
+    try:
+        mat = loadmat(path)
+    except NotImplementedError:
+        # MATLAB v7.3 files are HDF5; h5py returns the arrays with the
+        # dimensions reversed with respect to MATLAB, so transpose back.
+        import h5py
+
+        with h5py.File(path, "r") as f:
+            mat = {k: np.asarray(f[k]).T for k in f.keys() if isinstance(f[k], h5py.Dataset)}
     if "archetype_templates" not in mat:
         logger.warning(
             "JonesECGPreprocess: %s has no 'archetype_templates' variable; "
@@ -155,7 +163,7 @@ def _load_archetypes(archetypes_path: Optional[str]) -> Optional[np.ndarray]:
     if arch.ndim != 2 or arch.shape[1] != 256:
         logger.warning(
             "JonesECGPreprocess: archetypes matrix has shape %s, expected "
-            "(8, 256); using the median-of-beats template fallback",
+            "(n, 256); using the median-of-beats template fallback",
             arch.shape,
         )
         return None
@@ -200,46 +208,73 @@ def _centered_moving_stat(
     MATLAB's edge truncation.
 
     ``stat`` is ``"var"`` (sample variance, ddof=1), ``"median"``, or
-    ``"max"``.  Edge windows use the available samples, exactly like
-    MATLAB with a scalar window.
+    ``"max"``.  Window ``i`` covers ``v[max(0, i - window // 2) :
+    min(n, i + window - window // 2)]``; edge windows use the available
+    samples, exactly like MATLAB with a scalar window.  Vectorised: the
+    variance uses windowed sums, median and max use ``scipy.ndimage`` on
+    the interior and an explicit loop only on the ``window // 2`` samples
+    at each edge.
     """
+    from scipy import ndimage
+
     v = np.asarray(v, dtype=np.float64)
     n = len(v)
     half = window // 2
-    out = np.empty(n)
-    for i in range(n):
-        lo = max(0, i - half)
-        hi = min(n, i + window - half)
-        seg = v[lo:hi]
-        if stat == "var":
-            m = len(seg)
-            if m < 2:
-                out[i] = 0.0
-            else:
-                out[i] = np.var(seg, ddof=1)
-        elif stat == "median":
-            out[i] = np.median(seg)
-        elif stat == "max":
-            out[i] = np.max(seg)
-        else:  # pragma: no cover
-            raise ValueError(f"unknown stat {stat!r}")
+    if n == 0:
+        return np.empty(0)
+    idx = np.arange(n)
+    lo = np.maximum(0, idx - half)
+    hi = np.minimum(n, idx + window - half)
+    if stat == "var":
+        # Windowed sums around the global mean (limits cancellation).
+        c = v - v.mean()
+        s1 = np.concatenate(([0.0], np.cumsum(c)))
+        s2 = np.concatenate(([0.0], np.cumsum(c * c)))
+        m = (hi - lo).astype(np.float64)
+        w1 = s1[hi] - s1[lo]
+        w2 = s2[hi] - s2[lo]
+        with np.errstate(invalid="ignore", divide="ignore"):
+            out = (w2 - w1 * w1 / m) / (m - 1.0)
+        out[m < 2] = 0.0
+        return np.maximum(out, 0.0)
+    if stat == "median":
+        filt = ndimage.median_filter
+        reduce = np.median
+    elif stat == "max":
+        filt = ndimage.maximum_filter
+        reduce = np.max
+    else:  # pragma: no cover
+        raise ValueError(f"unknown stat {stat!r}")
+    # Interior samples see a full window [i - half, i + window - half),
+    # which is ndimage's default placement (origin 0) for odd and even sizes.
+    if stat == "median" and window % 2 == 0:
+        # np.median of an even window averages the two middle values.
+        out = 0.5 * (
+            ndimage.rank_filter(v, window // 2 - 1, size=window, mode="nearest")
+            + ndimage.rank_filter(v, window // 2, size=window, mode="nearest")
+        )
+    else:
+        out = filt(v, size=window, mode="nearest")
+    edge = [i for i in range(min(half, n))] + [
+        i for i in range(max(half, n - (window - half) + 1), n)
+    ]
+    for i in edge:
+        out[i] = reduce(v[lo[i]:hi[i]])
     return out
 
 
 def _fill_mask_gaps(mask: np.ndarray, fill_length: int) -> np.ndarray:
     """Mirror of ``fill_mask_array_gaps.m``: zero runs of 1s of length
-    <= ``fill_length``; a trailing run is never zeroed."""
+    <= ``fill_length``, the trailing run included (vectorised
+    run-length encoding)."""
     mask = mask.copy()
-    n = len(mask)
-    start = None
-    for i in range(n + 1):
-        val = mask[i] if i < n else 0  # sentinel forces a flush
-        if val == 1 and start is None:
-            start = i
-        elif val != 1 and start is not None:
-            if i - start <= fill_length:
-                mask[start:i] = 0
-            start = None
+    ones = np.concatenate(([0], (np.asarray(mask) == 1).astype(np.int8), [0]))
+    d = np.diff(ones)
+    starts = np.flatnonzero(d == 1)
+    ends = np.flatnonzero(d == -1)
+    for st, en in zip(starts, ends):
+        if en - st <= fill_length:
+            mask[st:en] = 0
     return mask
 
 
@@ -693,11 +728,11 @@ class JonesECGPreprocess(PreprocessingStep):
             if find_noise:
                 x, _ = find_and_remove_noise(x, fs_in)
 
-            ratio = Fraction(JONES_ECG_FS_OUT).limit_denominator(
-                int(round(32768 / fs_in))
-            )
+            # MATLAB: [p, q] = rat(256 / fs); resample(x, p, q).
+            ratio = (Fraction(JONES_ECG_FS_OUT) / Fraction(fs_in)).limit_denominator(10000)
             p, q = ratio.numerator, ratio.denominator
-            x = _sig.resample_poly(x, p, q, window=("kaiser", 8.0))
+            if p != q:
+                x = _sig.resample_poly(x, p, q, window=("kaiser", 8.0))
 
             lv = _lowpass_local_variation(local_variation(x, 256.0))
             cand = _sig.find_peaks(
