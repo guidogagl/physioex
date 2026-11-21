@@ -69,6 +69,7 @@ packages = ["physioex"]
 "physioex/train/models/check_table.csv" = "physioex/train/models/check_table.csv"
 "physioex/data/datasets/_splits/shhs.json" = "physioex/data/datasets/_splits/shhs.json"
 "physioex/data/datasets/_splits/wav2sleep/" = "physioex/data/datasets/_splits/wav2sleep/"
+"physioex/data/datasets/_splits/sleepppgnet-replica/" = "physioex/data/datasets/_splits/sleepppgnet-replica/"
 
 
 [project.scripts]
