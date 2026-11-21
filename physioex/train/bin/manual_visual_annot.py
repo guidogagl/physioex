@@ -34,6 +34,7 @@ SEG_S = 5.0
 SEGS = "ABCDEF"
 TOK_PER_SEG = int(SEG_S / 0.5)
 STAGE = {0: "W", 1: "N1", 2: "N2", 3: "N3", 4: "R"}
+STAGE_ID = {v: k for k, v in STAGE.items()}
 #: vocabulary -> (M1 mask, stages where random negatives are drawn, manual definition with source)
 VOCAB = {
     "arousal": ("arousal_m1", (1, 2, 3, 4),
@@ -96,8 +97,8 @@ def _signals(z, sc, key, mods=("eeg", "eog", "emg")):
     return out
 
 
-def render(sig, fs, i, stage, emg_half=None):
-    """PNG bytes of epoch ``i`` (with 1 s of the neighbours filtered away at the edges)."""
+def render(sig, fs, i, stage, emg_half=None, hl=None):
+    """PNG bytes of epoch ``i`` (the neighbours only feed the filters); ``hl``: segment index to shade."""
     from matplotlib.figure import Figure  # no pyplot: renders run in threads
 
     fig = Figure(figsize=(16, 6.5), dpi=100)
@@ -106,6 +107,8 @@ def render(sig, fs, i, stage, emg_half=None):
     t = np.arange(n_ep) / fs
     for ax, (m, label, lo, hi, half) in zip(axes, LANES):
         ax.set_yticks([])
+        if hl is not None:
+            ax.axvspan(hl * SEG_S, (hl + 1) * SEG_S, color="gold", alpha=0.25, zorder=0)
         for s in np.arange(0, 31, 1.0):
             ax.axvline(s, color="0.85" if s % 5 else "0.45", lw=0.5 if s % 5 else 1.2, zorder=0)
         for sp in ("top", "right", "bottom"):
@@ -324,6 +327,88 @@ def render_ids(a):
     print("DONE", flush=True)
 
 
+def review(a):
+    """Blind review set: per concept ``--n`` segments from the annotated epochs, in four strata of equal size
+    (M1+M2+, M1 only, M2 only, neither), shuffled across concepts. Writes ``OUT/<id>.png`` (segment shaded),
+    ``OUT/items.json`` (id, concept, question: no stratum) and ``OUT/key.json`` (stratum per id: keep it
+    away from the reviewer). Ids are random hex."""
+    rng = np.random.default_rng(a.seed)
+    meta = json.load(open(os.path.join(a.dump, "meta.json")))
+    sc = json.load(open(os.path.join(a.dump, "scale.json")))
+    fs = int(meta["fs"]["eeg"])
+    rows = [r for r in map(json.loads, open(os.path.join(a.dump, "m2", "annot.jsonl"))) if r.get("ann")]
+    m1c = {}
+    pool = {}  # (concept, stratum) -> [(key, epoch, seg, stage)]
+    for r in rows:
+        k, i = r["key"], r["epoch"]
+        if k not in m1c:
+            m1c = {k: _load_mask(os.path.join(a.dump, "m1", f"{k}.npz"))}
+        m1 = m1c[k]
+        seen = {s["segment"]: set(s["concepts"]) for s in r["ann"]["segments"]}
+        for c, (mask, stages, _) in VOCAB.items():
+            if mask is None or mask not in m1 or STAGE_ID[r["stage"]] not in stages:
+                continue
+            p1 = _seg_pos(m1[mask], i)
+            for j, sname in enumerate(SEGS):
+                st = {(1, 1): "both", (1, 0): "m1", (0, 1): "m2", (0, 0): "none"}[(int(p1[j]), int(c in seen[sname]))]
+                pool.setdefault((c, st), []).append((k, i, j, r["stage"]))
+    per = a.n // 4
+    items, key = [], {}
+    for c in VOCAB:
+        for st in ("both", "m1", "m2", "none"):
+            cand = pool.get((c, st), [])
+            for idx in rng.permutation(len(cand))[:per]:
+                uid = "%08x" % rng.integers(0, 2 ** 32)
+                items.append({"id": uid, "concept": c, "src": cand[idx]})
+                key[uid] = {"concept": c, "stratum": st, "pool": len(cand), "key": cand[idx][0],
+                            "epoch": int(cand[idx][1]), "segment": SEGS[cand[idx][2]]}
+    rng.shuffle(items)
+    os.makedirs(a.out, exist_ok=True)
+    sig_k = None
+    for it in sorted(items, key=lambda t: t["src"][0]):
+        k, i, j, stage = it["src"]
+        if sig_k != k:
+            z = np.load(os.path.join(a.dump, f"{k}.npz"))
+            sig, sig_k = _signals(z, sc, k), k
+            emg_half = float(np.percentile(np.abs(sig["emg"]), 95) * 2) if "emg" in sig else None
+        open(os.path.join(a.out, it["id"] + ".png"), "wb").write(render(sig, fs, i, stage, emg_half, hl=j))
+    json.dump([{"id": t["id"], "concept": t["concept"], "stage": t["src"][3]} for t in items],
+              open(os.path.join(a.out, "items.json"), "w"), indent=0)
+    json.dump(key, open(a.key, "w"), indent=0)
+    print(f"[review] {len(items)} segments -> {a.out}; key -> {a.key}\n"
+          + " ".join(f"{c}:{st}={len(v)}" for (c, st), v in sorted(pool.items())) + "\nDONE", flush=True)
+
+
+def page(a):
+    """``DIR/index.html`` for the blind review of ``DIR/items.json``: one shaded segment per card, the manual
+    definition of the concept, yes / no / unsure; a button copies the answers as JSON (paste them back)."""
+    import html
+
+    items = json.load(open(os.path.join(a.dir, "items.json")))
+    cards = []
+    for n, it in enumerate(items):
+        c = it["concept"]
+        cards.append(f'''<div class="card"><div class="h">{n + 1}/{len(items)} - <b>{html.escape(c)}</b>
+(stage {it["stage"]})</div><div class="d">{html.escape(VOCAB[c][2])}</div>
+<img loading="lazy" src="{it["id"]}.png"><div class="q">Is <b>{html.escape(c)}</b> present in the shaded 5 s?
+{"".join(f'<label><input type="radio" name="{it["id"]}" value="{v}"> {v}</label>' for v in ("yes", "no", "unsure"))}
+</div></div>''')
+    doc = f'''<!doctype html><html><head><meta charset="utf-8"><title>M1/M2 blind review</title><style>
+body{{font-family:sans-serif;max-width:1500px;margin:auto;padding:12px}}.card{{border-bottom:1px solid #ccc;
+padding:12px 0}}img{{width:100%}}.d{{color:#555;font-size:14px}}.q label{{margin-right:18px}}
+textarea{{width:100%;height:120px}}button{{padding:8px 16px;margin:12px 0}}</style></head><body>
+<h2>Blind review: {len(items)} segments</h2><p>Judge only the shaded 5 s, by the definition shown. The stage is the
+scored one. Answers stay in this page until you copy them.</p>{"".join(cards)}
+<button onclick="go()">Copy answers</button><span id="n"></span><textarea id="out"></textarea>
+<script>function go(){{const r={{}};document.querySelectorAll('input[type=radio]:checked').forEach(e=>r[e.name]=e.value);
+const t=JSON.stringify(r);document.getElementById('out').value=t;document.getElementById('n').textContent=
+' '+Object.keys(r).length+' answered';navigator.clipboard&&navigator.clipboard.writeText(t)}}</script></body></html>'''
+    out = os.path.join(a.dir, "index.html")
+    open(out, "w").write(doc)
+    os.chmod(out, 0o600)
+    print(out)
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -342,8 +427,16 @@ def main(argv=None):
     p.add_argument("--dump", required=True)
     p.add_argument("--ids", required=True)
     p.add_argument("--out", required=True)
+    p = sub.add_parser("review")
+    p.add_argument("--dump", required=True)
+    p.add_argument("--out", required=True, help="folder of the PNGs and items.json (goes to the review page)")
+    p.add_argument("--key", required=True, help="answer key (strata), stays on Sofia")
+    p.add_argument("--n", type=int, default=48, help="segments per concept (4 equal strata)")
+    p.add_argument("--seed", type=int, default=0)
+    p = sub.add_parser("page")
+    p.add_argument("--dir", required=True)
     a = ap.parse_args(argv)
-    {"annotate": annotate, "agree": agree, "render": render_ids}[a.cmd](a)
+    {"annotate": annotate, "agree": agree, "render": render_ids, "review": review, "page": page}[a.cmd](a)
 
 
 if __name__ == "__main__":
