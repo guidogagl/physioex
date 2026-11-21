@@ -399,3 +399,106 @@ REGRESSION_METRICS = {
     "mae": mae_score,
     "r2": r2_score,
 }
+
+
+# ---------------------------------------------------------------------------
+# Record-level Cohen's kappa aggregations (numpy, class-index inputs)
+#
+# Published sleep-staging results aggregate kappa in two ways:
+#   * pooled: one confusion matrix over every scored epoch of every
+#     recording (wav2sleep's kappa_T, Jones' ``overall_kappa``);
+#   * per-record: one kappa per recording, then the median across
+#     recordings (SleepPPG-Net, Jones' headline metric).
+# Both use the standard Cohen's kappa of the confusion matrix
+# (identical to ``sklearn.metrics.cohen_kappa_score``).
+# ---------------------------------------------------------------------------
+
+
+def _as_index_array(x) -> "np.ndarray":
+    import numpy as np
+
+    if isinstance(x, torch.Tensor):
+        x = x.detach().cpu().numpy()
+    return np.asarray(x).reshape(-1)
+
+
+def record_confusion_matrix(
+    y_true, y_pred, n_classes: int, ignore_index: typing.Optional[int] = -1
+) -> "np.ndarray":
+    """Confusion matrix (rows = true, columns = predicted) of one recording.
+
+    ``y_true`` and ``y_pred`` are class indices of equal length (numpy arrays,
+    lists or tensors). Epochs whose true label equals ``ignore_index``
+    (unscored or padding) are dropped.
+    """
+    import numpy as np
+
+    t = _as_index_array(y_true).astype(np.int64)
+    p = _as_index_array(y_pred).astype(np.int64)
+    if t.shape != p.shape:
+        raise ValueError(f"y_true and y_pred differ in length: {t.shape} vs {p.shape}")
+    if ignore_index is not None:
+        keep = t != ignore_index
+        t, p = t[keep], p[keep]
+    if t.size and (t.min() < 0 or t.max() >= n_classes or p.min() < 0 or p.max() >= n_classes):
+        raise ValueError(f"class index outside [0, {n_classes}) after removing ignore_index")
+    return np.bincount(t * n_classes + p, minlength=n_classes * n_classes).reshape(
+        n_classes, n_classes
+    )
+
+
+def kappa_from_confusion(cm) -> float:
+    """Cohen's kappa of a confusion matrix; NaN when it is undefined.
+
+    Undefined cases: an empty matrix, or chance agreement equal to 1 (one
+    class only in both rater marginals).
+    """
+    import numpy as np
+
+    cm = np.asarray(cm, dtype=np.float64)
+    total = cm.sum()
+    if total == 0:
+        return float("nan")
+    po = np.trace(cm) / total
+    pe = float((cm.sum(axis=0) * cm.sum(axis=1)).sum()) / (total * total)
+    if np.isclose(pe, 1.0):
+        return float("nan")
+    return float((po - pe) / (1.0 - pe))
+
+
+def pooled_kappa(
+    y_true_records, y_pred_records, n_classes: int, ignore_index: typing.Optional[int] = -1
+) -> float:
+    """Kappa of the confusion matrix summed over all recordings (kappa_T)."""
+    import numpy as np
+
+    cm = np.zeros((n_classes, n_classes), dtype=np.int64)
+    for t, p in zip(y_true_records, y_pred_records, strict=True):
+        cm += record_confusion_matrix(t, p, n_classes, ignore_index)
+    return kappa_from_confusion(cm)
+
+
+def per_record_kappa(
+    y_true_records, y_pred_records, n_classes: int, ignore_index: typing.Optional[int] = -1
+) -> "np.ndarray":
+    """One kappa per recording (NaN where kappa is undefined)."""
+    import numpy as np
+
+    return np.array(
+        [
+            kappa_from_confusion(record_confusion_matrix(t, p, n_classes, ignore_index))
+            for t, p in zip(y_true_records, y_pred_records, strict=True)
+        ],
+        dtype=np.float64,
+    )
+
+
+def median_record_kappa(
+    y_true_records, y_pred_records, n_classes: int, ignore_index: typing.Optional[int] = -1
+) -> float:
+    """Median of the per-recording kappas, ignoring undefined (NaN) ones."""
+    import numpy as np
+
+    k = per_record_kappa(y_true_records, y_pred_records, n_classes, ignore_index)
+    k = k[~np.isnan(k)]
+    return float(np.median(k)) if k.size else float("nan")
