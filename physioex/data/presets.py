@@ -393,10 +393,15 @@ def wav2sleep_preset() -> Dict[str, PreprocessingPipeline]:
     (ECG/PPG) or 256 samples (RESP); the 4096-sample EOG grid is
     re-epoch-ed at load time.
     """
-    return {
+    preset = {
         modality: _wav2sleep_pipeline(modality)
         for modality in ("ECG", "PPG", "RESP", "EOG")
     }
+    # ABD and THX are resolved as modality requests of their own (they are
+    # in the EDF reader's known modalities), so they need explicit entries;
+    # without them they would fall back to the Identity pipeline.
+    preset["ABD"] = preset["THX"] = preset["RESP"]
+    return preset
 
 
 def sleepppgnet_preset() -> PreprocessingPipeline:

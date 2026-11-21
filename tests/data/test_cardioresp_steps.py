@@ -424,13 +424,14 @@ def test_wav2sleep_preset_end_to_end(rng):
         "physical_min": -1.0,
         "physical_max": 1.0,
     }
-    fs_map = {"ECG": 250.0, "PPG": 250.0, "RESP": 250.0, "EOG": 512.0}
+    fs_map = {"ECG": 250.0, "PPG": 250.0, "RESP": 250.0, "EOG": 512.0, "ABD": 250.0, "THX": 250.0}
     n1024 = round(36000 * 1024.0 / 30.0)  # 1228800
     n256 = round(36000 * 256.0 / 30.0)    # 307200
     n4096 = round(36000 * 4096.0 / 30.0)  # 4915200
 
     expected = {"ECG": (1200, 1024), "PPG": (1200, 1024),
-                "RESP": (1200, 256), "EOG": (1200, 4096)}
+                "RESP": (1200, 256), "EOG": (1200, 4096),
+                "ABD": (1200, 256), "THX": (1200, 256)}
     for mod, pipe in bundle.items():
         x = _synthetic_recording(rng, duration, fs_map[mod])
         compiled = pipe.compile(fs_map[mod], header=header)

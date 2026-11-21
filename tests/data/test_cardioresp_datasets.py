@@ -407,3 +407,15 @@ def test_sleepppgnet_replica_split_file():
     assert all(i.startswith("mesa-sleep-") for i in ids)
     assert load_sleepppgnet_replica_split("mesa", "train") == []
     assert load_sleepppgnet_replica_split("shhs", "test") == []
+
+
+def test_harmonized_age_sex_falls_back_to_plain_columns():
+    # CCSHS ships ccshs-trec-dataset with ``age`` / ``male`` instead of the
+    # harmonized nsrr_age / nsrr_sex columns.
+    from physioex.data.datasets._nsrr import _NSRRBaseDataset
+
+    f = _NSRRBaseDataset._harmonized_age_sex
+    assert f({"nsrr_age": 50.0, "nsrr_sex": "female"}) == (50.0, "F")
+    assert f({"age": 17.0, "male": 1}) == (17.0, "M")
+    assert f({"age": "16", "male": "0"}) == (16.0, "F")
+    assert f({}) == (None, None)

@@ -153,12 +153,19 @@ class _NSRRBaseDataset(BasePhysioDataset):
         """
         if not row:
             return None, None
-        age = row.get("nsrr_age")
+        # Harmonized column first; datasets whose CSV is not the harmonized
+        # one (e.g. CCSHS ``ccshs-trec-dataset``) carry plain ``age`` / ``male``.
+        age = row.get("nsrr_age", row.get("age"))
         try:
             age = float(age) if age is not None and not pd_isna(age) else None
         except (TypeError, ValueError):
             age = None
         sex = row.get("nsrr_sex")
+        if sex is None and row.get("male") is not None:
+            try:
+                sex = "M" if int(float(row["male"])) == 1 else "F"
+            except (TypeError, ValueError):
+                sex = None
         if sex is None or (isinstance(sex, float) and pd_isna(sex)):
             sex = None
         elif isinstance(sex, str):

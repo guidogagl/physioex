@@ -339,3 +339,14 @@ def test_time_frequency_clip_db():
 # ---------------------------------------------------------------------------
 # Run all tests
 # ---------------------------------------------------------------------------
+
+
+def test_wav2sleep_preset_covers_abd_and_thx():
+    # Regression: ABD/THX are resolved as modality requests of their own;
+    # without explicit entries they fell back to the Identity pipeline.
+    from physioex.data.presets import get_preset
+
+    preset = get_preset("wav2sleep")
+    for key in ("ABD", "THX"):
+        assert key in preset
+        assert preset[key].hash() == preset["RESP"].hash()

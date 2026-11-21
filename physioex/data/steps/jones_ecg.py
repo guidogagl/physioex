@@ -664,7 +664,11 @@ class JonesECGPreprocess(PreprocessingStep):
         self.archetypes_path = archetypes_path
 
     def spec(self) -> str:
+        # ``impl`` is bumped whenever the numerical output changes for the same
+        # parameters, so caches built by an older implementation are not reused
+        # (2: SOS high-pass and per-beat template z-score).
         return self._build_spec(
+            impl=2,
             line_freq=self.line_freq,
             remove_clips=self.remove_clips,
             find_noise=self.find_noise,
