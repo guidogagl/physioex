@@ -25,13 +25,6 @@ PIPELINE = "wav2sleep"
 LABEL_TRANSFORM = "aasm4"
 N_CLASSES = 4
 METRICS_PATH = Path(__file__).parent / "paper_metrics.json"
-#: Signal names passed to predict_night for each condition of Table 6.
-CONDITION_SIGNALS = {
-    "all": ["ABD", "THX", "ECG", "PPG"],
-    "ecg_thx": ["ECG", "THX"],
-    "ecg": ["ECG"],
-    "ppg": ["PPG"],
-}
 #: Datasets whose "all" condition includes PPG in the paper.
 ALL_WITH_PPG = {"mesa", "chat", "cfs", "ccshs"}
 
@@ -64,7 +57,7 @@ def _default_device() -> str:
 def _condition_channels(cond: str, dataset_name: str) -> list:
     """Channel requests for one condition; PPG in "all" only where the paper says so."""
     if cond == "all":
-        channels = ["ECG", "THX"]
+        channels = ["ABD", "THX", "ECG"]
         if dataset_name in ALL_WITH_PPG:
             channels.append("PPG")
         return channels
@@ -94,30 +87,6 @@ def _build_dataset(dataset_cls, root, cache_dir, channels) -> "object | None":
         print("  [SKIP] no subjects found (data missing or unreadable)")
         return None
     return ds
-
-
-def _predict_nights(model, dataset, subject_ids, signals) -> "list[tuple]":
-    """Return (subject_id, pred, labels) for each night that evaluates cleanly."""
-    import numpy as np
-    from torch import no_grad
-
-    out = []
-    for sid in subject_ids:
-        try:
-            item = dataset[int(dataset.get_subjects().index(sid))]
-        except (IndexError, ValueError):
-            print(f"  [SKIP] {sid}: not present in this dataset instance")
-            continue
-        sig = {name: item["signals"][f"{name}_0"] for name in signals}
-        try:
-            with no_grad():
-                pred = model.predict_night(sig, item["subject"])
-            pred = np.asarray(pred, dtype=np.int64)
-        except Exception as exc:
-            print(f"  [SKIP] {sid}: prediction failed ({type(exc).__name__}: {exc})")
-            continue
-        out.append((sid, pred, item["labels"]))
-    return out
 
 
 def _git_sha() -> "str | None":
@@ -161,50 +130,43 @@ def main(argv=None) -> int:
     print(f"Loading {MODEL_NAME} on {device}...")
     model = load_from_pretrained(MODEL_NAME, device=device)
 
-    # ── Per-dataset evaluation, one pass per condition ─────────────────
+    # ── One pass over the nights; every condition predicted per night ──
+    census = {t.condition: t.requires for t in targets if t.dataset == "census"}
+    census_names = set().union(*census.values()) if census else set()
+    names = sorted(set(dataset_names) | census_names)
     per_dataset: dict = {}     # (dataset, condition) -> [(sid, pred, labels)]
-    for name in dataset_names:
-        try:
-            ds = _build_dataset(get_dataset(name), args.data_root, args.cache_dir,
-                                ["ECG", "THX", "PPG"])
-        except Exception as exc:
-            print(f"  [SKIP] {name}: {type(exc).__name__}: {exc}")
-            continue
+    for name in names:
+        ds = _build_dataset(get_dataset(name), args.data_root, args.cache_dir,
+                            ["ECG", "THX", "ABD", "PPG"])
         if ds is None:
             continue
-        _, _, test_ids = ds.get_splits(split=split)
-        test_ids = test_ids[:max_nights] if max_nights else test_ids
-        print(f"{name}: {len(test_ids)} test nights")
-        for cond in sorted({t.condition for t in targets if t.dataset == name}):
-            signals = _condition_channels(cond, name)
-            records = _predict_nights(model, ds, test_ids, signals)
-            records = [(sid, *rep.align(pred, labels)) for sid, pred, labels in records]
-            if records:
-                per_dataset[(name, cond)] = records
-            if len(records) < len(test_ids):
-                print(f"  {cond}: {len(test_ids) - len(records)} nights skipped")
-
-    # ── Census rows: pool the census nights of the required datasets ───
-    for t in targets:
-        if t.dataset != "census":
-            continue
-        records = []
-        for name in t.requires:
-            ds = _build_dataset(get_dataset(name), args.data_root, args.cache_dir,
-                                ["ECG", "THX", "PPG"])
-            if ds is None:
-                continue
-            _, _, test_ids = ds.get_splits(split="wav2sleep-census")
-            test_ids = test_ids[:max_nights] if max_nights else test_ids
-            for sid, pred, labels in _predict_nights(
-                    model, ds, test_ids, _condition_channels(t.condition, name)):
-                records.append((sid, *rep.align(pred, labels)))
-        if records:
-            per_dataset[("census", t.condition)] = records
+        own = {t.condition for t in targets if t.dataset == name} if name in dataset_names else set()
+        test_ids = list(ds.get_splits(split=split)[2]) if own else []
+        cen_conds = {c for c, req in census.items() if name in req}
+        cen_ids = list(ds.get_splits(split="wav2sleep-census")[2]) if cen_conds else []
+        if max_nights:
+            test_ids, cen_ids = test_ids[:max_nights], cen_ids[:max_nights]
+        wanted = list(dict.fromkeys(test_ids + cen_ids))
+        present = set(ds.get_subjects())
+        missing = [s for s in wanted if s not in present]
+        if missing:
+            print(f"  {name}: {len(missing)} split nights not in the dataset, skipped")
+        print(f"{name}: {len(test_ids)} test nights, {len(cen_ids)} census nights")
+        test_set, cen_set = set(test_ids), set(cen_ids)
+        for sid, signals, labels, _meta in rep.iter_nights(ds, [s for s in wanted if s in present]):
+            for cond in own | cen_conds:
+                sig = {k: v for k, v in signals.items() if k in _condition_channels(cond, name)}
+                if not sig:
+                    continue
+                pred, lab, _ = rep.align(model.predict_night(sig), labels)
+                if cond in own and sid in test_set:
+                    per_dataset.setdefault((name, cond), []).append((sid, pred, lab))
+                if cond in cen_conds and sid in cen_set:
+                    per_dataset.setdefault(("census", cond), []).append((sid, pred, lab))
 
     # ── Scores and verdicts ────────────────────────────────────────────
     results = {
-        key: rep.evaluate([p for _, p, _ in recs], [l for _, _, l in recs], N_CLASSES)
+        key: rep.evaluate([l for _, _, l in recs], [p for _, p, _ in recs], N_CLASSES)
         for key, recs in per_dataset.items()
     }
     rows = rep.check(results, targets)
@@ -214,11 +176,11 @@ def main(argv=None) -> int:
                 row["status"] = "REPORT"
     print(rep.format_table(rows))
 
-    per_record_kappa = {}
-    for key, recs in per_dataset.items():
-        for sid, pred, labels in recs:
-            per_record_kappa.setdefault(key[0], {}).setdefault(
-                sid, rep.evaluate([(pred,)], [(labels,)], N_CLASSES))
+    per_record_kappa = {
+        f"{key[0]}/{key[1]}": dict(zip([sid for sid, _, _ in recs],
+                                       results[key]["per_record_kappa"]))
+        for key, recs in per_dataset.items()
+    }
 
     out_path = Path(args.out)
     out_path.parent.mkdir(parents=True, exist_ok=True)

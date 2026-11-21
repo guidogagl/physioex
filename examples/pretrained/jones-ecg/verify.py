@@ -79,30 +79,6 @@ def _build_dataset(dataset_cls, root, cache_dir):
     return ds
 
 
-def _predict_nights(model, dataset, subject_ids) -> "list[tuple]":
-    """Return (subject_id, pred, labels) for each night that evaluates cleanly."""
-    import numpy as np
-    from torch import no_grad
-
-    out = []
-    for sid in subject_ids:
-        try:
-            item = dataset[int(dataset.get_subjects().index(sid))]
-        except (IndexError, ValueError):
-            print(f"  [SKIP] {sid}: not present in this dataset instance")
-            continue
-        try:
-            with no_grad():
-                pred = model.predict_night(
-                    {"ECG": item["signals"]["ECG_0"]}, item["subject"])
-            pred = np.asarray(pred, dtype=np.int64)
-        except Exception as exc:
-            print(f"  [SKIP] {sid}: prediction failed ({type(exc).__name__}: {exc})")
-            continue
-        out.append((sid, pred, item["labels"]))
-    return out
-
-
 def _reference_kappas() -> dict:
     """Map session_id -> o_kappa from the authors' per-recording CSV."""
     out = {}
@@ -171,9 +147,13 @@ def main(argv=None) -> int:
         _, _, test_ids = ds.get_splits(split=SPLIT)
         test_ids = test_ids[:max_nights] if max_nights else test_ids
         print(f"{name}: {len(test_ids)} census test nights")
+        present = set(ds.get_subjects())
         records = []
-        for sid, pred, labels in _predict_nights(model, ds, test_ids):
-            records.append((ds.session_id(sid), *rep.align(pred, labels)))
+        for sid, signals, labels, meta in rep.iter_nights(ds, [s for s in test_ids if s in present]):
+            if "ECG" not in signals:
+                continue
+            pred, lab, _ = rep.align(model.predict_night({"ECG": signals["ECG"]}, meta), labels)
+            records.append((ds.session_id(sid), pred, lab))
             session_id_of[sid] = ds.session_id(sid)
         if records:
             per_dataset[(name, "ecg")] = records
@@ -185,7 +165,7 @@ def main(argv=None) -> int:
         per_dataset[("census", "ecg")] = census_records
 
     results = {
-        key: rep.evaluate([p for _, p, _ in recs], [l for _, _, l in recs], N_CLASSES)
+        key: rep.evaluate([l for _, _, l in recs], [p for _, p, _ in recs], N_CLASSES)
         for key, recs in per_dataset.items()
     }
     rows = rep.check(results, targets)
@@ -203,11 +183,10 @@ def main(argv=None) -> int:
         shown = f"{ref_median[key[0]]:.4f}" if ref else "n/a"
         print(f"  reference median o_kappa over the same {key[0]} recordings: {shown}")
 
-    per_record_kappa = {}
-    for key, recs in per_dataset.items():
-        for sid, pred, labels in recs:
-            per_record_kappa.setdefault(key[0], {}).setdefault(
-                sid, rep.evaluate([(pred,)], [(labels,)], N_CLASSES))
+    per_record_kappa = {
+        key[0]: dict(zip([sid for sid, _, _ in recs], results[key]["per_record_kappa"]))
+        for key, recs in per_dataset.items()
+    }
 
     out_path = Path(args.out)
     out_path.parent.mkdir(parents=True, exist_ok=True)

@@ -127,31 +127,20 @@ def main(argv=None) -> int:
         test_ids = test_ids[:max_nights] if max_nights else test_ids
         print(f"{name}: {len(test_ids)} test nights")
         cond = "ppg"
+        present = set(ds.get_subjects())
         records = []
-        for sid in test_ids:
-            try:
-                item = ds[int(ds.get_subjects().index(sid))]
-            except (IndexError, ValueError):
-                print(f"  [SKIP] {sid}: not present in this dataset instance")
+        for sid, signals, labels, _meta in rep.iter_nights(ds, [s for s in test_ids if s in present]):
+            if "PPG" not in signals:
                 continue
-            from torch import no_grad
-
-            try:
-                with no_grad():
-                    pred = model.predict_night(
-                        {"PPG": item["signals"]["PPG_0"]}, item["subject"])
-            except Exception as exc:
-                print(f"  [SKIP] {sid}: prediction failed ({type(exc).__name__}: {exc})")
-                continue
-            pred, labels, _ = rep.align(pred, item["labels"])
-            records.append((sid, pred, labels))
+            pred, lab, _ = rep.align(model.predict_night({"PPG": signals["PPG"]}), labels)
+            records.append((sid, pred, lab))
         if records:
             per_dataset[(name, cond)] = records
         if len(records) < len(test_ids):
             print(f"  {cond}: {len(test_ids) - len(records)} nights skipped")
 
     results = {
-        key: rep.evaluate([p for _, p, _ in recs], [l for _, _, l in recs], N_CLASSES)
+        key: rep.evaluate([l for _, _, l in recs], [p for _, p, _ in recs], N_CLASSES)
         for key, recs in per_dataset.items()
     }
     rows = rep.check(results, targets)
@@ -161,11 +150,10 @@ def main(argv=None) -> int:
                 row["status"] = "REPORT"
     print(rep.format_table(rows))
 
-    per_record_kappa = {}
-    for key, recs in per_dataset.items():
-        for sid, pred, labels in recs:
-            per_record_kappa.setdefault(key[0], {}).setdefault(
-                sid, rep.evaluate([(pred,)], [(labels,)], N_CLASSES))
+    per_record_kappa = {
+        key[0]: dict(zip([sid for sid, _, _ in recs], results[key]["per_record_kappa"]))
+        for key, recs in per_dataset.items()
+    }
 
     out_path = Path(args.out)
     out_path.parent.mkdir(parents=True, exist_ok=True)

@@ -146,9 +146,11 @@ def iter_nights(
     Yields:
         Tuples ``(subject_id, signals, labels, metadata)`` where
 
-        * ``signals`` maps the channel key the dataset builds items with
-          (``channel_order``, e.g. ``"ECG_0"``) to a ``(L, T_e)`` float32
-          array of the (preprocessed) whole-night signal;
+        * ``signals`` maps the requested channel name (``channel_info[key]
+          ["request"]``, e.g. ``"ECG"``; the item key such as ``"ECG_0"``
+          when no request is recorded) to a ``(L, T_e)`` float32 array of the
+          (preprocessed) whole-night signal. Channels the subject lacks
+          (``available=False``, zero-filled by the dataset) are left out;
         * ``labels`` is the ``(L,)`` int64 label array in the dataset's label
           transform (e.g. ``aasm4``: W=0, Light=1, Deep=2, REM=3; ``-1``
           unscored), aligned with the signals;
@@ -169,10 +171,16 @@ def iter_nights(
         if subject_id not in index:
             raise KeyError(f"subject {subject_id!r} not in dataset {dataset.DATASET_NAME}")
         item = dataset[index[subject_id]]
-        signals = {
-            name: np.asarray(sig, dtype=np.float32)
-            for name, sig in item["signals"].items()
-        }
+        info = item.get("channel_info", {})
+        signals = {}
+        for key, sig in item["signals"].items():
+            meta = info.get(key, {})
+            # Channels the subject lacks are zero-filled by the dataset with
+            # available=False: drop them so the model sees them as absent.
+            if not meta.get("available", True):
+                continue
+            name = str(meta.get("request", key))
+            signals[name] = np.asarray(sig, dtype=np.float32)
         labels = np.asarray(item["labels"], dtype=np.int64)
         try:
             metadata = dataset.subject_metadata(subject_id)

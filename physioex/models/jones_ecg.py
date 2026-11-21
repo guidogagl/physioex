@@ -293,8 +293,9 @@ class JonesECGNet(nn.Module):
         if additional is None:
             additional = self.build_additional(seqlen, self.variant)
             additional = additional.unsqueeze(0).expand(batch, -1, -1)
+        additional = additional.to(device=x.device, dtype=x.dtype)
 
-        mask = padding_mask if padding_mask is not None else torch.ones(batch, seqlen, dtype=x.dtype)
+        mask = padding_mask if padding_mask is not None else torch.ones(batch, seqlen, dtype=x.dtype, device=x.device)
         if mask.dim() == 2:
             mask = mask.unsqueeze(-1)
         mask = mask.to(x.dtype)
@@ -502,20 +503,20 @@ class JonesECGNet(nn.Module):
                 )
 
         device = next(self.parameters()).device
-        provided = [v is not None for v in (age, sex, start)]
-        if any(provided):
-            additional = self.build_additional(
-                L,
-                self.variant,
-                age=age,
-                sex=sex,
-                midnight_offset=self.midnight_offset(start) if start is not None else None,
-            ).unsqueeze(0)
-        else:
-            # All auxiliary inputs missing: use the variant's noise fallback
-            # (the authors' way of running input-occluded models) instead of
-            # letting build_additional raise.
-            additional = self._fallback_additional(L, self.variant, device).unsqueeze(0)
+        # Start from the variant's noise fallback (the authors' way of running
+        # input-occluded models) and overwrite the columns whose inputs are
+        # known, so a partly missing metadata dict never raises.
+        additional = self._fallback_additional(L, self.variant, torch.device("cpu"))
+        needs = VARIANTS[self.variant]["needs"]
+        if age is not None and sex is not None and {"age", "sex"} <= needs:
+            additional[:, 0] = float(sex)
+            additional[:, 1] = float(age) / 100.0
+        if start is not None and "start_time" in needs:
+            full = self.build_additional(
+                L, self.variant, age=0.0, sex=0.0, midnight_offset=self.midnight_offset(start)
+            )
+            additional[:, 2:] = full[:, 2:]
+        additional = additional.unsqueeze(0)
         x = torch.from_numpy(arr).reshape(1, L, 1, arr.shape[1]).to(device)
         additional = additional.to(device)
 
