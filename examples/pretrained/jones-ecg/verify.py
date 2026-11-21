@@ -68,6 +68,9 @@ def _build_dataset(dataset_cls, root, cache_dir, **extra):
             pipelines=PIPELINE,
             **extra,
             sequence_length=0,
+            # Whole nights are read once each: keep few files open (a large
+            # memmap LRU can stall a GPFS client on the cluster node).
+            memmap_cache_size=4,
             cache_dir=cache_dir,
             trim_excess_wake=False,
         )

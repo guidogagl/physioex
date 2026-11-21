@@ -213,6 +213,11 @@ def iter_nights(
             # not every dataset provides subject-level metadata
             metadata = {}
         yield subject_id, signals, labels, metadata
+    # Release the memmapped cache files of the iterated nights (they are
+    # reopened on demand); many open files can stall a parallel filesystem.
+    close = getattr(dataset, "close", None)
+    if callable(close):
+        close()
 
 
 # ---------------------------------------------------------------------------
