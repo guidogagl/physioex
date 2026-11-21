@@ -17,6 +17,7 @@ from physioex.train.replication import (
     check,
     evaluate,
     format_table,
+    has_scoring_issues,
     iter_nights,
     load_paper_metrics,
 )
@@ -464,3 +465,17 @@ def test_mros_visit_argument():
 
     with pytest.raises(ValueError):
         MrOSDataset(root="/nonexistent", visit=3)
+
+
+def test_has_scoring_issues_reads_raw_labels():
+    class _DS:
+        _subjects = [_FakeSpec("a"), _FakeSpec("b"), _FakeSpec("c")]
+        _raw = {"a": [0, 2, 2, -1], "b": [0, 1, 2], "c": [0, 2, 4]}
+
+        def _get_labels(self, spec):
+            return np.array(self._raw[spec.subject_id])
+
+    ds = _DS()
+    assert has_scoring_issues(ds, "a") is True
+    assert has_scoring_issues(ds, "b") is False
+    assert has_scoring_issues(ds, "c") is False

@@ -225,6 +225,19 @@ def iter_nights(
 # ---------------------------------------------------------------------------
 
 
+def has_scoring_issues(dataset: "BasePhysioDataset", subject_id: str) -> bool:
+    """True when the night has no N1, N3 or REM epoch in its raw AASM labels.
+
+    wav2sleep's ingestion marks such nights as ``.issues`` (recordings scored
+    sleep/wake only, with N2 as the sole sleep class) and its per-dataset test
+    evaluation leaves them out (``exclude_issues=True``). The check reads the
+    labels before any ``label_transform``, since ``aasm4`` merges N1 into Light.
+    """
+    spec = next(s for s in dataset._subjects if s.subject_id == subject_id)
+    raw = np.asarray(dataset._get_labels(spec))
+    return not np.isin(raw, (1, 3, 4)).any()
+
+
 def align(
     pred: np.ndarray, labels: np.ndarray
 ) -> "tuple[np.ndarray, np.ndarray, int]":

@@ -20,6 +20,8 @@ import os
 import sys
 from pathlib import Path
 
+import numpy as np
+
 MODEL_NAME = "wav2sleep"
 PIPELINE = "wav2sleep"
 LABEL_TRANSFORM = "aasm4"
@@ -45,6 +47,9 @@ def build_parser() -> argparse.ArgumentParser:
                              "(PASS/FAIL are reported as REPORT)")
     parser.add_argument("--out", default="./verify_results.json",
                         help="path of the output JSON")
+    parser.add_argument("--keep-issues", action="store_true",
+                        help="keep test nights without N1/N3/REM (the authors "
+                             "exclude them; census nights are always kept)")
     return parser
 
 
@@ -155,9 +160,18 @@ def main(argv=None) -> int:
         missing = [s for s in wanted if s not in present]
         if missing:
             print(f"  {name}: {len(missing)} split nights not in the dataset, skipped")
-        print(f"{name} {extra}: {len(test_ids)} test nights, {len(cen_ids)} census nights")
-        test_set, cen_set = set(test_ids), set(cen_ids)
+        test_set, cen_set = set(test_ids) & present, set(cen_ids)
+        if not args.keep_issues:
+            issues = {s for s in test_set if rep.has_scoring_issues(ds, s)}
+            test_set -= issues
+            wanted = [s for s in wanted if s not in issues or s in cen_set]
+            if issues:
+                print(f"  {name}: {len(issues)} test nights without N1/N3/REM excluded")
+        print(f"{name} {extra}: {len(test_set)} test nights, {len(cen_ids)} census nights")
         for sid, signals, labels, _meta in rep.iter_nights(ds, [s for s in wanted if s in present]):
+            # The authors drop a flat PPG (std < 1e-3) at ingestion: absent signal.
+            if "PPG" in signals and float(np.std(signals["PPG"])) < 1e-3:
+                signals = {k: v for k, v in signals.items() if k != "PPG"}
             for cond in own | cen_conds:
                 sig = {k: v for k, v in signals.items() if k in _condition_channels(cond, name)}
                 if not sig:
@@ -199,6 +213,7 @@ def main(argv=None) -> int:
             "device": device,
             "model": MODEL_NAME,
             "max_nights": max_nights,
+            "keep_issues": args.keep_issues,
             "data_root": os.environ.get("PHYSIOEX_DATA", args.data_root),
         },
     }, indent=2, default=str))
