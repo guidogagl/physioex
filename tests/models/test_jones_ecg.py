@@ -36,13 +36,13 @@ ALL_VARIANTS = list(VARIANTS)
 
 def _variant_keys(variant):
     return [
-        "jones/1_paper_models/primary_model",
-        "jones/1_paper_models/real-time_model",
-        "jones/2_post-paper_models/primary_model_no_demographics",
-        "jones/2_post-paper_models/primary_model_no_time",
-        "jones/2_post-paper_models/primary_model_only_ecg",
-        "jones/3_cyclic-time_models/primary_model",
-        "jones/3_cyclic-time_models/real-time_model",
+        "1_paper_models/primary_model",
+        "1_paper_models/real-time_model",
+        "2_post-paper_models/primary_model_no_demographics",
+        "2_post-paper_models/primary_model_no_time",
+        "2_post-paper_models/primary_model_only_ecg",
+        "3_cyclic-time_models/primary_model",
+        "3_cyclic-time_models/real-time_model",
     ][["primary", "realtime", "no-demographics", "no-time", "only-ecg", "cyclic", "cyclic-realtime"].index(variant)]
 
 
@@ -52,7 +52,7 @@ def _variant_keys(variant):
 def test_state_dict_matches_fixture(variant):
     """Keys and shapes must match the original checkpoint exactly (strict load)."""
     with open(FIXTURES / "state_dict_shapes.json") as f:
-        expected = json.load(f)[_variant_keys(variant)]
+        expected = json.load(f)["jones/" + _variant_keys(variant)]
 
     model = JonesECGNet(variant=variant)
     actual = {k: list(v.shape) for k, v in model.state_dict().items()}

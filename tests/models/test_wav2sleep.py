@@ -200,6 +200,6 @@ def test_golden_parity(name, signals, seeds, cases):
     }
     for case in cases:
         got = case_logits(expected_active[case])
-        want = npz[case]
+        want = npz[case][0]
         assert got.shape == want.shape, (case, got.shape, want.shape)
         np.testing.assert_allclose(got, want, atol=1e-4, rtol=1e-4, err_msg=case)

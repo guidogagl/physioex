@@ -380,7 +380,7 @@ class Wav2Sleep(nn.Module):
             B = x_flat[signals[0]].size(0)
             absent_B = torch.stack(
                 [torch.isinf(x_flat[s]).all(dim=-1) for s in signals], dim=-1
-            ).any(dim=-1)
+            ).all(dim=-1)
             logits_BSF = torch.where(absent_B[:, None, None], float("-inf"), logits_BSF)
         return logits_BSF
 
