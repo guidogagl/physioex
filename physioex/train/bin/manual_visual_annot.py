@@ -142,13 +142,15 @@ def render(sig, fs, i, stage, emg_half=None, hl=None):
 def call(endpoint, key, png, stage, model="qwen3.8-27b", tries=3):
     content = [{"type": "image_url", "image_url": {"url": "data:image/png;base64," + base64.b64encode(png).decode()}},
                {"type": "text", "text": PROMPT.format(stage=stage, defs=_defs())}]
-    body = {"model": model, "temperature": 0.0, "max_tokens": 1500, "messages": [{"role": "user", "content": content}],
-            "response_format": {"type": "json_schema", "json_schema": {"name": "epoch", "schema": SCHEMA}},
-            "chat_template_kwargs": {"enable_thinking": False}}
-    req = urllib.request.Request(endpoint.rstrip("/") + "/v1/chat/completions", data=json.dumps(body).encode(),
-                                 headers={"Authorization": "Bearer " + key, "Content-Type": "application/json"})
     err = ""
     for a in range(tries):
+        # greedy first; a JSON that loops on whitespace repeats identically at temperature 0, so retry sampled
+        body = {"model": model, "temperature": 0.0 if a == 0 else 0.4, "max_tokens": 700,
+                "messages": [{"role": "user", "content": content}],
+                "response_format": {"type": "json_schema", "json_schema": {"name": "epoch", "schema": SCHEMA}},
+                "chat_template_kwargs": {"enable_thinking": False}}
+        req = urllib.request.Request(endpoint.rstrip("/") + "/v1/chat/completions", data=json.dumps(body).encode(),
+                                     headers={"Authorization": "Bearer " + key, "Content-Type": "application/json"})
         try:
             with urllib.request.urlopen(req, timeout=600) as r:
                 return json.loads(json.loads(r.read())["choices"][0]["message"]["content"]), ""
