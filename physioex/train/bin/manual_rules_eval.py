@@ -49,6 +49,68 @@ def _m1_night(job):
     return key, sorted(r), time.time() - t0
 
 
+def _arousal_night(job):
+    from physioex.explain.concept_refs import contiguous, samples_to_tokens
+    from physioex.explain.manual_rules import detect_arousal
+
+    key, dump_dir, entry, ks = job
+    z = np.load(os.path.join(dump_dir, f"{key}.npz"))
+    sc = entry["scale"]
+    if "eeg" not in sc or "x_eeg" not in z.files:
+        return key, None
+    ts, y = z["ts"], z["y"].astype(np.int8)
+    eeg = z["x_eeg"].astype(np.float32) * np.float32(sc["eeg"][1]) + np.float32(sc["eeg"][0])
+    emg = z["x_emg"].astype(np.float32) if "x_emg" in z.files else None
+    f = float(entry["fs"]["eeg"])
+    out = {k: np.zeros(len(ts) * T, bool) for k in ks}
+    for a, b in contiguous(ts):
+        s = eeg[a:b].reshape(-1).astype(np.float64)
+        m = emg[a:b].reshape(-1).astype(np.float64) if emg is not None and emg.shape == eeg.shape else None
+        st = np.repeat(y[a:b], T)
+        for k in ks:
+            ar = detect_arousal(s, f, m, st, k=k)
+            out[k][a * T:b * T] = samples_to_tokens(ar["arousal"] + ar["awakening"], len(s), f)[:(b - a) * T]
+    return key, out
+
+
+def arousal_grid(a, meta, sc, keys, ks):
+    """Event F1 of ``arousal_m1 | awakening_m1`` vs ``arousal_ann`` outside W for every ``k``, per group, with
+    MASS SS01 split into odd (``mass_ss01_odd``: choose k) and even nights (``mass_ss01_even``: held out)."""
+    from concurrent.futures import ProcessPoolExecutor
+
+    from physioex.train.bin.concept_scan import load_refs
+
+    jobs = [(k, a.dump, dict(meta["nights"][k], fs=meta["fs"],
+                             scale={m: [o["median"], o["scale"]] for m, o in sc.get(k, {}).items()}), ks)
+            for k, _ in keys]
+    grp = dict(keys)
+    mass = [k for k, g in keys if g == "mass_ss01"]
+    half = {k: "_odd" if j % 2 else "_even" for j, k in enumerate(mass)}  # alternate nights in key order
+    counts = {}
+    with ProcessPoolExecutor(a.workers) as ex:
+        for key, res in ex.map(_arousal_night, jobs):
+            rp = os.path.join(a.dump, "refs", f"{key}.npz")
+            if res is None or not os.path.exists(rp):
+                continue
+            rf = load_refs(rp)
+            if "arousal_ann" not in rf:
+                continue
+            y = np.repeat(np.load(os.path.join(a.dump, f"{key}.npz"))["y"].astype(np.int8), T)
+            g = grp[key]
+            g += half.get(key, "")
+            for k, m in res.items():
+                counts.setdefault((k, g), []).append(night_counts(m, rf["arousal_ann"], np.isin(y, (1, 2, 3, 4))))
+    res = {}
+    for (k, g), c in sorted(counts.items()):
+        b = bootstrap(c, a.n_boot)
+        res.setdefault(g, {})[str(k)] = b
+        print(f"[grid] k {k:4.1f} {g:15s} P {b['precision']:.2f} R {b['recall']:.2f} F1 {b['f1']:.2f} "
+              f"({b['n_det']}/{b['n_ref']})", flush=True)
+    out = a.out or os.path.join(a.dump, "arousal_grid.json")
+    json.dump(res, open(out, "w"), indent=1, default=float)
+    print(f"[grid] -> {out}\nDONE", flush=True)
+
+
 def main(argv=None):
     from concurrent.futures import ProcessPoolExecutor
 
@@ -62,6 +124,7 @@ def main(argv=None):
     ap.add_argument("--n-boot", type=int, default=1000)
     ap.add_argument("--force", action="store_true", help="recompute DUMP/m1 masks")
     ap.add_argument("--out", default=None, help="default DUMP/manual_rules_eval.json")
+    ap.add_argument("--arousal-k", default="", help="comma-separated k: only the arousal grid (no masks written)")
     a = ap.parse_args(argv)
     t0 = time.time()
     meta = json.load(open(os.path.join(a.dump, "meta.json")))
@@ -77,6 +140,8 @@ def main(argv=None):
         per[g] = per.get(g, 0) + 1
         keys.append((k, g))
     print(f"[m1_eval] {len(keys)} nights: {per}", flush=True)
+    if a.arousal_k:
+        return arousal_grid(a, meta, sc, keys, [float(k) for k in a.arousal_k.split(",")])
     jobs = []
     for k, _ in keys:
         if not a.force and os.path.exists(os.path.join(a.dump, "m1", f"{k}.npz")):

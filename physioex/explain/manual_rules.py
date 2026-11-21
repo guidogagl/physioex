@@ -151,11 +151,14 @@ def detect_alpha_intrusion(sig, fs, stages_tok, arousal_iv, max_burst_s=3.0, rat
     """Alpha intrusion [F ch4; K]: "intrusions of alpha activity of less than 3 s into NREM sleep at a rate
     greater than one burst per 10 s are not scored as arousals". Alpha token = ``eeg_background`` alpha
     (8-13 Hz dominant). ``alpha_burst``: runs of alpha tokens inside N2/N3 tokens, shorter than ``max_burst_s``,
-    not overlapping ``arousal_iv`` (samples). ``alpha_intrusion``: the bursts with more than ``rate_per_10s``
+    not overlapping ``arousal_iv`` (samples); a token counts only if its 8-12 Hz power exceeds the 12-16 Hz
+    power (ours: spindles are not alpha). ``alpha_intrusion``: the bursts with more than ``rate_per_10s``
     burst onsets (itself included) in some ``win_s`` window containing their onset, i.e. another onset
     less than ``win_s`` away."""
-    alpha, _ = eeg_background(sig, fs)
-    n = len(alpha)
+    alpha, _ = eeg_background(sig, fs)  # 8-13 Hz dominant: also catches the low edge of spindles
+    p = band_power_tokens(sig, fs, {"alpha": (8.0, 12.0), "sigma": SIGMA})
+    n = min(len(alpha), len(p["alpha"]))
+    alpha = alpha[:n] & (p["alpha"][:n] > p["sigma"][:n])  # ours: not a spindle
     nrem = np.ones(n, bool) if stages_tok is None else np.isin(stages_tok[:n], (2, 3))
     block = np.zeros(n, bool)
     for a, b in _tok_iv(arousal_iv, fs):
