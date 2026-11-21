@@ -234,12 +234,37 @@ class WSCDataset(_NSRRBaseDataset):
     def subject_metadata(self, subject_id: str) -> Dict[str, Any]:
         """Return ``{"age", "sex", "recording_start"}`` for a subject.
 
-        The WSC CSV carries no ``nsrr_age``/``nsrr_sex`` columns (and is not
-        the NSRR harmonized format), so age and sex are ``None``;
-        ``recording_start`` comes from the EDF header startdatetime.
-        Never raises.
+        Age and sex come from the NSRR harmonized CSV
+        (``wsc-harmonized-dataset-*.csv``, columns ``nsrr_age`` / ``nsrr_sex``,
+        rows matched on ``nsrrid`` and ``wsc_vst``); ``recording_start``
+        comes from the EDF header startdatetime. A missing file or value
+        yields ``None``. Never raises.
         """
-        return {"age": None, "sex": None, "recording_start": self._recording_start(subject_id)}
+        row = self._harmonized_rows().get(str(subject_id).split("-")[2] if subject_id.count("-") >= 2 else "")
+        age, sex = self._harmonized_age_sex(row)
+        return {"age": age, "sex": sex, "recording_start": self._recording_start(subject_id)}
+
+    def _harmonized_rows(self) -> Dict[str, Dict[str, Any]]:
+        """Harmonized-CSV rows of this visit keyed by ``nsrrid`` (cached)."""
+        cached = getattr(self, "_harmonized_cache", None)
+        if cached is not None:
+            return cached
+        rows: Dict[str, Dict[str, Any]] = {}
+        try:
+            import pandas as pd
+
+            paths = sorted((Path(self.root) / "datasets").glob("wsc-harmonized-dataset-*.csv"))
+            if paths:
+                df = pd.read_csv(paths[-1], low_memory=False)
+                df = df[df["wsc_vst"] == self.visit]
+                for _, r in df.iterrows():
+                    rows[str(int(r["nsrrid"]))] = {k: (None if pd.isna(v) else v) for k, v in r.items()}
+            else:
+                logger.debug("[%s] no wsc-harmonized-dataset-*.csv under %s", self.DATASET_NAME, self.root)
+        except Exception as exc:  # metadata is optional: never raise
+            logger.debug("[%s] cannot read the harmonized CSV: %s", self.DATASET_NAME, exc)
+        self._harmonized_cache = rows
+        return rows
 
     # ------------------------------------------------------------------
     # Subject discovery

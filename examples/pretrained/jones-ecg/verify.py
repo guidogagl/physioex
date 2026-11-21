@@ -59,13 +59,14 @@ def _default_device() -> str:
     return "cuda" if torch.cuda.is_available() else "cpu"
 
 
-def _build_dataset(dataset_cls, root, cache_dir):
+def _build_dataset(dataset_cls, root, cache_dir, **extra):
     """Build one dataset (whole-night ECG, jones preset); None on failure."""
     try:
         ds = dataset_cls(
             root=root,
             channels=["ECG"],
             pipelines=PIPELINE,
+            **extra,
             sequence_length=0,
             cache_dir=cache_dir,
             trim_excess_wake=False,
@@ -136,9 +137,9 @@ def main(argv=None) -> int:
     # reference_per_record.csv via dataset.session_id().
     per_dataset: dict = {}   # (dataset, condition) -> [(sid, pred, labels)]
     session_id_of: dict = {}
-    for name in dataset_names:
+    for name, extra in [(n, kw) for n in dataset_names for kw in rep.replication_kwargs(n)]:
         try:
-            ds = _build_dataset(get_dataset(name), args.data_root, args.cache_dir)
+            ds = _build_dataset(get_dataset(name), args.data_root, args.cache_dir, **extra)
         except Exception as exc:
             print(f"  [SKIP] {name}: {type(exc).__name__}: {exc}")
             continue
@@ -146,7 +147,7 @@ def main(argv=None) -> int:
             continue
         _, _, test_ids = ds.get_splits(split=SPLIT)
         test_ids = test_ids[:max_nights] if max_nights else test_ids
-        print(f"{name}: {len(test_ids)} census test nights")
+        print(f"{name} {extra}: {len(test_ids)} census test nights")
         present = set(ds.get_subjects())
         records = []
         for sid, signals, labels, meta in rep.iter_nights(ds, [s for s in test_ids if s in present]):
@@ -156,7 +157,7 @@ def main(argv=None) -> int:
             records.append((ds.session_id(sid), pred, lab))
             session_id_of[sid] = ds.session_id(sid)
         if records:
-            per_dataset[(name, "ecg")] = records
+            per_dataset.setdefault((name, "ecg"), []).extend(records)
         if len(records) < len(test_ids):
             print(f"  ecg: {len(test_ids) - len(records)} nights skipped")
 

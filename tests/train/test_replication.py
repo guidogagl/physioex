@@ -446,3 +446,21 @@ def test_predict_night_restores_training_mode():
     signals = {"ECG": np.random.default_rng(6).standard_normal((L, 7680)).astype(np.float32)}
     model.predict_night(signals)
     assert model.training is True
+
+
+def test_replication_kwargs_cover_split_visits():
+    from physioex.train.replication import replication_kwargs
+
+    assert replication_kwargs("mesa") == [{}]
+    assert replication_kwargs("ccshs") == [{"exclude_subjects": []}]
+    assert [kw["visit"] for kw in replication_kwargs("wsc")] == [1, 2, 3, 4]
+    assert [kw["visit"] for kw in replication_kwargs("shhs")] == [1, 2]
+    assert [kw["visit"] for kw in replication_kwargs("mros")] == [1, 2]
+
+
+def test_mros_visit_argument():
+    import pytest
+    from physioex.data.datasets.mros import MrOSDataset
+
+    with pytest.raises(ValueError):
+        MrOSDataset(root="/nonexistent", visit=3)

@@ -129,6 +129,31 @@ def load_paper_metrics(path: "str | Path") -> "tuple[dict, list[PaperTarget]]":
 # ---------------------------------------------------------------------------
 
 
+#: Visits that the published test splits draw from, per dataset registry name.
+#: The readers load one visit per instance (``visit=`` argument), so a
+#: replication builds one instance per visit and pools the nights.
+SPLIT_VISITS: "dict[str, tuple[int, ...]]" = {
+    "shhs": (1, 2),
+    "mros": (1, 2),
+    "wsc": (1, 2, 3, 4),
+}
+
+
+def replication_kwargs(dataset_name: str) -> "list[dict]":
+    """Constructor keyword sets that together cover a dataset's split nights.
+
+    One dict per visit for multi-visit datasets (see :data:`SPLIT_VISITS`),
+    else a single dict. CCSHS also gets ``exclude_subjects=[]``: its default
+    exclusion list (recordings whose XML disagrees with the NSRR summary CSV)
+    is a physioex choice the published evaluations did not make.
+    """
+    extra = {"exclude_subjects": []} if dataset_name == "ccshs" else {}
+    visits = SPLIT_VISITS.get(dataset_name)
+    if not visits:
+        return [dict(extra)]
+    return [dict(extra, visit=v) for v in visits]
+
+
 def iter_nights(
     dataset: "BasePhysioDataset",
     subject_ids: Sequence[str],

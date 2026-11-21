@@ -68,13 +68,14 @@ def _condition_channels(cond: str, dataset_name: str) -> list:
     }[cond]
 
 
-def _build_dataset(dataset_cls, root, cache_dir, channels) -> "object | None":
+def _build_dataset(dataset_cls, root, cache_dir, channels, **extra) -> "object | None":
     """Build one whole-night dataset instance; None (with a reason) on failure."""
     try:
         ds = dataset_cls(
             root=root,
             channels=channels,
             pipelines=PIPELINE,
+            **extra,
             sequence_length=0,
             label_transform=LABEL_TRANSFORM,
             cache_dir=cache_dir,
@@ -135,9 +136,9 @@ def main(argv=None) -> int:
     census_names = set().union(*census.values()) if census else set()
     names = sorted(set(dataset_names) | census_names)
     per_dataset: dict = {}     # (dataset, condition) -> [(sid, pred, labels)]
-    for name in names:
+    for name, extra in [(n, kw) for n in names for kw in rep.replication_kwargs(n)]:
         ds = _build_dataset(get_dataset(name), args.data_root, args.cache_dir,
-                            ["ECG", "THX", "ABD", "PPG"])
+                            ["ECG", "THX", "ABD", "PPG"], **extra)
         if ds is None:
             continue
         own = {t.condition for t in targets if t.dataset == name} if name in dataset_names else set()
@@ -151,7 +152,7 @@ def main(argv=None) -> int:
         missing = [s for s in wanted if s not in present]
         if missing:
             print(f"  {name}: {len(missing)} split nights not in the dataset, skipped")
-        print(f"{name}: {len(test_ids)} test nights, {len(cen_ids)} census nights")
+        print(f"{name} {extra}: {len(test_ids)} test nights, {len(cen_ids)} census nights")
         test_set, cen_set = set(test_ids), set(cen_ids)
         for sid, signals, labels, _meta in rep.iter_nights(ds, [s for s in wanted if s in present]):
             for cond in own | cen_conds:

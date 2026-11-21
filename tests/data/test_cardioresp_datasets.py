@@ -419,3 +419,19 @@ def test_harmonized_age_sex_falls_back_to_plain_columns():
     assert f({"age": 17.0, "male": 1}) == (17.0, "M")
     assert f({"age": "16", "male": "0"}) == (16.0, "F")
     assert f({}) == (None, None)
+
+
+def test_wsc_subject_metadata_reads_harmonized_csv(tmp_path, monkeypatch):
+    # WSC age/sex live only in wsc-harmonized-dataset-*.csv (per visit).
+    from physioex.data.datasets.wsc import WSCDataset
+
+    (tmp_path / "datasets").mkdir()
+    (tmp_path / "datasets" / "wsc-harmonized-dataset-0.8.0.csv").write_text(
+        "nsrrid,wsc_vst,nsrr_age,nsrr_sex\n10119,1,52,male\n10119,2,57,male\n20000,1,61,female\n"
+    )
+    ds = object.__new__(WSCDataset)
+    ds.root, ds.visit, ds.DATASET_NAME = str(tmp_path), 1, "wsc_visit1"
+    monkeypatch.setattr(WSCDataset, "_recording_start", lambda self, sid: None)
+    assert ds.subject_metadata("wsc-visit1-10119") == {"age": 52.0, "sex": "M", "recording_start": None}
+    assert ds.subject_metadata("wsc-visit1-20000")["sex"] == "F"
+    assert ds.subject_metadata("wsc-visit1-99999")["age"] is None

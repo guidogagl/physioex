@@ -32,7 +32,7 @@ logger = logging.getLogger("physioex.data")
 
 
 class MrOSDataset(_NSRRBaseDataset):
-    """MrOS sleep dataset (visit 1)."""
+    """MrOS sleep dataset (visit 1 by default; ``visit=2`` for the second visit)."""
 
     DATASET_NAME = "mros"
     DATASET_SUBDIR = "mros"
@@ -40,6 +40,8 @@ class MrOSDataset(_NSRRBaseDataset):
     DATASET_PREFIX = "mros-visit1-"
     HARMONIZED_CSV_GLOB = "mros-visit1-harmonized-*.csv"
     CSV_ID_COLUMN = "nsrrid"
+    #: All visits share the single ``mros`` external-split directory.
+    DATASET_SPLIT_KEY = "mros"
 
     CHANNEL_PREFERENCES: Dict[str, List] = {
         "EEG": [
@@ -106,11 +108,22 @@ class MrOSDataset(_NSRRBaseDataset):
     def __init__(
         self,
         root: Optional[str] = None,
+        visit: int = 1,
         **kwargs,
     ):
+        if visit not in (1, 2):
+            raise ValueError(f"visit must be 1 or 2; got {visit!r}")
         if root is None:
             root = str(get_data_root() / self.DATASET_SUBDIR)
-        self._metadata = self._load_metadata(root)
+        self.visit = visit
+        if visit != 1:
+            # Visit 1 keeps the historical name so existing caches stay valid.
+            self.DATASET_NAME = f"mros_visit{visit}"
+            self.SESSION_PREFIX = self.DATASET_PREFIX = f"mros-visit{visit}-"
+        # The harmonized CSV loader is a classmethod bound to the visit-1 file
+        # pattern; visit 2 has no harmonized CSV in the NSRR release, so its
+        # subjects carry no CSV metadata (age/sex -> None).
+        self._metadata = self._load_metadata(root) if visit == 1 else {}
         super().__init__(root=root, **kwargs)
 
     # ------------------------------------------------------------------
@@ -130,9 +143,10 @@ class MrOSDataset(_NSRRBaseDataset):
     def _list_subjects(self) -> List[SubjectSpec]:
         root = Path(self.root)
         # MrOS EDFs and annotations are organised in visit subdirectories.
-        # Try visit1 first (primary); fall back to flat layout for compat.
-        edf_dir = root / "polysomnography" / "edfs" / "visit1"
-        xml_dir = root / "polysomnography" / "annotations-events-nsrr" / "visit1"
+        # Use the selected visit's subdirectory; fall back to flat layout for compat.
+        visit_dir = f"visit{getattr(self, 'visit', 1)}"
+        edf_dir = root / "polysomnography" / "edfs" / visit_dir
+        xml_dir = root / "polysomnography" / "annotations-events-nsrr" / visit_dir
         if not edf_dir.exists():
             # Fall back to flat layout (no visit subdirs)
             edf_dir = root / "polysomnography" / "edfs"
