@@ -76,8 +76,10 @@ as stage {stage}: central EEG, EOG and chin EMG, in microvolts (scale bars on th
 For each segment list the events below that you can see in it, using only these definitions:
 {defs}
 
-Rules: list an event in every segment it overlaps; an empty list when none is visible; do not guess what the
-image does not show; confidence = how sure you are of that segment. note = one short sentence on the epoch.
+Rules: list an event only in the segments where you see its waveform in the traces; the stage alone is never
+a reason to list an event; a K complex is a single wave standing out of the background, not one wave of a
+train of slow waves; an empty list when none is visible; confidence = how sure you are of that segment.
+note = one short sentence on the epoch.
 Return JSON only."""
 
 
