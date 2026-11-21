@@ -108,10 +108,10 @@ def test_synthetic_ecg_full_check(fs, monkeypatch):
     t = np.arange(len(y)) / JONES_ECG_FS_OUT
     r_t = np.arange(0.0, len(x) / fs, 60.0 / 70.0)
     keep = np.array(
-        [min(abs(r - tt) for tt in r_t) < 0.15 for tt in t[peaks]], dtype=bool
+        [min(abs(rr - tt) for rr in r_t) < 0.15 for tt in t[peaks]], dtype=bool
     )
     if keep.sum() >= 5:
-        med = np.median(np.abs(y[peaks[keep]]) + 0.05)
+        med = np.median(np.abs(y[peaks[keep]]))
         assert 0.3 <= med <= 0.7, (
             f"median R amplitude {med:.3f} not in [0.3, 0.7]"
         )
@@ -144,7 +144,8 @@ def test_flat_clipped_stretch_becomes_zero(monkeypatch):
     # after resampling the stretch maps to roughly [a*256/fs, b*256/fs]
     ya = int(round(a * JONES_ECG_FS_OUT / fs))
     yb = int(round(b * JONES_ECG_FS_OUT / fs))
-    stretch = y[ya + 10 : yb - 10]
+    # skip the 1-s smoothed mask transition (and filter settling) at each edge
+    stretch = y[ya + 2 * 256 : yb - 2 * 256]
     assert len(stretch) > 0
     assert np.all(np.abs(stretch) < 0.1), (
         f"clipped stretch not removed (max |y| = {np.abs(stretch).max():.3f})"
@@ -210,3 +211,26 @@ def test_archetypes_download_path():
     assert y.dtype == np.float32
     assert np.all(np.abs(y) <= 1.0)
     assert abs(len(y) - round(len(x) * JONES_ECG_FS_OUT / 250.0)) <= 1
+
+
+def test_highpass_is_finite_on_long_signals():
+    # Regression: the (b, a) form of the 0.5 Hz Chebyshev-II high-pass was
+    # numerically unstable at 256 Hz and returned NaN on real nights.
+    from physioex.data.steps.jones_ecg import highpass_cheby2
+
+    x = np.random.default_rng(0).standard_normal(256 * 3600)
+    y = highpass_cheby2(x, 256.0)
+    assert np.isfinite(y).all()
+
+
+def test_template_is_not_zero():
+    # Regression: the robust z-score must be per beat; a per-sample
+    # z-score made the median template identically zero.
+    from physioex.data.steps.jones_ecg import _build_template
+
+    rng = np.random.default_rng(1)
+    beat = np.exp(-0.5 * ((np.arange(256) - 100) / 3.0) ** 2)
+    beats = beat[None, :] * rng.uniform(0.5, 2.0, (50, 1)) + 0.05 * rng.standard_normal((50, 256))
+    tpl = _build_template(beats, None)
+    assert np.argmax(np.abs(tpl)) == 100
+    assert np.abs(tpl).max() > 1.0

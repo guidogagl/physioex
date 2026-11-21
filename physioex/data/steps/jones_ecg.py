@@ -311,29 +311,6 @@ def _smooth_mask(mask: np.ndarray, transition_length: int) -> np.ndarray:
     return mask
 
 
-def _cheby2_highpass_order(pw: float, rp_db: float, sw: float, sa_db: float) -> int:
-    """Minimal Chebyshev-II order meeting the passband ripple spec.
-
-    MATLAB ``MatchExactly='passband'`` has no published closed form;
-    search the order until the passband ripple stays <= ``rp_db`` up to
-    the passband edge.
-    """
-    omega_s = sw / pw
-    eps = np.sqrt(10 ** (rp_db / 10) - 1)
-    for N in range(1, 101):
-        k = np.log10(10 ** (sa_db / 10) - 1) / (2.0 * N)
-        omega_p_est = omega_s * np.cosh(k) ** (1.0 / N)
-        if omega_p_est < pw:
-            continue
-        b, a = _sig.cheby2(N, sa_db, Wn=pw, btype="high")
-        w = np.linspace(0.0, pw, 257)
-        h = _sig.freqz(b, a, worN=w)[1]
-        ripple = -20.0 * np.log10(np.maximum(h, 1e-30))
-        if np.max(ripple[1:]) <= rp_db:
-            return N
-    return 20
-
-
 def _butter_lowpass_order(
     pw: float, rp_db: float, sw: float, sa_db: float
 ) -> int:
@@ -403,9 +380,12 @@ def highpass_cheby2(
     sw = stop_hz / nyq
     if pw >= 1.0:
         return np.asarray(x, dtype=np.float64)
-    N = _cheby2_highpass_order(pw, 0.1, sw, 60.0)
-    b, a = _sig.cheby2(N, 60.0, Wn=pw, btype="high")
-    return _sig.filtfilt(b, a, np.asarray(x, dtype=np.float64))
+    # Minimal order for the spec; scipy's cheby2 takes the *stopband* edge
+    # as Wn, which cheb2ord returns. Second-order sections: the (b, a) form
+    # of this narrow high-pass is numerically unstable (NaN output).
+    N, wn = _sig.cheb2ord(wp=pw, ws=sw, gpass=0.1, gstop=60.0)
+    sos = _sig.cheby2(N, 60.0, Wn=wn, btype="high", output="sos")
+    return _sig.sosfiltfilt(sos, np.asarray(x, dtype=np.float64))
 
 
 def notch_line_noise(x: np.ndarray, fs: float, line_freq: float) -> np.ndarray:
@@ -573,10 +553,11 @@ def _build_template(beats: np.ndarray, archetypes: Optional[np.ndarray]) -> np.n
     sel = beats[keep]
     if len(sel) == 0:
         sel = beats
-    med = np.median(sel, axis=0)
-    mad = np.median(np.abs(sel - med[None, :]), axis=0) * 1.4826
+    # Robust z-score of each beat (row): (beat - median) / (1.4826 * MAD).
+    med = np.median(sel, axis=1, keepdims=True)
+    mad = np.median(np.abs(sel - med), axis=1, keepdims=True) * 1.4826
     mad = np.where(mad > 1e-10, mad, 1.0)
-    z = (sel - med[None, :]) / mad[None, :]
+    z = (sel - med) / mad
     template = np.median(z, axis=0)
     for k in range(1, 6):
         c = np.abs(_correlate_rows(z, template))
