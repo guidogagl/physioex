@@ -4,7 +4,7 @@ All notable changes to PhysioEx are documented here. Versions follow the
 `physioex.__version__` string (read dynamically by the build) and the `v*` git tags
 that publish to PyPI.
 
-## Unreleased
+## 2.0.6 — 2026-11-22
 
 ### Added
 - **Cardiorespiratory sleep staging.** Three published whole-night models, re-implemented in `physioex.models` with their
