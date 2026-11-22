@@ -26,10 +26,19 @@ on-disk cache, EDF/annotation readers and sleep-event helpers.
    physioex.data.BandpassFilter
    physioex.data.NotchFilter
    physioex.data.Resample
+   physioex.data.FFTResample
+   physioex.data.InterpResample
+   physioex.data.FixedLength
    physioex.data.ZScoreNormalize
+   physioex.data.ZScore
+   physioex.data.Clip
+   physioex.data.ChebyshevLowpass
+   physioex.data.PhysicalScale
    physioex.data.XSleepNetSpectrogram
+   physioex.data.steps.JonesECGPreprocess
    physioex.data.get_preset
    physioex.data.available_presets
+   physioex.data.get_label_transform
    physioex.data.ChannelCache
    physioex.data.dict_collate_fn
    physioex.data.stack_channels
@@ -77,6 +86,7 @@ classic sleep-staging architectures.
    physioex.models.SJEEncoder
    physioex.models.NeuroLMEncoder
    physioex.models.load_from_pretrained
+   physioex.models.pretrained.list_pretrained
    physioex.models.extract_embeddings
    physioex.models.load_embeddings
    physioex.models.linear_probe
@@ -93,6 +103,18 @@ Classic architectures:
    physioex.models.tinysleepnet.TinySleepNet
    physioex.models.seqsleepnet.SeqSleepNet
    physioex.models.sleeptransformer.SleepTransformer
+```
+
+Cardiorespiratory architectures (whole-night models with published weights):
+
+```{eval-rst}
+.. autosummary::
+   :toctree: _generated
+   :nosignatures:
+
+   physioex.models.wav2sleep.Wav2Sleep
+   physioex.models.sleepppgnet.SleepPPGNet
+   physioex.models.jones_ecg.JonesECGNet
 ```
 
 ## `physioex.train`
@@ -121,6 +143,7 @@ Metrics, statistics and progress helpers are documented at module level:
    :toctree: _generated
 
    physioex.train.metrics
+   physioex.train.replication
    physioex.train.stats
    physioex.train.progress
 ```

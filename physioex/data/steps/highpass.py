@@ -4,6 +4,8 @@ Matches Huy Phan's EMG preprocessing (FIR high-pass at 10 Hz) and the
 AASM standard for chin EMG (10-100 Hz band).
 """
 import logging
+from typing import Optional
+
 import numpy as np
 from scipy.signal import butter, sosfiltfilt
 from physioex.data.pipeline import PreprocessingStep, CompiledStep
@@ -37,7 +39,7 @@ class HighPassFilter(PreprocessingStep):
     def spec(self) -> str:
         return self._build_spec(cutoff=self.cutoff, order=self.order)
 
-    def compile(self, fs_in: float) -> CompiledStep:
+    def compile(self, fs_in: float, header: Optional[dict] = None) -> CompiledStep:
         nyq = 0.5 * fs_in
         if not 0 < self.cutoff < nyq:
             logger.debug(

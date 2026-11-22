@@ -54,7 +54,7 @@ DEFAULT_PREFERENCES: Dict[str, List[Union[str, Tuple[str, str]]]] = {
 }
 
 
-KNOWN_MODALITIES = set(DEFAULT_PREFERENCES.keys())
+KNOWN_MODALITIES = set(DEFAULT_PREFERENCES.keys()) | {"RESP", "PPG", "ABD", "THX"}
 
 
 class ChannelNotAvailableError(ValueError):

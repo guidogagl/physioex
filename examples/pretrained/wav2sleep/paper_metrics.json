@@ -1,0 +1,181 @@
+{
+  "model": "wav2sleep",
+  "source": "Carter & Tarassenko (2024), arXiv:2411.04644, Table 6 (S_train = All)",
+  "metric": "pooled_kappa",
+  "tolerance": 0.005,
+  "assert": false,
+  "assert_note": "Reported, not asserted. The public checkpoint (Hugging Face joncarter/wav2sleep, uploaded 2026-01-30) postdates the paper (ML4H 2024) and its model card reports no kappa. physioex labels and ECG input were checked against the authors' own pipeline (identical labels on every test night; ECG r = 1.0000, kappa within 0.0004 on 10 MESA/CCSHS nights), so the remaining per-dataset gap (-0.02 to +0.02) is attributed to the checkpoint.",
+  "split": "wav2sleep",
+  "conditions": {
+    "all": "ABD+THX+ECG, plus PPG for MESA, CHAT, CFS and CCSHS",
+    "ecg_thx": "ECG+THX",
+    "ecg": "ECG",
+    "ppg": "PPG"
+  },
+  "targets": [
+    {
+      "dataset": "shhs",
+      "condition": "all",
+      "value": 0.786
+    },
+    {
+      "dataset": "mesa",
+      "condition": "all",
+      "value": 0.796
+    },
+    {
+      "dataset": "wsc",
+      "condition": "all",
+      "value": 0.737
+    },
+    {
+      "dataset": "chat",
+      "condition": "all",
+      "value": 0.836
+    },
+    {
+      "dataset": "cfs",
+      "condition": "all",
+      "value": 0.803
+    },
+    {
+      "dataset": "ccshs",
+      "condition": "all",
+      "value": 0.857
+    },
+    {
+      "dataset": "mros",
+      "condition": "all",
+      "value": 0.805
+    },
+    {
+      "dataset": "census",
+      "condition": "all",
+      "value": 0.821,
+      "requires": [
+        "ccshs",
+        "cfs",
+        "chat",
+        "mesa",
+        "wsc"
+      ],
+      "note": "Census-balanced test set of Jones et al. (2024), 500 nights from 5 datasets"
+    },
+    {
+      "dataset": "shhs",
+      "condition": "ecg_thx",
+      "value": 0.779
+    },
+    {
+      "dataset": "mesa",
+      "condition": "ecg_thx",
+      "value": 0.783
+    },
+    {
+      "dataset": "wsc",
+      "condition": "ecg_thx",
+      "value": 0.728
+    },
+    {
+      "dataset": "chat",
+      "condition": "ecg_thx",
+      "value": 0.827
+    },
+    {
+      "dataset": "cfs",
+      "condition": "ecg_thx",
+      "value": 0.802
+    },
+    {
+      "dataset": "ccshs",
+      "condition": "ecg_thx",
+      "value": 0.854
+    },
+    {
+      "dataset": "mros",
+      "condition": "ecg_thx",
+      "value": 0.796
+    },
+    {
+      "dataset": "census",
+      "condition": "ecg_thx",
+      "value": 0.812,
+      "requires": [
+        "ccshs",
+        "cfs",
+        "chat",
+        "mesa",
+        "wsc"
+      ],
+      "note": "Census-balanced test set of Jones et al. (2024), 500 nights from 5 datasets"
+    },
+    {
+      "dataset": "shhs",
+      "condition": "ecg",
+      "value": 0.739
+    },
+    {
+      "dataset": "mesa",
+      "condition": "ecg",
+      "value": 0.731
+    },
+    {
+      "dataset": "wsc",
+      "condition": "ecg",
+      "value": 0.689
+    },
+    {
+      "dataset": "chat",
+      "condition": "ecg",
+      "value": 0.8
+    },
+    {
+      "dataset": "cfs",
+      "condition": "ecg",
+      "value": 0.784
+    },
+    {
+      "dataset": "ccshs",
+      "condition": "ecg",
+      "value": 0.833
+    },
+    {
+      "dataset": "mros",
+      "condition": "ecg",
+      "value": 0.75
+    },
+    {
+      "dataset": "census",
+      "condition": "ecg",
+      "value": 0.783,
+      "requires": [
+        "ccshs",
+        "cfs",
+        "chat",
+        "mesa",
+        "wsc"
+      ],
+      "note": "Census-balanced test set of Jones et al. (2024), 500 nights from 5 datasets"
+    },
+    {
+      "dataset": "mesa",
+      "condition": "ppg",
+      "value": 0.742
+    },
+    {
+      "dataset": "chat",
+      "condition": "ppg",
+      "value": 0.793
+    },
+    {
+      "dataset": "cfs",
+      "condition": "ppg",
+      "value": 0.763
+    },
+    {
+      "dataset": "ccshs",
+      "condition": "ppg",
+      "value": 0.832
+    }
+  ]
+}

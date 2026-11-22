@@ -33,6 +33,14 @@ from physioex.data.steps import (
     NotchFilter,
     Resample,
     XSleepNetSpectrogram,
+    ChebyshevLowpass,
+    FFTResample,
+    InterpResample,
+    FixedLength,
+    Clip,
+    ZScore,
+    PhysicalScale,
+    JonesECGPreprocess,
 )
 
 
@@ -344,6 +352,93 @@ def coresleep_preset() -> Dict[str, PreprocessingPipeline]:
     }
 
 
+def _wav2sleep_pipeline(modality: str) -> PreprocessingPipeline:
+    """One wav2sleep modality pipeline: scale -> interpolate -> pad -> z-score.
+
+    ECG / EOG are converted to mV, PPG and RESP are mapped to ``[-1, 1]``
+    from their header physical range.  All modalities are interpolated onto
+    a 1024 (ECG/PPG/EOG) or 256 (RESP) samples / 30 s grid, padded or
+    truncated to a 10 h (36000 s) window, and z-scored over the *full*
+    grid **including the zero padding** (the padding is therefore part of
+    the statistics, as in the reference code).
+    """
+    if modality in ("ECG", "EOG"):
+        scale = PhysicalScale("mV")
+        spe = 1024 if modality == "ECG" else 4096
+    else:  # PPG, RESP
+        scale = PhysicalScale("range")
+        spe = 1024 if modality == "PPG" else 256
+    return PreprocessingPipeline(
+        [
+            scale,
+            InterpResample(samples_per_epoch=spe),
+            FixedLength(seconds=36000.0, fill=0.0),
+            ZScore(ddof=1, eps=1e-6),
+        ]
+    )
+
+
+def wav2sleep_preset() -> Dict[str, PreprocessingPipeline]:
+    """Per-modality preset for wav2sleep (Carter & Tarassenko, 2024).
+
+    wav2sleep stages sleep from cardiac and respiratory signals (ECG,
+    PPG, ABD, THX; plus an EOG variant). The reference preprocessing
+    (``joncarter/wav2sleep``) converts ECG/EOG to millivolts and PPG/RESP
+    to ``[-1, 1]``, interpolates each channel onto a fixed
+    samples-per-30-second grid (1024 for ECG/PPG, 4096 for EOG, 256 for
+    RESP), pads or truncates every recording to a 10-hour (36000 s)
+    window with zeros, and finally z-scores each channel over the full
+    grid *including the zero padding* (``ddof=1``, ``eps=1e-6``). The
+    10 h window at 34.13 samples/s yields 1200 epochs of 1024 samples
+    (ECG/PPG) or 256 samples (RESP); the 4096-sample EOG grid is
+    re-epoch-ed at load time.
+    """
+    preset = {
+        modality: _wav2sleep_pipeline(modality)
+        for modality in ("ECG", "PPG", "RESP", "EOG")
+    }
+    # ABD and THX are resolved as modality requests of their own (they are
+    # in the EDF reader's known modalities), so they need explicit entries;
+    # without them they would fall back to the Identity pipeline.
+    preset["ABD"] = preset["THX"] = preset["RESP"]
+    return preset
+
+
+def sleepppgnet_preset() -> PreprocessingPipeline:
+    """PPG preset for SleepPPG-Net (Kotzen et al., 2023; SPPPPG-Net).
+
+    SleepPPG-Net stages sleep from the pulse-oximeter plethysmogram.
+    The reference (third-party replica) preprocessing applies an
+    8th-order Chebyshev type-II lowpass at 8 Hz (-40 dB stop band),
+    FFT-resamples to 1024 samples / 30 s, clips outliers at 3 standard
+    deviations, z-scores (``ddof=0``), and pads/truncates to the 10-hour
+    (36000 s) window, i.e. 1200 epochs of 1024 samples at
+    1024/30 Hz.
+    """
+    return PreprocessingPipeline(
+        [
+            ChebyshevLowpass(cutoff_hz=8.0, order=8, stop_db=40.0),
+            FFTResample(target_fs=1024.0 / 30.0),
+            Clip(n_std=3.0),
+            ZScore(ddof=0, eps=0.0),
+            FixedLength(seconds=36000.0, fill=0.0),
+        ]
+    )
+
+
+def jones_ecg_preset() -> PreprocessingPipeline:
+    """ECG preset for Jones, Itti & Sheth (2024).
+
+    The full reference ECG pipeline (clip-mask removal, Chebyshev-II
+    high-pass 0.5/0.25 Hz, 60 Hz line notch + iterative extra-noise
+    notches, resample to 256 Hz, R-wave normalization, clip to
+    ``[-1, 1]``) as a single step.  Output is 7680 samples per 30 s
+    epoch (256 Hz), the input layout of
+    :class:`physioex.models.jones_ecg.JonesECGNet`.
+    """
+    return PreprocessingPipeline([JonesECGPreprocess()])
+
+
 PRESETS = {
     # uniform (single-pipeline) presets
     "raw": raw_pipeline,
@@ -359,6 +454,10 @@ PRESETS = {
     "time_domain": time_domain_preset,
     "time_frequency": time_frequency_preset,
     "coresleep": coresleep_preset,
+    # cardiorespiratory sleep-staging presets
+    "wav2sleep": wav2sleep_preset,
+    "sleepppgnet": sleepppgnet_preset,
+    "jones_ecg": jones_ecg_preset,
     # foundation model presets (HP 0.5Hz + Notch 50Hz + Resample, matching EEGBenchmarks)
     "biot": biot_pipeline,
     "bendr": bendr_pipeline,

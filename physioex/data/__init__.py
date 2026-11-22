@@ -23,10 +23,18 @@ from physioex.data.steps import (
     BandpassFilter,
     NotchFilter,
     Resample,
+    FFTResample,
+    InterpResample,
+    FixedLength,
     ZScoreNormalize,
+    Clip,
+    ZScore,
+    ChebyshevLowpass,
+    PhysicalScale,
     XSleepNetSpectrogram,
 )
 from physioex.data.presets import get_preset, available_presets, PRESETS
+from physioex.data.labels import get_label_transform, AASM4_CLASS_NAMES
 from physioex.data.base import BasePhysioDataset, SubjectSpec
 from physioex.data.multi import MultiDataset
 from physioex.data.sampling import site_balanced_weights, make_site_sampler
@@ -58,12 +66,22 @@ __all__ = [
     "BandpassFilter",
     "NotchFilter",
     "Resample",
+    "FFTResample",
+    "InterpResample",
+    "FixedLength",
     "ZScoreNormalize",
+    "Clip",
+    "ZScore",
+    "ChebyshevLowpass",
+    "PhysicalScale",
     "XSleepNetSpectrogram",
     # Presets
     "get_preset",
     "available_presets",
     "PRESETS",
+    # Labels
+    "get_label_transform",
+    "AASM4_CLASS_NAMES",
     # Dataset base
     "BasePhysioDataset",
     "SubjectSpec",

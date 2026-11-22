@@ -97,6 +97,10 @@ class CCSHSDataset(_NSRRBaseDataset):
 
     DATASET_NAME = "ccshs"
     DATASET_SUBDIR = "ccshs"
+    SESSION_PREFIX = "ccshs-trec-"
+    DATASET_PREFIX = "ccshs-trec-"
+    HARMONIZED_CSV_GLOB = "ccshs-trec-dataset-*.csv"
+    CSV_ID_COLUMN = "nsrrid"
 
     #: Recordings left out by default. Nine: stage minutes in the XML differ from the NSRR
     #: summary CSV (``ccshs-trec-dataset-*.csv``); two: no CSV row, so the hypnogram cannot be
@@ -135,6 +139,41 @@ class CCSHSDataset(_NSRRBaseDataset):
             ("EMG1", "EMG3"),
             "EMG1",
         ],
+        "ECG": [
+            "ECG",
+            "EKG",
+            "ECG1",
+            "ECG L",
+            "ECGL",
+            "ECG L-ECG R",
+        ],
+        "PPG": [
+            "Pleth",
+            "PlethWV",
+            "PWF",
+            "PlethMasimo",
+            "PletMasimo",
+            "PlethMasino",
+            "PLETHMASIMO",
+        ],
+        "ABD": [
+            "ABD",
+            "Abdo",
+            "ABDO RES",
+            "ABDO EFFORT",
+            "Abdominal",
+            "abdomen",
+        ],
+        "THX": [
+            "THX",
+            "Thor",
+            "THOR RES",
+            "THOR EFFORT",
+            "Thoracic",
+            "Chest",
+            "thorax",
+            "CHEST",
+        ],
     }
 
     def __init__(
@@ -157,24 +196,14 @@ class CCSHSDataset(_NSRRBaseDataset):
         self._metadata = self._load_metadata(root)
         super().__init__(root=root, **kwargs)
 
-    @staticmethod
-    def _load_metadata(root: str) -> Dict[str, Dict[str, Any]]:
+    @classmethod
+    def _load_metadata(cls, root: str) -> Dict[str, Dict[str, Any]]:
         # version-independent: ccshs-trec-dataset-<version>.csv (newest version wins)
-        found = sorted((Path(root) / "datasets").glob("ccshs-trec-dataset-*.csv"))
-        if not found:
-            logger.warning(
-                "CCSHS metadata CSV not found under %s", Path(root) / "datasets"
-            )
-            return {}
-        csv_path = found[-1]
-        import pandas as pd
+        meta = cls.load_harmonized_csv(root)
+        return {str(int(k)): v for k, v in meta.items()}
 
-        df = pd.read_csv(csv_path, low_memory=False)
-        meta: Dict[str, Dict[str, Any]] = {}
-        for _, row in df.iterrows():
-            key = str(int(row["nsrrid"]))
-            meta[key] = {c: (None if pd.isna(v) else v) for c, v in row.items()}
-        return meta
+    def _row_key_of(self, subject_id: str) -> Optional[str]:
+        return str(int(self._nsrrid_of(subject_id)))
 
     def _list_subjects(self) -> List[SubjectSpec]:
         root = Path(self.root)
@@ -191,9 +220,9 @@ class CCSHSDataset(_NSRRBaseDataset):
                 )
             specs = kept
         for spec in specs:
-            nid = spec.subject_id.replace("ccshs-trec-", "")
-            if nid in self._metadata:
-                spec.external_meta.update(self._metadata[nid])
+            row = self._subject_row(spec.subject_id)
+            if row is not None:
+                spec.external_meta.update(row)
         return specs
 
     def _read_subject_labels(self, spec: SubjectSpec) -> np.ndarray:

@@ -1,0 +1,16 @@
+{
+  "model": "sleepppgnet-replica",
+  "source": "Kotzen et al. (2023), arXiv:2202.05735: median per-patient kappa 0.75 (IQR 0.69-0.81) on 204 MESA test patients",
+  "metric": "median_record_kappa",
+  "tolerance": 0.005,
+  "split": "sleepppgnet-replica",
+  "targets": [
+    {
+      "dataset": "mesa",
+      "condition": "ppg",
+      "value": 0.75,
+      "assert": false,
+      "note": "third-party replica weights, not the authors' model: reported next to the paper value, not asserted"
+    }
+  ]
+}

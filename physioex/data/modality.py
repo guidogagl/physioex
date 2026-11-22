@@ -5,7 +5,8 @@ data pipeline (collate ordering) and models (SleepTokenizer).
 
 Validated on 807 channels across multiple datasets (98.4% accuracy).
 
-Note: ModalityType now has 15 types (added TEMP for temperature sensors).
+Note: ModalityType has 16 types (15 core PSG types + PPG for the
+photoplethysmographic waveform; TEMP was added for temperature sensors).
 """
 from enum import IntEnum
 import re
@@ -13,7 +14,7 @@ from typing import Optional
 
 
 class ModalityType(IntEnum):
-    """14 AASM+ signal types for PSG channels."""
+    """AASM+ signal types for PSG channels (plus PPG)."""
 
     EEG = 0
     EOG = 1
@@ -30,6 +31,11 @@ class ModalityType(IntEnum):
     TEMP = 12
     DEVICE = 13
     OTHER = 14
+    # Photoplethysmography (pulse oximeter plethysmogram waveform). Appended
+    # after OTHER so the integer values of every existing member are
+    # unchanged. SpO2/SaO2 saturation *values* stay SPO2; the PPG *waveform*
+    # (Pleth/PulseAmp/TC-PPG) is a separate modality.
+    PPG = 15
 
     def __str__(self) -> str:
         return self.name
@@ -140,12 +146,18 @@ def infer_channel_modality(channel_name: str, hint: Optional[str] = None) -> Mod
     if c in ("NP", "NPV", "TV"):
         return ModalityType.RESP
 
-    # ── SPO2 ──
+    # ── PPG (plethysmographic waveform) ──
+    # The pulse-oximeter *waveform* (Pleth, PulseAmp, TC-PPG, ...) is
+    # photoplethysmography, not a saturation value. SpO2/SaO2/OxStat
+    # saturation channels are matched first and stay SPO2.
     if re.search(
-        r"SPO2|SAO2|SA02|OXSTAT|OXSTATUS|PLETH|PLTH|PPG|TCPPG|"
-        r"PLESMO|NONIN|PULSEAMP|RDPLETH|RDQUALITY",
+        r"PLETH|PLTH|PPG|TCPPG|PLESMO|PULSEAMP|RDPLETH|PWF|PLETHWV|PLETHMASIMO",
         c,
     ):
+        return ModalityType.PPG
+
+    # ── SPO2 ──
+    if re.search(r"SPO2|SAO2|SA02|OXSTAT|OXSTATUS|NONIN|RDQUALITY", c):
         return ModalityType.SPO2
     if c.startswith("OX"):
         return ModalityType.SPO2

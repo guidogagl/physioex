@@ -1,3 +1,5 @@
+from typing import Optional
+
 import numpy as np
 from scipy.signal import get_window, spectrogram
 from physioex.data.pipeline import PreprocessingStep, CompiledStep
@@ -62,7 +64,7 @@ class XSleepNetSpectrogram(PreprocessingStep):
             window=self.window,
         )
 
-    def compile(self, fs_in: float) -> CompiledStep:
+    def compile(self, fs_in: float, header: Optional[dict] = None) -> CompiledStep:
         win = get_window(self.window, self.nperseg)
         nperseg = self.nperseg
         noverlap = self.noverlap

@@ -34,6 +34,9 @@ class MESADataset(_NSRRBaseDataset):
 
     DATASET_NAME = "mesa"
     DATASET_SUBDIR = "mesa"
+    DATASET_PREFIX = "mesa-sleep-"
+    HARMONIZED_CSV_GLOB = "mesa-sleep-harmonized-dataset-*.csv"
+    CSV_ID_COLUMN = "nsrrid"
 
     CHANNEL_PREFERENCES: Dict[str, List] = {
         "EEG": [
@@ -61,7 +64,41 @@ class MESADataset(_NSRRBaseDataset):
             "EMG",
             ("LCHIN", "RCHIN"),
         ],
-        "ECG": ["ECG", "EKG", "ECG1"],
+        "ECG": [
+            "ECG",
+            "EKG",
+            "ECG1",
+            "ECG L",
+            "ECGL",
+            "ECG L-ECG R",
+        ],
+        "PPG": [
+            "Pleth",
+            "PlethWV",
+            "PWF",
+            "PlethMasimo",
+            "PletMasimo",
+            "PlethMasino",
+            "PLETHMASIMO",
+        ],
+        "ABD": [
+            "ABD",
+            "Abdo",
+            "ABDO RES",
+            "ABDO EFFORT",
+            "Abdominal",
+            "abdomen",
+        ],
+        "THX": [
+            "THX",
+            "Thor",
+            "THOR RES",
+            "THOR EFFORT",
+            "Thoracic",
+            "Chest",
+            "thorax",
+            "CHEST",
+        ],
     }
 
     def __init__(
@@ -78,23 +115,14 @@ class MESADataset(_NSRRBaseDataset):
     # Metadata
     # ------------------------------------------------------------------
 
-    @staticmethod
-    def _load_metadata(root: str) -> Dict[str, Dict[str, Any]]:
+    @classmethod
+    def _load_metadata(cls, root: str) -> Dict[str, Dict[str, Any]]:
         """Load harmonized CSV into a dict keyed by nsrrid (as string)."""
-        csv_path = Path(root) / "datasets" / "mesa-sleep-harmonized-dataset-0.8.0.csv"
-        if not csv_path.exists():
-            logger.warning("MESA metadata CSV not found: %s", csv_path)
-            return {}
-        import pandas as pd
+        return cls.load_harmonized_csv(root)
 
-        df = pd.read_csv(csv_path)
-        meta: Dict[str, Dict[str, Any]] = {}
-        for _, row in df.iterrows():
-            key = str(int(row["nsrrid"]))
-            meta[key] = {
-                col: (None if pd.isna(val) else val) for col, val in row.items()
-            }
-        return meta
+    def _row_key_of(self, subject_id: str) -> Optional[str]:
+        # subject_id is "mesa-sleep-0001" -> nsrrid "1" (leading zeros stripped)
+        return str(int(self._nsrrid_of(subject_id)))
 
     def _list_subjects(self) -> List[SubjectSpec]:
         root = Path(self.root)
@@ -103,9 +131,8 @@ class MESADataset(_NSRRBaseDataset):
             root / "polysomnography" / "annotations-events-nsrr",
         )
         # Enrich with metadata from harmonized CSV.
-        # subject_id is "mesa-sleep-0001" -> numeric id "1"
         for spec in specs:
-            num_id = spec.subject_id.replace("mesa-sleep-", "").lstrip("0") or "0"
-            if num_id in self._metadata:
-                spec.external_meta.update(self._metadata[num_id])
+            row = self._subject_row(spec.subject_id)
+            if row is not None:
+                spec.external_meta.update(row)
         return specs

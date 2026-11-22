@@ -23,17 +23,20 @@ from physioex.data.modality import (
 def test_modality_type_is_intenum():
     assert ModalityType.EEG == 0
     assert int(ModalityType.OTHER) == 14
+    assert int(ModalityType.PPG) == 15
     assert str(ModalityType.EEG) == "EEG"
     assert str(ModalityType.SPO2) == "SPO2"
 
 
 def test_modality_count_invariants():
-    # 15 types total (EEG..OTHER); docstring history mentions the TEMP addition.
-    assert N_MODALITY_TYPES == len(ModalityType) == 15
+    # 16 types total (EEG..PPG); PPG was appended after OTHER so that the
+    # integer values of every existing member are unchanged.
+    assert N_MODALITY_TYPES == len(ModalityType) == 16
     assert MODALITY_TYPES == {m.name: int(m) for m in ModalityType}
     # Legacy dict maps name -> integer value consistently.
     assert MODALITY_TYPES["EEG"] == 0
     assert MODALITY_TYPES["OTHER"] == 14
+    assert MODALITY_TYPES["PPG"] == 15
 
 
 # ---------------------------------------------------------------------------
@@ -80,9 +83,21 @@ def test_invalid_hint_falls_back_to_name():
         ("Nasal Flow", ModalityType.RESP),
         ("Thor", ModalityType.RESP),
         ("Abdo", ModalityType.RESP),
-        # SPO2
+        # SPO2 (saturation *values* stay SPO2)
         ("SpO2", ModalityType.SPO2),
-        ("Pleth", ModalityType.SPO2),
+        ("SaO2", ModalityType.SPO2),
+        ("OxStat", ModalityType.SPO2),
+        # PPG (plethysmographic waveform)
+        ("Pleth", ModalityType.PPG),
+        ("PLTH", ModalityType.PPG),
+        ("PPG", ModalityType.PPG),
+        ("TC-PPG", ModalityType.PPG),
+        ("PLESMO", ModalityType.PPG),
+        ("PulseAmp", ModalityType.PPG),
+        ("RD-Pleth", ModalityType.PPG),
+        ("PWF", ModalityType.PPG),
+        ("PLETHWV", ModalityType.PPG),
+        ("PLETHMASIMO", ModalityType.PPG),
         # HR
         ("HR", ModalityType.HR),
         ("Pulse", ModalityType.HR),

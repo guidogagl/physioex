@@ -13,24 +13,334 @@ The ``config.json`` carries everything needed to reconstruct the model
 the architecture in advance.
 
 Cached locally under the standard HuggingFace cache directory.
+
+Third-party cardiorespiratory models (wav2sleep, SleepPPG-Net, Jones ECG)
+live in their authors' repos; they are registered in
+``THIRD_PARTY_PRETRAINED`` below and downloaded on demand to the
+foundation-model cache.  ``load_from_pretrained`` routes by name: registry
+names build the third-party model, anything else falls through to the
+4rooms/physioex behaviour.  ``list_pretrained()`` lists both families.
 """
 from __future__ import annotations
 
 import importlib
 import json
 import logging
+from pathlib import Path
 
 import torch
+
+from physioex.models.foundation_checkpoints import (
+    CheckpointSource,
+    ensure_checkpoint,
+    _register_checkpoint_source,
+)
 
 logger = logging.getLogger("physioex.models")
 
 HF_REPO_ID = "4rooms/physioex"
+
+# ── Third-party pretrained models ────────────────────────────────────
+
+#: Licenses that carry no known usage restriction and need no warning.
+_PERMISSIVE_LICENSES = frozenset({"MIT", "Apache-2.0", "BSD-3-Clause"})
 
 
 def _resolve_class(spec: str):
     """Import a class from a ``'module.path:ClassName'`` string."""
     module_path, class_name = spec.rsplit(":", 1)
     return getattr(importlib.import_module(module_path), class_name)
+
+
+def _load_wav2sleep(paths: list[str]) -> torch.nn.Module:
+    """Build Wav2Sleep from downloaded ``config.yaml`` + ``state_dict.pth``."""
+    from physioex.models.wav2sleep import Wav2Sleep
+
+    return Wav2Sleep.from_original(paths[0], paths[1])
+
+
+def _load_wav2sleep_eog(paths: list[str]) -> torch.nn.Module:
+    """Build Wav2Sleep (EOG variant) from ``config.yaml`` + ``state_dict.pth``."""
+    from physioex.models.wav2sleep import Wav2Sleep
+
+    return Wav2Sleep.from_original(paths[0], paths[1])
+
+
+def _load_sleepppgnet(paths: list[str]) -> torch.nn.Module:
+    """Build SleepPPGNet from the authors' replica weights (``class_order="physioex"``)."""
+    from physioex.models.sleepppgnet import SleepPPGNet
+
+    return SleepPPGNet.from_original(paths[0], class_order="physioex")
+
+
+def _load_jones_ecg(paths: list[str], variant: str = "primary") -> torch.nn.Module:
+    """Build JonesECGNet from a downloaded checkpoint (``variant`` = family name)."""
+    from physioex.models.jones_ecg import JonesECGNet
+
+    return JonesECGNet.from_original(paths[0], variant)
+
+
+# Base folder for the Jones et al. 2024 checkpoints (adammj/ecg-sleep-staging).
+_JONES_RAW_BASE = "https://raw.githubusercontent.com/adammj/ecg-sleep-staging/main/models"
+
+# (variant in physioex registry, Jones checkpoint filename, sub-folder in the repo)
+_JONES_VARIANTS = (
+    ("primary", "epoch_0647_kappa_0.724.pt", "1_paper_models/primary_model"),
+    ("realtime", "epoch_0637_kappa_0.703.pt", "1_paper_models/real-time_model"),
+    ("no-demographics", "epoch_0552_kappa_0.718.pt", "2_post-paper_models/primary_model_no_demographics"),
+    ("no-time", "epoch_0490_kappa_0.724.pt", "2_post-paper_models/primary_model_no_time"),
+    ("only-ecg", "epoch_0369_kappa_0.721.pt", "2_post-paper_models/primary_model_only_ecg"),
+    ("cyclic", "epoch_0548_kappa_0.725.pt", "3_cyclic-time_models/primary_model"),
+    ("cyclic-realtime", "epoch_0472_kappa_0.703.pt", "3_cyclic-time_models/real-time_model"),
+)
+
+#: physioex's 5-class AASM order (W, N1, N2, N3, REM).
+_AASM_CLASS_NAMES = ("W", "N1", "N2", "N3", "REM")
+
+
+def _jones_spec(variant: str, filename: str, folder: str) -> CheckpointSource:
+    url = f"{_JONES_RAW_BASE}/{folder}/{filename}"
+    return CheckpointSource(
+        source_type="raw_url",
+        repo_id="adammj/ecg-sleep-staging",
+        filenames=[filename],
+        raw_urls=[url],
+        local_filename=filename,
+    )
+
+
+def _third_party_registry() -> dict:
+    """Build ``THIRD_PARTY_PRETRAINED`` (the seven Jones variants expand inline)."""
+    registry: dict = {
+        "wav2sleep": {
+            "source": CheckpointSource(
+                source_type="huggingface_file",
+                repo_id="joncarter/wav2sleep",
+                filenames=["config.yaml", "state_dict.pth"],
+            ),
+            "loader": _load_wav2sleep,
+            "license": "MIT",
+            "license_note": "MIT license from the authors' repository.",
+            "reference": (
+                "Carter, J. F. & Tarassenko, L. (2024). wav2sleep: A Unified "
+                "Multi-Modal Approach to Sleep Stage Classification from "
+                "Physiological Signals. arXiv:2411.04644. "
+                "https://github.com/joncarter1/wav2sleep"
+            ),
+            "n_classes": 4,
+            "class_names": ("W", "Light", "Deep", "REM"),
+            "input": (
+                "Whole night (1200 x 30-s epochs) of any subset of ECG, PPG "
+                "(1024 samples/epoch) and ABD, THX (256 samples/epoch); absent "
+                "signals = -inf; preset \"wav2sleep\""
+            ),
+        },
+        "wav2sleep-eog": {
+            "source": CheckpointSource(
+                source_type="huggingface_file",
+                repo_id="joncarter/wav2sleep-eog",
+                filenames=["config.yaml", "state_dict.pth"],
+            ),
+            "loader": _load_wav2sleep_eog,
+            "license": "MIT",
+            "license_note": "MIT license from the authors' repository.",
+            "reference": (
+                "Carter, J. F. & Tarassenko, L. (2024), wav2sleep EOG release. "
+                "https://huggingface.co/joncarter/wav2sleep-eog"
+            ),
+            "n_classes": 5,
+            "class_names": _AASM_CLASS_NAMES,
+            "input": (
+                "Whole night (1200 x 30-s epochs) of EOG-L, EOG-R at 4096 "
+                "samples/epoch; preset \"wav2sleep\""
+            ),
+        },
+        "sleepppgnet-replica": {
+            "source": CheckpointSource(
+                source_type="huggingface_file",
+                repo_id="sleep-is-all-you-need/SPPPPG-Net",
+                filenames=["modelStatebe14cbce-76c1a81b-dd25c9a2-SleepPPGNet-"
+                           "857c0582-b900d29c-6864dcd6-39dc88ff-0--current"],
+                local_filename="sleepppgnet-replica.pt",
+            ),
+            "loader": _load_sleepppgnet,
+            "license": "fair-noncommercial-research",
+            "license_note": (
+                "Third-party replica weights; non-commercial research use only, "
+                "see the SPPPPG-Net repository."
+            ),
+            "reference": (
+                "Architecture: Kotzen, K. et al. (2023). SleepPPG-Net: a deep "
+                "learning algorithm for robust sleep staging from continuous "
+                "photoplethysmography. IEEE JBHI, arXiv:2202.05735. Weights: "
+                "third-party replica https://huggingface.co/sleep-is-all-you-need/SPPPPG-Net"
+            ),
+            "n_classes": 4,
+            "class_names": ("W", "Light", "Deep", "REM"),
+            "input": (
+                "Whole night PPG, 1 channel, 1200 x 1024 samples (34.13 Hz); "
+                "preset \"sleepppgnet\""
+            ),
+        },
+    }
+    for variant, filename, folder in _JONES_VARIANTS:
+        registry[f"jones-ecg-{variant}"] = {
+            "source": _jones_spec(variant, filename, folder),
+            "loader": (lambda paths, v=variant: _load_jones_ecg(paths, v)),
+            "license": "AGPL-3.0",
+            "license_note": (
+                "AGPL-3.0 per the authors' repository; note that AGPL copyleft "
+                "may propagate to derivative works."
+            ),
+            "reference": (
+                "Jones, A. M., Itti, L. & Sheth, B. R. (2024). Expert-level sleep "
+                "staging using an electrocardiography-only feed-forward neural "
+                "network. Computers in Biology and Medicine. "
+                "doi:10.1016/j.compbiomed.2024.108545. "
+                "https://github.com/adammj/ecg-sleep-staging"
+            ),
+            "n_classes": 5,
+            "class_names": _AASM_CLASS_NAMES,
+            "input": (
+                "Whole night ECG, 1 channel at 256 Hz (7680 samples/epoch) plus "
+                "per-epoch additional features; preset \"jones_ecg\""
+            ),
+        }
+    # Alias: the paper's primary checkpoint.
+    registry["jones-ecg"] = dict(
+        registry["jones-ecg-primary"], alias="jones-ecg-primary"
+    )
+    # Register all sources in the download-cache registry so ensure_checkpoint
+    # knows where (and whether) each checkpoint lives.
+    for name, spec in registry.items():
+        _register_checkpoint_source(name, spec["source"])
+    return registry
+
+
+THIRD_PARTY_PRETRAINED: dict = _third_party_registry()
+
+
+def _third_party_names() -> tuple:
+    """Names in the registry, following aliases to their canonical target."""
+    names = []
+    for name in THIRD_PARTY_PRETRAINED:
+        spec = THIRD_PARTY_PRETRAINED[name]
+        target = spec.get("alias") or name
+        names.append(target if target in THIRD_PARTY_PRETRAINED else name)
+    return tuple(names)
+
+
+def _license_is_restrictive(license_: str) -> bool:
+    """True unless the license is in :data:`_PERMISSIVE_LICENSES`."""
+    return license_.strip().lower() not in {l.lower() for l in _PERMISSIVE_LICENSES}
+
+
+# (name, reference). License is "physioex" (permissive, Apache-2.0) for the
+# 4rooms family; n_classes=None means the model takes it from config.json.
+_4ROOMS_PRETRAINED = (
+    ("seqsleepnet-huy", "Huy et al. (2022)"),
+    ("seqsleepnet-phan", "Phan et al. (2021)"),
+    ("lseqsleepnet-phan", "Phan et al. (2022)"),
+    ("sleeptransformer-phan", "Phan et al. (2021)"),
+    ("tinysleepnet-supratak", "Supratak et al. (2017)"),
+    ("chambon2018", "Chambon et al. (2018)"),
+    ("tsinalis-2016", "Tsinalis et al. (2016)"),
+    ("coresleep-kontras", "Kontras et al. (2024)"),
+    ("protosleepnet-gagliardi", "Gagliardi et al. (2026)"),
+    ("protosleeptransformer-gagliardi", "Gagliardi et al. (2026)"),
+)
+
+
+def list_pretrained() -> list[dict]:
+    """List the pretrained models available through ``load_from_pretrained``.
+
+    Covers the third-party registry (wav2sleep, SleepPPG-Net, Jones ECG) and a
+    static list of the 4rooms/physioex models; no network access.
+
+    Returns:
+        One dict per model with keys ``name``, ``source``, ``license``,
+        ``reference``, ``n_classes`` (and ``class_names`` for the
+        third-party models).
+    """
+    entries: list[dict] = []
+    for name in THIRD_PARTY_PRETRAINED:
+        spec = THIRD_PARTY_PRETRAINED[name]
+        src = spec["source"]
+        if src.source_type == "raw_url":
+            source = f"github: {src.repo_id} ({src.filenames[0]})"
+        elif src.source_type == "huggingface_file":
+            source = f"hf: {src.repo_id} ({', '.join(src.filenames)})"
+        else:
+            source = f"hf: {src.repo_id}"
+        entries.append({
+            "name": name,
+            "source": source,
+            "license": spec["license"],
+            "reference": spec["reference"],
+            "n_classes": spec["n_classes"],
+            "class_names": list(spec["class_names"]),
+        })
+    for name, reference in _4ROOMS_PRETRAINED:
+        entries.append({
+            "name": name,
+            "source": f"hf: {HF_REPO_ID}/{name}",
+            "license": "Apache-2.0",
+            "reference": reference,
+            "n_classes": None,
+            "class_names": None,
+        })
+    return entries
+
+
+def _load_third_party(
+    name: str, device: str, verbose: bool, repo_id: str | None
+) -> torch.nn.Module:
+    """Download (if needed) and build a third-party registered model."""
+    spec = THIRD_PARTY_PRETRAINED[name]
+    target = spec.get("alias", name)
+    if target != name:
+        spec = THIRD_PARTY_PRETRAINED[target]
+        name = target
+    source = spec["source"]
+
+    if source.source_type == "huggingface_file":
+        # ensure_checkpoint returns the first file; all files land in the
+        # same directory (see _download_hf_file).
+        primary = Path(ensure_checkpoint(name))
+        if len(source.filenames) > 1:
+            paths = [str(primary.parent / f) for f in source.filenames]
+        else:
+            paths = [str(primary)]
+    elif source.source_type == "raw_url":
+        paths = ensure_checkpoint(name)
+        if isinstance(paths, str):
+            paths = [paths]
+    else:
+        raise ValueError(
+            f"Unsupported source_type {source.source_type!r} for {name!r}"
+        )
+
+    model = spec["loader"](paths)
+
+    if _license_is_restrictive(spec["license"]):
+        logger.warning(
+            "%s: weights under %s — %s",
+            name, spec["license"], spec["license_note"],
+        )
+
+    model = model.to(device).eval()
+
+    if verbose:
+        n_params = sum(p.numel() for p in model.parameters())
+        print(f"Model:     {name}")
+        print(f"Class:     {type(model).__module__}.{type(model).__qualname__}")
+        print(f"Params:    {n_params:,}")
+        print(f"Reference: {spec['reference']}")
+        print(f"License:   {spec['license']} ({spec['license_note']})")
+        print(f"Classes:   {', '.join(spec['class_names'])}")
+        print(f"Input:     {spec['input']}")
+
+    return model
 
 
 # (key in metrics.json, column header, width). A column is printed only if at
@@ -70,18 +380,27 @@ def load_from_pretrained(
     name: str, device: str = "cpu", verbose: bool = False,
     repo_id: str = None,
 ) -> torch.nn.Module:
-    """Load a pretrained model from HuggingFace Hub.
+    """Load a pretrained model, downloading the weights if needed.
 
-    The model class and constructor kwargs are read from ``config.json``
-    stored alongside the weights on HuggingFace.  The caller only needs
-    to know the model identifier (e.g. ``"seqsleepnet-huy"``).
+    If ``name`` is a registered third-party model (see
+    :data:`THIRD_PARTY_PRETRAINED` — wav2sleep, wav2sleep-eog,
+    sleepppgnet-replica, ``jones-ecg-*``) and ``repo_id`` is not set, the
+    checkpoint is downloaded to the foundation-model cache
+    (``$PHYSIOEX_CACHE_DIR/v1/foundation_models/<name>/``) and the model is
+    built with the authors' ``from_original`` factory.  Licenses that are
+    not MIT/Apache/BSD are always logged as a warning.
+
+    Otherwise the 4rooms/physioex behaviour applies: the model class and
+    constructor kwargs are read from the ``config.json`` stored in the HF
+    repo (e.g. ``"seqsleepnet-huy"``).
 
     Args:
-        name: Model identifier matching a sub-folder in the HF repo
-            (e.g. ``"seqsleepnet-huy"``).
+        name: Model identifier — a third-party registry name or a sub-folder
+            in the HF repo.
         device: Device to load the model onto (default ``"cpu"``).
-        verbose: If True, print model info and per-dataset evaluation
-            metrics stored on HuggingFace.
+        verbose: If True, print model info; for third-party models also the
+            reference, license, classes and expected input.
+        repo_id: Override the HF repo for the 4rooms-style load.
 
     Returns:
         The pretrained ``nn.Module`` in eval mode on *device*.
@@ -91,7 +410,11 @@ def load_from_pretrained(
         from physioex.models import load_from_pretrained
 
         model = load_from_pretrained("seqsleepnet-huy", verbose=True)
+        model = load_from_pretrained("wav2sleep", verbose=True)
     """
+    if name in THIRD_PARTY_PRETRAINED and repo_id is None:
+        return _load_third_party(name, device, verbose, repo_id)
+
     from huggingface_hub import hf_hub_download
 
     repo = repo_id or HF_REPO_ID

@@ -32,10 +32,16 @@ logger = logging.getLogger("physioex.data")
 
 
 class MrOSDataset(_NSRRBaseDataset):
-    """MrOS sleep dataset (visit 1)."""
+    """MrOS sleep dataset (visit 1 by default; ``visit=2`` for the second visit)."""
 
     DATASET_NAME = "mros"
     DATASET_SUBDIR = "mros"
+    SESSION_PREFIX = "mros-visit1-"
+    DATASET_PREFIX = "mros-visit1-"
+    HARMONIZED_CSV_GLOB = "mros-visit1-harmonized-*.csv"
+    CSV_ID_COLUMN = "nsrrid"
+    #: All visits share the single ``mros`` external-split directory.
+    DATASET_SPLIT_KEY = "mros"
 
     CHANNEL_PREFERENCES: Dict[str, List] = {
         "EEG": [
@@ -59,59 +65,96 @@ class MrOSDataset(_NSRRBaseDataset):
             "LCHIN",
             "RCHIN",
         ],
-        "ECG": ["ECG L", "ECG R", ("ECG L", "ECG R"), "ECG", "ECG1", "ECG2"],
+        "ECG": [
+            "ECG L",
+            "ECG R",
+            ("ECG L", "ECG R"),
+            "ECG",
+            "EKG",
+            "ECG1",
+            "ECGL",
+            "ECG L-ECG R",
+            "ECG2",
+        ],
+        "PPG": [
+            "Pleth",
+            "PlethWV",
+            "PWF",
+            "PlethMasimo",
+            "PletMasimo",
+            "PlethMasino",
+            "PLETHMASIMO",
+        ],
+        "ABD": [
+            "ABD",
+            "Abdo",
+            "ABDO RES",
+            "ABDO EFFORT",
+            "Abdominal",
+            "abdomen",
+        ],
+        "THX": [
+            "THX",
+            "Thor",
+            "THOR RES",
+            "THOR EFFORT",
+            "Thoracic",
+            "Chest",
+            "thorax",
+            "CHEST",
+        ],
     }
 
     def __init__(
         self,
         root: Optional[str] = None,
+        visit: int = 1,
         **kwargs,
     ):
+        if visit not in (1, 2):
+            raise ValueError(f"visit must be 1 or 2; got {visit!r}")
         if root is None:
             root = str(get_data_root() / self.DATASET_SUBDIR)
-        self._metadata = self._load_metadata(root)
+        self.visit = visit
+        if visit != 1:
+            # Visit 1 keeps the historical name so existing caches stay valid.
+            self.DATASET_NAME = f"mros_visit{visit}"
+            self.SESSION_PREFIX = self.DATASET_PREFIX = f"mros-visit{visit}-"
+        # The harmonized CSV loader is a classmethod bound to the visit-1 file
+        # pattern; visit 2 has no harmonized CSV in the NSRR release, so its
+        # subjects carry no CSV metadata (age/sex -> None).
+        self._metadata = self._load_metadata(root) if visit == 1 else {}
         super().__init__(root=root, **kwargs)
 
     # ------------------------------------------------------------------
     # Metadata
     # ------------------------------------------------------------------
 
-    @staticmethod
-    def _load_metadata(root: str) -> Dict[str, Dict[str, Any]]:
+    @classmethod
+    def _load_metadata(cls, root: str) -> Dict[str, Dict[str, Any]]:
         """Load harmonized CSV into a dict keyed by nsrrid (uppercase, e.g. 'AA0001')."""
-        csv_path = Path(root) / "datasets" / "mros-visit1-harmonized-0.6.0.csv"
-        if not csv_path.exists():
-            logger.warning("MrOS metadata CSV not found: %s", csv_path)
-            return {}
-        import pandas as pd
+        meta = cls.load_harmonized_csv(root)
+        return {k.upper(): v for k, v in meta.items()}
 
-        df = pd.read_csv(csv_path)
-        meta: Dict[str, Dict[str, Any]] = {}
-        for _, row in df.iterrows():
-            key = str(row["nsrrid"]).upper()
-            meta[key] = {
-                col: (None if pd.isna(val) else val) for col, val in row.items()
-            }
-        return meta
+    def _row_key_of(self, subject_id: str) -> Optional[str]:
+        # subject_id is "mros-visit1-aa0001" -> nsrrid "AA0001"
+        return self._nsrrid_of(subject_id).upper()
 
     def _list_subjects(self) -> List[SubjectSpec]:
         root = Path(self.root)
         # MrOS EDFs and annotations are organised in visit subdirectories.
-        # Try visit1 first (primary); fall back to flat layout for compat.
-        edf_dir = root / "polysomnography" / "edfs" / "visit1"
-        xml_dir = root / "polysomnography" / "annotations-events-nsrr" / "visit1"
+        # Use the selected visit's subdirectory; fall back to flat layout for compat.
+        visit_dir = f"visit{getattr(self, 'visit', 1)}"
+        edf_dir = root / "polysomnography" / "edfs" / visit_dir
+        xml_dir = root / "polysomnography" / "annotations-events-nsrr" / visit_dir
         if not edf_dir.exists():
             # Fall back to flat layout (no visit subdirs)
             edf_dir = root / "polysomnography" / "edfs"
             xml_dir = root / "polysomnography" / "annotations-events-nsrr"
         specs = self._pair_edfs_with_xml(edf_dir, xml_dir)
         # Enrich with metadata from harmonized CSV.
-        # subject_id is "mros-visit1-aa0001" -> nsrrid "AA0001"
         for spec in specs:
-            # Extract site+number portion after "mros-visit1-"
-            parts = spec.subject_id.split("-", 2)
-            if len(parts) >= 3:
-                nsrrid = parts[2].upper()  # "aa0001" -> "AA0001"
-                if nsrrid in self._metadata:
-                    spec.external_meta.update(self._metadata[nsrrid])
+            row = self._subject_row(spec.subject_id)
+            if row is not None:
+                spec.external_meta.update(row)
         return specs

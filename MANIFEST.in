@@ -1,2 +1,4 @@
 include physioex/train/models/check_table.csv
 include physioex/data/datasets/_splits/shhs.json
+recursive-include physioex/data/datasets/_splits/wav2sleep *.txt *.md
+recursive-include physioex/data/datasets/_splits/sleepppgnet-replica *.txt *.md

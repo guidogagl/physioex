@@ -25,6 +25,7 @@ from typing import Any, Dict, List, Optional
 import numpy as np
 
 from physioex.data.base import BasePhysioDataset, SubjectSpec, get_data_root
+from physioex.data.datasets._nsrr import _NSRRBaseDataset
 
 logger = logging.getLogger("physioex.data")
 
@@ -54,14 +55,14 @@ _ALLSCORE_STAGE_MAP = {
 }
 
 
-class WSCDataset(BasePhysioDataset):
+class WSCDataset(_NSRRBaseDataset):
     """Wisconsin Sleep Cohort dataset.
 
     Has 3 longitudinal visits. Each visit is selected via the ``visit``
     parameter.
 
     Args:
-        visit: int (1, 2, or 3). Selects which visit's recordings to load.
+        visit: int (1 to 5). Selects which visit's recordings to load.
         root: path to the WSC data directory
               (default: ``$PHYSIOEX_DATA/wsc``).
     """
@@ -73,6 +74,8 @@ class WSCDataset(BasePhysioDataset):
     DEFAULT_EPOCH_LENGTH_SEC = 30.0
 
     # Channel preferences: WSC uses non-standard channel names.
+    # ECG/PPG/ABD/THX use the wav2sleep alternate names (the same
+    # preference lists are shared by all NSRR datasets).
     CHANNEL_PREFERENCES = {
         "EEG": [
             "C3_M2",
@@ -101,6 +104,41 @@ class WSCDataset(BasePhysioDataset):
             "rchin_l",
             "EMG",
         ],
+        "ECG": [
+            "ECG",
+            "EKG",
+            "ECG1",
+            "ECG L",
+            "ECGL",
+            "ECG L-ECG R",
+        ],
+        "PPG": [
+            "Pleth",
+            "PlethWV",
+            "PWF",
+            "PlethMasimo",
+            "PletMasimo",
+            "PlethMasino",
+            "PLETHMASIMO",
+        ],
+        "ABD": [
+            "ABD",
+            "Abdo",
+            "ABDO RES",
+            "ABDO EFFORT",
+            "Abdominal",
+            "abdomen",
+        ],
+        "THX": [
+            "THX",
+            "Thor",
+            "THOR RES",
+            "THOR EFFORT",
+            "Thoracic",
+            "Chest",
+            "thorax",
+            "CHEST",
+        ],
     }
 
     def __init__(
@@ -116,7 +154,10 @@ class WSCDataset(BasePhysioDataset):
         self.visit = visit
         # Dynamic dataset name so cache dirs are separated per visit.
         self.DATASET_NAME = f"wsc_visit{visit}"
+        self.DATASET_PREFIX = f"wsc-visit{visit}-"
         self._metadata = self._load_metadata(root, visit)
+        # All WSC visits share the single ``wsc`` wav2sleep split directory.
+        self.DATASET_SPLIT_KEY = "wsc"
         super().__init__(root=root, **kwargs)
 
     # ------------------------------------------------------------------
@@ -129,12 +170,12 @@ class WSCDataset(BasePhysioDataset):
 
         Returns a dict keyed by wsc_id (as string) with all columns as values.
         """
+        import pandas as pd
+
         csv_path = Path(root) / "datasets" / "wsc-dataset-0.8.0.csv"
         if not csv_path.exists():
             logger.warning("WSC metadata CSV not found: %s", csv_path)
             return {}
-        import pandas as pd
-
         df = pd.read_csv(csv_path, low_memory=False)
         df_visit = df[df["wsc_vst"] == visit]
         meta: Dict[str, Dict[str, Any]] = {}
@@ -144,6 +185,86 @@ class WSCDataset(BasePhysioDataset):
                 col: (None if pd.isna(val) else val) for col, val in row.items()
             }
         return meta
+
+    # ------------------------------------------------------------------
+    # Session ids / named external splits / subject metadata
+    # ------------------------------------------------------------------
+
+    def session_id(self, subject_spec_or_subject_id):
+        """The NSRR session id is the EDF stem, which is the physioex
+        subject_id with the trailing ``-nsrr`` (as distributed by NSRR)."""
+        sid = (
+            subject_spec_or_subject_id
+            if isinstance(subject_spec_or_subject_id, str)
+            else subject_spec_or_subject_id.subject_id
+        )
+        return f"{sid}-nsrr"
+
+    def get_splits(self, fold: int = 0, split=None):
+        """Return ``(train, valid, test)`` subject_id lists.
+
+        ``split="wav2sleep"`` / ``"wav2sleep-census"`` select the published
+        external splits (see :meth:`_NSRRBaseDataset.get_splits`); otherwise
+        falls back to the default random 70/15/15.
+        """
+        if split is None:
+            return super().get_splits(fold=fold)
+        # The wav2sleep lists carry NSRR session ids (``wsc-visit1-10191-nsrr``)
+        # but this dataset's subject_ids drop the trailing ``-nsrr``. Build a
+        # temporary subject list of session ids so the base matcher can work,
+        # then map the surviving session ids back to subject_ids.
+        saved_subjects = self._subjects
+        session_specs = [
+            SubjectSpec(subject_id=f"{s.subject_id}-nsrr", edf_path=s.edf_path)
+            for s in saved_subjects
+        ]
+        self._subjects = session_specs
+        try:
+            train, val, test = super().get_splits(fold=fold, split=split)
+        finally:
+            self._subjects = saved_subjects
+
+        from_session = {i: i[: -len("-nsrr")] for i in train + val + test}
+        return (
+            [from_session[i] for i in train],
+            [from_session[i] for i in val],
+            [from_session[i] for i in test],
+        )
+
+    def subject_metadata(self, subject_id: str) -> Dict[str, Any]:
+        """Return ``{"age", "sex", "recording_start"}`` for a subject.
+
+        Age and sex come from the NSRR harmonized CSV
+        (``wsc-harmonized-dataset-*.csv``, columns ``nsrr_age`` / ``nsrr_sex``,
+        rows matched on ``nsrrid`` and ``wsc_vst``); ``recording_start``
+        comes from the EDF header startdatetime. A missing file or value
+        yields ``None``. Never raises.
+        """
+        row = self._harmonized_rows().get(str(subject_id).split("-")[2] if subject_id.count("-") >= 2 else "")
+        age, sex = self._harmonized_age_sex(row)
+        return {"age": age, "sex": sex, "recording_start": self._recording_start(subject_id)}
+
+    def _harmonized_rows(self) -> Dict[str, Dict[str, Any]]:
+        """Harmonized-CSV rows of this visit keyed by ``nsrrid`` (cached)."""
+        cached = getattr(self, "_harmonized_cache", None)
+        if cached is not None:
+            return cached
+        rows: Dict[str, Dict[str, Any]] = {}
+        try:
+            import pandas as pd
+
+            paths = sorted((Path(self.root) / "datasets").glob("wsc-harmonized-dataset-*.csv"))
+            if paths:
+                df = pd.read_csv(paths[-1], low_memory=False)
+                df = df[df["wsc_vst"] == self.visit]
+                for _, r in df.iterrows():
+                    rows[str(int(r["nsrrid"]))] = {k: (None if pd.isna(v) else v) for k, v in r.items()}
+            else:
+                logger.debug("[%s] no wsc-harmonized-dataset-*.csv under %s", self.DATASET_NAME, self.root)
+        except Exception as exc:  # metadata is optional: never raise
+            logger.debug("[%s] cannot read the harmonized CSV: %s", self.DATASET_NAME, exc)
+        self._harmonized_cache = rows
+        return rows
 
     # ------------------------------------------------------------------
     # Subject discovery

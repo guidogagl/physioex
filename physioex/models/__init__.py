@@ -1,5 +1,6 @@
 from physioex.models.pretrained import load_from_pretrained
 from physioex.models.embed import extract_embeddings, load_embeddings, linear_probe
+from physioex.models.jones_ecg import JonesECGNet
 
 # Foundation encoders
 from physioex.models.cbramod import CBraModEncoder
@@ -12,12 +13,17 @@ from physioex.models.reve import REVEEncoder
 from physioex.models.sjepa import SJEEncoder
 from physioex.models.neurolm import NeuroLMEncoder
 from physioex.models.foundation_base import FoundationEncoder
+from physioex.models.sleepppgnet import SleepPPGNet
+
+# Cardiorespiratory sleep staging
+from physioex.models.wav2sleep import Wav2Sleep
 
 __all__ = [
     "load_from_pretrained",
     "extract_embeddings",
     "load_embeddings",
     "linear_probe",
+    "JonesECGNet",
     # Foundation encoders
     "FoundationEncoder",
     "CBraModEncoder",
@@ -29,4 +35,7 @@ __all__ = [
     "REVEEncoder",
     "SJEEncoder",
     "NeuroLMEncoder",
+    # Cardiorespiratory sleep staging
+    "Wav2Sleep",
+    "SleepPPGNet",
 ]
