@@ -400,7 +400,9 @@ window.addEventListener("load", () => mermaid.run());
                 <article class="bd-article">
                   
   <h1>Source code for physioex.data.steps.resample</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span></span><span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Optional</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">scipy.signal</span><span class="w"> </span><span class="kn">import</span> <span class="n">resample</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">physioex.data.pipeline</span><span class="w"> </span><span class="kn">import</span> <span class="n">PreprocessingStep</span><span class="p">,</span> <span class="n">CompiledStep</span>
 
@@ -424,7 +426,7 @@ window.addEventListener("load", () => mermaid.run());
 
 <div class="viewcode-block" id="Resample.compile">
 <a class="viewcode-back" href="../../../../api/_generated/physioex.data.Resample.html#physioex.data.Resample.compile">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">compile</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fs_in</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">CompiledStep</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">compile</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fs_in</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">header</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">CompiledStep</span><span class="p">:</span>
         <span class="n">target</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">target_fs</span>
         <span class="k">if</span> <span class="n">fs_in</span> <span class="o">==</span> <span class="n">target</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">CompiledStep</span><span class="p">(</span>
@@ -434,6 +436,54 @@ window.addEventListener("load", () => mermaid.run());
         <span class="k">def</span><span class="w"> </span><span class="nf">apply</span><span class="p">(</span><span class="n">signal</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
             <span class="n">n_out</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="n">signal</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">target</span> <span class="o">/</span> <span class="n">fs_in</span><span class="p">))</span>
             <span class="n">y</span> <span class="o">=</span> <span class="n">resample</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">signal</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span> <span class="n">n_out</span><span class="p">,</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">y</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">CompiledStep</span><span class="p">(</span><span class="n">apply</span><span class="o">=</span><span class="n">apply</span><span class="p">,</span> <span class="n">fs_out</span><span class="o">=</span><span class="n">target</span><span class="p">)</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="FFTResample">
+<a class="viewcode-back" href="../../../../api/_generated/physioex.data.FFTResample.html#physioex.data.FFTResample">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">FFTResample</span><span class="p">(</span><span class="n">PreprocessingStep</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""FFT-based resample (``scipy.signal.resample``) to a target rate.</span>
+
+<span class="sd">    Distinct from :class:`Resample`: the output length is computed with</span>
+<span class="sd">    ``int(len(x) * target_fs / fs)`` (truncating, no rounding), which is</span>
+<span class="sd">    what the SleepPPG-Net reference code uses.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    target_fs : float</span>
+<span class="sd">        Target sampling rate in Hz.</span>
+<span class="sd">    """</span>
+
+<div class="viewcode-block" id="FFTResample.__init__">
+<a class="viewcode-back" href="../../../../api/_generated/physioex.data.FFTResample.html#physioex.data.FFTResample.__init__">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">target_fs</span><span class="p">:</span> <span class="nb">float</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">target_fs</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"target_fs must be &gt; 0; got </span><span class="si">{</span><span class="n">target_fs</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">target_fs</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">target_fs</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="FFTResample.spec">
+<a class="viewcode-back" href="../../../../api/_generated/physioex.data.FFTResample.html#physioex.data.FFTResample.spec">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">spec</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_build_spec</span><span class="p">(</span><span class="n">target_fs</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">target_fs</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="FFTResample.compile">
+<a class="viewcode-back" href="../../../../api/_generated/physioex.data.FFTResample.html#physioex.data.FFTResample.compile">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">compile</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fs_in</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">header</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">CompiledStep</span><span class="p">:</span>
+        <span class="n">target</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">target_fs</span>
+        <span class="k">if</span> <span class="n">fs_in</span> <span class="o">==</span> <span class="n">target</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">CompiledStep</span><span class="p">(</span>
+                <span class="n">apply</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">),</span> <span class="n">fs_out</span><span class="o">=</span><span class="n">target</span>
+            <span class="p">)</span>
+
+        <span class="k">def</span><span class="w"> </span><span class="nf">apply</span><span class="p">(</span><span class="n">signal</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+            <span class="n">n_out</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">signal</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">target</span> <span class="o">/</span> <span class="n">fs_in</span><span class="p">)</span>
+            <span class="n">y</span> <span class="o">=</span> <span class="n">resample</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">signal</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span> <span class="n">n_out</span><span class="p">)</span>
             <span class="k">return</span> <span class="n">y</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="n">CompiledStep</span><span class="p">(</span><span class="n">apply</span><span class="o">=</span><span class="n">apply</span><span class="p">,</span> <span class="n">fs_out</span><span class="o">=</span><span class="n">target</span><span class="p">)</span></div>

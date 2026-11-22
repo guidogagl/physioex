@@ -1,0 +1,6 @@
+﻿physioex.models.pretrained.list\_pretrained
+===========================================
+
+.. currentmodule:: physioex.models.pretrained
+
+.. autofunction:: list_pretrained

@@ -1,0 +1,85 @@
+﻿physioex.models.wav2sleep.Wav2Sleep
+===================================
+
+.. currentmodule:: physioex.models.wav2sleep
+
+.. autoclass:: Wav2Sleep
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~Wav2Sleep.__init__
+      ~Wav2Sleep.add_module
+      ~Wav2Sleep.apply
+      ~Wav2Sleep.bfloat16
+      ~Wav2Sleep.buffers
+      ~Wav2Sleep.children
+      ~Wav2Sleep.compile
+      ~Wav2Sleep.cpu
+      ~Wav2Sleep.cuda
+      ~Wav2Sleep.double
+      ~Wav2Sleep.eval
+      ~Wav2Sleep.extra_repr
+      ~Wav2Sleep.float
+      ~Wav2Sleep.forward
+      ~Wav2Sleep.from_original
+      ~Wav2Sleep.get_buffer
+      ~Wav2Sleep.get_extra_state
+      ~Wav2Sleep.get_parameter
+      ~Wav2Sleep.get_submodule
+      ~Wav2Sleep.half
+      ~Wav2Sleep.ipu
+      ~Wav2Sleep.load_state_dict
+      ~Wav2Sleep.modules
+      ~Wav2Sleep.mtia
+      ~Wav2Sleep.named_buffers
+      ~Wav2Sleep.named_children
+      ~Wav2Sleep.named_modules
+      ~Wav2Sleep.named_parameters
+      ~Wav2Sleep.parameters
+      ~Wav2Sleep.predict
+      ~Wav2Sleep.predict_night
+      ~Wav2Sleep.register_backward_hook
+      ~Wav2Sleep.register_buffer
+      ~Wav2Sleep.register_forward_hook
+      ~Wav2Sleep.register_forward_pre_hook
+      ~Wav2Sleep.register_full_backward_hook
+      ~Wav2Sleep.register_full_backward_pre_hook
+      ~Wav2Sleep.register_load_state_dict_post_hook
+      ~Wav2Sleep.register_load_state_dict_pre_hook
+      ~Wav2Sleep.register_module
+      ~Wav2Sleep.register_parameter
+      ~Wav2Sleep.register_state_dict_post_hook
+      ~Wav2Sleep.register_state_dict_pre_hook
+      ~Wav2Sleep.requires_grad_
+      ~Wav2Sleep.set_extra_state
+      ~Wav2Sleep.set_submodule
+      ~Wav2Sleep.share_memory
+      ~Wav2Sleep.state_dict
+      ~Wav2Sleep.to
+      ~Wav2Sleep.to_empty
+      ~Wav2Sleep.train
+      ~Wav2Sleep.type
+      ~Wav2Sleep.xpu
+      ~Wav2Sleep.zero_grad
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~Wav2Sleep.T_destination
+      ~Wav2Sleep.call_super_init
+      ~Wav2Sleep.dump_patches
+      ~Wav2Sleep.valid_signals
+      ~Wav2Sleep.training
+   
+   

@@ -358,10 +358,19 @@
 <li class="toctree-l1"><a class="reference internal" href="physioex.data.BandpassFilter.html">physioex.data.BandpassFilter</a></li>
 <li class="toctree-l1"><a class="reference internal" href="physioex.data.NotchFilter.html">physioex.data.NotchFilter</a></li>
 <li class="toctree-l1"><a class="reference internal" href="physioex.data.Resample.html">physioex.data.Resample</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.FFTResample.html">physioex.data.FFTResample</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.InterpResample.html">physioex.data.InterpResample</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.FixedLength.html">physioex.data.FixedLength</a></li>
 <li class="toctree-l1"><a class="reference internal" href="physioex.data.ZScoreNormalize.html">physioex.data.ZScoreNormalize</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.ZScore.html">physioex.data.ZScore</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.Clip.html">physioex.data.Clip</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.ChebyshevLowpass.html">physioex.data.ChebyshevLowpass</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.PhysicalScale.html">physioex.data.PhysicalScale</a></li>
 <li class="toctree-l1"><a class="reference internal" href="physioex.data.XSleepNetSpectrogram.html">physioex.data.XSleepNetSpectrogram</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.steps.JonesECGPreprocess.html">physioex.data.steps.JonesECGPreprocess</a></li>
 <li class="toctree-l1"><a class="reference internal" href="physioex.data.get_preset.html">physioex.data.get_preset</a></li>
 <li class="toctree-l1"><a class="reference internal" href="physioex.data.available_presets.html">physioex.data.available_presets</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.get_label_transform.html">physioex.data.get_label_transform</a></li>
 <li class="toctree-l1"><a class="reference internal" href="physioex.data.ChannelCache.html">physioex.data.ChannelCache</a></li>
 <li class="toctree-l1"><a class="reference internal" href="physioex.data.dict_collate_fn.html">physioex.data.dict_collate_fn</a></li>
 <li class="toctree-l1"><a class="reference internal" href="physioex.data.stack_channels.html">physioex.data.stack_channels</a></li>
@@ -391,6 +400,7 @@
 <li class="toctree-l1"><a class="reference internal" href="physioex.models.SJEEncoder.html">physioex.models.SJEEncoder</a></li>
 <li class="toctree-l1"><a class="reference internal" href="physioex.models.NeuroLMEncoder.html">physioex.models.NeuroLMEncoder</a></li>
 <li class="toctree-l1"><a class="reference internal" href="physioex.models.load_from_pretrained.html">physioex.models.load_from_pretrained</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.models.pretrained.list_pretrained.html">physioex.models.pretrained.list_pretrained</a></li>
 <li class="toctree-l1"><a class="reference internal" href="physioex.models.extract_embeddings.html">physioex.models.extract_embeddings</a></li>
 <li class="toctree-l1"><a class="reference internal" href="physioex.models.load_embeddings.html">physioex.models.load_embeddings</a></li>
 <li class="toctree-l1"><a class="reference internal" href="physioex.models.linear_probe.html">physioex.models.linear_probe</a></li>
@@ -400,6 +410,11 @@
 <li class="toctree-l1"><a class="reference internal" href="physioex.models.tinysleepnet.TinySleepNet.html">physioex.models.tinysleepnet.TinySleepNet</a></li>
 <li class="toctree-l1"><a class="reference internal" href="physioex.models.seqsleepnet.SeqSleepNet.html">physioex.models.seqsleepnet.SeqSleepNet</a></li>
 <li class="toctree-l1"><a class="reference internal" href="physioex.models.sleeptransformer.SleepTransformer.html">physioex.models.sleeptransformer.SleepTransformer</a></li>
+</ul>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="physioex.models.wav2sleep.Wav2Sleep.html">physioex.models.wav2sleep.Wav2Sleep</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.models.sleepppgnet.SleepPPGNet.html">physioex.models.sleepppgnet.SleepPPGNet</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.models.jones_ecg.JonesECGNet.html">physioex.models.jones_ecg.JonesECGNet</a></li>
 </ul>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="physioex.train.trainer.Trainer.html">physioex.train.trainer.Trainer</a></li>
@@ -412,6 +427,7 @@
 </ul>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="physioex.train.metrics.html">physioex.train.metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.train.replication.html">physioex.train.replication</a></li>
 <li class="toctree-l1"><a class="reference internal" href="physioex.train.stats.html">physioex.train.stats</a></li>
 <li class="toctree-l1"><a class="reference internal" href="physioex.train.progress.html">physioex.train.progress</a></li>
 </ul>
@@ -506,8 +522,8 @@
 <tr class="row-odd"><td><p><a class="reference internal" href="#physioex.data.PreprocessingPipeline.__init__" title="physioex.data.PreprocessingPipeline.__init__"><code class="xref py py-obj docutils literal notranslate"><span class="pre">__init__</span></code></a>(steps)</p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">compile</span></code>(fs_in)</p></td>
-<td><p></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#physioex.data.PreprocessingPipeline.compile" title="physioex.data.PreprocessingPipeline.compile"><code class="xref py py-obj docutils literal notranslate"><span class="pre">compile</span></code></a>(fs_in[, header])</p></td>
+<td><p>Compile every step for <code class="docutils literal notranslate"><span class="pre">fs_in</span></code>, threading the per-channel <code class="docutils literal notranslate"><span class="pre">header</span></code> (optional) through to the steps that need it.</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">hash</span></code>()</p></td>
 <td><p></p></td>
@@ -518,6 +534,24 @@
 </tbody>
 </table>
 </div>
+<dl class="py method">
+<dt class="sig sig-object py" id="physioex.data.PreprocessingPipeline.compile">
+<span class="sig-name descname"><span class="pre">compile</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fs_in</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">header</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/physioex/data/pipeline.html#PreprocessingPipeline.compile"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#physioex.data.PreprocessingPipeline.compile" title="Link to this definition">#</a></dt>
+<dd><p>Compile every step for <code class="docutils literal notranslate"><span class="pre">fs_in</span></code>, threading the per-channel
+<code class="docutils literal notranslate"><span class="pre">header</span></code> (optional) through to the steps that need it.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>fs_in</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><em>float</em></a>)</p></li>
+<li><p><strong>header</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Dict" title="(in Python v3.15)"><em>Dict</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><em>str</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.15)"><em>Any</em></a><em>] </em><em>| </em><em>None</em>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="physioex.data.CompiledPipeline.html#physioex.data.CompiledPipeline" title="physioex.data.pipeline.CompiledPipeline"><em>CompiledPipeline</em></a></p>
+</dd>
+</dl>
+</dd></dl>
+
 </dd></dl>
 
 </section>
@@ -571,6 +605,7 @@
     <ul class="visible nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#physioex.data.PreprocessingPipeline"><code class="docutils literal notranslate"><span class="pre">PreprocessingPipeline</span></code></a><ul class="nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#physioex.data.PreprocessingPipeline.__init__"><code class="docutils literal notranslate"><span class="pre">PreprocessingPipeline.__init__()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#physioex.data.PreprocessingPipeline.compile"><code class="docutils literal notranslate"><span class="pre">PreprocessingPipeline.compile()</span></code></a></li>
 </ul>
 </li>
 </ul>

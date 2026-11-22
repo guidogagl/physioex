@@ -400,7 +400,9 @@ window.addEventListener("load", () => mermaid.run());
                 <article class="bd-article">
                   
   <h1>Source code for physioex.data.steps.spectrogram</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span></span><span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Optional</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">scipy.signal</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_window</span><span class="p">,</span> <span class="n">spectrogram</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">physioex.data.pipeline</span><span class="w"> </span><span class="kn">import</span> <span class="n">PreprocessingStep</span><span class="p">,</span> <span class="n">CompiledStep</span>
 
@@ -474,7 +476,7 @@ window.addEventListener("load", () => mermaid.run());
 
 <div class="viewcode-block" id="XSleepNetSpectrogram.compile">
 <a class="viewcode-back" href="../../../../api/_generated/physioex.data.XSleepNetSpectrogram.html#physioex.data.XSleepNetSpectrogram.compile">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">compile</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fs_in</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">CompiledStep</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">compile</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fs_in</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">header</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">CompiledStep</span><span class="p">:</span>
         <span class="n">win</span> <span class="o">=</span> <span class="n">get_window</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">window</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">nperseg</span><span class="p">)</span>
         <span class="n">nperseg</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nperseg</span>
         <span class="n">noverlap</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">noverlap</span>

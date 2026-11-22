@@ -1,0 +1,6 @@
+﻿physioex.data.get\_label\_transform
+===================================
+
+.. currentmodule:: physioex.data
+
+.. autofunction:: get_label_transform

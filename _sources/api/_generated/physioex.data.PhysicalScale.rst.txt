@@ -1,0 +1,30 @@
+﻿physioex.data.PhysicalScale
+===========================
+
+.. currentmodule:: physioex.data
+
+.. autoclass:: PhysicalScale
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~PhysicalScale.__init__
+      ~PhysicalScale.compile
+      ~PhysicalScale.spec
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~PhysicalScale.needs_header
+   
+   

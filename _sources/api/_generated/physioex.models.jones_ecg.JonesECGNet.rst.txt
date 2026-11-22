@@ -1,0 +1,85 @@
+﻿physioex.models.jones\_ecg.JonesECGNet
+======================================
+
+.. currentmodule:: physioex.models.jones_ecg
+
+.. autoclass:: JonesECGNet
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~JonesECGNet.__init__
+      ~JonesECGNet.add_module
+      ~JonesECGNet.apply
+      ~JonesECGNet.bfloat16
+      ~JonesECGNet.buffers
+      ~JonesECGNet.build_additional
+      ~JonesECGNet.children
+      ~JonesECGNet.compile
+      ~JonesECGNet.cpu
+      ~JonesECGNet.cuda
+      ~JonesECGNet.double
+      ~JonesECGNet.eval
+      ~JonesECGNet.extra_repr
+      ~JonesECGNet.float
+      ~JonesECGNet.forward
+      ~JonesECGNet.from_original
+      ~JonesECGNet.get_buffer
+      ~JonesECGNet.get_extra_state
+      ~JonesECGNet.get_parameter
+      ~JonesECGNet.get_submodule
+      ~JonesECGNet.half
+      ~JonesECGNet.ipu
+      ~JonesECGNet.load_state_dict
+      ~JonesECGNet.midnight_offset
+      ~JonesECGNet.modules
+      ~JonesECGNet.mtia
+      ~JonesECGNet.named_buffers
+      ~JonesECGNet.named_children
+      ~JonesECGNet.named_modules
+      ~JonesECGNet.named_parameters
+      ~JonesECGNet.parameters
+      ~JonesECGNet.predict_night
+      ~JonesECGNet.register_backward_hook
+      ~JonesECGNet.register_buffer
+      ~JonesECGNet.register_forward_hook
+      ~JonesECGNet.register_forward_pre_hook
+      ~JonesECGNet.register_full_backward_hook
+      ~JonesECGNet.register_full_backward_pre_hook
+      ~JonesECGNet.register_load_state_dict_post_hook
+      ~JonesECGNet.register_load_state_dict_pre_hook
+      ~JonesECGNet.register_module
+      ~JonesECGNet.register_parameter
+      ~JonesECGNet.register_state_dict_post_hook
+      ~JonesECGNet.register_state_dict_pre_hook
+      ~JonesECGNet.requires_grad_
+      ~JonesECGNet.set_extra_state
+      ~JonesECGNet.set_submodule
+      ~JonesECGNet.share_memory
+      ~JonesECGNet.state_dict
+      ~JonesECGNet.to
+      ~JonesECGNet.to_empty
+      ~JonesECGNet.train
+      ~JonesECGNet.type
+      ~JonesECGNet.xpu
+      ~JonesECGNet.zero_grad
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~JonesECGNet.T_destination
+      ~JonesECGNet.call_super_init
+      ~JonesECGNet.dump_patches
+      ~JonesECGNet.training
+   
+   

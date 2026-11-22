@@ -1,0 +1,920 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../../" data-theme="light">
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>JonesECGNet (Jones, Itti &amp; Sheth, 2024) &#8212; PhysioEx</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "light";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "light";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/custom.css?v=885a8570" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="../../../_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" />
+<link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" />
+
+    <script src="../../../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'pages/train/networks/jones_ecg';</script>
+    <link rel="icon" href="../../../_static/logo_bar.svg"/>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+    <link rel="next" title="SleepPPGNet (Kotzen et al., 2023) — replica weights" href="sleepppgnet.html" />
+    <link rel="prev" title="Wav2Sleep (Carter &amp; Tarassenko, 2024)" href="wav2sleep.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="light">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../../index.html">
+  
+  
+  
+  
+  
+    
+    
+    
+    <img src="../../../_static/logo_bar.svg" class="logo__image only-light" alt="PhysioEx - Home"/>
+    <img src="../../../_static/logo_bar.svg" class="logo__image only-dark pst-js-only" alt="PhysioEx - Home"/>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="../../user_guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../related/index.html">
+    Related Works
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../api/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../contribute.html">
+    Contributing to PhysioEx
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/guidogagl/physioex" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://guidogagl.github.io/" title="Website" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-globe fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Website</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="../../user_guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../related/index.html">
+    Related Works
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../api/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../contribute.html">
+    Contributing to PhysioEx
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/guidogagl/physioex" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://guidogagl.github.io/" title="Website" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-globe fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Website</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../data.html">Data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../preprocess.html">Preprocessing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../train.html">Training (programmatic API)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cli.html">Command-line interface of the train module</a></li>
+<li class="toctree-l1 current active has-children"><a class="reference internal" href="../networks.html">Model architectures</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="chambon2018.html"><code class="docutils literal notranslate"><span class="pre">Chambon2018</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="protosleepnet.html"><code class="docutils literal notranslate"><span class="pre">ProtoSleepNet</span></code> and <code class="docutils literal notranslate"><span class="pre">ProtoSleepTransformer</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="wav2sleep.html"><code class="docutils literal notranslate"><span class="pre">Wav2Sleep</span></code> (Carter &amp; Tarassenko, 2024)</a></li>
+<li class="toctree-l2 current active"><a class="current reference internal" href="#"><code class="docutils literal notranslate"><span class="pre">JonesECGNet</span></code> (Jones, Itti &amp; Sheth, 2024)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sleepppgnet.html"><code class="docutils literal notranslate"><span class="pre">SleepPPGNet</span></code> (Kotzen et al., 2023) — replica weights</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../explain/explain.html">Explain Module</a></li>
+</ul>
+</div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../../user_guide.html" class="nav-link">User Guide</a></li>
+    
+    
+    <li class="breadcrumb-item"><a href="../networks.html" class="nav-link">Model architectures</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis"><code class="docutils literal notranslate"><span class="pre">JonesECGNet</span></code> (Jones, Itti &amp; Sheth, 2024)</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section class="tex2jax_ignore mathjax_ignore" id="jonesecgnet-jones-itti-sheth-2024">
+<span id="jonesecgnet-jones-itti--sheth-2024"></span><h1><code class="docutils literal notranslate"><span class="pre">JonesECGNet</span></code> (Jones, Itti &amp; Sheth, 2024)<a class="headerlink" href="#jonesecgnet-jones-itti-sheth-2024" title="Link to this heading">#</a></h1>
+<p>An ECG-only sleep staging network: a convolutional front-end turns each 30-s
+epoch of single-lead ECG at 256 Hz into features, dense residual blocks add
+age, sex and the time since midnight, and a temporal convolutional network
+classifies the whole night into the five AASM stages.</p>
+<ul class="simple">
+<li><p>Paper: <em>Expert-level sleep staging using an electrocardiography-only feed-forward
+neural network</em>, Computers in Biology and Medicine (2024),
+doi:10.1016/j.compbiomed.2024.108545.</p></li>
+<li><p>Authors’ code and weights: <code class="docutils literal notranslate"><span class="pre">adammj/ecg-sleep-staging</span></code> (GitHub), AGPL-3.0.</p></li>
+<li><p>physioex class: <code class="docutils literal notranslate"><span class="pre">physioex.models.jones_ecg:JonesECGNet</span></code>, written from the
+paper and the checkpoint layout (no code copied from the AGPL repository).</p></li>
+</ul>
+<section id="quick-start">
+<h2>Quick start<a class="headerlink" href="#quick-start" title="Link to this heading">#</a></h2>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">physioex.data.datasets</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_dataset</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">physioex.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">load_from_pretrained</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">physioex.train</span><span class="w"> </span><span class="kn">import</span> <span class="n">replication</span> <span class="k">as</span> <span class="n">rep</span>
+
+<span class="n">model</span> <span class="o">=</span> <span class="n">load_from_pretrained</span><span class="p">(</span><span class="s2">"jones-ecg"</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>   <span class="c1"># = "jones-ecg-primary"</span>
+
+<span class="n">data</span> <span class="o">=</span> <span class="n">get_dataset</span><span class="p">(</span><span class="s2">"mesa"</span><span class="p">)(</span>
+    <span class="n">channels</span><span class="o">=</span><span class="p">[</span><span class="s2">"ECG"</span><span class="p">],</span>
+    <span class="n">pipelines</span><span class="o">=</span><span class="s2">"jones_ecg"</span><span class="p">,</span>        <span class="c1"># port of the authors' MATLAB preprocessing</span>
+    <span class="n">sequence_length</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>            <span class="c1"># one item = one whole night</span>
+    <span class="n">trim_excess_wake</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>       <span class="c1"># 5 AASM classes, no label transform</span>
+<span class="p">)</span>
+<span class="n">test</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get_splits</span><span class="p">(</span><span class="n">split</span><span class="o">=</span><span class="s2">"wav2sleep-census"</span><span class="p">)[</span><span class="mi">2</span><span class="p">]</span>
+<span class="k">for</span> <span class="n">subject</span><span class="p">,</span> <span class="n">signals</span><span class="p">,</span> <span class="n">labels</span><span class="p">,</span> <span class="n">metadata</span> <span class="ow">in</span> <span class="n">rep</span><span class="o">.</span><span class="n">iter_nights</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">test</span><span class="p">[:</span><span class="mi">1</span><span class="p">]):</span>
+    <span class="c1"># metadata: {"age": years, "sex": "M"/"F", "recording_start": datetime.time}</span>
+    <span class="n">stages</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">predict_night</span><span class="p">(</span><span class="n">signals</span><span class="p">,</span> <span class="n">metadata</span><span class="p">)</span>   <span class="c1"># (n_epochs,) in 0..4</span>
+</pre></div>
+</div>
+<p>When age, sex or the recording start are missing, <code class="docutils literal notranslate"><span class="pre">predict_night</span></code> fills the
+corresponding inputs as the variant does for inputs it was not trained with
+(standard-normal noise) and logs a warning once.</p>
+</section>
+<section id="inputs-and-preprocessing">
+<h2>Inputs and preprocessing<a class="headerlink" href="#inputs-and-preprocessing" title="Link to this heading">#</a></h2>
+<p>The <code class="docutils literal notranslate"><span class="pre">jones_ecg</span></code> preset applies <code class="docutils literal notranslate"><span class="pre">JonesECGPreprocess</span></code> to the ECG channel: removal
+of loose-lead clipping, a zero-phase Chebyshev II high-pass (0.5 Hz), a notch
+at the mains frequency plus an iterative search for further narrow-band noise,
+resampling to 256 Hz, R-peak detection with the authors’ templates
+(<code class="docutils literal notranslate"><span class="pre">archetypes.mat</span></code>, downloaded on first use) and scaling by twice the 90th
+percentile of the R-wave amplitude, clipped to [-1, 1]. The module docstring
+lists where the port deviates from the MATLAB code. NSRR readers provide the
+subject metadata through <code class="docutils literal notranslate"><span class="pre">subject_metadata(subject_id)</span></code>.</p>
+<p>Seven checkpoints are available, all with the same hyper-parameters:</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>name</p></th>
+<th class="head"><p>metadata used</p></th>
+<th class="head"><p>temporal network</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">jones-ecg-primary</span></code> (<code class="docutils literal notranslate"><span class="pre">jones-ecg</span></code>)</p></td>
+<td><p>age, sex, start time</p></td>
+<td><p>symmetric</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">jones-ecg-realtime</span></code></p></td>
+<td><p>age, sex, start time</p></td>
+<td><p>causal</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">jones-ecg-no-demographics</span></code></p></td>
+<td><p>start time</p></td>
+<td><p>symmetric</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">jones-ecg-no-time</span></code></p></td>
+<td><p>age, sex</p></td>
+<td><p>symmetric</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">jones-ecg-only-ecg</span></code></p></td>
+<td><p>none</p></td>
+<td><p>symmetric</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">jones-ecg-cyclic</span></code></p></td>
+<td><p>age, sex, cyclic start time</p></td>
+<td><p>symmetric</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">jones-ecg-cyclic-realtime</span></code></p></td>
+<td><p>age, sex, cyclic start time</p></td>
+<td><p>causal</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="replication">
+<h2>Replication<a class="headerlink" href="#replication" title="Link to this heading">#</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">examples/pretrained/jones-ecg/verify.py</span></code> evaluates a variant on the
+census-balanced held-out set (<code class="docutils literal notranslate"><span class="pre">get_splits(split=&quot;wav2sleep-census&quot;)</span></code>) with the
+paper’s metric, the median of the per-recording kappas, and prints next to it
+the authors’ own per-recording kappas on exactly the same recordings. Results
+of the primary model:</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>dataset</p></th>
+<th class="head"><p>paper</p></th>
+<th class="head"><p>physioex</p></th>
+<th class="head"><p>status</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>WSC</p></td>
+<td><p>0.6141</p></td>
+<td><p>0.6141</p></td>
+<td><p>PASS</p></td>
+</tr>
+<tr class="row-odd"><td><p>MESA</p></td>
+<td><p>0.6750</p></td>
+<td><p>0.6714</p></td>
+<td><p>PASS</p></td>
+</tr>
+<tr class="row-even"><td><p>CCSHS</p></td>
+<td><p>0.8136</p></td>
+<td><p>0.8034</p></td>
+<td><p>outside tolerance</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>On CCSHS (60 nights) the median per-recording difference from the authors’
+kappas is -0.001, but single recordings differ by up to 0.13: the
+preprocessing port is not bit-exact. CFS and CHAT, and the census rows that
+need them, are skipped when their data are not available.</p>
+</section>
+<section id="training">
+<h2>Training<a class="headerlink" href="#training" title="Link to this heading">#</a></h2>
+<p>physioex does not ship a training script for this model. The authors’ recipe
+is summarised in <code class="docutils literal notranslate"><span class="pre">examples/pretrained/jones-ecg/TRAINING.md</span></code>.</p>
+</section>
+<section id="api">
+<h2>API<a class="headerlink" href="#api" title="Link to this heading">#</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">physioex.models.jones_ecg.</span></span><span class="sig-name descname"><span class="pre">JonesECGNet</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">variant</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'primary'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_classes</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/physioex/models/jones_ecg.html#JonesECGNet"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.pytorch.org/docs/stable/generated/torch.nn.Module.html#torch.nn.Module" title="(in PyTorch v2.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code></a></p>
+<p>ECG-only sleep staging network of Jones, Itti &amp; Sheth (2024).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>variant</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><em>str</em></a>) – one of <code class="xref py py-data docutils literal notranslate"><span class="pre">VARIANTS</span></code> (default <code class="docutils literal notranslate"><span class="pre">&quot;primary&quot;</span></code>).</p></li>
+<li><p><strong>n_classes</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><em>int</em></a>) – number of sleep classes (5: W, N1, N2, N3, REM).</p></li>
+</ul>
+</dd>
+</dl>
+<p>Forward input:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">x</span></code>: (B, L, 1, 7680) or (B, L, 7680) float32 ECG, 256 Hz, in [-1, 1].</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">additional</span></code>: (B, L, 4) auxiliary features; if <code class="docutils literal notranslate"><span class="pre">None</span></code> it is built
+with <a class="reference internal" href="../../../api/_generated/physioex.models.jones_ecg.JonesECGNet.html#physioex.models.jones_ecg.JonesECGNet.build_additional" title="physioex.models.jones_ecg.JonesECGNet.build_additional"><code class="xref py py-meth docutils literal notranslate"><span class="pre">build_additional()</span></code></a>, filling the columns the variant was not
+trained with by standard-normal noise.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">padding_mask</span></code>: (B, L) or (B, L, 1) bool/float, 1 = real epoch;
+default all ones.</p></li>
+</ul>
+<p>Forward returns (B, L, n_classes) log-probabilities over
+[W, N1, N2, N3, REM].</p>
+<dl class="py method">
+<dt class="sig sig-object py">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">build_additional</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n_epochs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">variant</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">age</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sex</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">midnight_offset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">generator</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/physioex/models/jones_ecg.html#JonesECGNet.build_additional"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Build the (n_epochs, 4) auxiliary-feature matrix for one night.</p>
+<p>Columns: [sex (0=F, 1=M), age/100, night_e (−1→1 across the night),
+midnight_e]. For cyclic variants the last two columns are replaced
+by (cos t_e, sin t_e) with <code class="docutils literal notranslate"><span class="pre">t_e</span> <span class="pre">=</span> <span class="pre">2π(e/2880</span> <span class="pre">+</span> <span class="pre">midnight_offset</span> <span class="pre">mod</span> <span class="pre">1)</span></code>.
+Columns the variant was not trained with (see <code class="xref py py-data docutils literal notranslate"><span class="pre">VARIANTS</span></code>) are
+filled with standard-normal noise drawn from <code class="docutils literal notranslate"><span class="pre">generator</span></code>: one draw
+per epoch per column, except demographics which are drawn once per
+night (size 2) and repeated over the epochs.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – if <code class="docutils literal notranslate"><span class="pre">age</span></code>, <code class="docutils literal notranslate"><span class="pre">sex</span></code> or <code class="docutils literal notranslate"><span class="pre">midnight_offset</span></code> is missing
+    for a variant that was trained with it.</p>
+</dd>
+<dt class="field-even">Parameters<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>n_epochs</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><em>int</em></a>)</p></li>
+<li><p><strong>variant</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><em>str</em></a>)</p></li>
+<li><p><strong>age</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><em>float</em></a><em> | </em><em>None</em>)</p></li>
+<li><p><strong>sex</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><em>float</em></a><em> | </em><em>None</em>)</p></li>
+<li><p><strong>midnight_offset</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><em>float</em></a><em> | </em><em>None</em>)</p></li>
+<li><p><strong>generator</strong> (<a class="reference external" href="https://docs.pytorch.org/docs/stable/generated/torch.Generator.html#torch.Generator" title="(in PyTorch v2.15)"><em>Generator</em></a><em> | </em><em>None</em>)</p></li>
+</ul>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.15)"><em>Tensor</em></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">forward</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">additional</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">padding_mask</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/physioex/models/jones_ecg.html#JonesECGNet.forward"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Run per-epoch inference; returns (B, L, n_classes) log-probabilities.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> (<a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.15)"><em>Tensor</em></a>)</p></li>
+<li><p><strong>additional</strong> (<a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.15)"><em>Tensor</em></a><em> | </em><em>None</em>)</p></li>
+<li><p><strong>padding_mask</strong> (<a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.15)"><em>Tensor</em></a><em> | </em><em>None</em>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.15)"><em>Tensor</em></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">from_original</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">checkpoint_path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">variant</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/physioex/models/jones_ecg.html#JonesECGNet.from_original"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Load one of the authors’ released checkpoints.</p>
+<p>The checkpoints are plain dicts with a <code class="docutils literal notranslate"><span class="pre">model_state_dict</span></code> entry whose
+keys this re-implementation reproduces exactly, so the load is strict
+and needs no remapping.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>checkpoint_path</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><em>str</em></a><em> | </em><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><em>Path</em></a>) – path to the <code class="docutils literal notranslate"><span class="pre">.pt</span></code> checkpoint (e.g. downloaded
+from <code class="docutils literal notranslate"><span class="pre">adammj/ecg-sleep-staging</span></code>).</p></li>
+<li><p><strong>variant</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><em>str</em></a>) – variant name (used to build the matching architecture).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The model in <code class="docutils literal notranslate"><span class="pre">eval()</span></code> mode.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="../../../api/_generated/physioex.models.jones_ecg.JonesECGNet.html#physioex.models.jones_ecg.JonesECGNet" title="physioex.models.jones_ecg.JonesECGNet"><em>JonesECGNet</em></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">midnight_offset</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">start</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/physioex/models/jones_ecg.html#JonesECGNet.midnight_offset"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Signed offset in days of <code class="docutils literal notranslate"><span class="pre">start</span></code> from the nearest midnight.</p>
+<p>Positive when the start is in the (next) morning, negative in the
+(previous) evening: 01:30 → +1.5/24, 23:00 → -1/24.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>start</strong> (<a class="reference external" href="https://docs.python.org/3/library/datetime.html#datetime.time" title="(in Python v3.15)"><em>time</em></a><em> | </em><a class="reference external" href="https://docs.python.org/3/library/datetime.html#datetime.datetime" title="(in Python v3.15)"><em>datetime</em></a>)</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)">float</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">predict_night</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">signals</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">metadata</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/physioex/models/jones_ecg.html#JonesECGNet.predict_night"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Classify one whole night, already preprocessed by the <code class="docutils literal notranslate"><span class="pre">jones_ecg</span></code> preset.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>signals</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><em>dict</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><em>str</em></a><em>, </em><em>np.ndarray</em><em>]</em>) – Mapping of signal name to a <code class="docutils literal notranslate"><span class="pre">(L,</span> <span class="pre">7680)</span></code> float array of
+one night (256 Hz, 30-s epochs, in [-1, 1]); the night’s
+<code class="docutils literal notranslate"><span class="pre">&quot;ECG&quot;</span></code> channel is required. Unlike the fixed-grid models,
+JonesECGNet accepts any number of epochs, so the night is not
+padded or truncated here.</p></li>
+<li><p><strong>metadata</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><em>dict</em></a><em> | </em><em>None</em>) – optional dict with <code class="docutils literal notranslate"><span class="pre">&quot;age&quot;</span></code> (years), <code class="docutils literal notranslate"><span class="pre">&quot;sex&quot;</span></code>
+(<code class="docutils literal notranslate"><span class="pre">&quot;M&quot;</span></code>/<code class="docutils literal notranslate"><span class="pre">&quot;F&quot;</span></code>) and <code class="docutils literal notranslate"><span class="pre">&quot;recording_start&quot;</span></code>
+(<code class="docutils literal notranslate"><span class="pre">datetime.time</span></code>). The auxiliary features are built with
+<a class="reference internal" href="../../../api/_generated/physioex.models.jones_ecg.JonesECGNet.html#physioex.models.jones_ecg.JonesECGNet.build_additional" title="physioex.models.jones_ecg.JonesECGNet.build_additional"><code class="xref py py-meth docutils literal notranslate"><span class="pre">build_additional()</span></code></a> for the model’s variant; a missing
+value that the variant was not trained with (see
+<code class="xref py py-data docutils literal notranslate"><span class="pre">VARIANTS</span></code>) is filled with the variant’s noise fallback,
+with one warning per missing key.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>int64 class indices of shape <code class="docutils literal notranslate"><span class="pre">(L,)</span></code> in AASM 5-class order
+[W, N1, N2, N3, REM]. Runs under <code class="docutils literal notranslate"><span class="pre">torch.no_grad()</span></code> in eval mode,
+batch of one, on the model’s current device.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">physioex.data.steps.</span></span><span class="sig-name descname"><span class="pre">JonesECGPreprocess</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">line_freq</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">60.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">remove_clips</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">find_noise</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">archetypes_path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/physioex/data/steps/jones_ecg.html#JonesECGPreprocess"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Bases: <a class="reference internal" href="../../../api/_generated/physioex.data.PreprocessingStep.html#physioex.data.PreprocessingStep" title="physioex.data.pipeline.PreprocessingStep"><code class="xref py py-class docutils literal notranslate"><span class="pre">PreprocessingStep</span></code></a></p>
+<p>Full Jones et al. (2024) ECG preprocessing in a single step.</p>
+<p>Turn one raw single-lead ECG channel (whole night, any fs) into the
+network input of <a class="reference internal" href="../../../api/_generated/physioex.models.jones_ecg.JonesECGNet.html#physioex.models.jones_ecg.JonesECGNet" title="physioex.models.jones_ecg.JonesECGNet"><code class="xref py py-class docutils literal notranslate"><span class="pre">physioex.models.jones_ecg.JonesECGNet</span></code></a>:
+256 Hz, scaled by the per-night R-wave normalization factor and
+clipped to <code class="docutils literal notranslate"><span class="pre">[-1,</span> <span class="pre">1]</span></code>.</p>
+<p>Order of operations (MATLAB stage 2 -&gt; stage 3 -&gt; stage 5 scaling):</p>
+<ol class="arabic simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">remove_large_clips</span></code> — loose-lead clipping mask removal;</p></li>
+<li><p>zero-phase Chebyshev-II high-pass (0.5 / 0.25 Hz, 0.1 / 60 dB);</p></li>
+<li><p>line-noise notch at <code class="docutils literal notranslate"><span class="pre">line_freq</span></code> (with the aliasing rules) plus
+up to 10 iterative extra-noise notches (if <code class="docutils literal notranslate"><span class="pre">find_noise</span></code>);</p></li>
+<li><p>resample to 256 Hz with <code class="docutils literal notranslate"><span class="pre">resample_poly</span></code> (p/q from
+<code class="docutils literal notranslate"><span class="pre">Fraction(256/fs).limit_denominator()</span></code>);</p></li>
+<li><p>R-wave detection (local variation + template; archetypes when
+available) and normalization factor = 2 x P90 of per-beat <code class="docutils literal notranslate"><span class="pre">max</span> <span class="pre">|x|</span></code>;</p></li>
+<li><p>divide by the factor, clip to <code class="docutils literal notranslate"><span class="pre">[-1,</span> <span class="pre">1]</span></code>.</p></li>
+</ol>
+<section id="parameters">
+<h3>Parameters<a class="headerlink" href="#parameters" title="Link to this heading">#</a></h3>
+<dl class="simple">
+<dt>line_freq<span class="classifier">float</span></dt><dd><p>Mains frequency to notch (60.0 in the authors’ US data, 50.0 in
+EU data).</p>
+</dd>
+<dt>remove_clips<span class="classifier">bool</span></dt><dd><p>Apply the loose-lead clip-mask removal.</p>
+</dd>
+<dt>find_noise<span class="classifier">bool</span></dt><dd><p>Run the iterative extra-noise notch search.</p>
+</dd>
+<dt>archetypes_path<span class="classifier">str, optional</span></dt><dd><p>Path to <code class="docutils literal notranslate"><span class="pre">archetypes.mat</span></code>.  <code class="docutils literal notranslate"><span class="pre">None</span></code> (default) downloads it from
+the authors’ repository on first use.  Deliberately excluded from
+<code class="docutils literal notranslate"><span class="pre">spec()</span></code> — a path must not change the cache hash.</p>
+</dd>
+</dl>
+<p>Degenerate inputs (all zeros, fully clipped, no beats found) return
+zeros of the correct length with a warning instead of raising.</p>
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">compile</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fs_in</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">header</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/physioex/data/steps/jones_ecg.html#JonesECGPreprocess.compile"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Precompute any expensive state and return a callable specialized
+for fs_in.</p>
+<p><code class="docutils literal notranslate"><span class="pre">header</span></code> is an optional per-channel metadata dict (physical
+dimension, physical min/max, …) forwarded to steps that declare
+they need it (<code class="docutils literal notranslate"><span class="pre">needs_header</span></code> attribute, e.g. <code class="docutils literal notranslate"><span class="pre">PhysicalScale</span></code>).
+Steps that ignore it simply do not read it; the signature default
+keeps every existing <code class="docutils literal notranslate"><span class="pre">compile(fs)</span></code> call site working.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>fs_in</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><em>float</em></a>)</p></li>
+<li><p><strong>header</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><em>dict</em></a><em> | </em><em>None</em>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="../../../api/_generated/physioex.data.CompiledStep.html#physioex.data.CompiledStep" title="physioex.data.pipeline.CompiledStep"><em>CompiledStep</em></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">spec</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/physioex/data/steps/jones_ecg.html#JonesECGPreprocess.spec"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Return canonical, hashable text repr.</p>
+<p>Format: ClassName(key1=val1,key2=val2,…) with sorted keys, floats
+normalized via f’{float(v):.10g}’.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)">str</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>line_freq</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><em>float</em></a>)</p></li>
+<li><p><strong>remove_clips</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><em>bool</em></a>)</p></li>
+<li><p><strong>find_noise</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><em>bool</em></a>)</p></li>
+<li><p><strong>archetypes_path</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><em>str</em></a><em>]</em>)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="wav2sleep.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title"><code class="docutils literal notranslate"><span class="pre">Wav2Sleep</span></code> (Carter &amp; Tarassenko, 2024)</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="sleepppgnet.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title"><code class="docutils literal notranslate"><span class="pre">SleepPPGNet</span></code> (Kotzen et al., 2023) — replica weights</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#quick-start">Quick start</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#inputs-and-preprocessing">Inputs and preprocessing</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#replication">Replication</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#training">Training</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#api">API</a></li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../../../_sources/pages/train/networks/jones_ecg.md.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer src="../../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2023, Guido Gagliardi.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 8.1.3.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.16.1.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

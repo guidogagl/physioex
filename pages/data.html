@@ -354,6 +354,9 @@
 <li class="toctree-l1 has-children"><a class="reference internal" href="train/networks.html">Model architectures</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="train/networks/chambon2018.html"><code class="docutils literal notranslate"><span class="pre">Chambon2018</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="train/networks/protosleepnet.html"><code class="docutils literal notranslate"><span class="pre">ProtoSleepNet</span></code> and <code class="docutils literal notranslate"><span class="pre">ProtoSleepTransformer</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="train/networks/wav2sleep.html"><code class="docutils literal notranslate"><span class="pre">Wav2Sleep</span></code> (Carter &amp; Tarassenko, 2024)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="train/networks/jones_ecg.html"><code class="docutils literal notranslate"><span class="pre">JonesECGNet</span></code> (Jones, Itti &amp; Sheth, 2024)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="train/networks/sleepppgnet.html"><code class="docutils literal notranslate"><span class="pre">SleepPPGNet</span></code> (Kotzen et al., 2023) — replica weights</a></li>
 </ul>
 </details></li>
 <li class="toctree-l1"><a class="reference internal" href="explain/explain.html">Explain Module</a></li>
@@ -436,12 +439,12 @@ imported directly. For the full class diagram and how the pieces fit together,
 see the <a class="reference internal" href="architecture/library/data.html"><span class="std std-doc">data-layer architecture</span></a> page.</p>
 <section id="resolving-a-dataset-by-name">
 <h2>Resolving a dataset by name<a class="headerlink" href="#resolving-a-dataset-by-name" title="Link to this heading">#</a></h2>
-<p><code class="docutils literal notranslate"><span class="pre">physioex.data.datasets</span></code> exposes a registry of the 13 concrete datasets:</p>
+<p><code class="docutils literal notranslate"><span class="pre">physioex.data.datasets</span></code> exposes a registry of the 15 concrete datasets:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">physioex.data.datasets</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_dataset</span><span class="p">,</span> <span class="n">available_datasets</span>
 
 <span class="n">available_datasets</span><span class="p">()</span>
-<span class="c1"># ['alzheimers', 'ccshs', 'dcsm', 'hmc', 'hpap', 'mass', 'mesa', 'mros',</span>
-<span class="c1">#  'parkinsons', 'shhs', 'sleepedf', 'stages', 'wsc']</span>
+<span class="c1"># ['alzheimers', 'ccshs', 'cfs', 'chat', 'dcsm', 'hmc', 'hpap', 'mass', 'mesa',</span>
+<span class="c1">#  'mros', 'parkinsons', 'shhs', 'sleepedf', 'stages', 'wsc']</span>
 
 <span class="n">HMCDataset</span> <span class="o">=</span> <span class="n">get_dataset</span><span class="p">(</span><span class="s2">"hmc"</span><span class="p">)</span>   <span class="c1"># the class, not an instance</span>
 </pre></div>
@@ -517,6 +520,48 @@ time-domain presets yield <code class="docutils literal notranslate"><span class
 train/validation/test subject splits (70/15/15, seeded by <code class="docutils literal notranslate"><span class="pre">42</span> <span class="pre">+</span> <span class="pre">fold</span></code>). See the
 API reference for the exact return types.</p>
 </section>
+<section id="whole-nights-and-cardiorespiratory-signals">
+<h2>Whole nights and cardiorespiratory signals<a class="headerlink" href="#whole-nights-and-cardiorespiratory-signals" title="Link to this heading">#</a></h2>
+<p>With <code class="docutils literal notranslate"><span class="pre">sequence_length=0</span></code> (or any value <code class="docutils literal notranslate"><span class="pre">&lt;=</span> <span class="pre">0</span></code>) an item is one whole night, and
+item <code class="docutils literal notranslate"><span class="pre">i</span></code> is subject <code class="docutils literal notranslate"><span class="pre">i</span></code>. Channels a subject lacks are zero-filled and flagged
+with <code class="docutils literal notranslate"><span class="pre">channel_info[key][&quot;available&quot;]</span> <span class="pre">=</span> <span class="pre">False</span></code>. This mode is used by the
+cardiorespiratory models (wav2sleep, Jones et al. 2024, SleepPPG-Net), which
+stage the full night at once.</p>
+<ul class="simple">
+<li><p><strong>Channels.</strong> Besides EEG/EOG/EMG, the NSRR datasets resolve <code class="docutils literal notranslate"><span class="pre">ECG</span></code>, <code class="docutils literal notranslate"><span class="pre">PPG</span></code>
+(its own modality, no longer grouped with SpO2) and the respiratory
+effort belts <code class="docutils literal notranslate"><span class="pre">ABD</span></code> and <code class="docutils literal notranslate"><span class="pre">THX</span></code>.</p></li>
+<li><p><strong>Labels.</strong> <code class="docutils literal notranslate"><span class="pre">label_transform=&quot;aasm4&quot;</span></code> maps the AASM labels to four classes
+(W, Light = N1+N2, Deep = N3, REM); <code class="docutils literal notranslate"><span class="pre">-1</span></code> stays unscored. The default keeps
+the five AASM classes.</p></li>
+<li><p><strong>Visits.</strong> <code class="docutils literal notranslate"><span class="pre">shhs</span></code>, <code class="docutils literal notranslate"><span class="pre">mros</span></code> and <code class="docutils literal notranslate"><span class="pre">wsc</span></code> take a <code class="docutils literal notranslate"><span class="pre">visit</span></code> argument; each visit is
+a separate dataset instance with its own cache.</p></li>
+<li><p><strong>Subject metadata.</strong> NSRR datasets return
+<code class="docutils literal notranslate"><span class="pre">{&quot;age&quot;,</span> <span class="pre">&quot;sex&quot;,</span> <span class="pre">&quot;recording_start&quot;}</span></code> from <code class="docutils literal notranslate"><span class="pre">subject_metadata(subject_id)</span></code>.</p></li>
+<li><p><strong>Published splits.</strong> Besides the 70/15/15 folds, <code class="docutils literal notranslate"><span class="pre">get_splits(split=...)</span></code>
+returns the lists used by published work: <code class="docutils literal notranslate"><span class="pre">&quot;wav2sleep&quot;</span></code> (the per-dataset
+train/validation/test sessions of Carter &amp; Tarassenko, 2024),
+<code class="docutils literal notranslate"><span class="pre">&quot;wav2sleep-census&quot;</span></code> (the census-balanced held-out set of Jones et al., 2024)
+and <code class="docutils literal notranslate"><span class="pre">&quot;sleepppgnet-replica&quot;</span></code> (the 204 MESA test nights of the SleepPPG-Net
+replica).</p></li>
+</ul>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">physioex.data.datasets</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_dataset</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">physioex.train.replication</span><span class="w"> </span><span class="kn">import</span> <span class="n">iter_nights</span>
+
+<span class="n">data</span> <span class="o">=</span> <span class="n">get_dataset</span><span class="p">(</span><span class="s2">"shhs"</span><span class="p">)(</span>
+    <span class="n">channels</span><span class="o">=</span><span class="p">[</span><span class="s2">"ECG"</span><span class="p">,</span> <span class="s2">"THX"</span><span class="p">,</span> <span class="s2">"ABD"</span><span class="p">],</span>
+    <span class="n">pipelines</span><span class="o">=</span><span class="s2">"wav2sleep"</span><span class="p">,</span>
+    <span class="n">sequence_length</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+    <span class="n">label_transform</span><span class="o">=</span><span class="s2">"aasm4"</span><span class="p">,</span>
+    <span class="n">trim_excess_wake</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="n">visit</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">test</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get_splits</span><span class="p">(</span><span class="n">split</span><span class="o">=</span><span class="s2">"wav2sleep"</span><span class="p">)[</span><span class="mi">2</span><span class="p">]</span>
+<span class="k">for</span> <span class="n">subject</span><span class="p">,</span> <span class="n">signals</span><span class="p">,</span> <span class="n">labels</span><span class="p">,</span> <span class="n">metadata</span> <span class="ow">in</span> <span class="n">iter_nights</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">test</span><span class="p">):</span>
+    <span class="n">signals</span><span class="p">[</span><span class="s2">"ECG"</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span>   <span class="c1"># (n_epochs, 1024)</span>
+</pre></div>
+</div>
+</section>
 <section id="merging-datasets">
 <h2>Merging datasets<a class="headerlink" href="#merging-datasets" title="Link to this heading">#</a></h2>
 <p><code class="docutils literal notranslate"><span class="pre">MultiDataset</span></code> concatenates several <code class="docutils literal notranslate"><span class="pre">BasePhysioDataset</span></code> instances into a single
@@ -578,7 +623,7 @@ See the <a class="reference internal" href="train/train.html"><span class="std s
 <dl class="py class">
 <dt class="sig sig-object py">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">physioex.data.</span></span><span class="sig-name descname"><span class="pre">BasePhysioDataset</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">root</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">channels</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pipelines</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'raw'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sequence_length</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">21</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">subset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cache_dir</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cache_enabled</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">epoch_length_sec</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label_transform</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">skip_corrupt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">skip_subjects_without_channels</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stage_map</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">trim_excess_wake</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">memmap_cache_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1000</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/physioex/data/base.html#BasePhysioDataset"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
-<dd><p>Bases: <a class="reference external" href="https://docs.pytorch.org/docs/stable/data.html#torch.utils.data.Dataset" title="(in PyTorch v2.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Dataset</span></code></a></p>
+<dd><p>Bases: <a class="reference external" href="https://docs.pytorch.org/docs/stable/data.html#torch.utils.data.Dataset" title="(in PyTorch v2.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Dataset</span></code></a></p>
 <p>Abstract base class for lazy-loading EDF-based sleep datasets.</p>
 <dl class="simple">
 <dt>Subclasses must implement:</dt><dd><ul class="simple">
@@ -608,7 +653,7 @@ See the <a class="reference internal" href="train/train.html"><span class="std s
 <li><p><strong>cache_dir</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><em>str</em></a><em>]</em>)</p></li>
 <li><p><strong>cache_enabled</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><em>bool</em></a>)</p></li>
 <li><p><strong>epoch_length_sec</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><em>float</em></a><em>]</em>)</p></li>
-<li><p><strong>label_transform</strong> (<em>Optional</em><em>[</em><em>Callable</em><em>]</em>)</p></li>
+<li><p><strong>label_transform</strong> (<em>Union</em><em>[</em><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><em>str</em></a><em>, </em><em>Callable</em><em>, </em><em>None</em><em>]</em>)</p></li>
 <li><p><strong>skip_corrupt</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><em>bool</em></a>)</p></li>
 <li><p><strong>skip_subjects_without_channels</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><em>bool</em></a>)</p></li>
 <li><p><strong>stage_map</strong> (<em>Optional</em><em>[</em><em>Dict</em><em>]</em>)</p></li>
@@ -792,7 +837,7 @@ for all subjects.</p>
 <dl class="py class">
 <dt class="sig sig-object py">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">physioex.data.</span></span><span class="sig-name descname"><span class="pre">MultiDataset</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">datasets</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">memmap_cache_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1000</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/physioex/data/multi.html#MultiDataset"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
-<dd><p>Bases: <a class="reference external" href="https://docs.pytorch.org/docs/stable/data.html#torch.utils.data.Dataset" title="(in PyTorch v2.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Dataset</span></code></a></p>
+<dd><p>Bases: <a class="reference external" href="https://docs.pytorch.org/docs/stable/data.html#torch.utils.data.Dataset" title="(in PyTorch v2.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Dataset</span></code></a></p>
 <p>Wraps multiple BasePhysioDataset instances into a single unified dataset.</p>
 <p>Provides ConcatDataset-like flat indexing across all datasets, with:
 - Unified __getitem__ returning the same dict format as BasePhysioDataset
@@ -989,6 +1034,7 @@ The collate sorts channels by (modality, index) for deterministic ordering.</p>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#resolving-a-dataset-by-name">Resolving a dataset by name</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#instantiating-a-dataset">Instantiating a dataset</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#splitting">Splitting</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#whole-nights-and-cardiorespiratory-signals">Whole nights and cardiorespiratory signals</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#merging-datasets">Merging datasets</a><ul class="nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#balancing-sites-with-very-different-sizes">Balancing sites with very different sizes</a></li>
 </ul>

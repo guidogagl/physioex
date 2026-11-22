@@ -1,0 +1,1032 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../" data-theme="light">
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>physioex.train.replication &#8212; PhysioEx</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "light";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "light";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=885a8570" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="../../_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" />
+
+    <script src="../../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'api/_generated/physioex.train.replication';</script>
+    <link rel="icon" href="../../_static/logo_bar.svg"/>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="physioex.train.stats" href="physioex.train.stats.html" />
+    <link rel="prev" title="physioex.train.metrics" href="physioex.train.metrics.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="light">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../index.html">
+  
+  
+  
+  
+  
+    
+    
+    
+    <img src="../../_static/logo_bar.svg" class="logo__image only-light" alt="PhysioEx - Home"/>
+    <img src="../../_static/logo_bar.svg" class="logo__image only-dark pst-js-only" alt="PhysioEx - Home"/>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../pages/user_guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../related/index.html">
+    Related Works
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="../index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../pages/contribute.html">
+    Contributing to PhysioEx
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/guidogagl/physioex" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://guidogagl.github.io/" title="Website" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-globe fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Website</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../pages/user_guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../related/index.html">
+    Related Works
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="../index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../pages/contribute.html">
+    Contributing to PhysioEx
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/guidogagl/physioex" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://guidogagl.github.io/" title="Website" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-globe fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Website</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.BasePhysioDataset.html">physioex.data.BasePhysioDataset</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.MultiDataset.html">physioex.data.MultiDataset</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.SubjectSpec.html">physioex.data.SubjectSpec</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.PreprocessingStep.html">physioex.data.PreprocessingStep</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.PreprocessingPipeline.html">physioex.data.PreprocessingPipeline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.CompiledPipeline.html">physioex.data.CompiledPipeline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.CompiledStep.html">physioex.data.CompiledStep</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.Identity.html">physioex.data.Identity</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.BandpassFilter.html">physioex.data.BandpassFilter</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.NotchFilter.html">physioex.data.NotchFilter</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.Resample.html">physioex.data.Resample</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.FFTResample.html">physioex.data.FFTResample</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.InterpResample.html">physioex.data.InterpResample</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.FixedLength.html">physioex.data.FixedLength</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.ZScoreNormalize.html">physioex.data.ZScoreNormalize</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.ZScore.html">physioex.data.ZScore</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.Clip.html">physioex.data.Clip</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.ChebyshevLowpass.html">physioex.data.ChebyshevLowpass</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.PhysicalScale.html">physioex.data.PhysicalScale</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.XSleepNetSpectrogram.html">physioex.data.XSleepNetSpectrogram</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.steps.JonesECGPreprocess.html">physioex.data.steps.JonesECGPreprocess</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.get_preset.html">physioex.data.get_preset</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.available_presets.html">physioex.data.available_presets</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.get_label_transform.html">physioex.data.get_label_transform</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.ChannelCache.html">physioex.data.ChannelCache</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.dict_collate_fn.html">physioex.data.dict_collate_fn</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.stack_channels.html">physioex.data.stack_channels</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.is_dict_batch.html">physioex.data.is_dict_batch</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.EDFHeader.html">physioex.data.EDFHeader</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.ResolvedChannel.html">physioex.data.ResolvedChannel</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.probe_edf_header.html">physioex.data.probe_edf_header</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.resolve_channels.html">physioex.data.resolve_channels</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.SleepEvent.html">physioex.data.SleepEvent</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.map_events_to_epochs.html">physioex.data.map_events_to_epochs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.events_to_dicts.html">physioex.data.events_to_dicts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.dicts_to_events.html">physioex.data.dicts_to_events</a></li>
+</ul>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.datasets.get_dataset.html">physioex.data.datasets.get_dataset</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.datasets.available_datasets.html">physioex.data.datasets.available_datasets</a></li>
+</ul>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="physioex.models.FoundationEncoder.html">physioex.models.FoundationEncoder</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.models.CBraModEncoder.html">physioex.models.CBraModEncoder</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.models.BENDREncoder.html">physioex.models.BENDREncoder</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.models.LaBraMEncoder.html">physioex.models.LaBraMEncoder</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.models.BIOTEncoder.html">physioex.models.BIOTEncoder</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.models.SleepFMEncoder.html">physioex.models.SleepFMEncoder</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.models.TFCEncoder.html">physioex.models.TFCEncoder</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.models.REVEEncoder.html">physioex.models.REVEEncoder</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.models.SJEEncoder.html">physioex.models.SJEEncoder</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.models.NeuroLMEncoder.html">physioex.models.NeuroLMEncoder</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.models.load_from_pretrained.html">physioex.models.load_from_pretrained</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.models.pretrained.list_pretrained.html">physioex.models.pretrained.list_pretrained</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.models.extract_embeddings.html">physioex.models.extract_embeddings</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.models.load_embeddings.html">physioex.models.load_embeddings</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.models.linear_probe.html">physioex.models.linear_probe</a></li>
+</ul>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="physioex.models.chambon2018.Chambon2018Net.html">physioex.models.chambon2018.Chambon2018Net</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.models.tinysleepnet.TinySleepNet.html">physioex.models.tinysleepnet.TinySleepNet</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.models.seqsleepnet.SeqSleepNet.html">physioex.models.seqsleepnet.SeqSleepNet</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.models.sleeptransformer.SleepTransformer.html">physioex.models.sleeptransformer.SleepTransformer</a></li>
+</ul>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="physioex.models.wav2sleep.Wav2Sleep.html">physioex.models.wav2sleep.Wav2Sleep</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.models.sleepppgnet.SleepPPGNet.html">physioex.models.sleepppgnet.SleepPPGNet</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.models.jones_ecg.JonesECGNet.html">physioex.models.jones_ecg.JonesECGNet</a></li>
+</ul>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="physioex.train.trainer.Trainer.html">physioex.train.trainer.Trainer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.train.trainer.seed_everything.html">physioex.train.trainer.seed_everything</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.train.multidevicetrainer.Trainer.html">physioex.train.multidevicetrainer.Trainer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.train.logger.Logger.html">physioex.train.logger.Logger</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.train.logger.NoOpLogger.html">physioex.train.logger.NoOpLogger</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.train.logger.build_logger.html">physioex.train.logger.build_logger</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.train.models.load.load_model.html">physioex.train.models.load.load_model</a></li>
+</ul>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="physioex.train.metrics.html">physioex.train.metrics</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">physioex.train.replication</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.train.stats.html">physioex.train.stats</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.train.progress.html">physioex.train.progress</a></li>
+</ul>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="physioex.explain.foundational.html">physioex.explain.foundational</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.explain.prototypes.posthoc.html">physioex.explain.prototypes.posthoc</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.explain.lrp.html">physioex.explain.lrp</a></li>
+</ul>
+</div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../index.html" class="nav-link">API Reference</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">physioex.train.replication</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="module-physioex.train.replication">
+<span id="physioex-train-replication"></span><h1>physioex.train.replication<a class="headerlink" href="#module-physioex.train.replication" title="Link to this heading">#</a></h1>
+<p>Library support for replicating published cardiorespiratory results.</p>
+<p>The three integrated cardiorespiratory sleep-staging networks (Wav2Sleep,
+SleepPPG-Net and the ECG-only network of Jones et al.) report their headline
+numbers as Cohen’s kappa computed in two different ways:</p>
+<ul class="simple">
+<li><p><em>pooled</em> — one confusion matrix over every scored epoch of every recording
+(Wav2Sleep’s <code class="docutils literal notranslate"><span class="pre">kappa_T</span></code>, Jones’ <code class="docutils literal notranslate"><span class="pre">overall_kappa</span></code>);</p></li>
+<li><p><em>median record</em> — one kappa per recording, then the median across
+recordings (SleepPPG-Net, Jones’ headline number).</p></li>
+</ul>
+<p>This module provides the plumbing to recompute those numbers on whole nights
+and check them against the values printed in the papers:</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="#physioex.train.replication.iter_nights" title="physioex.train.replication.iter_nights"><code class="xref py py-func docutils literal notranslate"><span class="pre">iter_nights()</span></code></a> pulls whole nights (preprocessed signals + aligned
+labels + metadata) out of a <a class="reference internal" href="physioex.data.BasePhysioDataset.html#physioex.data.BasePhysioDataset" title="physioex.data.base.BasePhysioDataset"><code class="xref py py-class docutils literal notranslate"><span class="pre">BasePhysioDataset</span></code></a>
+built in whole-night mode (<code class="docutils literal notranslate"><span class="pre">sequence_length</span> <span class="pre">&lt;=</span> <span class="pre">0</span></code>);</p></li>
+<li><p><a class="reference internal" href="#physioex.train.replication.align" title="physioex.train.replication.align"><code class="xref py py-func docutils literal notranslate"><span class="pre">align()</span></code></a> trims a prediction and its label array to a common length the
+way the authors’ inference code does (see the docstring);</p></li>
+<li><p><a class="reference internal" href="#physioex.train.replication.evaluate" title="physioex.train.replication.evaluate"><code class="xref py py-func docutils literal notranslate"><span class="pre">evaluate()</span></code></a> wraps
+<a class="reference internal" href="physioex.train.metrics.html#physioex.train.metrics.pooled_kappa" title="physioex.train.metrics.pooled_kappa"><code class="xref py py-func docutils literal notranslate"><span class="pre">physioex.train.metrics.pooled_kappa()</span></code></a> and friends;</p></li>
+<li><p><a class="reference internal" href="#physioex.train.replication.load_paper_metrics" title="physioex.train.replication.load_paper_metrics"><code class="xref py py-func docutils literal notranslate"><span class="pre">load_paper_metrics()</span></code></a> / <a class="reference internal" href="#physioex.train.replication.check" title="physioex.train.replication.check"><code class="xref py py-func docutils literal notranslate"><span class="pre">check()</span></code></a> / <a class="reference internal" href="#physioex.train.replication.format_table" title="physioex.train.replication.format_table"><code class="xref py py-func docutils literal notranslate"><span class="pre">format_table()</span></code></a> read the
+paper’s claimed values (a small JSON file), compare them with the measured
+ones and render a fixed-width table.</p></li>
+</ul>
+<p>No GPU or data access happens at import time.</p>
+<p class="rubric">Module Attributes</p>
+<div class="pst-scrollable-table-container"><table class="autosummary longtable table autosummary">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#physioex.train.replication.SPLIT_VISITS" title="physioex.train.replication.SPLIT_VISITS"><code class="xref py py-obj docutils literal notranslate"><span class="pre">SPLIT_VISITS</span></code></a></p></td>
+<td><p>Visits that the published test splits draw from, per dataset registry name.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p class="rubric">Functions</p>
+<div class="pst-scrollable-table-container"><table class="autosummary longtable table autosummary">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#physioex.train.replication.align" title="physioex.train.replication.align"><code class="xref py py-obj docutils literal notranslate"><span class="pre">align</span></code></a>(pred, labels)</p></td>
+<td><p>Cut prediction and labels to their common length.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#physioex.train.replication.check" title="physioex.train.replication.check"><code class="xref py py-obj docutils literal notranslate"><span class="pre">check</span></code></a>(results, targets)</p></td>
+<td><p>Compare measured results against the paper's claimed values.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#physioex.train.replication.evaluate" title="physioex.train.replication.evaluate"><code class="xref py py-obj docutils literal notranslate"><span class="pre">evaluate</span></code></a>(y_true_records, y_pred_records, ...)</p></td>
+<td><p>Compute the kappa metrics of one evaluation run.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#physioex.train.replication.format_table" title="physioex.train.replication.format_table"><code class="xref py py-obj docutils literal notranslate"><span class="pre">format_table</span></code></a>(rows)</p></td>
+<td><p>Render comparison rows as a fixed-width text table.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#physioex.train.replication.has_scoring_issues" title="physioex.train.replication.has_scoring_issues"><code class="xref py py-obj docutils literal notranslate"><span class="pre">has_scoring_issues</span></code></a>(dataset, subject_id)</p></td>
+<td><p>True when the night has no N1, N3 or REM epoch in its raw AASM labels.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#physioex.train.replication.iter_nights" title="physioex.train.replication.iter_nights"><code class="xref py py-obj docutils literal notranslate"><span class="pre">iter_nights</span></code></a>(dataset, subject_ids)</p></td>
+<td><p>Yield one entry per whole night of the given subjects.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#physioex.train.replication.load_paper_metrics" title="physioex.train.replication.load_paper_metrics"><code class="xref py py-obj docutils literal notranslate"><span class="pre">load_paper_metrics</span></code></a>(path)</p></td>
+<td><p>Read the paper's claimed results from a JSON file.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#physioex.train.replication.replication_kwargs" title="physioex.train.replication.replication_kwargs"><code class="xref py py-obj docutils literal notranslate"><span class="pre">replication_kwargs</span></code></a>(dataset_name)</p></td>
+<td><p>Constructor keyword sets that together cover a dataset's split nights.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p class="rubric">Classes</p>
+<div class="pst-scrollable-table-container"><table class="autosummary longtable table autosummary">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#physioex.train.replication.PaperTarget" title="physioex.train.replication.PaperTarget"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PaperTarget</span></code></a>(dataset, condition, value[, ...])</p></td>
+<td><p>One number to replicate from a paper.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<dl class="py class">
+<dt class="sig sig-object py" id="physioex.train.replication.PaperTarget">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">physioex.train.replication.</span></span><span class="sig-name descname"><span class="pre">PaperTarget</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataset</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">condition</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">metric='pooled_kappa'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tolerance=0.05</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">assert_=True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">requires=&lt;factory&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">note=''</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/physioex/train/replication.html#PaperTarget"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#physioex.train.replication.PaperTarget" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/builtins/functions.html#object" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<p>One number to replicate from a paper.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dataset</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><em>str</em></a>)</p></li>
+<li><p><strong>condition</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><em>str</em></a>)</p></li>
+<li><p><strong>value</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><em>float</em></a>)</p></li>
+<li><p><strong>metric</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><em>str</em></a>)</p></li>
+<li><p><strong>tolerance</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><em>float</em></a>)</p></li>
+<li><p><strong>assert_</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><em>bool</em></a>)</p></li>
+<li><p><strong>requires</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.15)"><em>List</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><em>str</em></a><em>]</em>)</p></li>
+<li><p><strong>note</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><em>str</em></a>)</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="physioex.train.replication.PaperTarget.dataset">
+<span class="sig-name descname"><span class="pre">dataset</span></span><a class="headerlink" href="#physioex.train.replication.PaperTarget.dataset" title="Link to this definition">#</a></dt>
+<dd><p>dataset name (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;shhs&quot;</span></code>).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)">str</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="physioex.train.replication.PaperTarget.condition">
+<span class="sig-name descname"><span class="pre">condition</span></span><a class="headerlink" href="#physioex.train.replication.PaperTarget.condition" title="Link to this definition">#</a></dt>
+<dd><p>the split/condition the paper reports (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;test&quot;</span></code>).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)">str</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="physioex.train.replication.PaperTarget.value">
+<span class="sig-name descname"><span class="pre">value</span></span><a class="headerlink" href="#physioex.train.replication.PaperTarget.value" title="Link to this definition">#</a></dt>
+<dd><p>the published value.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)">float</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="physioex.train.replication.PaperTarget.metric">
+<span class="sig-name descname"><span class="pre">metric</span></span><a class="headerlink" href="#physioex.train.replication.PaperTarget.metric" title="Link to this definition">#</a></dt>
+<dd><p><code class="docutils literal notranslate"><span class="pre">&quot;pooled_kappa&quot;</span></code> or <code class="docutils literal notranslate"><span class="pre">&quot;median_record_kappa&quot;</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)">str</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="physioex.train.replication.PaperTarget.tolerance">
+<span class="sig-name descname"><span class="pre">tolerance</span></span><a class="headerlink" href="#physioex.train.replication.PaperTarget.tolerance" title="Link to this definition">#</a></dt>
+<dd><p>accepted absolute deviation <code class="docutils literal notranslate"><span class="pre">|ours</span> <span class="pre">-</span> <span class="pre">paper|</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)">float</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="physioex.train.replication.PaperTarget.assert_">
+<span class="sig-name descname"><span class="pre">assert_</span></span><a class="headerlink" href="#physioex.train.replication.PaperTarget.assert_" title="Link to this definition">#</a></dt>
+<dd><p><code class="docutils literal notranslate"><span class="pre">True</span></code> = the target must PASS (<code class="docutils literal notranslate"><span class="pre">FAIL</span></code> otherwise);
+<code class="docutils literal notranslate"><span class="pre">False</span></code> = the number is only reported (<code class="docutils literal notranslate"><span class="pre">REPORT</span></code>).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)">bool</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="physioex.train.replication.PaperTarget.requires">
+<span class="sig-name descname"><span class="pre">requires</span></span><a class="headerlink" href="#physioex.train.replication.PaperTarget.requires" title="Link to this definition">#</a></dt>
+<dd><p>dataset names whose results must all be present for the
+target to be evaluated (default <code class="docutils literal notranslate"><span class="pre">[dataset]</span></code>).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>List[<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)">str</a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="physioex.train.replication.PaperTarget.note">
+<span class="sig-name descname"><span class="pre">note</span></span><a class="headerlink" href="#physioex.train.replication.PaperTarget.note" title="Link to this definition">#</a></dt>
+<dd><p>free text shown in the table for context.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)">str</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="physioex.train.replication.SPLIT_VISITS">
+<span class="sig-prename descclassname"><span class="pre">physioex.train.replication.</span></span><span class="sig-name descname"><span class="pre">SPLIT_VISITS</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><span class="pre">int</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{'mros':</span> <span class="pre">(1,</span> <span class="pre">2),</span> <span class="pre">'shhs':</span> <span class="pre">(1,</span> <span class="pre">2),</span> <span class="pre">'wsc':</span> <span class="pre">(1,</span> <span class="pre">2,</span> <span class="pre">3,</span> <span class="pre">4)}</span></em><a class="headerlink" href="#physioex.train.replication.SPLIT_VISITS" title="Link to this definition">#</a></dt>
+<dd><p>Visits that the published test splits draw from, per dataset registry name.
+The readers load one visit per instance (<code class="docutils literal notranslate"><span class="pre">visit=</span></code> argument), so a
+replication builds one instance per visit and pools the nights.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="physioex.train.replication.align">
+<span class="sig-prename descclassname"><span class="pre">physioex.train.replication.</span></span><span class="sig-name descname"><span class="pre">align</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pred</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">labels</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/physioex/train/replication.html#align"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#physioex.train.replication.align" title="Link to this definition">#</a></dt>
+<dd><p>Cut prediction and labels to their common length.</p>
+<p>Whole-night models with a fixed input grid (Wav2Sleep, SleepPPG-Net: 1200
+epochs) produce predictions for padded epochs when the night is shorter
+than the grid, and the authors’ inference drops the tail labels of
+nights longer than the grid. Both effects leave pred and labels at
+different lengths; cutting both to <code class="docutils literal notranslate"><span class="pre">min(len)</span></code> recovers the epochs that
+are scored and predicted alike.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>pred</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.5)"><em>ndarray</em></a>) – prediction array, <code class="docutils literal notranslate"><span class="pre">(L_p,)</span></code> class indices (any length).</p></li>
+<li><p><strong>labels</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.5)"><em>ndarray</em></a>) – label array, <code class="docutils literal notranslate"><span class="pre">(L_l,)</span></code> class indices.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><code class="docutils literal notranslate"><span class="pre">(pred_aligned,</span> <span class="pre">labels_aligned,</span> <span class="pre">n_dropped)</span></code> where the first two
+have shape <code class="docutils literal notranslate"><span class="pre">(min(L_p,</span> <span class="pre">L_l),)</span></code> and <code class="docutils literal notranslate"><span class="pre">n_dropped</span></code> is the number of
+<em>labelled</em> epochs that were dropped (<code class="docutils literal notranslate"><span class="pre">max(0,</span> <span class="pre">L_l</span> <span class="pre">-</span> <span class="pre">min(L_p,</span> <span class="pre">L_l))</span></code>)
+so callers can report it.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)">tuple</a>[<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.5)"><em>ndarray</em></a>, <a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.5)"><em>ndarray</em></a>, <a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)">int</a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="physioex.train.replication.check">
+<span class="sig-prename descclassname"><span class="pre">physioex.train.replication.</span></span><span class="sig-name descname"><span class="pre">check</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">results</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">targets</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/physioex/train/replication.html#check"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#physioex.train.replication.check" title="Link to this definition">#</a></dt>
+<dd><p>Compare measured results against the paper’s claimed values.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>results</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><em>dict</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)"><em>tuple</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><em>str</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><em>str</em></a><em>]</em><em>, </em><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><em>dict</em></a><em>]</em>) – mapping <code class="docutils literal notranslate"><span class="pre">(dataset,</span> <span class="pre">condition)</span></code> -&gt; the dict returned by
+<a class="reference internal" href="#physioex.train.replication.evaluate" title="physioex.train.replication.evaluate"><code class="xref py py-func docutils literal notranslate"><span class="pre">evaluate()</span></code></a>.</p></li>
+<li><p><strong>targets</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Sequence" title="(in Python v3.15)"><em>Sequence</em></a><em>[</em><a class="reference internal" href="#physioex.train.replication.PaperTarget" title="physioex.train.replication.PaperTarget"><em>PaperTarget</em></a><em>]</em>) – the paper targets from <a class="reference internal" href="#physioex.train.replication.load_paper_metrics" title="physioex.train.replication.load_paper_metrics"><code class="xref py py-func docutils literal notranslate"><span class="pre">load_paper_metrics()</span></code></a>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>One dict per target with keys <code class="docutils literal notranslate"><span class="pre">dataset</span></code>, <code class="docutils literal notranslate"><span class="pre">condition</span></code>, <code class="docutils literal notranslate"><span class="pre">metric</span></code>,
+<code class="docutils literal notranslate"><span class="pre">paper</span></code>, <code class="docutils literal notranslate"><span class="pre">ours</span></code>, <code class="docutils literal notranslate"><span class="pre">delta</span></code>, <code class="docutils literal notranslate"><span class="pre">tolerance</span></code>, <code class="docutils literal notranslate"><span class="pre">status</span></code> (plus
+<code class="docutils literal notranslate"><span class="pre">note</span></code>). <code class="docutils literal notranslate"><span class="pre">status</span></code> is <code class="docutils literal notranslate"><span class="pre">&quot;SKIP&quot;</span></code> when any dataset in the target’s
+<code class="docutils literal notranslate"><span class="pre">requires</span></code> has no results, <code class="docutils literal notranslate"><span class="pre">&quot;PASS&quot;</span></code>/<code class="docutils literal notranslate"><span class="pre">&quot;FAIL&quot;</span></code> when
+<code class="docutils literal notranslate"><span class="pre">assert_</span></code> is true and <code class="docutils literal notranslate"><span class="pre">|delta|</span> <span class="pre">&lt;=</span> <span class="pre">tolerance</span></code> (or not), and
+<code class="docutils literal notranslate"><span class="pre">&quot;REPORT&quot;</span></code> when <code class="docutils literal notranslate"><span class="pre">assert_</span></code> is false. <code class="docutils literal notranslate"><span class="pre">ours</span></code>/<code class="docutils literal notranslate"><span class="pre">delta</span></code> are
+<code class="docutils literal notranslate"><span class="pre">None</span></code> for <code class="docutils literal notranslate"><span class="pre">SKIP</span></code> rows.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.15)"><em>List</em></a>[<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Dict" title="(in Python v3.15)"><em>Dict</em></a>[<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)">str</a>, <a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.15)"><em>Any</em></a>]]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="physioex.train.replication.evaluate">
+<span class="sig-prename descclassname"><span class="pre">physioex.train.replication.</span></span><span class="sig-name descname"><span class="pre">evaluate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">y_true_records</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_pred_records</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_classes</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/physioex/train/replication.html#evaluate"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#physioex.train.replication.evaluate" title="Link to this definition">#</a></dt>
+<dd><p>Compute the kappa metrics of one evaluation run.</p>
+<p>Wraps <a class="reference internal" href="physioex.train.metrics.html#physioex.train.metrics.pooled_kappa" title="physioex.train.metrics.pooled_kappa"><code class="xref py py-func docutils literal notranslate"><span class="pre">physioex.train.metrics.pooled_kappa()</span></code></a>,
+<a class="reference internal" href="physioex.train.metrics.html#physioex.train.metrics.median_record_kappa" title="physioex.train.metrics.median_record_kappa"><code class="xref py py-func docutils literal notranslate"><span class="pre">physioex.train.metrics.median_record_kappa()</span></code></a> and
+<a class="reference internal" href="physioex.train.metrics.html#physioex.train.metrics.per_record_kappa" title="physioex.train.metrics.per_record_kappa"><code class="xref py py-func docutils literal notranslate"><span class="pre">physioex.train.metrics.per_record_kappa()</span></code></a> (epochs with an unscored
+true label are ignored there).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>y_true_records</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Sequence" title="(in Python v3.15)"><em>Sequence</em></a><em>[</em><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.5)"><em>ndarray</em></a><em>]</em>) – one label array (class indices, <code class="docutils literal notranslate"><span class="pre">-1</span></code> unscored) per
+recording.</p></li>
+<li><p><strong>y_pred_records</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Sequence" title="(in Python v3.15)"><em>Sequence</em></a><em>[</em><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.5)"><em>ndarray</em></a><em>]</em>) – one prediction array per recording, same order.</p></li>
+<li><p><strong>n_classes</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><em>int</em></a>) – number of classes (4 for Wav2Sleep/SleepPPG-Net, 5 for
+Jones).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>dict with <code class="docutils literal notranslate"><span class="pre">&quot;pooled_kappa&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;median_record_kappa&quot;</span></code>,
+<code class="docutils literal notranslate"><span class="pre">&quot;per_record_kappa&quot;</span></code> (list), <code class="docutils literal notranslate"><span class="pre">&quot;n_records&quot;</span></code> and <code class="docutils literal notranslate"><span class="pre">&quot;n_epochs&quot;</span></code>
+(total scored epochs across recordings).</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Dict" title="(in Python v3.15)"><em>Dict</em></a>[<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)">str</a>, <a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.15)"><em>Any</em></a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="physioex.train.replication.format_table">
+<span class="sig-prename descclassname"><span class="pre">physioex.train.replication.</span></span><span class="sig-name descname"><span class="pre">format_table</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">rows</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/physioex/train/replication.html#format_table"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#physioex.train.replication.format_table" title="Link to this definition">#</a></dt>
+<dd><p>Render comparison rows as a fixed-width text table.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>rows</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Sequence" title="(in Python v3.15)"><em>Sequence</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><em>dict</em></a><em>]</em>) – the dicts returned by <a class="reference internal" href="#physioex.train.replication.check" title="physioex.train.replication.check"><code class="xref py py-func docutils literal notranslate"><span class="pre">check()</span></code></a> (any subset of their keys
+is used, in the canonical column order).</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The table as a string (no trailing newline).</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)">str</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="physioex.train.replication.has_scoring_issues">
+<span class="sig-prename descclassname"><span class="pre">physioex.train.replication.</span></span><span class="sig-name descname"><span class="pre">has_scoring_issues</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataset</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">subject_id</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/physioex/train/replication.html#has_scoring_issues"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#physioex.train.replication.has_scoring_issues" title="Link to this definition">#</a></dt>
+<dd><p>True when the night has no N1, N3 or REM epoch in its raw AASM labels.</p>
+<p>wav2sleep’s ingestion marks such nights as <code class="docutils literal notranslate"><span class="pre">.issues</span></code> (recordings scored
+sleep/wake only, with N2 as the sole sleep class) and its per-dataset test
+evaluation leaves them out (<code class="docutils literal notranslate"><span class="pre">exclude_issues=True</span></code>). The check reads the
+labels before any <code class="docutils literal notranslate"><span class="pre">label_transform</span></code>, since <code class="docutils literal notranslate"><span class="pre">aasm4</span></code> merges N1 into Light.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dataset</strong> (<a class="reference internal" href="physioex.data.BasePhysioDataset.html#physioex.data.BasePhysioDataset" title="physioex.data.BasePhysioDataset"><em>BasePhysioDataset</em></a>)</p></li>
+<li><p><strong>subject_id</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><em>str</em></a>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)">bool</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="physioex.train.replication.iter_nights">
+<span class="sig-prename descclassname"><span class="pre">physioex.train.replication.</span></span><span class="sig-name descname"><span class="pre">iter_nights</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataset</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">subject_ids</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/physioex/train/replication.html#iter_nights"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#physioex.train.replication.iter_nights" title="Link to this definition">#</a></dt>
+<dd><p>Yield one entry per whole night of the given subjects.</p>
+<p>The dataset must be built in whole-night mode (<code class="docutils literal notranslate"><span class="pre">sequence_length</span> <span class="pre">&lt;=</span> <span class="pre">0</span></code>);
+in that mode item index <code class="docutils literal notranslate"><span class="pre">i</span></code> is exactly subject <code class="docutils literal notranslate"><span class="pre">i</span></code>
+(see <code class="docutils literal notranslate"><span class="pre">BasePhysioDataset._get_recording_item</span></code>).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dataset</strong> (<a class="reference internal" href="physioex.data.BasePhysioDataset.html#physioex.data.BasePhysioDataset" title="physioex.data.BasePhysioDataset"><em>BasePhysioDataset</em></a>) – a <code class="docutils literal notranslate"><span class="pre">BasePhysioDataset</span></code> instance (whole-night mode).</p></li>
+<li><p><strong>subject_ids</strong> (<em>Sequence</em><em>[</em><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><em>str</em></a><em>]</em>) – subject ids to iterate over, in any order.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Yields<span class="colon">:</span></dt>
+<dd class="field-even"><p>Tuples <code class="docutils literal notranslate"><span class="pre">(subject_id,</span> <span class="pre">signals,</span> <span class="pre">labels,</span> <span class="pre">metadata)</span></code> where</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">signals</span></code> maps the requested channel name (<code class="docutils literal notranslate"><span class="pre">channel_info[key]</span>
+<span class="pre">[&quot;request&quot;]</span></code>, e.g. <code class="docutils literal notranslate"><span class="pre">&quot;ECG&quot;</span></code>; the item key such as <code class="docutils literal notranslate"><span class="pre">&quot;ECG_0&quot;</span></code>
+when no request is recorded) to a <code class="docutils literal notranslate"><span class="pre">(L,</span> <span class="pre">T_e)</span></code> float32 array of the
+(preprocessed) whole-night signal. Channels the subject lacks
+(<code class="docutils literal notranslate"><span class="pre">available=False</span></code>, zero-filled by the dataset) are left out;</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">labels</span></code> is the <code class="docutils literal notranslate"><span class="pre">(L,)</span></code> int64 label array in the dataset’s label
+transform (e.g. <code class="docutils literal notranslate"><span class="pre">aasm4</span></code>: W=0, Light=1, Deep=2, REM=3; <code class="docutils literal notranslate"><span class="pre">-1</span></code>
+unscored), aligned with the signals;</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">metadata</span></code> is the return value of
+<code class="docutils literal notranslate"><span class="pre">dataset.subject_metadata(subject_id)</span></code> when the dataset provides
+that method, else <code class="docutils literal notranslate"><span class="pre">{}</span></code>.</p></li>
+</ul>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Iterator[<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)">tuple</a>[<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)">str</a>, <a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)">dict</a>[<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)">str</a>, np.ndarray], np.ndarray, <a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)">dict</a>]]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="physioex.train.replication.load_paper_metrics">
+<span class="sig-prename descclassname"><span class="pre">physioex.train.replication.</span></span><span class="sig-name descname"><span class="pre">load_paper_metrics</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/physioex/train/replication.html#load_paper_metrics"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#physioex.train.replication.load_paper_metrics" title="Link to this definition">#</a></dt>
+<dd><p>Read the paper’s claimed results from a JSON file.</p>
+<p>The file has the top-level keys <code class="docutils literal notranslate"><span class="pre">&quot;model&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;source&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;metric&quot;</span></code>,
+<code class="docutils literal notranslate"><span class="pre">&quot;tolerance&quot;</span></code> and <code class="docutils literal notranslate"><span class="pre">&quot;targets&quot;</span></code> (a list of objects with keys
+<code class="docutils literal notranslate"><span class="pre">dataset</span></code>, <code class="docutils literal notranslate"><span class="pre">condition</span></code>, <code class="docutils literal notranslate"><span class="pre">value</span></code> and optional <code class="docutils literal notranslate"><span class="pre">metric</span></code>,
+<code class="docutils literal notranslate"><span class="pre">tolerance</span></code>, <code class="docutils literal notranslate"><span class="pre">assert</span></code> (bool, default true), <code class="docutils literal notranslate"><span class="pre">requires</span></code>, <code class="docutils literal notranslate"><span class="pre">note</span></code>).
+A target’s optional <code class="docutils literal notranslate"><span class="pre">metric</span></code>/<code class="docutils literal notranslate"><span class="pre">tolerance</span></code>/<code class="docutils literal notranslate"><span class="pre">assert</span></code> override the
+top-level ones.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>path</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><em>str</em></a><em> | </em><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><em>Path</em></a>) – path to the JSON file.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><code class="docutils literal notranslate"><span class="pre">(header,</span> <span class="pre">targets)</span></code> where <code class="docutils literal notranslate"><span class="pre">header</span></code> is the top-level dict without
+<code class="docutils literal notranslate"><span class="pre">&quot;targets&quot;</span></code> and <code class="docutils literal notranslate"><span class="pre">targets</span></code> the list of <a class="reference internal" href="#physioex.train.replication.PaperTarget" title="physioex.train.replication.PaperTarget"><code class="xref py py-class docutils literal notranslate"><span class="pre">PaperTarget</span></code></a>.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)">tuple</a>[<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)">dict</a>, <a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)">list</a>[<a class="reference internal" href="#physioex.train.replication.PaperTarget" title="physioex.train.replication.PaperTarget"><em>PaperTarget</em></a>]]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="physioex.train.replication.replication_kwargs">
+<span class="sig-prename descclassname"><span class="pre">physioex.train.replication.</span></span><span class="sig-name descname"><span class="pre">replication_kwargs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataset_name</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/physioex/train/replication.html#replication_kwargs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#physioex.train.replication.replication_kwargs" title="Link to this definition">#</a></dt>
+<dd><p>Constructor keyword sets that together cover a dataset’s split nights.</p>
+<p>One dict per visit for multi-visit datasets (see <a class="reference internal" href="#physioex.train.replication.SPLIT_VISITS" title="physioex.train.replication.SPLIT_VISITS"><code class="xref py py-data docutils literal notranslate"><span class="pre">SPLIT_VISITS</span></code></a>),
+else a single dict. CCSHS also gets <code class="docutils literal notranslate"><span class="pre">exclude_subjects=[]</span></code>: its default
+exclusion list (recordings whose XML disagrees with the NSRR summary CSV)
+is a physioex choice the published evaluations did not make.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>dataset_name</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><em>str</em></a>)</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)">list</a>[<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)">dict</a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="physioex.train.metrics.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">physioex.train.metrics</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="physioex.train.stats.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">physioex.train.stats</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#physioex.train.replication.PaperTarget"><code class="docutils literal notranslate"><span class="pre">PaperTarget</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#physioex.train.replication.PaperTarget.dataset"><code class="docutils literal notranslate"><span class="pre">PaperTarget.dataset</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#physioex.train.replication.PaperTarget.condition"><code class="docutils literal notranslate"><span class="pre">PaperTarget.condition</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#physioex.train.replication.PaperTarget.value"><code class="docutils literal notranslate"><span class="pre">PaperTarget.value</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#physioex.train.replication.PaperTarget.metric"><code class="docutils literal notranslate"><span class="pre">PaperTarget.metric</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#physioex.train.replication.PaperTarget.tolerance"><code class="docutils literal notranslate"><span class="pre">PaperTarget.tolerance</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#physioex.train.replication.PaperTarget.assert_"><code class="docutils literal notranslate"><span class="pre">PaperTarget.assert_</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#physioex.train.replication.PaperTarget.requires"><code class="docutils literal notranslate"><span class="pre">PaperTarget.requires</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#physioex.train.replication.PaperTarget.note"><code class="docutils literal notranslate"><span class="pre">PaperTarget.note</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#physioex.train.replication.SPLIT_VISITS"><code class="docutils literal notranslate"><span class="pre">SPLIT_VISITS</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#physioex.train.replication.align"><code class="docutils literal notranslate"><span class="pre">align()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#physioex.train.replication.check"><code class="docutils literal notranslate"><span class="pre">check()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#physioex.train.replication.evaluate"><code class="docutils literal notranslate"><span class="pre">evaluate()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#physioex.train.replication.format_table"><code class="docutils literal notranslate"><span class="pre">format_table()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#physioex.train.replication.has_scoring_issues"><code class="docutils literal notranslate"><span class="pre">has_scoring_issues()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#physioex.train.replication.iter_nights"><code class="docutils literal notranslate"><span class="pre">iter_nights()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#physioex.train.replication.load_paper_metrics"><code class="docutils literal notranslate"><span class="pre">load_paper_metrics()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#physioex.train.replication.replication_kwargs"><code class="docutils literal notranslate"><span class="pre">replication_kwargs()</span></code></a></li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../../_sources/api/_generated/physioex.train.replication.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer src="../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2023, Guido Gagliardi.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 8.1.3.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.16.1.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

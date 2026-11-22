@@ -12,10 +12,15 @@
       cohen_kappa_score
       confusion_matrix
       f1_score
+      kappa_from_confusion
       mae_score
+      median_record_kappa
       mse_score
+      per_record_kappa
+      pooled_kappa
       precision_score
       r2_score
       recall_score
+      record_confusion_matrix
       support_score
    

@@ -52,7 +52,7 @@
     <link rel="icon" href="../../_static/logo_bar.svg"/>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
-    <link rel="next" title="physioex.train.stats" href="physioex.train.stats.html" />
+    <link rel="next" title="physioex.train.replication" href="physioex.train.replication.html" />
     <link rel="prev" title="physioex.train.models.load.load_model" href="physioex.train.models.load.load_model.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
@@ -358,10 +358,19 @@
 <li class="toctree-l1"><a class="reference internal" href="physioex.data.BandpassFilter.html">physioex.data.BandpassFilter</a></li>
 <li class="toctree-l1"><a class="reference internal" href="physioex.data.NotchFilter.html">physioex.data.NotchFilter</a></li>
 <li class="toctree-l1"><a class="reference internal" href="physioex.data.Resample.html">physioex.data.Resample</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.FFTResample.html">physioex.data.FFTResample</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.InterpResample.html">physioex.data.InterpResample</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.FixedLength.html">physioex.data.FixedLength</a></li>
 <li class="toctree-l1"><a class="reference internal" href="physioex.data.ZScoreNormalize.html">physioex.data.ZScoreNormalize</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.ZScore.html">physioex.data.ZScore</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.Clip.html">physioex.data.Clip</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.ChebyshevLowpass.html">physioex.data.ChebyshevLowpass</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.PhysicalScale.html">physioex.data.PhysicalScale</a></li>
 <li class="toctree-l1"><a class="reference internal" href="physioex.data.XSleepNetSpectrogram.html">physioex.data.XSleepNetSpectrogram</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.steps.JonesECGPreprocess.html">physioex.data.steps.JonesECGPreprocess</a></li>
 <li class="toctree-l1"><a class="reference internal" href="physioex.data.get_preset.html">physioex.data.get_preset</a></li>
 <li class="toctree-l1"><a class="reference internal" href="physioex.data.available_presets.html">physioex.data.available_presets</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.get_label_transform.html">physioex.data.get_label_transform</a></li>
 <li class="toctree-l1"><a class="reference internal" href="physioex.data.ChannelCache.html">physioex.data.ChannelCache</a></li>
 <li class="toctree-l1"><a class="reference internal" href="physioex.data.dict_collate_fn.html">physioex.data.dict_collate_fn</a></li>
 <li class="toctree-l1"><a class="reference internal" href="physioex.data.stack_channels.html">physioex.data.stack_channels</a></li>
@@ -391,6 +400,7 @@
 <li class="toctree-l1"><a class="reference internal" href="physioex.models.SJEEncoder.html">physioex.models.SJEEncoder</a></li>
 <li class="toctree-l1"><a class="reference internal" href="physioex.models.NeuroLMEncoder.html">physioex.models.NeuroLMEncoder</a></li>
 <li class="toctree-l1"><a class="reference internal" href="physioex.models.load_from_pretrained.html">physioex.models.load_from_pretrained</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.models.pretrained.list_pretrained.html">physioex.models.pretrained.list_pretrained</a></li>
 <li class="toctree-l1"><a class="reference internal" href="physioex.models.extract_embeddings.html">physioex.models.extract_embeddings</a></li>
 <li class="toctree-l1"><a class="reference internal" href="physioex.models.load_embeddings.html">physioex.models.load_embeddings</a></li>
 <li class="toctree-l1"><a class="reference internal" href="physioex.models.linear_probe.html">physioex.models.linear_probe</a></li>
@@ -400,6 +410,11 @@
 <li class="toctree-l1"><a class="reference internal" href="physioex.models.tinysleepnet.TinySleepNet.html">physioex.models.tinysleepnet.TinySleepNet</a></li>
 <li class="toctree-l1"><a class="reference internal" href="physioex.models.seqsleepnet.SeqSleepNet.html">physioex.models.seqsleepnet.SeqSleepNet</a></li>
 <li class="toctree-l1"><a class="reference internal" href="physioex.models.sleeptransformer.SleepTransformer.html">physioex.models.sleeptransformer.SleepTransformer</a></li>
+</ul>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="physioex.models.wav2sleep.Wav2Sleep.html">physioex.models.wav2sleep.Wav2Sleep</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.models.sleepppgnet.SleepPPGNet.html">physioex.models.sleepppgnet.SleepPPGNet</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.models.jones_ecg.JonesECGNet.html">physioex.models.jones_ecg.JonesECGNet</a></li>
 </ul>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="physioex.train.trainer.Trainer.html">physioex.train.trainer.Trainer</a></li>
@@ -412,6 +427,7 @@
 </ul>
 <ul class="current nav bd-sidenav">
 <li class="toctree-l1 current active"><a class="current reference internal" href="#">physioex.train.metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.train.replication.html">physioex.train.replication</a></li>
 <li class="toctree-l1"><a class="reference internal" href="physioex.train.stats.html">physioex.train.stats</a></li>
 <li class="toctree-l1"><a class="reference internal" href="physioex.train.progress.html">physioex.train.progress</a></li>
 </ul>
@@ -496,11 +512,23 @@
 <tr class="row-even"><td><p><a class="reference internal" href="#physioex.train.metrics.f1_score" title="physioex.train.metrics.f1_score"><code class="xref py py-obj docutils literal notranslate"><span class="pre">f1_score</span></code></a>(outputs, targets[, ignore_index, ...])</p></td>
 <td><p>Compute F1 score.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#physioex.train.metrics.mae_score" title="physioex.train.metrics.mae_score"><code class="xref py py-obj docutils literal notranslate"><span class="pre">mae_score</span></code></a>(outputs, targets[, ignore_index])</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#physioex.train.metrics.kappa_from_confusion" title="physioex.train.metrics.kappa_from_confusion"><code class="xref py py-obj docutils literal notranslate"><span class="pre">kappa_from_confusion</span></code></a>(cm)</p></td>
+<td><p>Cohen's kappa of a confusion matrix; NaN when it is undefined.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#physioex.train.metrics.mae_score" title="physioex.train.metrics.mae_score"><code class="xref py py-obj docutils literal notranslate"><span class="pre">mae_score</span></code></a>(outputs, targets[, ignore_index])</p></td>
 <td><p>Mean absolute error for regression tasks.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#physioex.train.metrics.median_record_kappa" title="physioex.train.metrics.median_record_kappa"><code class="xref py py-obj docutils literal notranslate"><span class="pre">median_record_kappa</span></code></a>(y_true_records, ...[, ...])</p></td>
+<td><p>Median of the per-recording kappas, ignoring undefined (NaN) ones.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#physioex.train.metrics.mse_score" title="physioex.train.metrics.mse_score"><code class="xref py py-obj docutils literal notranslate"><span class="pre">mse_score</span></code></a>(outputs, targets[, ignore_index])</p></td>
 <td><p>Mean squared error for regression tasks.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#physioex.train.metrics.per_record_kappa" title="physioex.train.metrics.per_record_kappa"><code class="xref py py-obj docutils literal notranslate"><span class="pre">per_record_kappa</span></code></a>(y_true_records, ...[, ...])</p></td>
+<td><p>One kappa per recording (NaN where kappa is undefined).</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#physioex.train.metrics.pooled_kappa" title="physioex.train.metrics.pooled_kappa"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pooled_kappa</span></code></a>(y_true_records, y_pred_records, ...)</p></td>
+<td><p>Kappa of the confusion matrix summed over all recordings (kappa_T).</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#physioex.train.metrics.precision_score" title="physioex.train.metrics.precision_score"><code class="xref py py-obj docutils literal notranslate"><span class="pre">precision_score</span></code></a>(outputs, targets[, ...])</p></td>
 <td><p>Compute precision score.</p></td>
@@ -511,7 +539,10 @@
 <tr class="row-odd"><td><p><a class="reference internal" href="#physioex.train.metrics.recall_score" title="physioex.train.metrics.recall_score"><code class="xref py py-obj docutils literal notranslate"><span class="pre">recall_score</span></code></a>(outputs, targets[, ...])</p></td>
 <td><p>Compute recall score.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">support_score</span></code>(outputs, targets[, ignore_index])</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#physioex.train.metrics.record_confusion_matrix" title="physioex.train.metrics.record_confusion_matrix"><code class="xref py py-obj docutils literal notranslate"><span class="pre">record_confusion_matrix</span></code></a>(y_true, y_pred, ...)</p></td>
+<td><p>Confusion matrix (rows = true, columns = predicted) of one recording.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">support_score</span></code>(outputs, targets[, ignore_index])</p></td>
 <td><p></p></td>
 </tr>
 </tbody>
@@ -524,8 +555,8 @@
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>outputs</strong> (<a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.14)"><em>Tensor</em></a>) – Model outputs (logits), shape (…, n_classes).</p></li>
-<li><p><strong>targets</strong> (<a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.14)"><em>Tensor</em></a>) – Ground-truth labels.</p></li>
+<li><p><strong>outputs</strong> (<a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.15)"><em>Tensor</em></a>) – Model outputs (logits), shape (…, n_classes).</p></li>
+<li><p><strong>targets</strong> (<a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.15)"><em>Tensor</em></a>) – Ground-truth labels.</p></li>
 <li><p><strong>ignore_index</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><em>int</em></a>) – Label value to ignore (default -1).</p></li>
 <li><p><strong>average</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><em>str</em></a>) – Averaging method. <code class="docutils literal notranslate"><span class="pre">&quot;micro&quot;</span></code> computes global accuracy (correct / total).
 <code class="docutils literal notranslate"><span class="pre">&quot;weighted&quot;</span></code> is equivalent to <code class="docutils literal notranslate"><span class="pre">&quot;micro&quot;</span></code> for accuracy and is accepted for
@@ -548,8 +579,8 @@ API consistency with the other metric functions.</p></li>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>outputs</strong> (<a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.14)"><em>Tensor</em></a>) – Model outputs (logits), shape (…, n_classes).</p></li>
-<li><p><strong>targets</strong> (<a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.14)"><em>Tensor</em></a>) – Ground-truth labels.</p></li>
+<li><p><strong>outputs</strong> (<a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.15)"><em>Tensor</em></a>) – Model outputs (logits), shape (…, n_classes).</p></li>
+<li><p><strong>targets</strong> (<a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.15)"><em>Tensor</em></a>) – Ground-truth labels.</p></li>
 <li><p><strong>ignore_index</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><em>int</em></a>) – Label value to ignore (default -1).</p></li>
 <li><p><strong>average</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><em>str</em></a>) – <code class="docutils literal notranslate"><span class="pre">&quot;macro&quot;</span></code> returns unweighted mean of per-class F1 across classes
 with non-zero support. <code class="docutils literal notranslate"><span class="pre">&quot;weighted&quot;</span></code> weights each class F1 by its
@@ -566,15 +597,45 @@ support (number of true instances).</p></li>
 </dd></dl>
 
 <dl class="py function">
+<dt class="sig sig-object py" id="physioex.train.metrics.kappa_from_confusion">
+<span class="sig-prename descclassname"><span class="pre">physioex.train.metrics.</span></span><span class="sig-name descname"><span class="pre">kappa_from_confusion</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cm</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/physioex/train/metrics.html#kappa_from_confusion"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#physioex.train.metrics.kappa_from_confusion" title="Link to this definition">#</a></dt>
+<dd><p>Cohen’s kappa of a confusion matrix; NaN when it is undefined.</p>
+<p>Undefined cases: an empty matrix, or chance agreement equal to 1 (one
+class only in both rater marginals).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)">float</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
 <dt class="sig sig-object py" id="physioex.train.metrics.mae_score">
 <span class="sig-prename descclassname"><span class="pre">physioex.train.metrics.</span></span><span class="sig-name descname"><span class="pre">mae_score</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">outputs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">targets</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ignore_index</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/physioex/train/metrics.html#mae_score"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#physioex.train.metrics.mae_score" title="Link to this definition">#</a></dt>
 <dd><p>Mean absolute error for regression tasks.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>outputs</strong> (<a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.14)"><em>Tensor</em></a>)</p></li>
-<li><p><strong>targets</strong> (<a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.14)"><em>Tensor</em></a>)</p></li>
+<li><p><strong>outputs</strong> (<a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.15)"><em>Tensor</em></a>)</p></li>
+<li><p><strong>targets</strong> (<a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.15)"><em>Tensor</em></a>)</p></li>
 <li><p><strong>ignore_index</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><em>int</em></a>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)">float</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="physioex.train.metrics.median_record_kappa">
+<span class="sig-prename descclassname"><span class="pre">physioex.train.metrics.</span></span><span class="sig-name descname"><span class="pre">median_record_kappa</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">y_true_records</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_pred_records</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_classes</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ignore_index</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/physioex/train/metrics.html#median_record_kappa"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#physioex.train.metrics.median_record_kappa" title="Link to this definition">#</a></dt>
+<dd><p>Median of the per-recording kappas, ignoring undefined (NaN) ones.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>n_classes</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><em>int</em></a>)</p></li>
+<li><p><strong>ignore_index</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><em>int</em></a><em> | </em><em>None</em>)</p></li>
 </ul>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
@@ -590,9 +651,43 @@ support (number of true instances).</p></li>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>outputs</strong> (<a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.14)"><em>Tensor</em></a>)</p></li>
-<li><p><strong>targets</strong> (<a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.14)"><em>Tensor</em></a>)</p></li>
+<li><p><strong>outputs</strong> (<a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.15)"><em>Tensor</em></a>)</p></li>
+<li><p><strong>targets</strong> (<a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.15)"><em>Tensor</em></a>)</p></li>
 <li><p><strong>ignore_index</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><em>int</em></a>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)">float</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="physioex.train.metrics.per_record_kappa">
+<span class="sig-prename descclassname"><span class="pre">physioex.train.metrics.</span></span><span class="sig-name descname"><span class="pre">per_record_kappa</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">y_true_records</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_pred_records</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_classes</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ignore_index</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/physioex/train/metrics.html#per_record_kappa"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#physioex.train.metrics.per_record_kappa" title="Link to this definition">#</a></dt>
+<dd><p>One kappa per recording (NaN where kappa is undefined).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>n_classes</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><em>int</em></a>)</p></li>
+<li><p><strong>ignore_index</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><em>int</em></a><em> | </em><em>None</em>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="physioex.train.metrics.pooled_kappa">
+<span class="sig-prename descclassname"><span class="pre">physioex.train.metrics.</span></span><span class="sig-name descname"><span class="pre">pooled_kappa</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">y_true_records</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_pred_records</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_classes</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ignore_index</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/physioex/train/metrics.html#pooled_kappa"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#physioex.train.metrics.pooled_kappa" title="Link to this definition">#</a></dt>
+<dd><p>Kappa of the confusion matrix summed over all recordings (kappa_T).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>n_classes</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><em>int</em></a>)</p></li>
+<li><p><strong>ignore_index</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><em>int</em></a><em> | </em><em>None</em>)</p></li>
 </ul>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
@@ -608,8 +703,8 @@ support (number of true instances).</p></li>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>outputs</strong> (<a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.14)"><em>Tensor</em></a>) – Model outputs (logits), shape (…, n_classes).</p></li>
-<li><p><strong>targets</strong> (<a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.14)"><em>Tensor</em></a>) – Ground-truth labels.</p></li>
+<li><p><strong>outputs</strong> (<a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.15)"><em>Tensor</em></a>) – Model outputs (logits), shape (…, n_classes).</p></li>
+<li><p><strong>targets</strong> (<a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.15)"><em>Tensor</em></a>) – Ground-truth labels.</p></li>
 <li><p><strong>ignore_index</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><em>int</em></a>) – Label value to ignore (default -1).</p></li>
 <li><p><strong>average</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><em>str</em></a>) – <code class="docutils literal notranslate"><span class="pre">&quot;macro&quot;</span></code> returns unweighted mean of per-class precision across
 classes with non-zero support. <code class="docutils literal notranslate"><span class="pre">&quot;weighted&quot;</span></code> weights each class precision
@@ -632,8 +727,8 @@ by its support.</p></li>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>outputs</strong> (<a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.14)"><em>Tensor</em></a>)</p></li>
-<li><p><strong>targets</strong> (<a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.14)"><em>Tensor</em></a>)</p></li>
+<li><p><strong>outputs</strong> (<a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.15)"><em>Tensor</em></a>)</p></li>
+<li><p><strong>targets</strong> (<a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.15)"><em>Tensor</em></a>)</p></li>
 <li><p><strong>ignore_index</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><em>int</em></a>)</p></li>
 </ul>
 </dd>
@@ -650,8 +745,8 @@ by its support.</p></li>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>outputs</strong> (<a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.14)"><em>Tensor</em></a>) – Model outputs (logits), shape (…, n_classes).</p></li>
-<li><p><strong>targets</strong> (<a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.14)"><em>Tensor</em></a>) – Ground-truth labels.</p></li>
+<li><p><strong>outputs</strong> (<a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.15)"><em>Tensor</em></a>) – Model outputs (logits), shape (…, n_classes).</p></li>
+<li><p><strong>targets</strong> (<a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.15)"><em>Tensor</em></a>) – Ground-truth labels.</p></li>
 <li><p><strong>ignore_index</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><em>int</em></a>) – Label value to ignore (default -1).</p></li>
 <li><p><strong>average</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><em>str</em></a>) – <code class="docutils literal notranslate"><span class="pre">&quot;macro&quot;</span></code> returns unweighted mean of per-class recall across classes
 with non-zero support. <code class="docutils literal notranslate"><span class="pre">&quot;weighted&quot;</span></code> weights each class recall by its
@@ -663,6 +758,26 @@ support.</p></li>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)">float</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="physioex.train.metrics.record_confusion_matrix">
+<span class="sig-prename descclassname"><span class="pre">physioex.train.metrics.</span></span><span class="sig-name descname"><span class="pre">record_confusion_matrix</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">y_true</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_pred</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_classes</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ignore_index</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/physioex/train/metrics.html#record_confusion_matrix"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#physioex.train.metrics.record_confusion_matrix" title="Link to this definition">#</a></dt>
+<dd><p>Confusion matrix (rows = true, columns = predicted) of one recording.</p>
+<p><code class="docutils literal notranslate"><span class="pre">y_true</span></code> and <code class="docutils literal notranslate"><span class="pre">y_pred</span></code> are class indices of equal length (numpy arrays,
+lists or tensors). Epochs whose true label equals <code class="docutils literal notranslate"><span class="pre">ignore_index</span></code>
+(unscored or padding) are dropped.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>n_classes</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><em>int</em></a>)</p></li>
+<li><p><strong>ignore_index</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><em>int</em></a><em> | </em><em>None</em>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>np.ndarray</p>
 </dd>
 </dl>
 </dd></dl>
@@ -689,11 +804,11 @@ support.</p></li>
       </div>
     </a>
     <a class="right-next"
-       href="physioex.train.stats.html"
+       href="physioex.train.replication.html"
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">physioex.train.stats</p>
+        <p class="prev-next-title">physioex.train.replication</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>
@@ -718,11 +833,16 @@ support.</p></li>
     <ul class="visible nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#physioex.train.metrics.accuracy_score"><code class="docutils literal notranslate"><span class="pre">accuracy_score()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#physioex.train.metrics.f1_score"><code class="docutils literal notranslate"><span class="pre">f1_score()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#physioex.train.metrics.kappa_from_confusion"><code class="docutils literal notranslate"><span class="pre">kappa_from_confusion()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#physioex.train.metrics.mae_score"><code class="docutils literal notranslate"><span class="pre">mae_score()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#physioex.train.metrics.median_record_kappa"><code class="docutils literal notranslate"><span class="pre">median_record_kappa()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#physioex.train.metrics.mse_score"><code class="docutils literal notranslate"><span class="pre">mse_score()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#physioex.train.metrics.per_record_kappa"><code class="docutils literal notranslate"><span class="pre">per_record_kappa()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#physioex.train.metrics.pooled_kappa"><code class="docutils literal notranslate"><span class="pre">pooled_kappa()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#physioex.train.metrics.precision_score"><code class="docutils literal notranslate"><span class="pre">precision_score()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#physioex.train.metrics.r2_score"><code class="docutils literal notranslate"><span class="pre">r2_score()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#physioex.train.metrics.recall_score"><code class="docutils literal notranslate"><span class="pre">recall_score()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#physioex.train.metrics.record_confusion_matrix"><code class="docutils literal notranslate"><span class="pre">record_confusion_matrix()</span></code></a></li>
 </ul>
   </nav></div>
 

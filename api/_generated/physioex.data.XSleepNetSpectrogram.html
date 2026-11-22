@@ -52,8 +52,8 @@
     <link rel="icon" href="../../_static/logo_bar.svg"/>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
-    <link rel="next" title="physioex.data.get_preset" href="physioex.data.get_preset.html" />
-    <link rel="prev" title="physioex.data.ZScoreNormalize" href="physioex.data.ZScoreNormalize.html" />
+    <link rel="next" title="physioex.data.steps.JonesECGPreprocess" href="physioex.data.steps.JonesECGPreprocess.html" />
+    <link rel="prev" title="physioex.data.PhysicalScale" href="physioex.data.PhysicalScale.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
   <meta name="docsearch:version" content="" />
@@ -358,10 +358,19 @@
 <li class="toctree-l1"><a class="reference internal" href="physioex.data.BandpassFilter.html">physioex.data.BandpassFilter</a></li>
 <li class="toctree-l1"><a class="reference internal" href="physioex.data.NotchFilter.html">physioex.data.NotchFilter</a></li>
 <li class="toctree-l1"><a class="reference internal" href="physioex.data.Resample.html">physioex.data.Resample</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.FFTResample.html">physioex.data.FFTResample</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.InterpResample.html">physioex.data.InterpResample</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.FixedLength.html">physioex.data.FixedLength</a></li>
 <li class="toctree-l1"><a class="reference internal" href="physioex.data.ZScoreNormalize.html">physioex.data.ZScoreNormalize</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.ZScore.html">physioex.data.ZScore</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.Clip.html">physioex.data.Clip</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.ChebyshevLowpass.html">physioex.data.ChebyshevLowpass</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.PhysicalScale.html">physioex.data.PhysicalScale</a></li>
 <li class="toctree-l1 current active"><a class="current reference internal" href="#">physioex.data.XSleepNetSpectrogram</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.steps.JonesECGPreprocess.html">physioex.data.steps.JonesECGPreprocess</a></li>
 <li class="toctree-l1"><a class="reference internal" href="physioex.data.get_preset.html">physioex.data.get_preset</a></li>
 <li class="toctree-l1"><a class="reference internal" href="physioex.data.available_presets.html">physioex.data.available_presets</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.data.get_label_transform.html">physioex.data.get_label_transform</a></li>
 <li class="toctree-l1"><a class="reference internal" href="physioex.data.ChannelCache.html">physioex.data.ChannelCache</a></li>
 <li class="toctree-l1"><a class="reference internal" href="physioex.data.dict_collate_fn.html">physioex.data.dict_collate_fn</a></li>
 <li class="toctree-l1"><a class="reference internal" href="physioex.data.stack_channels.html">physioex.data.stack_channels</a></li>
@@ -391,6 +400,7 @@
 <li class="toctree-l1"><a class="reference internal" href="physioex.models.SJEEncoder.html">physioex.models.SJEEncoder</a></li>
 <li class="toctree-l1"><a class="reference internal" href="physioex.models.NeuroLMEncoder.html">physioex.models.NeuroLMEncoder</a></li>
 <li class="toctree-l1"><a class="reference internal" href="physioex.models.load_from_pretrained.html">physioex.models.load_from_pretrained</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.models.pretrained.list_pretrained.html">physioex.models.pretrained.list_pretrained</a></li>
 <li class="toctree-l1"><a class="reference internal" href="physioex.models.extract_embeddings.html">physioex.models.extract_embeddings</a></li>
 <li class="toctree-l1"><a class="reference internal" href="physioex.models.load_embeddings.html">physioex.models.load_embeddings</a></li>
 <li class="toctree-l1"><a class="reference internal" href="physioex.models.linear_probe.html">physioex.models.linear_probe</a></li>
@@ -400,6 +410,11 @@
 <li class="toctree-l1"><a class="reference internal" href="physioex.models.tinysleepnet.TinySleepNet.html">physioex.models.tinysleepnet.TinySleepNet</a></li>
 <li class="toctree-l1"><a class="reference internal" href="physioex.models.seqsleepnet.SeqSleepNet.html">physioex.models.seqsleepnet.SeqSleepNet</a></li>
 <li class="toctree-l1"><a class="reference internal" href="physioex.models.sleeptransformer.SleepTransformer.html">physioex.models.sleeptransformer.SleepTransformer</a></li>
+</ul>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="physioex.models.wav2sleep.Wav2Sleep.html">physioex.models.wav2sleep.Wav2Sleep</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.models.sleepppgnet.SleepPPGNet.html">physioex.models.sleepppgnet.SleepPPGNet</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.models.jones_ecg.JonesECGNet.html">physioex.models.jones_ecg.JonesECGNet</a></li>
 </ul>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="physioex.train.trainer.Trainer.html">physioex.train.trainer.Trainer</a></li>
@@ -412,6 +427,7 @@
 </ul>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="physioex.train.metrics.html">physioex.train.metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="physioex.train.replication.html">physioex.train.replication</a></li>
 <li class="toctree-l1"><a class="reference internal" href="physioex.train.stats.html">physioex.train.stats</a></li>
 <li class="toctree-l1"><a class="reference internal" href="physioex.train.progress.html">physioex.train.progress</a></li>
 </ul>
@@ -538,7 +554,7 @@ filter stop-band leakage and zero-padding artifacts.</p>
 <tr class="row-odd"><td><p><a class="reference internal" href="#physioex.data.XSleepNetSpectrogram.__init__" title="physioex.data.XSleepNetSpectrogram.__init__"><code class="xref py py-obj docutils literal notranslate"><span class="pre">__init__</span></code></a>([nperseg, noverlap, nfft, window, ...])</p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#physioex.data.XSleepNetSpectrogram.compile" title="physioex.data.XSleepNetSpectrogram.compile"><code class="xref py py-obj docutils literal notranslate"><span class="pre">compile</span></code></a>(fs_in)</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#physioex.data.XSleepNetSpectrogram.compile" title="physioex.data.XSleepNetSpectrogram.compile"><code class="xref py py-obj docutils literal notranslate"><span class="pre">compile</span></code></a>(fs_in[, header])</p></td>
 <td><p>Precompute any expensive state and return a callable specialized for fs_in.</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#physioex.data.XSleepNetSpectrogram.spec" title="physioex.data.XSleepNetSpectrogram.spec"><code class="xref py py-obj docutils literal notranslate"><span class="pre">spec</span></code></a>()</p></td>
@@ -549,11 +565,20 @@ filter stop-band leakage and zero-padding artifacts.</p>
 </div>
 <dl class="py method">
 <dt class="sig sig-object py" id="physioex.data.XSleepNetSpectrogram.compile">
-<span class="sig-name descname"><span class="pre">compile</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fs_in</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/physioex/data/steps/spectrogram.html#XSleepNetSpectrogram.compile"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#physioex.data.XSleepNetSpectrogram.compile" title="Link to this definition">#</a></dt>
-<dd><p>Precompute any expensive state and return a callable specialized for fs_in.</p>
+<span class="sig-name descname"><span class="pre">compile</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fs_in</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">header</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/physioex/data/steps/spectrogram.html#XSleepNetSpectrogram.compile"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#physioex.data.XSleepNetSpectrogram.compile" title="Link to this definition">#</a></dt>
+<dd><p>Precompute any expensive state and return a callable specialized
+for fs_in.</p>
+<p><code class="docutils literal notranslate"><span class="pre">header</span></code> is an optional per-channel metadata dict (physical
+dimension, physical min/max, …) forwarded to steps that declare
+they need it (<code class="docutils literal notranslate"><span class="pre">needs_header</span></code> attribute, e.g. <code class="docutils literal notranslate"><span class="pre">PhysicalScale</span></code>).
+Steps that ignore it simply do not read it; the signature default
+keeps every existing <code class="docutils literal notranslate"><span class="pre">compile(fs)</span></code> call site working.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>fs_in</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><em>float</em></a>)</p>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>fs_in</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><em>float</em></a>)</p></li>
+<li><p><strong>header</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><em>dict</em></a><em> | </em><em>None</em>)</p></li>
+</ul>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p><a class="reference internal" href="physioex.data.CompiledStep.html#physioex.data.CompiledStep" title="physioex.data.pipeline.CompiledStep"><em>CompiledStep</em></a></p>
@@ -602,20 +627,20 @@ normalized via f’{float(v):.10g}’.</p>
                   
 <div class="prev-next-area">
     <a class="left-prev"
-       href="physioex.data.ZScoreNormalize.html"
+       href="physioex.data.PhysicalScale.html"
        title="previous page">
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
         <p class="prev-next-subtitle">previous</p>
-        <p class="prev-next-title">physioex.data.ZScoreNormalize</p>
+        <p class="prev-next-title">physioex.data.PhysicalScale</p>
       </div>
     </a>
     <a class="right-next"
-       href="physioex.data.get_preset.html"
+       href="physioex.data.steps.JonesECGPreprocess.html"
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">physioex.data.get_preset</p>
+        <p class="prev-next-title">physioex.data.steps.JonesECGPreprocess</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>

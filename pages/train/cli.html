@@ -354,6 +354,9 @@
 <li class="toctree-l1 has-children"><a class="reference internal" href="networks.html">Model architectures</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="networks/chambon2018.html"><code class="docutils literal notranslate"><span class="pre">Chambon2018</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="networks/protosleepnet.html"><code class="docutils literal notranslate"><span class="pre">ProtoSleepNet</span></code> and <code class="docutils literal notranslate"><span class="pre">ProtoSleepTransformer</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="networks/wav2sleep.html"><code class="docutils literal notranslate"><span class="pre">Wav2Sleep</span></code> (Carter &amp; Tarassenko, 2024)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="networks/jones_ecg.html"><code class="docutils literal notranslate"><span class="pre">JonesECGNet</span></code> (Jones, Itti &amp; Sheth, 2024)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="networks/sleepppgnet.html"><code class="docutils literal notranslate"><span class="pre">SleepPPGNet</span></code> (Kotzen et al., 2023) — replica weights</a></li>
 </ul>
 </details></li>
 <li class="toctree-l1"><a class="reference internal" href="../explain/explain.html">Explain Module</a></li>
@@ -519,7 +522,7 @@ with fine-tuning defaults: <code class="docutils literal notranslate"><span clas
 </div>
 </section>
 <section id="test-model">
-<h2><code class="docutils literal notranslate"><span class="pre">test_model</span></code><a class="headerlink" href="#test-model" title="Link to this heading">#</a></h2>
+<span id="test_model"></span><h2><code class="docutils literal notranslate"><span class="pre">test_model</span></code><a class="headerlink" href="#test-model" title="Link to this heading">#</a></h2>
 <p>Evaluates a checkpoint. Requires <code class="docutils literal notranslate"><span class="pre">--model</span></code> and <code class="docutils literal notranslate"><span class="pre">--ckpt_path</span></code>, plus the shared
 dataset flags. Other flags: <code class="docutils literal notranslate"><span class="pre">--config</span></code>, <code class="docutils literal notranslate"><span class="pre">--fold</span></code> (0), <code class="docutils literal notranslate"><span class="pre">--results_path</span></code>
 (directory to save the results CSV), <code class="docutils literal notranslate"><span class="pre">--gpu_id</span></code>, and <code class="docutils literal notranslate"><span class="pre">--voting</span></code> (enable

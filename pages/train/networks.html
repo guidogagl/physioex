@@ -354,6 +354,9 @@
 <li class="toctree-l1 current active has-children"><a class="current reference internal" href="#">Model architectures</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="networks/chambon2018.html"><code class="docutils literal notranslate"><span class="pre">Chambon2018</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="networks/protosleepnet.html"><code class="docutils literal notranslate"><span class="pre">ProtoSleepNet</span></code> and <code class="docutils literal notranslate"><span class="pre">ProtoSleepTransformer</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="networks/wav2sleep.html"><code class="docutils literal notranslate"><span class="pre">Wav2Sleep</span></code> (Carter &amp; Tarassenko, 2024)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="networks/jones_ecg.html"><code class="docutils literal notranslate"><span class="pre">JonesECGNet</span></code> (Jones, Itti &amp; Sheth, 2024)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="networks/sleepppgnet.html"><code class="docutils literal notranslate"><span class="pre">SleepPPGNet</span></code> (Kotzen et al., 2023) — replica weights</a></li>
 </ul>
 </details></li>
 <li class="toctree-l1"><a class="reference internal" href="../explain/explain.html">Explain Module</a></li>
@@ -471,6 +474,15 @@ their own modules and referenced by dotted <code class="docutils literal notrans
 <tr class="row-odd"><td><p>ProtoSleepNet</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">physioex.models.protosleepnet:ProtoSleepNet</span></code></p></td>
 </tr>
+<tr class="row-even"><td><p>wav2sleep</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">physioex.models.wav2sleep:Wav2Sleep</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>SleepPPG-Net</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">physioex.models.sleepppgnet:SleepPPGNet</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>Jones et al. 2024</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">physioex.models.jones_ecg:JonesECGNet</span></code></p></td>
+</tr>
 </tbody>
 </table>
 </div>
@@ -479,6 +491,43 @@ constructors from a <code class="docutils literal notranslate"><span class="pre"
 multi-dataset checkpoints (<code class="docutils literal notranslate"><span class="pre">protosleepnet-gagliardi</span></code>, <code class="docutils literal notranslate"><span class="pre">protosleeptransformer-gagliardi</span></code>) are
 described, with their performance on every training site, in
 <a class="reference internal" href="networks/protosleepnet.html"><span class="std std-doc">ProtoSleepNet and ProtoSleepTransformer</span></a>.</p>
+</section>
+<section id="cardiorespiratory-sleep-staging">
+<h2>Cardiorespiratory sleep staging<a class="headerlink" href="#cardiorespiratory-sleep-staging" title="Link to this heading">#</a></h2>
+<p>Three published models stage sleep from cardiac and respiratory signals
+instead of EEG. They run on whole nights (<code class="docutils literal notranslate"><span class="pre">sequence_length=0</span></code>), load the
+authors’ (or, for SleepPPG-Net, a third-party) weights with
+<code class="docutils literal notranslate"><span class="pre">load_from_pretrained</span></code>, and expose <code class="docutils literal notranslate"><span class="pre">predict_night(signals,</span> <span class="pre">metadata)</span></code>, which
+returns one class per 30-s epoch. Each has a preprocessing preset of the same
+name and a verification script under <code class="docutils literal notranslate"><span class="pre">examples/pretrained/</span></code> that compares
+its results with the paper.</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Model</p></th>
+<th class="head"><p>Inputs</p></th>
+<th class="head"><p>Pretrained names</p></th>
+<th class="head"><p>Weights license</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><a class="reference internal" href="networks/wav2sleep.html"><span class="std std-doc">wav2sleep</span></a></p></td>
+<td><p>any subset of ECG, PPG, ABD, THX (or EOG)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">wav2sleep</span></code>, <code class="docutils literal notranslate"><span class="pre">wav2sleep-eog</span></code></p></td>
+<td><p>MIT</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="networks/jones_ecg.html"><span class="std std-doc">Jones et al. 2024</span></a></p></td>
+<td><p>ECG + age, sex, time of night</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">jones-ecg</span></code> and six <code class="docutils literal notranslate"><span class="pre">jones-ecg-&lt;variant&gt;</span></code></p></td>
+<td><p>AGPL-3.0</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="networks/sleepppgnet.html"><span class="std std-doc">SleepPPG-Net</span></a></p></td>
+<td><p>PPG</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">sleepppgnet-replica</span></code> (third-party replica)</p></td>
+<td><p>non-commercial research</p></td>
+</tr>
+</tbody>
+</table>
+</div>
 </section>
 <section id="foundation-encoders">
 <h2>Foundation encoders<a class="headerlink" href="#foundation-encoders" title="Link to this heading">#</a></h2>
@@ -518,7 +567,7 @@ state-dicts, and can look a model up in the built-in registry.</p>
 <dd class="field-even"><p>The loaded model in eval mode on the specified device.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.pytorch.org/docs/stable/generated/torch.nn.Module.html#torch.nn.Module" title="(in PyTorch v2.14)"><em>Module</em></a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.pytorch.org/docs/stable/generated/torch.nn.Module.html#torch.nn.Module" title="(in PyTorch v2.15)"><em>Module</em></a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -587,6 +636,7 @@ compatible with <code class="docutils literal notranslate"><span class="pre">Tra
   <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="visible nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#classic-architectures">Classic architectures</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#cardiorespiratory-sleep-staging">Cardiorespiratory sleep staging</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#foundation-encoders">Foundation encoders</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#loading-a-model">Loading a model</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#adding-your-own-model">Adding your own model</a></li>

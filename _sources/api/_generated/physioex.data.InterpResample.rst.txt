@@ -1,0 +1,24 @@
+﻿physioex.data.InterpResample
+============================
+
+.. currentmodule:: physioex.data
+
+.. autoclass:: InterpResample
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~InterpResample.__init__
+      ~InterpResample.compile
+      ~InterpResample.spec
+   
+   
+
+   
+   
+   

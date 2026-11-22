@@ -53,7 +53,7 @@
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
     <link rel="next" title="Related Works" href="../../related/index.html" />
-    <link rel="prev" title="ProtoSleepNet and ProtoSleepTransformer" href="../train/networks/protosleepnet.html" />
+    <link rel="prev" title="SleepPPGNet (Kotzen et al., 2023) — replica weights" href="../train/networks/sleepppgnet.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
   <meta name="docsearch:version" content="" />
@@ -354,6 +354,9 @@
 <li class="toctree-l1 has-children"><a class="reference internal" href="../train/networks.html">Model architectures</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="../train/networks/chambon2018.html"><code class="docutils literal notranslate"><span class="pre">Chambon2018</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../train/networks/protosleepnet.html"><code class="docutils literal notranslate"><span class="pre">ProtoSleepNet</span></code> and <code class="docutils literal notranslate"><span class="pre">ProtoSleepTransformer</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../train/networks/wav2sleep.html"><code class="docutils literal notranslate"><span class="pre">Wav2Sleep</span></code> (Carter &amp; Tarassenko, 2024)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../train/networks/jones_ecg.html"><code class="docutils literal notranslate"><span class="pre">JonesECGNet</span></code> (Jones, Itti &amp; Sheth, 2024)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../train/networks/sleepppgnet.html"><code class="docutils literal notranslate"><span class="pre">SleepPPGNet</span></code> (Kotzen et al., 2023) — replica weights</a></li>
 </ul>
 </details></li>
 <li class="toctree-l1 current active"><a class="current reference internal" href="#">Explain Module</a></li>
@@ -426,7 +429,7 @@ foundation models, organized under <code class="docutils literal notranslate"><s
 the full class diagram see the
 <a class="reference internal" href="../architecture/library/explain.html"><span class="std std-doc">explain-layer architecture</span></a> page.</p>
 <section id="post-hoc-attribution-physioex-explain-posthoc">
-<h2>Post-hoc attribution — <code class="docutils literal notranslate"><span class="pre">physioex.explain.posthoc</span></code><a class="headerlink" href="#post-hoc-attribution-physioex-explain-posthoc" title="Link to this heading">#</a></h2>
+<span id="post-hoc-attribution--physioexexplainposthoc"></span><h2>Post-hoc attribution — <code class="docutils literal notranslate"><span class="pre">physioex.explain.posthoc</span></code><a class="headerlink" href="#post-hoc-attribution-physioex-explain-posthoc" title="Link to this heading">#</a></h2>
 <p>Gradient-based attribution over a trained classifier, plus frequency- and
 time-frequency-domain variants:</p>
 <ul class="simple">
@@ -448,7 +451,7 @@ differentiable (I)DFT/(I)STFT layers.</p></li>
 call signatures of each attributor before use.</p>
 </section>
 <section id="foundational-explainability-physioex-explain-foundational">
-<h2>Foundational explainability — <code class="docutils literal notranslate"><span class="pre">physioex.explain.foundational</span></code><a class="headerlink" href="#foundational-explainability-physioex-explain-foundational" title="Link to this heading">#</a></h2>
+<span id="foundational-explainability--physioexexplainfoundational"></span><h2>Foundational explainability — <code class="docutils literal notranslate"><span class="pre">physioex.explain.foundational</span></code><a class="headerlink" href="#foundational-explainability-physioex-explain-foundational" title="Link to this heading">#</a></h2>
 <p>Concept-level analysis of foundation-model embeddings:</p>
 <ul class="simple">
 <li><p><strong>Conceptual Spectral Decomposition</strong> — <code class="docutils literal notranslate"><span class="pre">ConceptualSpectralDecomposition</span></code>
@@ -462,7 +465,7 @@ returns a <code class="docutils literal notranslate"><span class="pre">CSDResult
 </ul>
 </section>
 <section id="prototypes-physioex-explain-prototypes">
-<h2>Prototypes — <code class="docutils literal notranslate"><span class="pre">physioex.explain.prototypes</span></code><a class="headerlink" href="#prototypes-physioex-explain-prototypes" title="Link to this heading">#</a></h2>
+<span id="prototypes--physioexexplainprototypes"></span><h2>Prototypes — <code class="docutils literal notranslate"><span class="pre">physioex.explain.prototypes</span></code><a class="headerlink" href="#prototypes-physioex-explain-prototypes" title="Link to this heading">#</a></h2>
 <p>Prototype/concept discovery and reconstruction:</p>
 <ul class="simple">
 <li><p><strong>Local relevance</strong>: <code class="docutils literal notranslate"><span class="pre">PrototypeRelevance</span></code>, <code class="docutils literal notranslate"><span class="pre">get_prototypes</span></code> (<code class="docutils literal notranslate"><span class="pre">local.py</span></code>).</p></li>
@@ -475,7 +478,7 @@ returns a <code class="docutils literal notranslate"><span class="pre">CSDResult
 </ul>
 </section>
 <section id="layer-wise-relevance-propagation-physioex-explain-lrp">
-<h2>Layer-wise Relevance Propagation — <code class="docutils literal notranslate"><span class="pre">physioex.explain.lrp</span></code><a class="headerlink" href="#layer-wise-relevance-propagation-physioex-explain-lrp" title="Link to this heading">#</a></h2>
+<span id="layer-wise-relevance-propagation--physioexexplainlrp"></span><h2>Layer-wise Relevance Propagation — <code class="docutils literal notranslate"><span class="pre">physioex.explain.lrp</span></code><a class="headerlink" href="#layer-wise-relevance-propagation-physioex-explain-lrp" title="Link to this heading">#</a></h2>
 <p>Conservation-based attribution (Bach et al. 2015): relevance is redistributed
 backward through the network, conserving the total (<code class="docutils literal notranslate"><span class="pre">Σ</span> <span class="pre">R</span> <span class="pre">≈</span> <span class="pre">f(x)</span></code>). This family
 is <strong>optional</strong> — install the extra:</p>
@@ -601,12 +604,12 @@ families.</p>
                   
 <div class="prev-next-area">
     <a class="left-prev"
-       href="../train/networks/protosleepnet.html"
+       href="../train/networks/sleepppgnet.html"
        title="previous page">
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
         <p class="prev-next-subtitle">previous</p>
-        <p class="prev-next-title"><code class="docutils literal notranslate"><span class="pre">ProtoSleepNet</span></code> and <code class="docutils literal notranslate"><span class="pre">ProtoSleepTransformer</span></code></p>
+        <p class="prev-next-title"><code class="docutils literal notranslate"><span class="pre">SleepPPGNet</span></code> (Kotzen et al., 2023) — replica weights</p>
       </div>
     </a>
     <a class="right-next"

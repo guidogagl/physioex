@@ -400,8 +400,13 @@ window.addEventListener("load", () => mermaid.run());
                 <article class="bd-article">
                   
   <h1>Source code for physioex.data.steps.normalize</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Optional</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">physioex.data.pipeline</span><span class="w"> </span><span class="kn">import</span> <span class="n">PreprocessingStep</span><span class="p">,</span> <span class="n">CompiledStep</span>
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">"physioex.data.steps"</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="ZScoreNormalize">
@@ -430,7 +435,7 @@ window.addEventListener("load", () => mermaid.run());
 
 <div class="viewcode-block" id="ZScoreNormalize.compile">
 <a class="viewcode-back" href="../../../../api/_generated/physioex.data.ZScoreNormalize.html#physioex.data.ZScoreNormalize.compile">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">compile</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fs_in</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">CompiledStep</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">compile</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fs_in</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">header</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">CompiledStep</span><span class="p">:</span>
         <span class="n">eps</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">eps</span>
 
         <span class="k">def</span><span class="w"> </span><span class="nf">apply</span><span class="p">(</span><span class="n">signal</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
@@ -438,6 +443,115 @@ window.addEventListener("load", () => mermaid.run());
             <span class="n">mean</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
             <span class="n">std</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">std</span><span class="p">()</span> <span class="o">+</span> <span class="n">eps</span>
             <span class="k">return</span> <span class="p">((</span><span class="n">x</span> <span class="o">-</span> <span class="n">mean</span><span class="p">)</span> <span class="o">/</span> <span class="n">std</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">CompiledStep</span><span class="p">(</span><span class="n">apply</span><span class="o">=</span><span class="n">apply</span><span class="p">,</span> <span class="n">fs_out</span><span class="o">=</span><span class="n">fs_in</span><span class="p">)</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="Clip">
+<a class="viewcode-back" href="../../../../api/_generated/physioex.data.Clip.html#physioex.data.Clip">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">Clip</span><span class="p">(</span><span class="n">PreprocessingStep</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Symmetric outlier clipping around the signal mean.</span>
+
+<span class="sd">    ``y = clip(x, mean - n_std*std, mean + n_std*std)`` with the mean and</span>
+<span class="sd">    standard deviation (``ddof=0``) computed over the whole signal. This</span>
+<span class="sd">    is the ``np.clip(x, x.mean()-3*x.std(), x.mean()+3*x.std())`` step of</span>
+<span class="sd">    the SleepPPG-Net reference preprocessing. The sampling rate is</span>
+<span class="sd">    unchanged.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    n_std : float</span>
+<span class="sd">        Number of standard deviations for the clip bounds (default 3.0).</span>
+<span class="sd">    """</span>
+
+<div class="viewcode-block" id="Clip.__init__">
+<a class="viewcode-back" href="../../../../api/_generated/physioex.data.Clip.html#physioex.data.Clip.__init__">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n_std</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">3.0</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_std</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">n_std</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Clip.spec">
+<a class="viewcode-back" href="../../../../api/_generated/physioex.data.Clip.html#physioex.data.Clip.spec">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">spec</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_build_spec</span><span class="p">(</span><span class="n">n_std</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">n_std</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Clip.compile">
+<a class="viewcode-back" href="../../../../api/_generated/physioex.data.Clip.html#physioex.data.Clip.compile">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">compile</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fs_in</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">header</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">CompiledStep</span><span class="p">:</span>
+        <span class="n">n_std</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_std</span>
+
+        <span class="k">def</span><span class="w"> </span><span class="nf">apply</span><span class="p">(</span><span class="n">signal</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">signal</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+            <span class="n">mean</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+            <span class="n">std</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">ddof</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+            <span class="n">lo</span> <span class="o">=</span> <span class="n">mean</span> <span class="o">-</span> <span class="n">n_std</span> <span class="o">*</span> <span class="n">std</span>
+            <span class="n">hi</span> <span class="o">=</span> <span class="n">mean</span> <span class="o">+</span> <span class="n">n_std</span> <span class="o">*</span> <span class="n">std</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">lo</span><span class="p">,</span> <span class="n">hi</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">CompiledStep</span><span class="p">(</span><span class="n">apply</span><span class="o">=</span><span class="n">apply</span><span class="p">,</span> <span class="n">fs_out</span><span class="o">=</span><span class="n">fs_in</span><span class="p">)</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="ZScore">
+<a class="viewcode-back" href="../../../../api/_generated/physioex.data.ZScore.html#physioex.data.ZScore">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">ZScore</span><span class="p">(</span><span class="n">PreprocessingStep</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Whole-signal z-score with a tunable ``ddof`` and a std floor.</span>
+
+<span class="sd">    ``y = (x - mean) / max(std, eps)`` where the mean and standard</span>
+<span class="sd">    deviation (with the given ``ddof``) are computed over the whole</span>
+<span class="sd">    signal. Used by the wav2sleep reference preprocessing, which</span>
+<span class="sd">    z-scores each 10 h recording with ``ddof=1, eps=1e-6`` **over the</span>
+<span class="sd">    full grid including the zero padding** (the padding is therefore part</span>
+<span class="sd">    of the statistics -- keep :class:`~physioex.data.steps.interp.FixedLength`</span>
+<span class="sd">    before this step in that pipeline).</span>
+
+<span class="sd">    If ``std == 0`` and ``eps == 0`` the step returns ``x - mean``</span>
+<span class="sd">    (a constant signal is degenerate for a ratio).</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    ddof : int</span>
+<span class="sd">        Delta degrees of freedom for the standard deviation (default 0).</span>
+<span class="sd">    eps : float</span>
+<span class="sd">        Floor for the standard deviation (default 0.0).</span>
+<span class="sd">    """</span>
+
+<div class="viewcode-block" id="ZScore.__init__">
+<a class="viewcode-back" href="../../../../api/_generated/physioex.data.ZScore.html#physioex.data.ZScore.__init__">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ddof</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">eps</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">ddof</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"ddof must be &gt;= 0; got </span><span class="si">{</span><span class="n">ddof</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ddof</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">ddof</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">eps</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">eps</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="ZScore.spec">
+<a class="viewcode-back" href="../../../../api/_generated/physioex.data.ZScore.html#physioex.data.ZScore.spec">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">spec</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_build_spec</span><span class="p">(</span><span class="n">ddof</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ddof</span><span class="p">,</span> <span class="n">eps</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">eps</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="ZScore.compile">
+<a class="viewcode-back" href="../../../../api/_generated/physioex.data.ZScore.html#physioex.data.ZScore.compile">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">compile</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fs_in</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">header</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">CompiledStep</span><span class="p">:</span>
+        <span class="n">ddof</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ddof</span>
+        <span class="n">eps</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">eps</span>
+
+        <span class="k">def</span><span class="w"> </span><span class="nf">apply</span><span class="p">(</span><span class="n">signal</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">signal</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+            <span class="n">mean</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+            <span class="c1"># ddof is only valid for a non-empty signal; a degenerate</span>
+            <span class="c1"># (all-NaN) signal is left unchanged.</span>
+            <span class="k">if</span> <span class="n">x</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">x</span><span class="p">)</span><span class="o">.</span><span class="n">any</span><span class="p">():</span>
+                <span class="k">return</span> <span class="n">x</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+            <span class="n">std</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">ddof</span><span class="o">=</span><span class="n">ddof</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">std</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">eps</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">return</span> <span class="p">(</span><span class="n">x</span> <span class="o">-</span> <span class="n">mean</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+            <span class="k">return</span> <span class="p">((</span><span class="n">x</span> <span class="o">-</span> <span class="n">mean</span><span class="p">)</span> <span class="o">/</span> <span class="nb">max</span><span class="p">(</span><span class="n">std</span><span class="p">,</span> <span class="n">eps</span><span class="p">))</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="n">CompiledStep</span><span class="p">(</span><span class="n">apply</span><span class="o">=</span><span class="n">apply</span><span class="p">,</span> <span class="n">fs_out</span><span class="o">=</span><span class="n">fs_in</span><span class="p">)</span></div>
 </div>

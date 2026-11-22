@@ -354,6 +354,9 @@
 <li class="toctree-l1 has-children"><a class="reference internal" href="train/networks.html">Model architectures</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="train/networks/chambon2018.html"><code class="docutils literal notranslate"><span class="pre">Chambon2018</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="train/networks/protosleepnet.html"><code class="docutils literal notranslate"><span class="pre">ProtoSleepNet</span></code> and <code class="docutils literal notranslate"><span class="pre">ProtoSleepTransformer</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="train/networks/wav2sleep.html"><code class="docutils literal notranslate"><span class="pre">Wav2Sleep</span></code> (Carter &amp; Tarassenko, 2024)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="train/networks/jones_ecg.html"><code class="docutils literal notranslate"><span class="pre">JonesECGNet</span></code> (Jones, Itti &amp; Sheth, 2024)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="train/networks/sleepppgnet.html"><code class="docutils literal notranslate"><span class="pre">SleepPPGNet</span></code> (Kotzen et al., 2023) — replica weights</a></li>
 </ul>
 </details></li>
 <li class="toctree-l1"><a class="reference internal" href="explain/explain.html">Explain Module</a></li>
@@ -445,7 +448,9 @@ yourself for full control.</p></li>
 <span class="c1"># includes: 'raw', 'seqsleepnet', 'identity', 'time_domain', 'time_frequency',</span>
 <span class="c1">#           per-modality ('eeg', 'eog', 'emg', 'ecg'), 'coresleep',</span>
 <span class="c1">#           and foundation-model presets ('biot', 'bendr', 'cbramod',</span>
-<span class="c1">#           'labram', 'sleepfm', 'tfc', 'reve', 'sjepa', 'neurolm')</span>
+<span class="c1">#           'labram', 'sleepfm', 'tfc', 'reve', 'sjepa', 'neurolm'),</span>
+<span class="c1">#           and cardiorespiratory presets ('wav2sleep', 'sleepppgnet',</span>
+<span class="c1">#           'jones_ecg')</span>
 
 <span class="n">pipe</span> <span class="o">=</span> <span class="n">get_preset</span><span class="p">(</span><span class="s2">"seqsleepnet"</span><span class="p">)</span>   <span class="c1"># a PreprocessingPipeline</span>
 </pre></div>
@@ -469,6 +474,35 @@ usually pass the preset name straight to the dataset:</p>
                            <span class="n">sequence_length</span><span class="o">=</span><span class="mi">21</span><span class="p">)</span>
 </pre></div>
 </div>
+<section id="cardiorespiratory-presets">
+<h3>Cardiorespiratory presets<a class="headerlink" href="#cardiorespiratory-presets" title="Link to this heading">#</a></h3>
+<p>Three presets reproduce the preprocessing of published cardiorespiratory
+models; each is meant for whole nights (<code class="docutils literal notranslate"><span class="pre">sequence_length=0</span></code>):</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Preset</p></th>
+<th class="head"><p>Signals</p></th>
+<th class="head"><p>Steps</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">wav2sleep</span></code></p></td>
+<td><p>ECG, PPG, ABD, THX, EOG</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">PhysicalScale</span></code> (mV or physical range) → <code class="docutils literal notranslate"><span class="pre">InterpResample</span></code> (1024 samples per epoch; 256 for ABD/THX, 4096 for EOG) → <code class="docutils literal notranslate"><span class="pre">FixedLength</span></code> (10 h, zero fill) → <code class="docutils literal notranslate"><span class="pre">ZScore</span></code> over the whole grid</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">sleepppgnet</span></code></p></td>
+<td><p>PPG</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">ChebyshevLowpass</span></code> (8 Hz) → <code class="docutils literal notranslate"><span class="pre">FFTResample</span></code> (1024 samples per epoch) → <code class="docutils literal notranslate"><span class="pre">Clip</span></code> (3 SD) → <code class="docutils literal notranslate"><span class="pre">ZScore</span></code> → <code class="docutils literal notranslate"><span class="pre">FixedLength</span></code> (10 h)</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">jones_ecg</span></code></p></td>
+<td><p>ECG</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">JonesECGPreprocess</span></code>: port of the authors’ MATLAB pipeline, 256 Hz output in [-1, 1]</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">wav2sleep</span></code> is a per-modality bundle, the other two are single pipelines.</p>
+</section>
 </section>
 <section id="composing-a-pipeline-manually">
 <h2>Composing a pipeline manually<a class="headerlink" href="#composing-a-pipeline-manually" title="Link to this heading">#</a></h2>
@@ -510,6 +544,24 @@ presets apply modality-specific filtering.</p>
 <dd class="field-odd"><p><strong>steps</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.15)"><em>List</em></a><em>[</em><a class="reference internal" href="../api/_generated/physioex.data.PreprocessingStep.html#physioex.data.PreprocessingStep" title="physioex.data.pipeline.PreprocessingStep"><em>PreprocessingStep</em></a><em>]</em>)</p>
 </dd>
 </dl>
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">compile</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fs_in</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">header</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/physioex/data/pipeline.html#PreprocessingPipeline.compile"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Compile every step for <code class="docutils literal notranslate"><span class="pre">fs_in</span></code>, threading the per-channel
+<code class="docutils literal notranslate"><span class="pre">header</span></code> (optional) through to the steps that need it.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>fs_in</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><em>float</em></a>)</p></li>
+<li><p><strong>header</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Dict" title="(in Python v3.15)"><em>Dict</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><em>str</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.15)"><em>Any</em></a><em>] </em><em>| </em><em>None</em>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="../api/_generated/physioex.data.CompiledPipeline.html#physioex.data.CompiledPipeline" title="physioex.data.pipeline.CompiledPipeline"><em>CompiledPipeline</em></a></p>
+</dd>
+</dl>
+</dd></dl>
+
 </dd></dl>
 
 <dl class="py class">
@@ -519,11 +571,20 @@ presets apply modality-specific filtering.</p>
 <p>Base class for all preprocessing operations.</p>
 <dl class="py method">
 <dt class="sig sig-object py">
-<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">compile</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fs_in</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/physioex/data/pipeline.html#PreprocessingStep.compile"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
-<dd><p>Precompute any expensive state and return a callable specialized for fs_in.</p>
+<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">compile</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fs_in</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">header</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/physioex/data/pipeline.html#PreprocessingStep.compile"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Precompute any expensive state and return a callable specialized
+for fs_in.</p>
+<p><code class="docutils literal notranslate"><span class="pre">header</span></code> is an optional per-channel metadata dict (physical
+dimension, physical min/max, …) forwarded to steps that declare
+they need it (<code class="docutils literal notranslate"><span class="pre">needs_header</span></code> attribute, e.g. <code class="docutils literal notranslate"><span class="pre">PhysicalScale</span></code>).
+Steps that ignore it simply do not read it; the signature default
+keeps every existing <code class="docutils literal notranslate"><span class="pre">compile(fs)</span></code> call site working.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>fs_in</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><em>float</em></a>)</p>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>fs_in</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><em>float</em></a>)</p></li>
+<li><p><strong>header</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Dict" title="(in Python v3.15)"><em>Dict</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><em>str</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.15)"><em>Any</em></a><em>] </em><em>| </em><em>None</em>)</p></li>
+</ul>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p><a class="reference internal" href="../api/_generated/physioex.data.CompiledStep.html#physioex.data.CompiledStep" title="physioex.data.pipeline.CompiledStep"><em>CompiledStep</em></a></p>
@@ -626,7 +687,10 @@ documented in the auto-generated <a class="reference internal" href="../api/inde
   </div>
   <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#presets">Presets</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#presets">Presets</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cardiorespiratory-presets">Cardiorespiratory presets</a></li>
+</ul>
+</li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#composing-a-pipeline-manually">Composing a pipeline manually</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#api">API</a></li>
 </ul>

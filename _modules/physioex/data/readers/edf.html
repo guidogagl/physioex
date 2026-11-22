@@ -456,7 +456,7 @@ window.addEventListener("load", () => mermaid.run());
 <span class="p">}</span>
 
 
-<span class="n">KNOWN_MODALITIES</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">DEFAULT_PREFERENCES</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+<span class="n">KNOWN_MODALITIES</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">DEFAULT_PREFERENCES</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span> <span class="o">|</span> <span class="p">{</span><span class="s2">"RESP"</span><span class="p">,</span> <span class="s2">"PPG"</span><span class="p">,</span> <span class="s2">"ABD"</span><span class="p">,</span> <span class="s2">"THX"</span><span class="p">}</span>
 
 
 <span class="k">class</span><span class="w"> </span><span class="nc">ChannelNotAvailableError</span><span class="p">(</span><span class="ne">ValueError</span><span class="p">):</span>

@@ -1,0 +1,83 @@
+﻿physioex.models.sleepppgnet.SleepPPGNet
+=======================================
+
+.. currentmodule:: physioex.models.sleepppgnet
+
+.. autoclass:: SleepPPGNet
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~SleepPPGNet.__init__
+      ~SleepPPGNet.add_module
+      ~SleepPPGNet.apply
+      ~SleepPPGNet.bfloat16
+      ~SleepPPGNet.buffers
+      ~SleepPPGNet.children
+      ~SleepPPGNet.compile
+      ~SleepPPGNet.cpu
+      ~SleepPPGNet.cuda
+      ~SleepPPGNet.double
+      ~SleepPPGNet.eval
+      ~SleepPPGNet.extra_repr
+      ~SleepPPGNet.float
+      ~SleepPPGNet.forward
+      ~SleepPPGNet.from_original
+      ~SleepPPGNet.get_buffer
+      ~SleepPPGNet.get_extra_state
+      ~SleepPPGNet.get_parameter
+      ~SleepPPGNet.get_submodule
+      ~SleepPPGNet.half
+      ~SleepPPGNet.ipu
+      ~SleepPPGNet.load_state_dict
+      ~SleepPPGNet.modules
+      ~SleepPPGNet.mtia
+      ~SleepPPGNet.named_buffers
+      ~SleepPPGNet.named_children
+      ~SleepPPGNet.named_modules
+      ~SleepPPGNet.named_parameters
+      ~SleepPPGNet.parameters
+      ~SleepPPGNet.predict_night
+      ~SleepPPGNet.register_backward_hook
+      ~SleepPPGNet.register_buffer
+      ~SleepPPGNet.register_forward_hook
+      ~SleepPPGNet.register_forward_pre_hook
+      ~SleepPPGNet.register_full_backward_hook
+      ~SleepPPGNet.register_full_backward_pre_hook
+      ~SleepPPGNet.register_load_state_dict_post_hook
+      ~SleepPPGNet.register_load_state_dict_pre_hook
+      ~SleepPPGNet.register_module
+      ~SleepPPGNet.register_parameter
+      ~SleepPPGNet.register_state_dict_post_hook
+      ~SleepPPGNet.register_state_dict_pre_hook
+      ~SleepPPGNet.requires_grad_
+      ~SleepPPGNet.set_extra_state
+      ~SleepPPGNet.set_submodule
+      ~SleepPPGNet.share_memory
+      ~SleepPPGNet.state_dict
+      ~SleepPPGNet.to
+      ~SleepPPGNet.to_empty
+      ~SleepPPGNet.train
+      ~SleepPPGNet.type
+      ~SleepPPGNet.xpu
+      ~SleepPPGNet.zero_grad
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~SleepPPGNet.T_destination
+      ~SleepPPGNet.call_super_init
+      ~SleepPPGNet.dump_patches
+      ~SleepPPGNet.training
+   
+   

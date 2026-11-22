@@ -822,6 +822,137 @@ window.addEventListener("load", () => mermaid.run());
     <span class="s2">"mae"</span><span class="p">:</span> <span class="n">mae_score</span><span class="p">,</span>
     <span class="s2">"r2"</span><span class="p">:</span> <span class="n">r2_score</span><span class="p">,</span>
 <span class="p">}</span>
+
+
+<span class="c1"># ---------------------------------------------------------------------------</span>
+<span class="c1"># Record-level Cohen's kappa aggregations (numpy, class-index inputs)</span>
+<span class="c1">#</span>
+<span class="c1"># Published sleep-staging results aggregate kappa in two ways:</span>
+<span class="c1">#   * pooled: one confusion matrix over every scored epoch of every</span>
+<span class="c1">#     recording (wav2sleep's kappa_T, Jones' ``overall_kappa``);</span>
+<span class="c1">#   * per-record: one kappa per recording, then the median across</span>
+<span class="c1">#     recordings (SleepPPG-Net, Jones' headline metric).</span>
+<span class="c1"># Both use the standard Cohen's kappa of the confusion matrix</span>
+<span class="c1"># (identical to ``sklearn.metrics.cohen_kappa_score``).</span>
+<span class="c1"># ---------------------------------------------------------------------------</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_as_index_array</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">"np.ndarray"</span><span class="p">:</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">x</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="record_confusion_matrix">
+<a class="viewcode-back" href="../../../api/_generated/physioex.train.metrics.html#physioex.train.metrics.record_confusion_matrix">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">record_confusion_matrix</span><span class="p">(</span>
+    <span class="n">y_true</span><span class="p">,</span> <span class="n">y_pred</span><span class="p">,</span> <span class="n">n_classes</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">ignore_index</span><span class="p">:</span> <span class="n">typing</span><span class="o">.</span><span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">"np.ndarray"</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Confusion matrix (rows = true, columns = predicted) of one recording.</span>
+
+<span class="sd">    ``y_true`` and ``y_pred`` are class indices of equal length (numpy arrays,</span>
+<span class="sd">    lists or tensors). Epochs whose true label equals ``ignore_index``</span>
+<span class="sd">    (unscored or padding) are dropped.</span>
+<span class="sd">    """</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+    <span class="n">t</span> <span class="o">=</span> <span class="n">_as_index_array</span><span class="p">(</span><span class="n">y_true</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">)</span>
+    <span class="n">p</span> <span class="o">=</span> <span class="n">_as_index_array</span><span class="p">(</span><span class="n">y_pred</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">t</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="n">p</span><span class="o">.</span><span class="n">shape</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"y_true and y_pred differ in length: </span><span class="si">{</span><span class="n">t</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2"> vs </span><span class="si">{</span><span class="n">p</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">ignore_index</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">keep</span> <span class="o">=</span> <span class="n">t</span> <span class="o">!=</span> <span class="n">ignore_index</span>
+        <span class="n">t</span><span class="p">,</span> <span class="n">p</span> <span class="o">=</span> <span class="n">t</span><span class="p">[</span><span class="n">keep</span><span class="p">],</span> <span class="n">p</span><span class="p">[</span><span class="n">keep</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">t</span><span class="o">.</span><span class="n">size</span> <span class="ow">and</span> <span class="p">(</span>
+        <span class="n">t</span><span class="o">.</span><span class="n">min</span><span class="p">()</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">t</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">&gt;=</span> <span class="n">n_classes</span> <span class="ow">or</span> <span class="n">p</span><span class="o">.</span><span class="n">min</span><span class="p">()</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">p</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">&gt;=</span> <span class="n">n_classes</span>
+    <span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"class index outside [0, </span><span class="si">{</span><span class="n">n_classes</span><span class="si">}</span><span class="s2">) after removing ignore_index"</span>
+        <span class="p">)</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">bincount</span><span class="p">(</span><span class="n">t</span> <span class="o">*</span> <span class="n">n_classes</span> <span class="o">+</span> <span class="n">p</span><span class="p">,</span> <span class="n">minlength</span><span class="o">=</span><span class="n">n_classes</span> <span class="o">*</span> <span class="n">n_classes</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span>
+        <span class="n">n_classes</span><span class="p">,</span> <span class="n">n_classes</span>
+    <span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="kappa_from_confusion">
+<a class="viewcode-back" href="../../../api/_generated/physioex.train.metrics.html#physioex.train.metrics.kappa_from_confusion">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">kappa_from_confusion</span><span class="p">(</span><span class="n">cm</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Cohen's kappa of a confusion matrix; NaN when it is undefined.</span>
+
+<span class="sd">    Undefined cases: an empty matrix, or chance agreement equal to 1 (one</span>
+<span class="sd">    class only in both rater marginals).</span>
+<span class="sd">    """</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+    <span class="n">cm</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">cm</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+    <span class="n">total</span> <span class="o">=</span> <span class="n">cm</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">total</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="s2">"nan"</span><span class="p">)</span>
+    <span class="n">po</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="n">cm</span><span class="p">)</span> <span class="o">/</span> <span class="n">total</span>
+    <span class="n">pe</span> <span class="o">=</span> <span class="nb">float</span><span class="p">((</span><span class="n">cm</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span> <span class="o">*</span> <span class="n">cm</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">))</span><span class="o">.</span><span class="n">sum</span><span class="p">())</span> <span class="o">/</span> <span class="p">(</span><span class="n">total</span> <span class="o">*</span> <span class="n">total</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">isclose</span><span class="p">(</span><span class="n">pe</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="s2">"nan"</span><span class="p">)</span>
+    <span class="k">return</span> <span class="nb">float</span><span class="p">((</span><span class="n">po</span> <span class="o">-</span> <span class="n">pe</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">-</span> <span class="n">pe</span><span class="p">))</span></div>
+
+
+
+<div class="viewcode-block" id="pooled_kappa">
+<a class="viewcode-back" href="../../../api/_generated/physioex.train.metrics.html#physioex.train.metrics.pooled_kappa">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">pooled_kappa</span><span class="p">(</span>
+    <span class="n">y_true_records</span><span class="p">,</span>
+    <span class="n">y_pred_records</span><span class="p">,</span>
+    <span class="n">n_classes</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">ignore_index</span><span class="p">:</span> <span class="n">typing</span><span class="o">.</span><span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Kappa of the confusion matrix summed over all recordings (kappa_T)."""</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+    <span class="n">cm</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">n_classes</span><span class="p">,</span> <span class="n">n_classes</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">t</span><span class="p">,</span> <span class="n">p</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">y_true_records</span><span class="p">,</span> <span class="n">y_pred_records</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="n">cm</span> <span class="o">+=</span> <span class="n">record_confusion_matrix</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">p</span><span class="p">,</span> <span class="n">n_classes</span><span class="p">,</span> <span class="n">ignore_index</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">kappa_from_confusion</span><span class="p">(</span><span class="n">cm</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="per_record_kappa">
+<a class="viewcode-back" href="../../../api/_generated/physioex.train.metrics.html#physioex.train.metrics.per_record_kappa">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">per_record_kappa</span><span class="p">(</span>
+    <span class="n">y_true_records</span><span class="p">,</span>
+    <span class="n">y_pred_records</span><span class="p">,</span>
+    <span class="n">n_classes</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">ignore_index</span><span class="p">:</span> <span class="n">typing</span><span class="o">.</span><span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">"np.ndarray"</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""One kappa per recording (NaN where kappa is undefined)."""</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+        <span class="p">[</span>
+            <span class="n">kappa_from_confusion</span><span class="p">(</span><span class="n">record_confusion_matrix</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">p</span><span class="p">,</span> <span class="n">n_classes</span><span class="p">,</span> <span class="n">ignore_index</span><span class="p">))</span>
+            <span class="k">for</span> <span class="n">t</span><span class="p">,</span> <span class="n">p</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">y_true_records</span><span class="p">,</span> <span class="n">y_pred_records</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="p">],</span>
+        <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span>
+    <span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="median_record_kappa">
+<a class="viewcode-back" href="../../../api/_generated/physioex.train.metrics.html#physioex.train.metrics.median_record_kappa">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">median_record_kappa</span><span class="p">(</span>
+    <span class="n">y_true_records</span><span class="p">,</span>
+    <span class="n">y_pred_records</span><span class="p">,</span>
+    <span class="n">n_classes</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">ignore_index</span><span class="p">:</span> <span class="n">typing</span><span class="o">.</span><span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Median of the per-recording kappas, ignoring undefined (NaN) ones."""</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+    <span class="n">k</span> <span class="o">=</span> <span class="n">per_record_kappa</span><span class="p">(</span><span class="n">y_true_records</span><span class="p">,</span> <span class="n">y_pred_records</span><span class="p">,</span> <span class="n">n_classes</span><span class="p">,</span> <span class="n">ignore_index</span><span class="p">)</span>
+    <span class="n">k</span> <span class="o">=</span> <span class="n">k</span><span class="p">[</span><span class="o">~</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">k</span><span class="p">)]</span>
+    <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">k</span><span class="p">))</span> <span class="k">if</span> <span class="n">k</span><span class="o">.</span><span class="n">size</span> <span class="k">else</span> <span class="nb">float</span><span class="p">(</span><span class="s2">"nan"</span><span class="p">)</span></div>
+
 </pre></div>
 
                 </article>

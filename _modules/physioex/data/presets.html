@@ -435,6 +435,14 @@ window.addEventListener("load", () => mermaid.run());
     <span class="n">NotchFilter</span><span class="p">,</span>
     <span class="n">Resample</span><span class="p">,</span>
     <span class="n">XSleepNetSpectrogram</span><span class="p">,</span>
+    <span class="n">ChebyshevLowpass</span><span class="p">,</span>
+    <span class="n">FFTResample</span><span class="p">,</span>
+    <span class="n">InterpResample</span><span class="p">,</span>
+    <span class="n">FixedLength</span><span class="p">,</span>
+    <span class="n">Clip</span><span class="p">,</span>
+    <span class="n">ZScore</span><span class="p">,</span>
+    <span class="n">PhysicalScale</span><span class="p">,</span>
+    <span class="n">JonesECGPreprocess</span><span class="p">,</span>
 <span class="p">)</span>
 
 
@@ -746,6 +754,93 @@ window.addEventListener("load", () => mermaid.run());
     <span class="p">}</span>
 
 
+<span class="k">def</span><span class="w"> </span><span class="nf">_wav2sleep_pipeline</span><span class="p">(</span><span class="n">modality</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">PreprocessingPipeline</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""One wav2sleep modality pipeline: scale -&gt; interpolate -&gt; pad -&gt; z-score.</span>
+
+<span class="sd">    ECG / EOG are converted to mV, PPG and RESP are mapped to ``[-1, 1]``</span>
+<span class="sd">    from their header physical range.  All modalities are interpolated onto</span>
+<span class="sd">    a 1024 (ECG/PPG/EOG) or 256 (RESP) samples / 30 s grid, padded or</span>
+<span class="sd">    truncated to a 10 h (36000 s) window, and z-scored over the *full*</span>
+<span class="sd">    grid **including the zero padding** (the padding is therefore part of</span>
+<span class="sd">    the statistics, as in the reference code).</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="n">modality</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"ECG"</span><span class="p">,</span> <span class="s2">"EOG"</span><span class="p">):</span>
+        <span class="n">scale</span> <span class="o">=</span> <span class="n">PhysicalScale</span><span class="p">(</span><span class="s2">"mV"</span><span class="p">)</span>
+        <span class="n">spe</span> <span class="o">=</span> <span class="mi">1024</span> <span class="k">if</span> <span class="n">modality</span> <span class="o">==</span> <span class="s2">"ECG"</span> <span class="k">else</span> <span class="mi">4096</span>
+    <span class="k">else</span><span class="p">:</span>  <span class="c1"># PPG, RESP</span>
+        <span class="n">scale</span> <span class="o">=</span> <span class="n">PhysicalScale</span><span class="p">(</span><span class="s2">"range"</span><span class="p">)</span>
+        <span class="n">spe</span> <span class="o">=</span> <span class="mi">1024</span> <span class="k">if</span> <span class="n">modality</span> <span class="o">==</span> <span class="s2">"PPG"</span> <span class="k">else</span> <span class="mi">256</span>
+    <span class="k">return</span> <span class="n">PreprocessingPipeline</span><span class="p">(</span>
+        <span class="p">[</span>
+            <span class="n">scale</span><span class="p">,</span>
+            <span class="n">InterpResample</span><span class="p">(</span><span class="n">samples_per_epoch</span><span class="o">=</span><span class="n">spe</span><span class="p">),</span>
+            <span class="n">FixedLength</span><span class="p">(</span><span class="n">seconds</span><span class="o">=</span><span class="mf">36000.0</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="mf">0.0</span><span class="p">),</span>
+            <span class="n">ZScore</span><span class="p">(</span><span class="n">ddof</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">eps</span><span class="o">=</span><span class="mf">1e-6</span><span class="p">),</span>
+        <span class="p">]</span>
+    <span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">wav2sleep_preset</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">PreprocessingPipeline</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Per-modality preset for wav2sleep (Carter &amp; Tarassenko, 2024).</span>
+
+<span class="sd">    wav2sleep stages sleep from cardiac and respiratory signals (ECG,</span>
+<span class="sd">    PPG, ABD, THX; plus an EOG variant). The reference preprocessing</span>
+<span class="sd">    (``joncarter/wav2sleep``) converts ECG/EOG to millivolts and PPG/RESP</span>
+<span class="sd">    to ``[-1, 1]``, interpolates each channel onto a fixed</span>
+<span class="sd">    samples-per-30-second grid (1024 for ECG/PPG, 4096 for EOG, 256 for</span>
+<span class="sd">    RESP), pads or truncates every recording to a 10-hour (36000 s)</span>
+<span class="sd">    window with zeros, and finally z-scores each channel over the full</span>
+<span class="sd">    grid *including the zero padding* (``ddof=1``, ``eps=1e-6``). The</span>
+<span class="sd">    10 h window at 34.13 samples/s yields 1200 epochs of 1024 samples</span>
+<span class="sd">    (ECG/PPG) or 256 samples (RESP); the 4096-sample EOG grid is</span>
+<span class="sd">    re-epoch-ed at load time.</span>
+<span class="sd">    """</span>
+    <span class="n">preset</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="n">modality</span><span class="p">:</span> <span class="n">_wav2sleep_pipeline</span><span class="p">(</span><span class="n">modality</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">modality</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"ECG"</span><span class="p">,</span> <span class="s2">"PPG"</span><span class="p">,</span> <span class="s2">"RESP"</span><span class="p">,</span> <span class="s2">"EOG"</span><span class="p">)</span>
+    <span class="p">}</span>
+    <span class="c1"># ABD and THX are resolved as modality requests of their own (they are</span>
+    <span class="c1"># in the EDF reader's known modalities), so they need explicit entries;</span>
+    <span class="c1"># without them they would fall back to the Identity pipeline.</span>
+    <span class="n">preset</span><span class="p">[</span><span class="s2">"ABD"</span><span class="p">]</span> <span class="o">=</span> <span class="n">preset</span><span class="p">[</span><span class="s2">"THX"</span><span class="p">]</span> <span class="o">=</span> <span class="n">preset</span><span class="p">[</span><span class="s2">"RESP"</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">preset</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">sleepppgnet_preset</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">PreprocessingPipeline</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""PPG preset for SleepPPG-Net (Kotzen et al., 2023; SPPPPG-Net).</span>
+
+<span class="sd">    SleepPPG-Net stages sleep from the pulse-oximeter plethysmogram.</span>
+<span class="sd">    The reference (third-party replica) preprocessing applies an</span>
+<span class="sd">    8th-order Chebyshev type-II lowpass at 8 Hz (-40 dB stop band),</span>
+<span class="sd">    FFT-resamples to 1024 samples / 30 s, clips outliers at 3 standard</span>
+<span class="sd">    deviations, z-scores (``ddof=0``), and pads/truncates to the 10-hour</span>
+<span class="sd">    (36000 s) window, i.e. 1200 epochs of 1024 samples at</span>
+<span class="sd">    1024/30 Hz.</span>
+<span class="sd">    """</span>
+    <span class="k">return</span> <span class="n">PreprocessingPipeline</span><span class="p">(</span>
+        <span class="p">[</span>
+            <span class="n">ChebyshevLowpass</span><span class="p">(</span><span class="n">cutoff_hz</span><span class="o">=</span><span class="mf">8.0</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span> <span class="n">stop_db</span><span class="o">=</span><span class="mf">40.0</span><span class="p">),</span>
+            <span class="n">FFTResample</span><span class="p">(</span><span class="n">target_fs</span><span class="o">=</span><span class="mf">1024.0</span> <span class="o">/</span> <span class="mf">30.0</span><span class="p">),</span>
+            <span class="n">Clip</span><span class="p">(</span><span class="n">n_std</span><span class="o">=</span><span class="mf">3.0</span><span class="p">),</span>
+            <span class="n">ZScore</span><span class="p">(</span><span class="n">ddof</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">eps</span><span class="o">=</span><span class="mf">0.0</span><span class="p">),</span>
+            <span class="n">FixedLength</span><span class="p">(</span><span class="n">seconds</span><span class="o">=</span><span class="mf">36000.0</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="mf">0.0</span><span class="p">),</span>
+        <span class="p">]</span>
+    <span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">jones_ecg_preset</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">PreprocessingPipeline</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""ECG preset for Jones, Itti &amp; Sheth (2024).</span>
+
+<span class="sd">    The full reference ECG pipeline (clip-mask removal, Chebyshev-II</span>
+<span class="sd">    high-pass 0.5/0.25 Hz, 60 Hz line notch + iterative extra-noise</span>
+<span class="sd">    notches, resample to 256 Hz, R-wave normalization, clip to</span>
+<span class="sd">    ``[-1, 1]``) as a single step.  Output is 7680 samples per 30 s</span>
+<span class="sd">    epoch (256 Hz), the input layout of</span>
+<span class="sd">    :class:`physioex.models.jones_ecg.JonesECGNet`.</span>
+<span class="sd">    """</span>
+    <span class="k">return</span> <span class="n">PreprocessingPipeline</span><span class="p">([</span><span class="n">JonesECGPreprocess</span><span class="p">()])</span>
+
+
 <span class="n">PRESETS</span> <span class="o">=</span> <span class="p">{</span>
     <span class="c1"># uniform (single-pipeline) presets</span>
     <span class="s2">"raw"</span><span class="p">:</span> <span class="n">raw_pipeline</span><span class="p">,</span>
@@ -761,6 +856,10 @@ window.addEventListener("load", () => mermaid.run());
     <span class="s2">"time_domain"</span><span class="p">:</span> <span class="n">time_domain_preset</span><span class="p">,</span>
     <span class="s2">"time_frequency"</span><span class="p">:</span> <span class="n">time_frequency_preset</span><span class="p">,</span>
     <span class="s2">"coresleep"</span><span class="p">:</span> <span class="n">coresleep_preset</span><span class="p">,</span>
+    <span class="c1"># cardiorespiratory sleep-staging presets</span>
+    <span class="s2">"wav2sleep"</span><span class="p">:</span> <span class="n">wav2sleep_preset</span><span class="p">,</span>
+    <span class="s2">"sleepppgnet"</span><span class="p">:</span> <span class="n">sleepppgnet_preset</span><span class="p">,</span>
+    <span class="s2">"jones_ecg"</span><span class="p">:</span> <span class="n">jones_ecg_preset</span><span class="p">,</span>
     <span class="c1"># foundation model presets (HP 0.5Hz + Notch 50Hz + Resample, matching EEGBenchmarks)</span>
     <span class="s2">"biot"</span><span class="p">:</span> <span class="n">biot_pipeline</span><span class="p">,</span>
     <span class="s2">"bendr"</span><span class="p">:</span> <span class="n">bendr_pipeline</span><span class="p">,</span>

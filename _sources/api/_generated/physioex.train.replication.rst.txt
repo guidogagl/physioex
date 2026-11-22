@@ -1,0 +1,31 @@
+﻿physioex.train.replication
+==========================
+
+.. automodule:: physioex.train.replication
+
+   
+   .. rubric:: Module Attributes
+
+   .. autosummary::
+   
+      SPLIT_VISITS
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      align
+      check
+      evaluate
+      format_table
+      has_scoring_issues
+      iter_nights
+      load_paper_metrics
+      replication_kwargs
+   
+   .. rubric:: Classes
+
+   .. autosummary::
+   
+      PaperTarget
+   

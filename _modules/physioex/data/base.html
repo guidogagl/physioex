@@ -441,6 +441,7 @@ window.addEventListener("load", () => mermaid.run());
     <span class="n">events_to_dicts</span><span class="p">,</span>
     <span class="n">dicts_to_events</span><span class="p">,</span>
 <span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">physioex.data.labels</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_label_transform</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">physioex.data.modality</span><span class="w"> </span><span class="kn">import</span> <span class="n">infer_channel_modality</span><span class="p">,</span> <span class="n">ModalityType</span><span class="p">,</span> <span class="n">MODALITY_TYPES</span>
 
 <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">"physioex.data"</span><span class="p">)</span>
@@ -531,7 +532,7 @@ window.addEventListener("load", () => mermaid.run());
         <span class="n">cache_dir</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">cache_enabled</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
         <span class="n">epoch_length_sec</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-        <span class="n">label_transform</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Callable</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">label_transform</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Callable</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">skip_corrupt</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
         <span class="n">skip_subjects_without_channels</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
         <span class="n">stage_map</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -556,7 +557,14 @@ window.addEventListener("load", () => mermaid.run());
             <span class="k">if</span> <span class="n">epoch_length_sec</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
             <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">DEFAULT_EPOCH_LENGTH_SEC</span>
         <span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">label_transform</span> <span class="o">=</span> <span class="n">label_transform</span>
+        <span class="c1"># ``label_transform`` accepts a named label scheme (e.g. ``"aasm4"``)</span>
+        <span class="c1"># as well as a callable: string names are resolved through</span>
+        <span class="c1"># ``physioex.data.labels.get_label_transform``.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">label_transform</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">get_label_transform</span><span class="p">(</span><span class="n">label_transform</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">label_transform</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span>
+            <span class="k">else</span> <span class="n">label_transform</span>
+        <span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">skip_corrupt</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">skip_corrupt</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">skip_subjects_without_channels</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">skip_subjects_without_channels</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">stage_map</span> <span class="o">=</span> <span class="n">stage_map</span>
@@ -642,6 +650,53 @@ window.addEventListener("load", () => mermaid.run());
 
         <span class="k">with</span> <span class="n">pyedflib</span><span class="o">.</span><span class="n">EdfReader</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">edf_path</span><span class="p">))</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">read_channel</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">resolved</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_channel_header</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">spec</span><span class="p">:</span> <span class="n">SubjectSpec</span><span class="p">,</span> <span class="n">resolved</span><span class="p">:</span> <span class="n">ResolvedChannel</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Per-channel header metadata for header-aware pipeline steps.</span>
+
+<span class="sd">        Returns a dict with ``physical_dimension`` and, for differential</span>
+<span class="sd">        pairs, the combined ``physical_min`` / ``physical_max`` (the</span>
+<span class="sd">        min/max of the wider channel, since ``|A - B| &lt;= max_range``).</span>
+<span class="sd">        Subclasses reading non-EDF sources should override this to provide</span>
+<span class="sd">        their own header fields; on any failure it returns ``{}`` so that</span>
+<span class="sd">        header-aware steps (``PhysicalScale``) degrade to passthrough with</span>
+<span class="sd">        a warning.</span>
+<span class="sd">        """</span>
+        <span class="kn">import</span><span class="w"> </span><span class="nn">pyedflib</span>
+
+        <span class="n">indices</span> <span class="o">=</span> <span class="n">resolved</span><span class="o">.</span><span class="n">_indices</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">indices</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">{}</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">with</span> <span class="n">pyedflib</span><span class="o">.</span><span class="n">EdfReader</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">edf_path</span><span class="p">))</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">resolved</span><span class="o">.</span><span class="n">is_differential</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">indices</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
+                        <span class="k">return</span> <span class="p">{}</span>
+                    <span class="n">i0</span><span class="p">,</span> <span class="n">i1</span> <span class="o">=</span> <span class="n">indices</span>
+                    <span class="n">unit0</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">getPhysicalDimension</span><span class="p">(</span><span class="n">i0</span><span class="p">)</span>
+                    <span class="n">unit1</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">getPhysicalDimension</span><span class="p">(</span><span class="n">i1</span><span class="p">)</span>
+                    <span class="n">min0</span><span class="p">,</span> <span class="n">max0</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">getPhysicalMinimum</span><span class="p">(</span><span class="n">i0</span><span class="p">),</span> <span class="n">f</span><span class="o">.</span><span class="n">getPhysicalMaximum</span><span class="p">(</span><span class="n">i0</span><span class="p">)</span>
+                    <span class="n">min1</span><span class="p">,</span> <span class="n">max1</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">getPhysicalMinimum</span><span class="p">(</span><span class="n">i1</span><span class="p">),</span> <span class="n">f</span><span class="o">.</span><span class="n">getPhysicalMaximum</span><span class="p">(</span><span class="n">i1</span><span class="p">)</span>
+                    <span class="n">pmin</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">min0</span><span class="p">),</span> <span class="nb">float</span><span class="p">(</span><span class="n">min1</span><span class="p">))</span>
+                    <span class="n">pmax</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">max0</span><span class="p">),</span> <span class="nb">float</span><span class="p">(</span><span class="n">max1</span><span class="p">))</span>
+                    <span class="k">return</span> <span class="p">{</span>
+                        <span class="s2">"physical_dimension"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">unit0</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">(),</span>
+                        <span class="s2">"physical_min"</span><span class="p">:</span> <span class="n">pmin</span><span class="p">,</span>
+                        <span class="s2">"physical_max"</span><span class="p">:</span> <span class="n">pmax</span><span class="p">,</span>
+                    <span class="p">}</span>
+                <span class="n">i0</span> <span class="o">=</span> <span class="n">indices</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="k">return</span> <span class="p">{</span>
+                    <span class="s2">"physical_dimension"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">getPhysicalDimension</span><span class="p">(</span><span class="n">i0</span><span class="p">))</span><span class="o">.</span><span class="n">strip</span><span class="p">(),</span>
+                    <span class="s2">"physical_min"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">getPhysicalMinimum</span><span class="p">(</span><span class="n">i0</span><span class="p">)),</span>
+                    <span class="s2">"physical_max"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">getPhysicalMaximum</span><span class="p">(</span><span class="n">i0</span><span class="p">)),</span>
+                <span class="p">}</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"[</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">DATASET_NAME</span><span class="si">}</span><span class="s2">] </span><span class="si">{</span><span class="n">spec</span><span class="o">.</span><span class="n">subject_id</span><span class="si">}</span><span class="s2">: could not read the "</span>
+                <span class="sa">f</span><span class="s2">"channel header (</span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">exc</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">); header-aware "</span>
+                <span class="sa">f</span><span class="s2">"steps (PhysicalScale) will pass the signal through"</span>
+            <span class="p">)</span>
+            <span class="k">return</span> <span class="p">{}</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_filter_subset</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">subjects</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">SubjectSpec</span><span class="p">],</span> <span class="n">subset</span><span class="p">:</span> <span class="nb">str</span>
@@ -1309,12 +1364,15 @@ window.addEventListener("load", () => mermaid.run());
                         <span class="sa">f</span><span class="s2">"Corrupt signal cache </span><span class="si">{</span><span class="n">signal_path</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">; recomputing"</span>
                     <span class="p">)</span>
 
-        <span class="c1"># Compile pipeline for this subject's channel fs</span>
+        <span class="c1"># Compile pipeline for this subject's channel fs. The per-channel</span>
+        <span class="c1"># header (physical dimension / range) reaches header-aware steps</span>
+        <span class="c1"># (PhysicalScale) through ``compile(header=...)``.</span>
         <span class="n">fs_in</span> <span class="o">=</span> <span class="n">resolved</span><span class="o">.</span><span class="n">fs_in</span>
+        <span class="n">header</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_channel_header</span><span class="p">(</span><span class="n">spec</span><span class="p">,</span> <span class="n">resolved</span><span class="p">)</span>
         <span class="n">compile_key</span> <span class="o">=</span> <span class="p">(</span><span class="n">pipeline_hash</span><span class="p">,</span> <span class="n">fs_in</span><span class="p">,</span> <span class="n">spec</span><span class="o">.</span><span class="n">subject_id</span><span class="p">)</span>
         <span class="n">compiled</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_compiled_pipelines</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">compile_key</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">compiled</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">compiled</span> <span class="o">=</span> <span class="n">pipeline</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">fs_in</span><span class="p">)</span>
+            <span class="n">compiled</span> <span class="o">=</span> <span class="n">pipeline</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">fs_in</span><span class="p">,</span> <span class="n">header</span><span class="o">=</span><span class="n">header</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_compiled_pipelines</span><span class="p">[</span><span class="n">compile_key</span><span class="p">]</span> <span class="o">=</span> <span class="n">compiled</span>
 
         <span class="c1"># Read raw signal</span>
@@ -1418,6 +1476,12 @@ window.addEventListener("load", () => mermaid.run());
 
 <span class="sd">        After all steps, if the signal is still 1D it is reshaped to</span>
 <span class="sd">        ``(n_epochs, samples_per_epoch)``.</span>
+
+<span class="sd">        The samples-per-epoch count is ``int(round(epoch_length_sec * fs))``</span>
+<span class="sd">        (never a bare ``int()`` cast): for fractional rates such as</span>
+<span class="sd">        ``fs = 1024 / 30`` (30-s epochs of 1024 samples) a truncating</span>
+<span class="sd">        ``int(30 * (1024/30))`` rounds down and silently shifts every</span>
+<span class="sd">        epoch boundary.</span>
 <span class="sd">        """</span>
         <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">raw</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
         <span class="n">fs</span> <span class="o">=</span> <span class="n">fs_in</span>
@@ -1430,6 +1494,11 @@ window.addEventListener("load", () => mermaid.run());
                 <span class="c1"># not already</span>
                 <span class="k">if</span> <span class="ow">not</span> <span class="n">epoched</span><span class="p">:</span>
                     <span class="n">sps</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">epoch_length_sec</span> <span class="o">*</span> <span class="n">fs</span><span class="p">))</span>
+                    <span class="k">if</span> <span class="n">sps</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+                        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                            <span class="sa">f</span><span class="s2">"epoch_length_sec=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">epoch_length_sec</span><span class="si">}</span><span class="s2"> at fs=</span><span class="si">{</span><span class="n">fs</span><span class="si">}</span><span class="s2"> "</span>
+                            <span class="sa">f</span><span class="s2">"yields 0 samples per epoch"</span>
+                        <span class="p">)</span>
                     <span class="n">n_full</span> <span class="o">=</span> <span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">//</span> <span class="n">sps</span><span class="p">)</span> <span class="o">*</span> <span class="n">sps</span>
                     <span class="n">x</span> <span class="o">=</span> <span class="n">x</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="p">:</span><span class="n">n_full</span><span class="p">]</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">sps</span><span class="p">)</span>
                     <span class="n">epoched</span> <span class="o">=</span> <span class="kc">True</span>
@@ -1441,6 +1510,11 @@ window.addEventListener("load", () => mermaid.run());
         <span class="k">if</span> <span class="ow">not</span> <span class="n">epoched</span><span class="p">:</span>
             <span class="c1"># No domain-changing step; epoch at the end</span>
             <span class="n">sps</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">epoch_length_sec</span> <span class="o">*</span> <span class="n">fs</span><span class="p">))</span>
+            <span class="k">if</span> <span class="n">sps</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">"epoch_length_sec=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">epoch_length_sec</span><span class="si">}</span><span class="s2"> at fs=</span><span class="si">{</span><span class="n">fs</span><span class="si">}</span><span class="s2"> "</span>
+                    <span class="sa">f</span><span class="s2">"yields 0 samples per epoch"</span>
+                <span class="p">)</span>
             <span class="n">n_full</span> <span class="o">=</span> <span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">//</span> <span class="n">sps</span><span class="p">)</span> <span class="o">*</span> <span class="n">sps</span>
             <span class="n">x</span> <span class="o">=</span> <span class="n">x</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="p">:</span><span class="n">n_full</span><span class="p">]</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">sps</span><span class="p">)</span>
 

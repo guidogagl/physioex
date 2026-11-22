@@ -1,0 +1,1250 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../../../" data-theme="light">
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>physioex.data.steps.jones_ecg &#8212; PhysioEx</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "light";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "light";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../../_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+<link href="../../../../_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/custom.css?v=885a8570" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="../../../../_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" />
+<link rel="preload" as="script" href="../../../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" />
+
+    <script src="../../../../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../../../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../../../_static/design-tabs.js?v=f930bc37"></script>
+    <script type="module" src="https://cdn.jsdelivr.net/npm/mermaid@11.4.0/dist/mermaid.esm.min.mjs"></script>
+    <script type="module" src="https://cdn.jsdelivr.net/npm/@mermaid-js/layout-elk@0.1.4/dist/mermaid-layout-elk.esm.min.mjs"></script>
+    <script type="module">import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.4.0/dist/mermaid.esm.min.mjs";import elkLayouts from "https://cdn.jsdelivr.net/npm/@mermaid-js/layout-elk@0.1.4/dist/mermaid-layout-elk.esm.min.mjs";mermaid.registerLayoutLoaders(elkLayouts);mermaid.initialize({startOnLoad:false});</script>
+    <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
+    <script type="module">
+import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.4.0/dist/mermaid.esm.min.mjs";
+window.addEventListener("load", () => mermaid.run());
+</script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/physioex/data/steps/jones_ecg';</script>
+    <link rel="icon" href="../../../../_static/logo_bar.svg"/>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="light">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../../../index.html">
+  
+  
+  
+  
+  
+    
+    
+    
+    <img src="../../../../_static/logo_bar.svg" class="logo__image only-light" alt="PhysioEx - Home"/>
+    <img src="../../../../_static/logo_bar.svg" class="logo__image only-dark pst-js-only" alt="PhysioEx - Home"/>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../pages/user_guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../related/index.html">
+    Related Works
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../api/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../pages/contribute.html">
+    Contributing to PhysioEx
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/guidogagl/physioex" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://guidogagl.github.io/" title="Website" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-globe fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Website</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar hide-on-wide">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../pages/user_guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../related/index.html">
+    Related Works
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../api/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../pages/contribute.html">
+    Contributing to PhysioEx
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/guidogagl/physioex" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://guidogagl.github.io/" title="Website" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-globe fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Website</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../../../index.html" class="nav-link">Module code</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">physioex.data.steps.jones_ecg</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for physioex.data.steps.jones_ecg</h1><div class="highlight"><pre>
+<span></span><span class="sd">"""ECG preprocessing for the Jones, Itti &amp; Sheth (2024) sleep-staging network.</span>
+
+<span class="sd">Python port of the authors' MATLAB preprocessing</span>
+<span class="sd">(``ecg-sleep-staging/paper/0_data_processing``: ``2_cut_clip_subtract_resample``,</span>
+<span class="sd">``3_templates``, ``5_sets``), implemented from the published functional</span>
+<span class="sd">description. The step takes one raw single-lead ECG channel (whole night,</span>
+<span class="sd">any sampling rate; for two-lead recordings the channel resolution already</span>
+<span class="sd">delivers the lead difference) and turns it into the network input of</span>
+<span class="sd">:class:`physioex.models.jones_ecg.JonesECGNet`: 256 Hz, scaled by the</span>
+<span class="sd">per-night R-wave normalization factor and hard-clipped to ``[-1, 1]``.</span>
+
+<span class="sd">Deviations from the MATLAB reference</span>
+<span class="sd">------------------------------------</span>
+<span class="sd">1. ``designfilt(..., 'cheby2', ..., 'MatchExactly', 'passband')`` has no</span>
+<span class="sd">   closed-form order; the order is found by searching for the minimal N</span>
+<span class="sd">   whose passband ripple stays &lt;= 0.1 dB up to 0.5 Hz (the stopband spec</span>
+<span class="sd">   only sets the transition).  Typically &lt; 1e-6 different frequency</span>
+<span class="sd">   response from MATLAB's solver.</span>
+<span class="sd">2. ``designfilt('butter', ..., 'MatchExactly', 'passband')`` for the</span>
+<span class="sd">   local-variation low-pass is handled the same way: minimal Butterworth</span>
+<span class="sd">   order meeting &lt;= 1 dB ripple at 8 Hz.</span>
+<span class="sd">3. The mask-smoothing spline call in ``smooth_mask_array.m``</span>
+<span class="sd">   (``spline([0, 0.5, 1], [0, 0, 0.5, 1, 0])``) is malformed as written</span>
+<span class="sd">   (3 knots, 5 values); the documented intent is a monotone S-curve with</span>
+<span class="sd">   zero end derivatives, so we use smoothstep ``g(t) = 3t^2 - 2t^3``.</span>
+<span class="sd">4. MATLAB ``resample(x, p, q)`` uses a Kaiser-window FIR; we use</span>
+<span class="sd">   ``scipy.signal.resample_poly(x, p, q, window=('kaiser', 8))`` with the</span>
+<span class="sd">   same ``10*max(p, q)`` tap count — same architecture, not bit-exact.</span>
+<span class="sd">5. ``robust_zscore`` is not in the authors' tree; per its signature we</span>
+<span class="sd">   implement ``z(x) = (x - median(x)) / (1.4826 * med(|x - median(x)|))``</span>
+<span class="sd">   (assumption to verify against the missing file).</span>
+<span class="sd">6. Moving-window operators with MATLAB edge truncation (``movvar``,</span>
+<span class="sd">   ``movmedian``, ``movmax``, ``movmean`` one-sided variants) are</span>
+<span class="sd">   implemented with explicit sliding windows so edge semantics match</span>
+<span class="sd">   MATLAB (``scipy.ndimage`` would mirror/reflect instead).</span>
+<span class="sd">7. ``prctile(x, 50:5:100)(end-2) * 2`` is the 95th percentile (linear</span>
+<span class="sd">   interpolation, MATLAB default) times 2; the step contract is</span>
+<span class="sd">   "2 x the 90th percentile of per-beat max |x|", and we implement</span>
+<span class="sd">   ``2 * np.percentile(beatsmax, 90)`` per the contract.</span>
+<span class="sd">8. If the archetype download fails, the template falls back to the</span>
+<span class="sd">   column-median of the detected beats (documented deviation).</span>
+
+<span class="sd">Archetypes</span>
+<span class="sd">----------</span>
+<span class="sd">``archetypes_path=None`` (the default) downloads</span>
+<span class="sd">``archetypes.mat`` from the authors' repository on first use through</span>
+<span class="sd">``physioex.models.foundation_checkpoints`` under the registry name</span>
+<span class="sd">``"jones-ecg-archetypes"``; an explicit ``archetypes_path`` is used as-is.</span>
+<span class="sd">A path must not change the cache hash, so ``archetypes_path`` is excluded</span>
+<span class="sd">from ``spec()``.</span>
+<span class="sd">"""</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">threading</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">fractions</span><span class="w"> </span><span class="kn">import</span> <span class="n">Fraction</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Tuple</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">scipy</span><span class="w"> </span><span class="kn">import</span> <span class="n">signal</span> <span class="k">as</span> <span class="n">_sig</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">scipy.io</span><span class="w"> </span><span class="kn">import</span> <span class="n">loadmat</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">physioex.data.pipeline</span><span class="w"> </span><span class="kn">import</span> <span class="n">CompiledStep</span><span class="p">,</span> <span class="n">PreprocessingStep</span>
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">"physioex.data.steps"</span><span class="p">)</span>
+
+<span class="c1">#: Target sampling rate of the Jones ECG network.</span>
+<span class="n">JONES_ECG_FS_OUT</span> <span class="o">=</span> <span class="mf">256.0</span>
+
+<span class="n">_ARCHETYPES_NAME</span> <span class="o">=</span> <span class="s2">"jones-ecg-archetypes"</span>
+
+<span class="c1"># Local-variation / peak-picking constants (get_constants.m, fs=256).</span>
+<span class="n">_LV_LOCAL_SAMPLES</span> <span class="o">=</span> <span class="mi">17</span>  <span class="c1"># next_odd(0.060 * 256)</span>
+<span class="n">_LV_GROUP_SAMPLES</span> <span class="o">=</span> <span class="mi">257</span>  <span class="c1"># next_odd(1 * 256)</span>
+<span class="n">_LV_MIN_PEAK_HEIGHT</span> <span class="o">=</span> <span class="mf">1.5</span>  <span class="c1"># min_peak_height</span>
+<span class="n">_LV_MIN_PEAK_SEPARATION</span> <span class="o">=</span> <span class="mi">77</span>  <span class="c1"># round(0.3 * 256)</span>
+<span class="n">_LV_LP_PASS_HZ</span> <span class="o">=</span> <span class="mf">8.0</span>  <span class="c1"># low-pass passband edge</span>
+<span class="n">_LV_LP_STOP_HZ</span> <span class="o">=</span> <span class="mf">10.0</span>  <span class="c1"># low-pass stopband edge</span>
+<span class="n">_LV_LP_STOP_DB</span> <span class="o">=</span> <span class="mf">30.0</span>
+<span class="n">_LV_LP_PASS_RIPPLE_DB</span> <span class="o">=</span> <span class="mf">1.0</span>
+
+<span class="c1"># find_noise constants (cut_to_resample_process.m / find_noise.m).</span>
+<span class="n">_FIND_NOISE_WINDOWS</span> <span class="o">=</span> <span class="mi">10</span>
+<span class="n">_FIND_NOISE_AMP_SPAN_S</span> <span class="o">=</span> <span class="mf">20.0</span>
+<span class="n">_FIND_NOISE_AMP_FLOOR</span> <span class="o">=</span> <span class="mf">0.1</span>
+<span class="n">_FIND_NOISE_SPECTRUM_HZ</span> <span class="o">=</span> <span class="mf">0.5</span>
+<span class="n">_FIND_NOISE_MIN_FREQ_HZ</span> <span class="o">=</span> <span class="mf">10.0</span>
+<span class="n">_FIND_NOISE_MIN_RATIO</span> <span class="o">=</span> <span class="mf">4.0</span>  <span class="c1"># ecg_noise_min_ratio</span>
+<span class="n">_FIND_NOISE_MAX_ADD</span> <span class="o">=</span> <span class="mi">10</span>  <span class="c1"># max_additional_freqs</span>
+<span class="n">_NOTCH_BW_HZ</span> <span class="o">=</span> <span class="mf">1.5</span>  <span class="c1"># ecg_filter_bw</span>
+
+<span class="n">_warned_fallback</span> <span class="o">=</span> <span class="kc">False</span>
+<span class="n">_warned_lock</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Lock</span><span class="p">()</span>
+<span class="n">_archetype_download_registered</span> <span class="o">=</span> <span class="kc">False</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_register_archetype_source</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Register the raw-URL download source for ``archetypes.mat`` once."""</span>
+    <span class="k">global</span> <span class="n">_archetype_download_registered</span>
+    <span class="k">if</span> <span class="n">_archetype_download_registered</span><span class="p">:</span>
+        <span class="k">return</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">physioex.models.foundation_checkpoints</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+        <span class="n">CheckpointSource</span><span class="p">,</span>
+        <span class="n">_register_checkpoint_source</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="n">_register_checkpoint_source</span><span class="p">(</span>
+        <span class="n">_ARCHETYPES_NAME</span><span class="p">,</span>
+        <span class="n">CheckpointSource</span><span class="p">(</span>
+            <span class="n">source_type</span><span class="o">=</span><span class="s2">"raw_url"</span><span class="p">,</span>
+            <span class="n">repo_id</span><span class="o">=</span><span class="s2">"adammj/ecg-sleep-staging"</span><span class="p">,</span>
+            <span class="n">filenames</span><span class="o">=</span><span class="p">[</span><span class="s2">"archetypes.mat"</span><span class="p">],</span>
+            <span class="n">raw_urls</span><span class="o">=</span><span class="p">[</span>
+                <span class="s2">"https://raw.githubusercontent.com/adammj/ecg-sleep-staging/"</span>
+                <span class="s2">"main/paper/0_data_processing/3_templates/archetypes.mat"</span>
+            <span class="p">],</span>
+        <span class="p">),</span>
+    <span class="p">)</span>
+    <span class="n">_archetype_download_registered</span> <span class="o">=</span> <span class="kc">True</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_load_archetypes</span><span class="p">(</span><span class="n">archetypes_path</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Load the archetype matrix (n_archetypes x 256 in MATLAB); ``None`` if unavailable.</span>
+
+<span class="sd">    ``archetypes_path=None`` triggers the one-shot raw-URL download</span>
+<span class="sd">    (cached under the ``jones-ecg-archetypes`` registry name); any</span>
+<span class="sd">    failure logs a warning once and returns ``None`` so the caller can</span>
+<span class="sd">    fall back to the median-of-beats template.</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="n">archetypes_path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="n">archetypes_path</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">_register_archetype_source</span><span class="p">()</span>
+            <span class="kn">from</span><span class="w"> </span><span class="nn">physioex.models.foundation_checkpoints</span><span class="w"> </span><span class="kn">import</span> <span class="n">ensure_checkpoint</span>
+
+            <span class="n">resolved</span> <span class="o">=</span> <span class="n">ensure_checkpoint</span><span class="p">(</span><span class="n">_ARCHETYPES_NAME</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>  <span class="c1"># download / network failure</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                <span class="s2">"JonesECGPreprocess: could not download archetypes.mat "</span>
+                <span class="sa">f</span><span class="s2">"(</span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">); using the median-of-beats template fallback"</span>
+            <span class="p">)</span>
+            <span class="k">return</span> <span class="kc">None</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="n">resolved</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">resolved</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">))</span> <span class="k">else</span> <span class="n">resolved</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">mat</span> <span class="o">=</span> <span class="n">loadmat</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">NotImplementedError</span><span class="p">:</span>
+        <span class="c1"># MATLAB v7.3 files are HDF5; h5py returns the arrays with the</span>
+        <span class="c1"># dimensions reversed with respect to MATLAB, so transpose back.</span>
+        <span class="kn">import</span><span class="w"> </span><span class="nn">h5py</span>
+
+        <span class="k">with</span> <span class="n">h5py</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s2">"r"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">mat</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="n">k</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">f</span><span class="p">[</span><span class="n">k</span><span class="p">])</span><span class="o">.</span><span class="n">T</span>
+                <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">f</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">f</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">h5py</span><span class="o">.</span><span class="n">Dataset</span><span class="p">)</span>
+            <span class="p">}</span>
+    <span class="k">if</span> <span class="s2">"archetype_templates"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">mat</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+            <span class="s2">"JonesECGPreprocess: </span><span class="si">%s</span><span class="s2"> has no 'archetype_templates' variable; "</span>
+            <span class="s2">"using the median-of-beats template fallback"</span><span class="p">,</span>
+            <span class="n">path</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="n">arch</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">mat</span><span class="p">[</span><span class="s2">"archetype_templates"</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">arch</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="mi">2</span> <span class="ow">or</span> <span class="n">arch</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">256</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+            <span class="s2">"JonesECGPreprocess: archetypes matrix has shape </span><span class="si">%s</span><span class="s2">, expected "</span>
+            <span class="s2">"(n, 256); using the median-of-beats template fallback"</span><span class="p">,</span>
+            <span class="n">arch</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="k">return</span> <span class="n">arch</span><span class="o">.</span><span class="n">T</span>  <span class="c1"># (256, n_archetypes)</span>
+
+
+<span class="c1"># ── MATLAB primitive equivalents ─────────────────────────────────────</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">next_odd</span><span class="p">(</span><span class="n">x</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Mirror of ``next_odd.m``: smallest odd integer &gt;= x.</span>
+
+<span class="sd">    For x = 77 -&gt; 77, for x = 76.8 -&gt; 77, for x = 76 -&gt; 77.</span>
+<span class="sd">    """</span>
+    <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_causal_moving_mean</span><span class="p">(</span><span class="n">v</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">window</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""``movmean(v, [0, window-1], 'omitnan')``: one-sided causal mean."""</span>
+    <span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cumsum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">))</span>
+    <span class="n">idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">n</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">left</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">idx</span> <span class="o">-</span> <span class="n">window</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">c</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">-</span> <span class="n">c</span><span class="p">[</span><span class="n">left</span><span class="p">])</span> <span class="o">/</span> <span class="p">(</span><span class="n">idx</span> <span class="o">-</span> <span class="n">left</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_delayed_moving_mean</span><span class="p">(</span><span class="n">v</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">window</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""``movmean(v, [window-1, 0], 'omitnan')``: mean of the window ending</span>
+<span class="sd">    ``window - 1`` samples in the past (truncated at the start edge)."""</span>
+    <span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+    <span class="n">d</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">window</span> <span class="o">&lt;</span> <span class="mi">1</span> <span class="ow">or</span> <span class="n">n</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">d</span>
+    <span class="n">d</span><span class="p">[</span><span class="n">window</span> <span class="o">-</span> <span class="mi">1</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">_causal_moving_mean</span><span class="p">(</span><span class="n">v</span><span class="p">[:</span> <span class="n">n</span> <span class="o">-</span> <span class="n">window</span> <span class="o">+</span> <span class="mi">1</span><span class="p">],</span> <span class="n">window</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">d</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_centered_moving_stat</span><span class="p">(</span><span class="n">v</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">window</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">stat</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"var"</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Centered moving statistic (``movvar``/``movmedian``/``movmax``) with</span>
+<span class="sd">    MATLAB's edge truncation.</span>
+
+<span class="sd">    ``stat`` is ``"var"`` (sample variance, ddof=1), ``"median"``, or</span>
+<span class="sd">    ``"max"``.  Window ``i`` covers ``v[max(0, i - window // 2) :</span>
+<span class="sd">    min(n, i + window - window // 2)]``; edge windows use the available</span>
+<span class="sd">    samples, exactly like MATLAB with a scalar window.  Vectorised: the</span>
+<span class="sd">    variance uses windowed sums, median and max use ``scipy.ndimage`` on</span>
+<span class="sd">    the interior and an explicit loop only on the ``window // 2`` samples</span>
+<span class="sd">    at each edge.</span>
+<span class="sd">    """</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">scipy</span><span class="w"> </span><span class="kn">import</span> <span class="n">ndimage</span>
+
+    <span class="n">v</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+    <span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+    <span class="n">half</span> <span class="o">=</span> <span class="n">window</span> <span class="o">//</span> <span class="mi">2</span>
+    <span class="k">if</span> <span class="n">n</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+    <span class="n">lo</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">idx</span> <span class="o">-</span> <span class="n">half</span><span class="p">)</span>
+    <span class="n">hi</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">minimum</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">idx</span> <span class="o">+</span> <span class="n">window</span> <span class="o">-</span> <span class="n">half</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">stat</span> <span class="o">==</span> <span class="s2">"var"</span><span class="p">:</span>
+        <span class="c1"># Windowed sums around the global mean (limits cancellation).</span>
+        <span class="n">c</span> <span class="o">=</span> <span class="n">v</span> <span class="o">-</span> <span class="n">v</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+        <span class="n">s1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(([</span><span class="mf">0.0</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">cumsum</span><span class="p">(</span><span class="n">c</span><span class="p">)))</span>
+        <span class="n">s2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(([</span><span class="mf">0.0</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">cumsum</span><span class="p">(</span><span class="n">c</span> <span class="o">*</span> <span class="n">c</span><span class="p">)))</span>
+        <span class="n">m</span> <span class="o">=</span> <span class="p">(</span><span class="n">hi</span> <span class="o">-</span> <span class="n">lo</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+        <span class="n">w1</span> <span class="o">=</span> <span class="n">s1</span><span class="p">[</span><span class="n">hi</span><span class="p">]</span> <span class="o">-</span> <span class="n">s1</span><span class="p">[</span><span class="n">lo</span><span class="p">]</span>
+        <span class="n">w2</span> <span class="o">=</span> <span class="n">s2</span><span class="p">[</span><span class="n">hi</span><span class="p">]</span> <span class="o">-</span> <span class="n">s2</span><span class="p">[</span><span class="n">lo</span><span class="p">]</span>
+        <span class="k">with</span> <span class="n">np</span><span class="o">.</span><span class="n">errstate</span><span class="p">(</span><span class="n">invalid</span><span class="o">=</span><span class="s2">"ignore"</span><span class="p">,</span> <span class="n">divide</span><span class="o">=</span><span class="s2">"ignore"</span><span class="p">):</span>
+            <span class="n">out</span> <span class="o">=</span> <span class="p">(</span><span class="n">w2</span> <span class="o">-</span> <span class="n">w1</span> <span class="o">*</span> <span class="n">w1</span> <span class="o">/</span> <span class="n">m</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">m</span> <span class="o">-</span> <span class="mf">1.0</span><span class="p">)</span>
+        <span class="n">out</span><span class="p">[</span><span class="n">m</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">stat</span> <span class="o">==</span> <span class="s2">"median"</span><span class="p">:</span>
+        <span class="n">filt</span> <span class="o">=</span> <span class="n">ndimage</span><span class="o">.</span><span class="n">median_filter</span>
+        <span class="n">reduce</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">median</span>
+    <span class="k">elif</span> <span class="n">stat</span> <span class="o">==</span> <span class="s2">"max"</span><span class="p">:</span>
+        <span class="n">filt</span> <span class="o">=</span> <span class="n">ndimage</span><span class="o">.</span><span class="n">maximum_filter</span>
+        <span class="n">reduce</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span>
+    <span class="k">else</span><span class="p">:</span>  <span class="c1"># pragma: no cover</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"unknown stat </span><span class="si">{</span><span class="n">stat</span><span class="si">!r}</span><span class="s2">"</span><span class="p">)</span>
+    <span class="c1"># Interior samples see a full window [i - half, i + window - half),</span>
+    <span class="c1"># which is ndimage's default placement (origin 0) for odd and even sizes.</span>
+    <span class="k">if</span> <span class="n">stat</span> <span class="o">==</span> <span class="s2">"median"</span> <span class="ow">and</span> <span class="n">window</span> <span class="o">%</span> <span class="mi">2</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="c1"># np.median of an even window averages the two middle values.</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span>
+            <span class="n">ndimage</span><span class="o">.</span><span class="n">rank_filter</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">window</span> <span class="o">//</span> <span class="mi">2</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">window</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">"nearest"</span><span class="p">)</span>
+            <span class="o">+</span> <span class="n">ndimage</span><span class="o">.</span><span class="n">rank_filter</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">window</span> <span class="o">//</span> <span class="mi">2</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">window</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">"nearest"</span><span class="p">)</span>
+        <span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="n">filt</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">window</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">"nearest"</span><span class="p">)</span>
+    <span class="n">edge</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="n">half</span><span class="p">,</span> <span class="n">n</span><span class="p">))]</span> <span class="o">+</span> <span class="p">[</span>
+        <span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="n">half</span><span class="p">,</span> <span class="n">n</span> <span class="o">-</span> <span class="p">(</span><span class="n">window</span> <span class="o">-</span> <span class="n">half</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">),</span> <span class="n">n</span><span class="p">)</span>
+    <span class="p">]</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">edge</span><span class="p">:</span>
+        <span class="n">out</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">reduce</span><span class="p">(</span><span class="n">v</span><span class="p">[</span><span class="n">lo</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="p">:</span> <span class="n">hi</span><span class="p">[</span><span class="n">i</span><span class="p">]])</span>
+    <span class="k">return</span> <span class="n">out</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_fill_mask_gaps</span><span class="p">(</span><span class="n">mask</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">fill_length</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Mirror of ``fill_mask_array_gaps.m``: zero runs of 1s of length</span>
+<span class="sd">    &lt;= ``fill_length``, the trailing run included (vectorised</span>
+<span class="sd">    run-length encoding)."""</span>
+    <span class="n">mask</span> <span class="o">=</span> <span class="n">mask</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">ones</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(([</span><span class="mi">0</span><span class="p">],</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">mask</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int8</span><span class="p">),</span> <span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+    <span class="n">d</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">ones</span><span class="p">)</span>
+    <span class="n">starts</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">flatnonzero</span><span class="p">(</span><span class="n">d</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">ends</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">flatnonzero</span><span class="p">(</span><span class="n">d</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">st</span><span class="p">,</span> <span class="n">en</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">starts</span><span class="p">,</span> <span class="n">ends</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">en</span> <span class="o">-</span> <span class="n">st</span> <span class="o">&lt;=</span> <span class="n">fill_length</span><span class="p">:</span>
+            <span class="n">mask</span><span class="p">[</span><span class="n">st</span><span class="p">:</span><span class="n">en</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">return</span> <span class="n">mask</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_smoothstep</span><span class="p">(</span><span class="n">t</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""The intended ``smooth_mask_array`` S-curve: 3t^2 - 2t^3."""</span>
+    <span class="k">return</span> <span class="n">t</span> <span class="o">*</span> <span class="n">t</span> <span class="o">*</span> <span class="p">(</span><span class="mf">3.0</span> <span class="o">-</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="n">t</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_smooth_mask</span><span class="p">(</span><span class="n">mask</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">transition_length</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Mirror of ``smooth_mask_array.m`` (with the smoothstep profile)."""</span>
+    <span class="k">if</span> <span class="n">transition_length</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">mask</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+    <span class="n">mask</span> <span class="o">=</span> <span class="n">mask</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">mask</span><span class="p">)</span>
+    <span class="c1"># 1 -&gt; 0 boundary at i: ramp mask[max(1, i - L - 1):i]</span>
+    <span class="n">transitions</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">mask</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">))</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">transitions</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">a</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">i</span> <span class="o">-</span> <span class="n">transition_length</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">span</span> <span class="o">=</span> <span class="n">i</span> <span class="o">-</span> <span class="n">a</span>
+        <span class="k">if</span> <span class="n">span</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="n">g</span> <span class="o">=</span> <span class="n">_smoothstep</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="n">span</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span>
+        <span class="n">g</span> <span class="o">=</span> <span class="n">g</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+        <span class="n">mask</span><span class="p">[</span><span class="n">a</span><span class="p">:</span><span class="n">i</span><span class="p">]</span> <span class="o">*=</span> <span class="n">g</span>
+    <span class="c1"># 0 -&gt; 1 boundary at i: ramp mask[i : min(n, i + L + 1)]</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">transitions</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)[</span><span class="mi">0</span><span class="p">]:</span>
+        <span class="n">b</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">i</span> <span class="o">+</span> <span class="n">transition_length</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">span</span> <span class="o">=</span> <span class="n">b</span> <span class="o">-</span> <span class="n">i</span>
+        <span class="k">if</span> <span class="n">span</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="n">g</span> <span class="o">=</span> <span class="n">_smoothstep</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="n">span</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span>
+        <span class="n">g</span> <span class="o">=</span> <span class="n">g</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">mask</span><span class="p">[</span><span class="n">i</span><span class="p">:</span><span class="n">b</span><span class="p">]</span> <span class="o">*=</span> <span class="n">g</span>
+    <span class="k">return</span> <span class="n">mask</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_butter_lowpass_order</span><span class="p">(</span><span class="n">pw</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">rp_db</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">sw</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">sa_db</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Minimal Butterworth order meeting the passband ripple spec."""</span>
+    <span class="k">for</span> <span class="n">N</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">41</span><span class="p">):</span>
+        <span class="n">b</span><span class="p">,</span> <span class="n">a</span> <span class="o">=</span> <span class="n">_sig</span><span class="o">.</span><span class="n">butter</span><span class="p">(</span><span class="n">N</span><span class="p">,</span> <span class="n">pw</span><span class="p">,</span> <span class="n">btype</span><span class="o">=</span><span class="s2">"low"</span><span class="p">)</span>
+        <span class="n">w</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">pw</span><span class="p">,</span> <span class="mi">129</span><span class="p">)</span>
+        <span class="n">h</span> <span class="o">=</span> <span class="n">_sig</span><span class="o">.</span><span class="n">freqz</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">worN</span><span class="o">=</span><span class="n">w</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="o">-</span><span class="mf">20.0</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">h</span><span class="p">,</span> <span class="mf">1e-30</span><span class="p">)))</span> <span class="o">&lt;=</span> <span class="n">rp_db</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">N</span>
+    <span class="k">return</span> <span class="mi">10</span>
+
+
+<span class="c1"># ── Stage 2: clip removal and noise filtering ────────────────────────</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">remove_large_clips</span><span class="p">(</span><span class="n">x</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">fs</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">clip_ratio</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.5</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Mirror of ``remove_large_clips.m`` (single-channel case).</span>
+
+<span class="sd">    Marks stretches where &gt;= ``clip_ratio`` of a 0.3 s one-sided window</span>
+<span class="sd">    sits at the global signal max or min, fills short gaps, smooths the</span>
+<span class="sd">    mask boundaries, and returns ``(x - masked median) * mask``.</span>
+<span class="sd">    """</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+    <span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">n</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">x</span>
+    <span class="n">clip_length</span> <span class="o">=</span> <span class="n">next_odd</span><span class="p">(</span><span class="mf">0.3</span> <span class="o">*</span> <span class="n">fs</span><span class="p">)</span>
+    <span class="n">fill_gap_length</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="n">fs</span><span class="p">))</span>
+    <span class="n">smooth_transition_length</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="n">fs</span><span class="p">))</span>
+
+    <span class="n">mx</span><span class="p">,</span> <span class="n">mn</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">max</span><span class="p">(),</span> <span class="n">x</span><span class="o">.</span><span class="n">min</span><span class="p">()</span>
+    <span class="n">clip</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">mx</span> <span class="o">!=</span> <span class="n">mn</span><span class="p">:</span>
+        <span class="n">clip</span><span class="p">[</span><span class="n">x</span> <span class="o">&gt;=</span> <span class="n">mx</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span>
+        <span class="n">clip</span><span class="p">[</span><span class="n">x</span> <span class="o">&lt;=</span> <span class="n">mn</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mf">1.0</span>
+    <span class="n">abs_clip</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">clip</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">abs_clip</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">x</span>  <span class="c1"># nothing is pinned at the extremes</span>
+
+    <span class="n">mask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+    <span class="n">causal</span> <span class="o">=</span> <span class="n">_causal_moving_mean</span><span class="p">(</span><span class="n">abs_clip</span><span class="p">,</span> <span class="n">clip_length</span><span class="p">)</span>
+    <span class="n">delayed</span> <span class="o">=</span> <span class="n">_delayed_moving_mean</span><span class="p">(</span><span class="n">abs_clip</span><span class="p">,</span> <span class="n">clip_length</span><span class="p">)</span>
+    <span class="n">mask</span><span class="p">[</span><span class="n">causal</span> <span class="o">&gt;=</span> <span class="n">clip_ratio</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">mask</span><span class="p">[</span><span class="n">delayed</span> <span class="o">&gt;=</span> <span class="n">clip_ratio</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">mask</span> <span class="o">=</span> <span class="n">_fill_mask_gaps</span><span class="p">(</span><span class="n">mask</span><span class="p">,</span> <span class="n">fill_gap_length</span><span class="p">)</span>
+    <span class="n">mask</span> <span class="o">=</span> <span class="n">_smooth_mask</span><span class="p">(</span><span class="n">mask</span><span class="p">,</span> <span class="n">smooth_transition_length</span><span class="p">)</span>
+
+    <span class="n">kept</span> <span class="o">=</span> <span class="n">mask</span> <span class="o">&gt;</span> <span class="mi">0</span>
+    <span class="n">med</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="n">kept</span><span class="p">])</span> <span class="k">if</span> <span class="n">kept</span><span class="o">.</span><span class="n">any</span><span class="p">()</span> <span class="k">else</span> <span class="mf">0.0</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">x</span> <span class="o">-</span> <span class="n">med</span><span class="p">)</span> <span class="o">*</span> <span class="n">mask</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">highpass_cheby2</span><span class="p">(</span>
+    <span class="n">x</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">fs</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">pass_hz</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.5</span><span class="p">,</span> <span class="n">stop_hz</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.25</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Mirror of ``get_hp_filter.m``: zero-phase Chebyshev-II high-pass.</span>
+
+<span class="sd">    0.5 Hz pass edge with 0.1 dB ripple, 0.25 Hz stop edge with 60 dB</span>
+<span class="sd">    attenuation; the filter order is the minimal one meeting the</span>
+<span class="sd">    passband spec (``MatchExactly='passband'`` equivalent).</span>
+<span class="sd">    """</span>
+    <span class="n">nyq</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">fs</span>
+    <span class="n">pw</span> <span class="o">=</span> <span class="n">pass_hz</span> <span class="o">/</span> <span class="n">nyq</span>
+    <span class="n">sw</span> <span class="o">=</span> <span class="n">stop_hz</span> <span class="o">/</span> <span class="n">nyq</span>
+    <span class="k">if</span> <span class="n">pw</span> <span class="o">&gt;=</span> <span class="mf">1.0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+    <span class="c1"># Minimal order for the spec; scipy's cheby2 takes the *stopband* edge</span>
+    <span class="c1"># as Wn, which cheb2ord returns. Second-order sections: the (b, a) form</span>
+    <span class="c1"># of this narrow high-pass is numerically unstable (NaN output).</span>
+    <span class="n">N</span><span class="p">,</span> <span class="n">wn</span> <span class="o">=</span> <span class="n">_sig</span><span class="o">.</span><span class="n">cheb2ord</span><span class="p">(</span><span class="n">wp</span><span class="o">=</span><span class="n">pw</span><span class="p">,</span> <span class="n">ws</span><span class="o">=</span><span class="n">sw</span><span class="p">,</span> <span class="n">gpass</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">gstop</span><span class="o">=</span><span class="mf">60.0</span><span class="p">)</span>
+    <span class="n">sos</span> <span class="o">=</span> <span class="n">_sig</span><span class="o">.</span><span class="n">cheby2</span><span class="p">(</span><span class="n">N</span><span class="p">,</span> <span class="mf">60.0</span><span class="p">,</span> <span class="n">Wn</span><span class="o">=</span><span class="n">wn</span><span class="p">,</span> <span class="n">btype</span><span class="o">=</span><span class="s2">"high"</span><span class="p">,</span> <span class="n">output</span><span class="o">=</span><span class="s2">"sos"</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">_sig</span><span class="o">.</span><span class="n">sosfiltfilt</span><span class="p">(</span><span class="n">sos</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">))</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">notch_line_noise</span><span class="p">(</span><span class="n">x</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">fs</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">line_freq</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Zero-phase notch at the line frequency (or its alias).</span>
+
+<span class="sd">    Mirrors ``cut_to_resample_process.m:244-249``: notch at</span>
+<span class="sd">    ``line_freq`` when ``fs &gt; 2*line_freq``; at ``fs - line_freq`` when</span>
+<span class="sd">    ``line_freq &lt;= fs &lt;= 2*line_freq`` (the 60 Hz alias); no notch when</span>
+<span class="sd">    ``fs &lt; line_freq``.</span>
+<span class="sd">    """</span>
+    <span class="n">nyq</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">fs</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">fs</span> <span class="o">&gt;</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">line_freq</span><span class="p">:</span>
+        <span class="n">f</span> <span class="o">=</span> <span class="n">line_freq</span>
+    <span class="k">elif</span> <span class="n">fs</span> <span class="o">&gt;=</span> <span class="n">line_freq</span><span class="p">:</span>
+        <span class="n">f</span> <span class="o">=</span> <span class="n">fs</span> <span class="o">-</span> <span class="n">line_freq</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">x</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="mi">0</span> <span class="o">&lt;</span> <span class="n">f</span> <span class="o">&lt;</span> <span class="n">nyq</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">x</span>
+    <span class="n">b</span><span class="p">,</span> <span class="n">a</span> <span class="o">=</span> <span class="n">_sig</span><span class="o">.</span><span class="n">iirnotch</span><span class="p">(</span><span class="n">f</span> <span class="o">/</span> <span class="n">nyq</span><span class="p">,</span> <span class="n">f</span> <span class="o">/</span> <span class="n">_NOTCH_BW_HZ</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">_sig</span><span class="o">.</span><span class="n">filtfilt</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">x</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_scaled_fft_spectrum</span><span class="p">(</span><span class="n">x</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">fs</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">amp_floor</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Mirror of ``scaled_fft.m``: one 2 s window, rFFT on the 0.5 Hz grid,</span>
+<span class="sd">    normalized by its 13-bin moving median (floored at ``amp_floor/2``),</span>
+<span class="sd">    with inf replaced by 1."""</span>
+    <span class="n">n_seg</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="n">fs</span> <span class="o">/</span> <span class="n">_FIND_NOISE_SPECTRUM_HZ</span><span class="p">))</span>
+    <span class="n">N</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="n">n_seg</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">)),</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">seg</span> <span class="o">=</span> <span class="n">x</span><span class="p">[:</span><span class="n">N</span><span class="p">]</span>
+    <span class="n">spec</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">rfft</span><span class="p">(</span><span class="n">seg</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">hanning</span><span class="p">(</span><span class="n">N</span><span class="p">)))</span>
+    <span class="n">freqs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">rfftfreq</span><span class="p">(</span><span class="n">N</span><span class="p">,</span> <span class="n">d</span><span class="o">=</span><span class="mf">1.0</span> <span class="o">/</span> <span class="n">fs</span><span class="p">)</span>
+    <span class="c1"># interpolate onto the 0.5 Hz grid</span>
+    <span class="n">grid</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">fs</span> <span class="o">+</span> <span class="mf">0.25</span><span class="p">,</span> <span class="n">_FIND_NOISE_SPECTRUM_HZ</span><span class="p">)</span>
+    <span class="n">mag</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">interp</span><span class="p">(</span><span class="n">grid</span><span class="p">,</span> <span class="n">freqs</span><span class="p">,</span> <span class="n">spec</span><span class="p">,</span> <span class="n">right</span><span class="o">=</span><span class="mf">0.0</span><span class="p">)</span>
+    <span class="c1"># moving median over next_odd(6/0.5+1) = 13 bins, edge truncated</span>
+    <span class="n">med</span> <span class="o">=</span> <span class="n">_centered_moving_stat</span><span class="p">(</span><span class="n">mag</span><span class="p">,</span> <span class="mi">13</span><span class="p">,</span> <span class="s2">"median"</span><span class="p">)</span>
+    <span class="n">med</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">med</span><span class="p">,</span> <span class="n">amp_floor</span> <span class="o">/</span> <span class="mf">2.0</span><span class="p">)</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="n">mag</span> <span class="o">/</span> <span class="n">med</span>
+    <span class="n">out</span><span class="p">[</span><span class="o">~</span><span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">out</span><span class="p">)]</span> <span class="o">=</span> <span class="mf">1.0</span>
+    <span class="k">return</span> <span class="n">out</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">find_and_remove_noise</span><span class="p">(</span>
+    <span class="n">x</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">fs</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">max_add</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">_FIND_NOISE_MAX_ADD</span><span class="p">,</span>
+    <span class="n">min_ratio</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">_FIND_NOISE_MIN_RATIO</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">"""Mirror of ``find_and_remove_noise.m``: iteratively notch the</span>
+<span class="sd">    strongest non-ECG spectral peaks (&gt;= 10 Hz, ratio &gt;= ``min_ratio``</span>
+<span class="sd">    over the median-scaled spectrum of 10 equal windows), up to</span>
+<span class="sd">    ``max_add`` frequencies.  Returns ``(cleaned, freqs)``.</span>
+<span class="sd">    """</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+    <span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+    <span class="n">nyq</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">fs</span>
+    <span class="n">win</span> <span class="o">=</span> <span class="n">n</span> <span class="o">//</span> <span class="n">_FIND_NOISE_WINDOWS</span>
+    <span class="k">if</span> <span class="n">win</span> <span class="o">&lt;</span> <span class="nb">int</span><span class="p">(</span><span class="n">_FIND_NOISE_AMP_SPAN_S</span> <span class="o">*</span> <span class="n">fs</span><span class="p">)</span> <span class="ow">or</span> <span class="n">win</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">x</span><span class="p">,</span> <span class="p">[]</span>
+
+    <span class="n">removed</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">max_add</span><span class="p">):</span>
+        <span class="c1"># amplitude floor (find_noise.m:31-44)</span>
+        <span class="n">amps</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">_FIND_NOISE_WINDOWS</span><span class="p">):</span>
+            <span class="n">seg</span> <span class="o">=</span> <span class="n">x</span><span class="p">[</span><span class="n">k</span> <span class="o">*</span> <span class="n">win</span> <span class="p">:</span> <span class="n">k</span> <span class="o">*</span> <span class="n">win</span> <span class="o">+</span> <span class="n">win</span><span class="p">]</span>
+            <span class="n">sec</span> <span class="o">=</span> <span class="n">seg</span><span class="p">[:</span> <span class="nb">int</span><span class="p">(</span><span class="n">_FIND_NOISE_AMP_SPAN_S</span> <span class="o">*</span> <span class="n">fs</span><span class="p">)]</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">sec</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="n">pk</span> <span class="o">=</span> <span class="n">_sig</span><span class="o">.</span><span class="n">find_peaks</span><span class="p">(</span><span class="n">sec</span><span class="p">,</span> <span class="n">distance</span><span class="o">=</span><span class="mi">2</span> <span class="o">*</span> <span class="n">fs</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">tr</span> <span class="o">=</span> <span class="n">_sig</span><span class="o">.</span><span class="n">find_peaks</span><span class="p">(</span><span class="o">-</span><span class="n">sec</span><span class="p">,</span> <span class="n">distance</span><span class="o">=</span><span class="mi">2</span> <span class="o">*</span> <span class="n">fs</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">medp</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">sec</span><span class="p">[</span><span class="n">pk</span><span class="p">])</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">pk</span><span class="p">)</span> <span class="k">else</span> <span class="n">sec</span><span class="o">.</span><span class="n">max</span><span class="p">()</span>
+            <span class="n">medt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">sec</span><span class="p">[</span><span class="n">tr</span><span class="p">])</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">tr</span><span class="p">)</span> <span class="k">else</span> <span class="n">sec</span><span class="o">.</span><span class="n">min</span><span class="p">()</span>
+            <span class="n">amps</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">medp</span> <span class="o">+</span> <span class="n">medt</span><span class="p">)</span>
+        <span class="n">amp</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="nb">max</span><span class="p">(</span><span class="n">_FIND_NOISE_AMP_FLOOR</span><span class="p">,</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">amps</span><span class="p">)))</span>
+            <span class="k">if</span> <span class="n">amps</span>
+            <span class="k">else</span> <span class="n">_FIND_NOISE_AMP_FLOOR</span>
+        <span class="p">)</span>
+
+        <span class="c1"># per-window scaled spectra, averaged</span>
+        <span class="n">grid</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">nyq</span> <span class="o">+</span> <span class="mf">0.25</span><span class="p">,</span> <span class="n">_FIND_NOISE_SPECTRUM_HZ</span><span class="p">)</span>
+        <span class="n">mean_fft</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">grid</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">_FIND_NOISE_WINDOWS</span><span class="p">):</span>
+            <span class="n">seg</span> <span class="o">=</span> <span class="n">x</span><span class="p">[</span><span class="n">k</span> <span class="o">*</span> <span class="n">win</span> <span class="p">:</span> <span class="n">k</span> <span class="o">*</span> <span class="n">win</span> <span class="o">+</span> <span class="n">win</span><span class="p">]</span>
+            <span class="n">mean_fft</span> <span class="o">+=</span> <span class="n">_scaled_fft_spectrum</span><span class="p">(</span><span class="n">seg</span><span class="p">,</span> <span class="n">fs</span><span class="p">,</span> <span class="n">amp</span><span class="p">)</span>
+        <span class="n">mean_fft</span> <span class="o">/=</span> <span class="n">_FIND_NOISE_WINDOWS</span>
+
+        <span class="c1"># candidate bins</span>
+        <span class="n">cand</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span>
+            <span class="p">(</span><span class="n">grid</span> <span class="o">&gt;=</span> <span class="n">_FIND_NOISE_MIN_FREQ_HZ</span><span class="p">)</span>
+            <span class="o">&amp;</span> <span class="p">(</span><span class="n">grid</span> <span class="o">&lt;</span> <span class="n">nyq</span> <span class="o">-</span> <span class="mf">1e-9</span><span class="p">)</span>
+            <span class="o">&amp;</span> <span class="p">(</span><span class="n">mean_fft</span> <span class="o">&gt;=</span> <span class="n">min_ratio</span><span class="p">)</span>
+            <span class="o">&amp;</span> <span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">mean_fft</span><span class="p">)</span>
+        <span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">cand</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">break</span>
+        <span class="n">cand</span> <span class="o">=</span> <span class="n">cand</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">mean_fft</span><span class="p">[</span><span class="n">cand</span><span class="p">])[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]]</span>
+        <span class="n">f</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">grid</span><span class="p">[</span><span class="n">cand</span><span class="p">[</span><span class="mi">0</span><span class="p">]])</span>
+        <span class="n">b</span><span class="p">,</span> <span class="n">a</span> <span class="o">=</span> <span class="n">_sig</span><span class="o">.</span><span class="n">iirnotch</span><span class="p">(</span><span class="n">f</span> <span class="o">/</span> <span class="n">nyq</span><span class="p">,</span> <span class="n">f</span> <span class="o">/</span> <span class="n">_NOTCH_BW_HZ</span><span class="p">)</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">_sig</span><span class="o">.</span><span class="n">filtfilt</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">x</span><span class="p">)</span>
+        <span class="n">removed</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">x</span><span class="p">,</span> <span class="n">removed</span>
+
+
+<span class="c1"># ── Stage 3: R-wave detection and normalization ──────────────────────</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">local_variation</span><span class="p">(</span><span class="n">x</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">fs</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Mirror of ``calculate_local_variation.m``.</span>
+
+<span class="sd">    ``lv = movvar(x, 17) / movmedian(movvar(x, 17), 257)``, zero where</span>
+<span class="sd">    the numerator or denominator is degenerate, then ``log2(lv + 1)``.</span>
+<span class="sd">    """</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+    <span class="n">lv</span> <span class="o">=</span> <span class="n">_centered_moving_stat</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">_LV_LOCAL_SAMPLES</span><span class="p">,</span> <span class="s2">"var"</span><span class="p">)</span>
+    <span class="n">g</span> <span class="o">=</span> <span class="n">_centered_moving_stat</span><span class="p">(</span><span class="n">lv</span><span class="p">,</span> <span class="n">_LV_GROUP_SAMPLES</span><span class="p">,</span> <span class="s2">"median"</span><span class="p">)</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span>
+        <span class="p">(</span><span class="n">lv</span> <span class="o">&gt;=</span> <span class="mf">1e-10</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">g</span> <span class="o">&gt;=</span> <span class="mf">1e-10</span><span class="p">)</span> <span class="o">&amp;</span> <span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">g</span><span class="p">),</span>
+        <span class="n">lv</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">g</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">,</span> <span class="n">g</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span>
+        <span class="mf">0.0</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">log2</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span> <span class="o">+</span> <span class="mf">1.0</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_lowpass_local_variation</span><span class="p">(</span><span class="n">lv</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Mirror of ``filter_local_variation.m``: zero-phase Butterworth LP,</span>
+<span class="sd">    non-positive pre-filter positions forced back to 0, negatives clipped."""</span>
+    <span class="n">zero</span> <span class="o">=</span> <span class="n">lv</span> <span class="o">&lt;=</span> <span class="mi">0</span>
+    <span class="n">b</span><span class="p">,</span> <span class="n">a</span> <span class="o">=</span> <span class="n">_sig</span><span class="o">.</span><span class="n">butter</span><span class="p">(</span>
+        <span class="n">_butter_lowpass_order</span><span class="p">(</span><span class="mf">8.0</span> <span class="o">/</span> <span class="mf">128.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">10.0</span> <span class="o">/</span> <span class="mf">128.0</span><span class="p">,</span> <span class="mf">30.0</span><span class="p">),</span>
+        <span class="n">_LV_LP_PASS_HZ</span> <span class="o">/</span> <span class="mf">128.0</span><span class="p">,</span>
+        <span class="n">btype</span><span class="o">=</span><span class="s2">"low"</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">_sig</span><span class="o">.</span><span class="n">filtfilt</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">lv</span><span class="p">)</span>
+    <span class="n">y</span><span class="p">[</span><span class="n">zero</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_correlate_rows</span><span class="p">(</span><span class="n">a</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">b</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Row-wise Pearson correlation of (n, m) ``a`` against (m,) ``b``."""</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">a</span> <span class="o">-</span> <span class="n">a</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">keepdims</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">b</span> <span class="o">=</span> <span class="n">b</span> <span class="o">-</span> <span class="n">b</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+    <span class="n">num</span> <span class="o">=</span> <span class="n">a</span> <span class="o">@</span> <span class="n">b</span>
+    <span class="n">den</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">((</span><span class="n">a</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">))</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">((</span><span class="n">b</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">())</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">ok</span> <span class="o">=</span> <span class="n">den</span> <span class="o">&gt;</span> <span class="mi">0</span>
+    <span class="n">out</span><span class="p">[</span><span class="n">ok</span><span class="p">]</span> <span class="o">=</span> <span class="n">num</span><span class="p">[</span><span class="n">ok</span><span class="p">]</span> <span class="o">/</span> <span class="n">den</span><span class="p">[</span><span class="n">ok</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">out</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_build_template</span><span class="p">(</span><span class="n">beats</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">archetypes</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Mirror of ``use_archetypes_to_find_template.m`` + ``create_template.m``.</span>
+
+<span class="sd">    Archetype-matched beats are robust-zscored, column-medians give the</span>
+<span class="sd">    initial template, then up to 5 rounds drop beats whose |corr| with the</span>
+<span class="sd">    template is below the rising threshold (k/5 * 0.5).  A second pass</span>
+<span class="sd">    re-matches against the record-specific template.  With no archetypes</span>
+<span class="sd">    (download failed), all beats are used directly (deviation 8).</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">beats</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">256</span><span class="p">)</span>
+    <span class="n">keep</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">beats</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">archetypes</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="c1"># |corr(beat, archetype)| &gt;= 0.5 for any archetype</span>
+        <span class="n">ok</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">beats</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">arch</span> <span class="ow">in</span> <span class="n">archetypes</span><span class="o">.</span><span class="n">T</span><span class="p">:</span>
+            <span class="n">ok</span> <span class="o">|=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">_correlate_rows</span><span class="p">(</span><span class="n">beats</span><span class="p">,</span> <span class="n">arch</span><span class="p">))</span> <span class="o">&gt;=</span> <span class="mf">0.5</span>
+        <span class="n">keep</span> <span class="o">=</span> <span class="n">keep</span> <span class="o">&amp;</span> <span class="n">ok</span>
+    <span class="n">sel</span> <span class="o">=</span> <span class="n">beats</span><span class="p">[</span><span class="n">keep</span><span class="p">]</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">sel</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">sel</span> <span class="o">=</span> <span class="n">beats</span>
+    <span class="c1"># Robust z-score of each beat (row): (beat - median) / (1.4826 * MAD).</span>
+    <span class="n">med</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">sel</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">keepdims</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">mad</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">sel</span> <span class="o">-</span> <span class="n">med</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">keepdims</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="o">*</span> <span class="mf">1.4826</span>
+    <span class="n">mad</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">mad</span> <span class="o">&gt;</span> <span class="mf">1e-10</span><span class="p">,</span> <span class="n">mad</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>
+    <span class="n">z</span> <span class="o">=</span> <span class="p">(</span><span class="n">sel</span> <span class="o">-</span> <span class="n">med</span><span class="p">)</span> <span class="o">/</span> <span class="n">mad</span>
+    <span class="n">template</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">6</span><span class="p">):</span>
+        <span class="n">c</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">_correlate_rows</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="n">template</span><span class="p">))</span>
+        <span class="n">keepk</span> <span class="o">=</span> <span class="n">c</span> <span class="o">&gt;=</span> <span class="p">(</span><span class="mf">0.1</span> <span class="o">*</span> <span class="n">k</span><span class="p">)</span> <span class="o">**</span> <span class="mf">0.5</span>
+        <span class="k">if</span> <span class="n">keepk</span><span class="o">.</span><span class="n">all</span><span class="p">()</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">keepk</span><span class="o">.</span><span class="n">any</span><span class="p">():</span>
+            <span class="k">break</span>
+        <span class="n">z</span> <span class="o">=</span> <span class="n">z</span><span class="p">[</span><span class="n">keepk</span><span class="p">]</span>
+        <span class="n">template</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="c1"># second pass: match against the record-specific template</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">_correlate_rows</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="n">template</span><span class="p">))</span>
+    <span class="n">z2</span> <span class="o">=</span> <span class="n">z</span><span class="p">[</span><span class="n">c</span> <span class="o">&gt;=</span> <span class="mf">0.5</span><span class="p">]</span> <span class="k">if</span> <span class="p">(</span><span class="n">c</span> <span class="o">&gt;=</span> <span class="mf">0.5</span><span class="p">)</span><span class="o">.</span><span class="n">any</span><span class="p">()</span> <span class="k">else</span> <span class="n">z</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">z2</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">find_r_peaks</span><span class="p">(</span><span class="n">x</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">template</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""R-wave locations via local-variation peaks + template correlation.</span>
+
+<span class="sd">    ``findpeaks`` on the filtered local variation (min distance</span>
+<span class="sd">    ``round(0.3*256)`` samples, min height 1.5), then per candidate the</span>
+<span class="sd">    256-sample segment starting 100 samples before the peak; candidates</span>
+<span class="sd">    whose |corr| with the template is &gt;= 0.5 are R-peaks.</span>
+<span class="sd">    """</span>
+    <span class="n">lv</span> <span class="o">=</span> <span class="n">_lowpass_local_variation</span><span class="p">(</span><span class="n">local_variation</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="mf">256.0</span><span class="p">))</span>
+    <span class="n">peaks</span> <span class="o">=</span> <span class="n">_sig</span><span class="o">.</span><span class="n">find_peaks</span><span class="p">(</span>
+        <span class="n">lv</span><span class="p">,</span> <span class="n">distance</span><span class="o">=</span><span class="n">_LV_MIN_PEAK_SEPARATION</span><span class="p">,</span> <span class="n">height</span><span class="o">=</span><span class="n">_LV_MIN_PEAK_HEIGHT</span>
+    <span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">peaks</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+    <span class="n">sel</span> <span class="o">=</span> <span class="p">(</span><span class="n">peaks</span> <span class="o">&gt;=</span> <span class="mi">100</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">peaks</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">-</span> <span class="mi">156</span><span class="p">)</span>
+    <span class="n">peaks</span> <span class="o">=</span> <span class="n">peaks</span><span class="p">[</span><span class="n">sel</span><span class="p">]</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">peaks</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+    <span class="n">beats</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span><span class="n">x</span><span class="p">[</span><span class="n">p</span> <span class="o">-</span> <span class="mi">100</span> <span class="p">:</span> <span class="n">p</span> <span class="o">+</span> <span class="mi">156</span><span class="p">]</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">peaks</span><span class="p">])</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">_correlate_rows</span><span class="p">(</span><span class="n">beats</span><span class="p">,</span> <span class="n">template</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">peaks</span><span class="p">[</span><span class="n">c</span> <span class="o">&gt;=</span> <span class="mf">0.5</span><span class="p">]</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">normalization_factor</span><span class="p">(</span><span class="n">x</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">peaks</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Normalization factor: 2 x the 90th percentile of per-beat max |x|</span>
+<span class="sd">    over the template-matched beats (see deviation 7 for the prctile</span>
+<span class="sd">    rank)."""</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">peaks</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="mf">1.0</span>
+    <span class="n">beatsmax</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="n">p</span> <span class="o">-</span> <span class="mi">100</span> <span class="p">:</span> <span class="n">p</span> <span class="o">+</span> <span class="mi">156</span><span class="p">]))</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">peaks</span><span class="p">])</span>
+    <span class="n">beatsmax</span> <span class="o">=</span> <span class="n">beatsmax</span><span class="p">[</span><span class="n">beatsmax</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">]</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">beatsmax</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="mf">1.0</span>
+    <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="mf">2.0</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">beatsmax</span><span class="p">,</span> <span class="mf">90.0</span><span class="p">))</span>
+
+
+<span class="c1"># ── The step ─────────────────────────────────────────────────────────</span>
+
+
+<div class="viewcode-block" id="JonesECGPreprocess">
+<a class="viewcode-back" href="../../../../pages/train/networks/jones_ecg.html#physioex.data.steps.JonesECGPreprocess">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">JonesECGPreprocess</span><span class="p">(</span><span class="n">PreprocessingStep</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Full Jones et al. (2024) ECG preprocessing in a single step.</span>
+
+<span class="sd">    Turn one raw single-lead ECG channel (whole night, any fs) into the</span>
+<span class="sd">    network input of :class:`physioex.models.jones_ecg.JonesECGNet`:</span>
+<span class="sd">    256 Hz, scaled by the per-night R-wave normalization factor and</span>
+<span class="sd">    clipped to ``[-1, 1]``.</span>
+
+<span class="sd">    Order of operations (MATLAB stage 2 -&gt; stage 3 -&gt; stage 5 scaling):</span>
+
+<span class="sd">    1. ``remove_large_clips`` — loose-lead clipping mask removal;</span>
+<span class="sd">    2. zero-phase Chebyshev-II high-pass (0.5 / 0.25 Hz, 0.1 / 60 dB);</span>
+<span class="sd">    3. line-noise notch at ``line_freq`` (with the aliasing rules) plus</span>
+<span class="sd">       up to 10 iterative extra-noise notches (if ``find_noise``);</span>
+<span class="sd">    4. resample to 256 Hz with ``resample_poly`` (p/q from</span>
+<span class="sd">       ``Fraction(256/fs).limit_denominator()``);</span>
+<span class="sd">    5. R-wave detection (local variation + template; archetypes when</span>
+<span class="sd">       available) and normalization factor = 2 x P90 of per-beat ``max |x|``;</span>
+<span class="sd">    6. divide by the factor, clip to ``[-1, 1]``.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    line_freq : float</span>
+<span class="sd">        Mains frequency to notch (60.0 in the authors' US data, 50.0 in</span>
+<span class="sd">        EU data).</span>
+<span class="sd">    remove_clips : bool</span>
+<span class="sd">        Apply the loose-lead clip-mask removal.</span>
+<span class="sd">    find_noise : bool</span>
+<span class="sd">        Run the iterative extra-noise notch search.</span>
+<span class="sd">    archetypes_path : str, optional</span>
+<span class="sd">        Path to ``archetypes.mat``.  ``None`` (default) downloads it from</span>
+<span class="sd">        the authors' repository on first use.  Deliberately excluded from</span>
+<span class="sd">        ``spec()`` — a path must not change the cache hash.</span>
+
+<span class="sd">    Degenerate inputs (all zeros, fully clipped, no beats found) return</span>
+<span class="sd">    zeros of the correct length with a warning instead of raising.</span>
+<span class="sd">    """</span>
+
+<div class="viewcode-block" id="JonesECGPreprocess.__init__">
+<a class="viewcode-back" href="../../../../api/_generated/physioex.data.steps.JonesECGPreprocess.html#physioex.data.steps.JonesECGPreprocess.__init__">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">line_freq</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">60.0</span><span class="p">,</span>
+        <span class="n">remove_clips</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="n">find_noise</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="n">archetypes_path</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="k">if</span> <span class="n">line_freq</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"line_freq must be &gt; 0; got </span><span class="si">{</span><span class="n">line_freq</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">line_freq</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">line_freq</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">remove_clips</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">remove_clips</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">find_noise</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">find_noise</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">archetypes_path</span> <span class="o">=</span> <span class="n">archetypes_path</span></div>
+
+
+<div class="viewcode-block" id="JonesECGPreprocess.spec">
+<a class="viewcode-back" href="../../../../pages/train/networks/jones_ecg.html#physioex.data.steps.JonesECGPreprocess.spec">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">spec</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="c1"># ``impl`` is bumped whenever the numerical output changes for the same</span>
+        <span class="c1"># parameters, so caches built by an older implementation are not reused</span>
+        <span class="c1"># (2: SOS high-pass and per-beat template z-score).</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_build_spec</span><span class="p">(</span>
+            <span class="n">impl</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+            <span class="n">line_freq</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">line_freq</span><span class="p">,</span>
+            <span class="n">remove_clips</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">remove_clips</span><span class="p">,</span>
+            <span class="n">find_noise</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">find_noise</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="JonesECGPreprocess.compile">
+<a class="viewcode-back" href="../../../../pages/train/networks/jones_ecg.html#physioex.data.steps.JonesECGPreprocess.compile">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">compile</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fs_in</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">header</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">CompiledStep</span><span class="p">:</span>
+        <span class="n">fs_in</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">fs_in</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">fs_in</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"fs_in must be &gt; 0; got </span><span class="si">{</span><span class="n">fs_in</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="n">line_freq</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">line_freq</span>
+        <span class="n">remove_clips</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">remove_clips</span>
+        <span class="n">find_noise</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">find_noise</span>
+        <span class="n">archetypes_path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">archetypes_path</span>
+
+        <span class="n">archetypes</span> <span class="o">=</span> <span class="n">_load_archetypes</span><span class="p">(</span><span class="n">archetypes_path</span><span class="p">)</span>
+
+        <span class="k">def</span><span class="w"> </span><span class="nf">apply</span><span class="p">(</span><span class="n">signal</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">signal</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                    <span class="s2">"JonesECGPreprocess: input signal is empty/all-zero; "</span>
+                    <span class="s2">"returning zeros"</span>
+                <span class="p">)</span>
+                <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span>
+                    <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">*</span> <span class="n">JONES_ECG_FS_OUT</span> <span class="o">/</span> <span class="n">fs_in</span><span class="p">)),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span>
+                <span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">remove_clips</span><span class="p">:</span>
+                <span class="n">x</span> <span class="o">=</span> <span class="n">remove_large_clips</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">fs_in</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                    <span class="s2">"JonesECGPreprocess: signal fully clipped out by "</span>
+                    <span class="s2">"remove_large_clips; returning zeros"</span>
+                <span class="p">)</span>
+                <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span>
+                    <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">*</span> <span class="n">JONES_ECG_FS_OUT</span> <span class="o">/</span> <span class="n">fs_in</span><span class="p">)),</span>
+                    <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">,</span>
+                <span class="p">)</span>
+
+            <span class="n">x</span> <span class="o">=</span> <span class="n">highpass_cheby2</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">fs_in</span><span class="p">)</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">notch_line_noise</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">fs_in</span><span class="p">,</span> <span class="n">line_freq</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">find_noise</span><span class="p">:</span>
+                <span class="n">x</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">find_and_remove_noise</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">fs_in</span><span class="p">)</span>
+
+            <span class="c1"># MATLAB: [p, q] = rat(256 / fs); resample(x, p, q).</span>
+            <span class="n">ratio</span> <span class="o">=</span> <span class="p">(</span><span class="n">Fraction</span><span class="p">(</span><span class="n">JONES_ECG_FS_OUT</span><span class="p">)</span> <span class="o">/</span> <span class="n">Fraction</span><span class="p">(</span><span class="n">fs_in</span><span class="p">))</span><span class="o">.</span><span class="n">limit_denominator</span><span class="p">(</span>
+                <span class="mi">10000</span>
+            <span class="p">)</span>
+            <span class="n">p</span><span class="p">,</span> <span class="n">q</span> <span class="o">=</span> <span class="n">ratio</span><span class="o">.</span><span class="n">numerator</span><span class="p">,</span> <span class="n">ratio</span><span class="o">.</span><span class="n">denominator</span>
+            <span class="k">if</span> <span class="n">p</span> <span class="o">!=</span> <span class="n">q</span><span class="p">:</span>
+                <span class="n">x</span> <span class="o">=</span> <span class="n">_sig</span><span class="o">.</span><span class="n">resample_poly</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">p</span><span class="p">,</span> <span class="n">q</span><span class="p">,</span> <span class="n">window</span><span class="o">=</span><span class="p">(</span><span class="s2">"kaiser"</span><span class="p">,</span> <span class="mf">8.0</span><span class="p">))</span>
+
+            <span class="n">lv</span> <span class="o">=</span> <span class="n">_lowpass_local_variation</span><span class="p">(</span><span class="n">local_variation</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="mf">256.0</span><span class="p">))</span>
+            <span class="n">cand</span> <span class="o">=</span> <span class="n">_sig</span><span class="o">.</span><span class="n">find_peaks</span><span class="p">(</span>
+                <span class="n">lv</span><span class="p">,</span> <span class="n">distance</span><span class="o">=</span><span class="n">_LV_MIN_PEAK_SEPARATION</span><span class="p">,</span> <span class="n">height</span><span class="o">=</span><span class="n">_LV_MIN_PEAK_HEIGHT</span>
+            <span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">cand</span> <span class="o">=</span> <span class="n">cand</span><span class="p">[(</span><span class="n">cand</span> <span class="o">&gt;=</span> <span class="mi">100</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">cand</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">-</span> <span class="mi">156</span><span class="p">)]</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">cand</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                    <span class="s2">"JonesECGPreprocess: no R-wave candidates detected; "</span>
+                    <span class="s2">"returning zeros"</span>
+                <span class="p">)</span>
+                <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+            <span class="n">cand_beats</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span><span class="n">x</span><span class="p">[</span><span class="n">c</span> <span class="o">-</span> <span class="mi">100</span> <span class="p">:</span> <span class="n">c</span> <span class="o">+</span> <span class="mi">156</span><span class="p">]</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">cand</span><span class="p">])</span>
+            <span class="n">template</span> <span class="o">=</span> <span class="n">_build_template</span><span class="p">(</span><span class="n">cand_beats</span><span class="p">,</span> <span class="n">archetypes</span><span class="p">)</span>
+            <span class="n">peaks</span> <span class="o">=</span> <span class="n">find_r_peaks</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">template</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">peaks</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                    <span class="s2">"JonesECGPreprocess: no R-peaks detected; returning zeros"</span>
+                <span class="p">)</span>
+                <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+
+            <span class="n">factor</span> <span class="o">=</span> <span class="n">normalization_factor</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">peaks</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">factor</span><span class="p">)</span> <span class="ow">or</span> <span class="n">factor</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                    <span class="s2">"JonesECGPreprocess: degenerate normalization factor "</span>
+                    <span class="sa">f</span><span class="s2">"(</span><span class="si">{</span><span class="n">factor</span><span class="si">}</span><span class="s2">); returning zeros"</span>
+                <span class="p">)</span>
+                <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+
+            <span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">x</span> <span class="o">/</span> <span class="n">factor</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">y</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">CompiledStep</span><span class="p">(</span><span class="n">apply</span><span class="o">=</span><span class="n">apply</span><span class="p">,</span> <span class="n">fs_out</span><span class="o">=</span><span class="n">JONES_ECG_FS_OUT</span><span class="p">)</span></div>
+</div>
+
+</pre></div>
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer src="../../../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2023, Guido Gagliardi.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 8.1.3.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.16.1.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

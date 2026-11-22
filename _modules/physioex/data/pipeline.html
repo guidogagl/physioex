@@ -404,7 +404,7 @@ window.addEventListener("load", () => mermaid.run());
 <span class="kn">from</span><span class="w"> </span><span class="nn">abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">ABC</span><span class="p">,</span> <span class="n">abstractmethod</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">hashlib</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">List</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 
 
@@ -444,8 +444,18 @@ window.addEventListener("load", () => mermaid.run());
 <div class="viewcode-block" id="PreprocessingStep.compile">
 <a class="viewcode-back" href="../../../pages/preprocess.html#physioex.data.PreprocessingStep.compile">[docs]</a>
     <span class="nd">@abstractmethod</span>
-    <span class="k">def</span><span class="w"> </span><span class="nf">compile</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fs_in</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">CompiledStep</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""Precompute any expensive state and return a callable specialized for fs_in."""</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">compile</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">fs_in</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">header</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">CompiledStep</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Precompute any expensive state and return a callable specialized</span>
+<span class="sd">        for fs_in.</span>
+
+<span class="sd">        ``header`` is an optional per-channel metadata dict (physical</span>
+<span class="sd">        dimension, physical min/max, ...) forwarded to steps that declare</span>
+<span class="sd">        they need it (``needs_header`` attribute, e.g. ``PhysicalScale``).</span>
+<span class="sd">        Steps that ignore it simply do not read it; the signature default</span>
+<span class="sd">        keeps every existing ``compile(fs)`` call site working.</span>
+<span class="sd">        """</span>
         <span class="o">...</span></div>
 
 
@@ -502,15 +512,22 @@ window.addEventListener("load", () => mermaid.run());
         <span class="n">joined</span> <span class="o">=</span> <span class="s2">"|"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">spec</span><span class="p">())</span>
         <span class="k">return</span> <span class="n">hashlib</span><span class="o">.</span><span class="n">sha256</span><span class="p">(</span><span class="n">joined</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s2">"utf-8"</span><span class="p">))</span><span class="o">.</span><span class="n">hexdigest</span><span class="p">()[:</span><span class="mi">16</span><span class="p">]</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">compile</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fs_in</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">CompiledPipeline</span><span class="p">:</span>
+<div class="viewcode-block" id="PreprocessingPipeline.compile">
+<a class="viewcode-back" href="../../../pages/preprocess.html#physioex.data.PreprocessingPipeline.compile">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">compile</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">fs_in</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">header</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">CompiledPipeline</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Compile every step for ``fs_in``, threading the per-channel</span>
+<span class="sd">        ``header`` (optional) through to the steps that need it."""</span>
         <span class="n">compiled</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="n">fs</span> <span class="o">=</span> <span class="n">fs_in</span>
         <span class="k">for</span> <span class="n">step</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">steps</span><span class="p">:</span>
-            <span class="n">cs</span> <span class="o">=</span> <span class="n">step</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">fs</span><span class="p">)</span>
+            <span class="n">cs</span> <span class="o">=</span> <span class="n">step</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">fs</span><span class="p">,</span> <span class="n">header</span><span class="p">)</span>
             <span class="n">compiled</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">cs</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">cs</span><span class="o">.</span><span class="n">fs_out</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>  <span class="c1"># 0 = fs-not-meaningful (e.g. spectrogram)</span>
                 <span class="n">fs</span> <span class="o">=</span> <span class="n">cs</span><span class="o">.</span><span class="n">fs_out</span>
-        <span class="k">return</span> <span class="n">CompiledPipeline</span><span class="p">(</span><span class="n">compiled</span><span class="p">,</span> <span class="n">fs_out</span><span class="o">=</span><span class="n">fs</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">CompiledPipeline</span><span class="p">(</span><span class="n">compiled</span><span class="p">,</span> <span class="n">fs_out</span><span class="o">=</span><span class="n">fs</span><span class="p">)</span></div>
+
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="sa">f</span><span class="s2">"PreprocessingPipeline([</span><span class="si">{</span><span class="s1">', '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">spec</span><span class="p">())</span><span class="si">}</span><span class="s2">])"</span></div>

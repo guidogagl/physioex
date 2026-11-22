@@ -1,0 +1,933 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../../" data-theme="light">
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>physioex.train.replication &#8212; PhysioEx</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "light";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "light";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/custom.css?v=885a8570" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="../../../_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" />
+<link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" />
+
+    <script src="../../../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../../_static/design-tabs.js?v=f930bc37"></script>
+    <script type="module" src="https://cdn.jsdelivr.net/npm/mermaid@11.4.0/dist/mermaid.esm.min.mjs"></script>
+    <script type="module" src="https://cdn.jsdelivr.net/npm/@mermaid-js/layout-elk@0.1.4/dist/mermaid-layout-elk.esm.min.mjs"></script>
+    <script type="module">import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.4.0/dist/mermaid.esm.min.mjs";import elkLayouts from "https://cdn.jsdelivr.net/npm/@mermaid-js/layout-elk@0.1.4/dist/mermaid-layout-elk.esm.min.mjs";mermaid.registerLayoutLoaders(elkLayouts);mermaid.initialize({startOnLoad:false});</script>
+    <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
+    <script type="module">
+import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.4.0/dist/mermaid.esm.min.mjs";
+window.addEventListener("load", () => mermaid.run());
+</script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/physioex/train/replication';</script>
+    <link rel="icon" href="../../../_static/logo_bar.svg"/>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="light">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../../index.html">
+  
+  
+  
+  
+  
+    
+    
+    
+    <img src="../../../_static/logo_bar.svg" class="logo__image only-light" alt="PhysioEx - Home"/>
+    <img src="../../../_static/logo_bar.svg" class="logo__image only-dark pst-js-only" alt="PhysioEx - Home"/>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../pages/user_guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../related/index.html">
+    Related Works
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../api/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../pages/contribute.html">
+    Contributing to PhysioEx
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/guidogagl/physioex" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://guidogagl.github.io/" title="Website" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-globe fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Website</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar hide-on-wide">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../pages/user_guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../related/index.html">
+    Related Works
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../api/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../pages/contribute.html">
+    Contributing to PhysioEx
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/guidogagl/physioex" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://guidogagl.github.io/" title="Website" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-globe fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Website</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../../index.html" class="nav-link">Module code</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">physioex.train.replication</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for physioex.train.replication</h1><div class="highlight"><pre>
+<span></span><span class="sd">"""Library support for replicating published cardiorespiratory results.</span>
+
+<span class="sd">The three integrated cardiorespiratory sleep-staging networks (Wav2Sleep,</span>
+<span class="sd">SleepPPG-Net and the ECG-only network of Jones et al.) report their headline</span>
+<span class="sd">numbers as Cohen's kappa computed in two different ways:</span>
+
+<span class="sd">* *pooled* — one confusion matrix over every scored epoch of every recording</span>
+<span class="sd">  (Wav2Sleep's ``kappa_T``, Jones' ``overall_kappa``);</span>
+<span class="sd">* *median record* — one kappa per recording, then the median across</span>
+<span class="sd">  recordings (SleepPPG-Net, Jones' headline number).</span>
+
+<span class="sd">This module provides the plumbing to recompute those numbers on whole nights</span>
+<span class="sd">and check them against the values printed in the papers:</span>
+
+<span class="sd">* :func:`iter_nights` pulls whole nights (preprocessed signals + aligned</span>
+<span class="sd">  labels + metadata) out of a :class:`~physioex.data.base.BasePhysioDataset`</span>
+<span class="sd">  built in whole-night mode (``sequence_length &lt;= 0``);</span>
+<span class="sd">* :func:`align` trims a prediction and its label array to a common length the</span>
+<span class="sd">  way the authors' inference code does (see the docstring);</span>
+<span class="sd">* :func:`evaluate` wraps</span>
+<span class="sd">  :func:`physioex.train.metrics.pooled_kappa` and friends;</span>
+<span class="sd">* :func:`load_paper_metrics` / :func:`check` / :func:`format_table` read the</span>
+<span class="sd">  paper's claimed values (a small JSON file), compare them with the measured</span>
+<span class="sd">  ones and render a fixed-width table.</span>
+
+<span class="sd">No GPU or data access happens at import time.</span>
+<span class="sd">"""</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">TYPE_CHECKING</span><span class="p">,</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Iterator</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Union</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">physioex.train.metrics</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">median_record_kappa</span><span class="p">,</span>
+    <span class="n">per_record_kappa</span><span class="p">,</span>
+    <span class="n">pooled_kappa</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">physioex.data.base</span><span class="w"> </span><span class="kn">import</span> <span class="n">BasePhysioDataset</span>
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+
+
+<span class="c1"># ---------------------------------------------------------------------------</span>
+<span class="c1"># Paper targets</span>
+<span class="c1"># ---------------------------------------------------------------------------</span>
+
+
+<div class="viewcode-block" id="PaperTarget">
+<a class="viewcode-back" href="../../../api/_generated/physioex.train.replication.html#physioex.train.replication.PaperTarget">[docs]</a>
+<span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">PaperTarget</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""One number to replicate from a paper.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        dataset: dataset name (e.g. ``"shhs"``).</span>
+<span class="sd">        condition: the split/condition the paper reports (e.g. ``"test"``).</span>
+<span class="sd">        value: the published value.</span>
+<span class="sd">        metric: ``"pooled_kappa"`` or ``"median_record_kappa"``.</span>
+<span class="sd">        tolerance: accepted absolute deviation ``|ours - paper|``.</span>
+<span class="sd">        assert_: ``True`` = the target must PASS (``FAIL`` otherwise);</span>
+<span class="sd">            ``False`` = the number is only reported (``REPORT``).</span>
+<span class="sd">        requires: dataset names whose results must all be present for the</span>
+<span class="sd">            target to be evaluated (default ``[dataset]``).</span>
+<span class="sd">        note: free text shown in the table for context.</span>
+<span class="sd">    """</span>
+
+    <span class="n">dataset</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">condition</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">value</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="n">metric</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"pooled_kappa"</span>
+    <span class="n">tolerance</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.05</span>
+    <span class="n">assert_</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">requires</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span>
+    <span class="n">note</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">__post_init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">requires</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">requires</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="p">]</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">metric</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"pooled_kappa"</span><span class="p">,</span> <span class="s2">"median_record_kappa"</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"metric must be 'pooled_kappa' or 'median_record_kappa', got </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">metric</span><span class="si">!r}</span><span class="s2">"</span>
+            <span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="load_paper_metrics">
+<a class="viewcode-back" href="../../../api/_generated/physioex.train.replication.html#physioex.train.replication.load_paper_metrics">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">load_paper_metrics</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="s2">"str | Path"</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">"tuple[dict, list[PaperTarget]]"</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Read the paper's claimed results from a JSON file.</span>
+
+<span class="sd">    The file has the top-level keys ``"model"``, ``"source"``, ``"metric"``,</span>
+<span class="sd">    ``"tolerance"`` and ``"targets"`` (a list of objects with keys</span>
+<span class="sd">    ``dataset``, ``condition``, ``value`` and optional ``metric``,</span>
+<span class="sd">    ``tolerance``, ``assert`` (bool, default true), ``requires``, ``note``).</span>
+<span class="sd">    A target's optional ``metric``/``tolerance``/``assert`` override the</span>
+<span class="sd">    top-level ones.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        path: path to the JSON file.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        ``(header, targets)`` where ``header`` is the top-level dict without</span>
+<span class="sd">        ``"targets"`` and ``targets`` the list of :class:`PaperTarget`.</span>
+<span class="sd">    """</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="n">doc</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+    <span class="n">targets_spec</span> <span class="o">=</span> <span class="n">doc</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">"targets"</span><span class="p">,</span> <span class="p">[])</span>
+    <span class="n">default_metric</span> <span class="o">=</span> <span class="n">doc</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"metric"</span><span class="p">,</span> <span class="s2">"pooled_kappa"</span><span class="p">)</span>
+    <span class="n">default_tolerance</span> <span class="o">=</span> <span class="n">doc</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"tolerance"</span><span class="p">,</span> <span class="mf">0.05</span><span class="p">)</span>
+    <span class="n">default_assert</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">doc</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"assert"</span><span class="p">,</span> <span class="kc">True</span><span class="p">))</span>
+    <span class="n">targets</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">PaperTarget</span><span class="p">(</span>
+            <span class="n">dataset</span><span class="o">=</span><span class="n">spec</span><span class="p">[</span><span class="s2">"dataset"</span><span class="p">],</span>
+            <span class="n">condition</span><span class="o">=</span><span class="n">spec</span><span class="p">[</span><span class="s2">"condition"</span><span class="p">],</span>
+            <span class="n">value</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">spec</span><span class="p">[</span><span class="s2">"value"</span><span class="p">]),</span>
+            <span class="n">metric</span><span class="o">=</span><span class="n">spec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"metric"</span><span class="p">,</span> <span class="n">default_metric</span><span class="p">),</span>
+            <span class="n">tolerance</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"tolerance"</span><span class="p">,</span> <span class="n">default_tolerance</span><span class="p">)),</span>
+            <span class="n">assert_</span><span class="o">=</span><span class="nb">bool</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"assert"</span><span class="p">,</span> <span class="n">default_assert</span><span class="p">)),</span>
+            <span class="n">requires</span><span class="o">=</span><span class="nb">list</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"requires"</span><span class="p">,</span> <span class="p">[])),</span>
+            <span class="n">note</span><span class="o">=</span><span class="n">spec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"note"</span><span class="p">,</span> <span class="s2">""</span><span class="p">),</span>
+        <span class="p">)</span>
+        <span class="k">for</span> <span class="n">spec</span> <span class="ow">in</span> <span class="n">targets_spec</span>
+    <span class="p">]</span>
+    <span class="k">return</span> <span class="n">doc</span><span class="p">,</span> <span class="n">targets</span></div>
+
+
+
+<span class="c1"># ---------------------------------------------------------------------------</span>
+<span class="c1"># Whole-night iteration</span>
+<span class="c1"># ---------------------------------------------------------------------------</span>
+
+
+<span class="c1">#: Visits that the published test splits draw from, per dataset registry name.</span>
+<span class="c1">#: The readers load one visit per instance (``visit=`` argument), so a</span>
+<span class="c1">#: replication builds one instance per visit and pools the nights.</span>
+<span class="n">SPLIT_VISITS</span><span class="p">:</span> <span class="s2">"dict[str, tuple[int, ...]]"</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">"shhs"</span><span class="p">:</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span>
+    <span class="s2">"mros"</span><span class="p">:</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span>
+    <span class="s2">"wsc"</span><span class="p">:</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span>
+<span class="p">}</span>
+
+
+<div class="viewcode-block" id="replication_kwargs">
+<a class="viewcode-back" href="../../../api/_generated/physioex.train.replication.html#physioex.train.replication.replication_kwargs">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">replication_kwargs</span><span class="p">(</span><span class="n">dataset_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">"list[dict]"</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Constructor keyword sets that together cover a dataset's split nights.</span>
+
+<span class="sd">    One dict per visit for multi-visit datasets (see :data:`SPLIT_VISITS`),</span>
+<span class="sd">    else a single dict. CCSHS also gets ``exclude_subjects=[]``: its default</span>
+<span class="sd">    exclusion list (recordings whose XML disagrees with the NSRR summary CSV)</span>
+<span class="sd">    is a physioex choice the published evaluations did not make.</span>
+<span class="sd">    """</span>
+    <span class="n">extra</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"exclude_subjects"</span><span class="p">:</span> <span class="p">[]}</span> <span class="k">if</span> <span class="n">dataset_name</span> <span class="o">==</span> <span class="s2">"ccshs"</span> <span class="k">else</span> <span class="p">{}</span>
+    <span class="n">visits</span> <span class="o">=</span> <span class="n">SPLIT_VISITS</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">dataset_name</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">visits</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">[</span><span class="nb">dict</span><span class="p">(</span><span class="n">extra</span><span class="p">)]</span>
+    <span class="k">return</span> <span class="p">[</span><span class="nb">dict</span><span class="p">(</span><span class="n">extra</span><span class="p">,</span> <span class="n">visit</span><span class="o">=</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">visits</span><span class="p">]</span></div>
+
+
+
+<div class="viewcode-block" id="iter_nights">
+<a class="viewcode-back" href="../../../api/_generated/physioex.train.replication.html#physioex.train.replication.iter_nights">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">iter_nights</span><span class="p">(</span>
+    <span class="n">dataset</span><span class="p">:</span> <span class="s2">"BasePhysioDataset"</span><span class="p">,</span>
+    <span class="n">subject_ids</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">"Iterator[tuple[str, dict[str, np.ndarray], np.ndarray, dict]]"</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Yield one entry per whole night of the given subjects.</span>
+
+<span class="sd">    The dataset must be built in whole-night mode (``sequence_length &lt;= 0``);</span>
+<span class="sd">    in that mode item index ``i`` is exactly subject ``i``</span>
+<span class="sd">    (see ``BasePhysioDataset._get_recording_item``).</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        dataset: a ``BasePhysioDataset`` instance (whole-night mode).</span>
+<span class="sd">        subject_ids: subject ids to iterate over, in any order.</span>
+
+<span class="sd">    Yields:</span>
+<span class="sd">        Tuples ``(subject_id, signals, labels, metadata)`` where</span>
+
+<span class="sd">        * ``signals`` maps the requested channel name (``channel_info[key]</span>
+<span class="sd">          ["request"]``, e.g. ``"ECG"``; the item key such as ``"ECG_0"``</span>
+<span class="sd">          when no request is recorded) to a ``(L, T_e)`` float32 array of the</span>
+<span class="sd">          (preprocessed) whole-night signal. Channels the subject lacks</span>
+<span class="sd">          (``available=False``, zero-filled by the dataset) are left out;</span>
+<span class="sd">        * ``labels`` is the ``(L,)`` int64 label array in the dataset's label</span>
+<span class="sd">          transform (e.g. ``aasm4``: W=0, Light=1, Deep=2, REM=3; ``-1``</span>
+<span class="sd">          unscored), aligned with the signals;</span>
+<span class="sd">        * ``metadata`` is the return value of</span>
+<span class="sd">          ``dataset.subject_metadata(subject_id)`` when the dataset provides</span>
+<span class="sd">          that method, else ``{}``.</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="n">dataset</span><span class="o">.</span><span class="n">sequence_length</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="s2">"iter_nights needs a dataset in whole-night mode "</span>
+            <span class="sa">f</span><span class="s2">"(sequence_length &lt;= 0), got sequence_length=</span><span class="si">{</span><span class="n">dataset</span><span class="o">.</span><span class="n">sequence_length</span><span class="si">}</span><span class="s2">"</span>
+        <span class="p">)</span>
+
+    <span class="c1"># Recording mode: flat item index i is subject i.</span>
+    <span class="n">index</span> <span class="o">=</span> <span class="p">{</span><span class="n">s</span><span class="o">.</span><span class="n">subject_id</span><span class="p">:</span> <span class="n">i</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">s</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">_subjects</span><span class="p">)}</span>
+
+    <span class="k">for</span> <span class="n">subject_id</span> <span class="ow">in</span> <span class="n">subject_ids</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">subject_id</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">index</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"subject </span><span class="si">{</span><span class="n">subject_id</span><span class="si">!r}</span><span class="s2"> not in dataset </span><span class="si">{</span><span class="n">dataset</span><span class="o">.</span><span class="n">DATASET_NAME</span><span class="si">}</span><span class="s2">"</span>
+            <span class="p">)</span>
+        <span class="n">item</span> <span class="o">=</span> <span class="n">dataset</span><span class="p">[</span><span class="n">index</span><span class="p">[</span><span class="n">subject_id</span><span class="p">]]</span>
+        <span class="n">info</span> <span class="o">=</span> <span class="n">item</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"channel_info"</span><span class="p">,</span> <span class="p">{})</span>
+        <span class="n">signals</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">sig</span> <span class="ow">in</span> <span class="n">item</span><span class="p">[</span><span class="s2">"signals"</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">meta</span> <span class="o">=</span> <span class="n">info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="p">{})</span>
+            <span class="c1"># Channels the subject lacks are zero-filled by the dataset with</span>
+            <span class="c1"># available=False: drop them so the model sees them as absent.</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"available"</span><span class="p">,</span> <span class="kc">True</span><span class="p">):</span>
+                <span class="k">continue</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"request"</span><span class="p">,</span> <span class="n">key</span><span class="p">))</span>
+            <span class="n">signals</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">sig</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+        <span class="n">labels</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">item</span><span class="p">[</span><span class="s2">"labels"</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">metadata</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">subject_metadata</span><span class="p">(</span><span class="n">subject_id</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+            <span class="c1"># not every dataset provides subject-level metadata</span>
+            <span class="n">metadata</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">yield</span> <span class="n">subject_id</span><span class="p">,</span> <span class="n">signals</span><span class="p">,</span> <span class="n">labels</span><span class="p">,</span> <span class="n">metadata</span>
+    <span class="c1"># Release the memmapped cache files of the iterated nights (they are</span>
+    <span class="c1"># reopened on demand); many open files can stall a parallel filesystem.</span>
+    <span class="n">close</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span> <span class="s2">"close"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">callable</span><span class="p">(</span><span class="n">close</span><span class="p">):</span>
+        <span class="n">close</span><span class="p">()</span></div>
+
+
+
+<span class="c1"># ---------------------------------------------------------------------------</span>
+<span class="c1"># Prediction/label alignment</span>
+<span class="c1"># ---------------------------------------------------------------------------</span>
+
+
+<div class="viewcode-block" id="has_scoring_issues">
+<a class="viewcode-back" href="../../../api/_generated/physioex.train.replication.html#physioex.train.replication.has_scoring_issues">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">has_scoring_issues</span><span class="p">(</span><span class="n">dataset</span><span class="p">:</span> <span class="s2">"BasePhysioDataset"</span><span class="p">,</span> <span class="n">subject_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""True when the night has no N1, N3 or REM epoch in its raw AASM labels.</span>
+
+<span class="sd">    wav2sleep's ingestion marks such nights as ``.issues`` (recordings scored</span>
+<span class="sd">    sleep/wake only, with N2 as the sole sleep class) and its per-dataset test</span>
+<span class="sd">    evaluation leaves them out (``exclude_issues=True``). The check reads the</span>
+<span class="sd">    labels before any ``label_transform``, since ``aasm4`` merges N1 into Light.</span>
+<span class="sd">    """</span>
+    <span class="n">spec</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">s</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">dataset</span><span class="o">.</span><span class="n">_subjects</span> <span class="k">if</span> <span class="n">s</span><span class="o">.</span><span class="n">subject_id</span> <span class="o">==</span> <span class="n">subject_id</span><span class="p">)</span>
+    <span class="n">raw</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">_get_labels</span><span class="p">(</span><span class="n">spec</span><span class="p">))</span>
+    <span class="k">return</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">raw</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">))</span><span class="o">.</span><span class="n">any</span><span class="p">()</span></div>
+
+
+
+<div class="viewcode-block" id="align">
+<a class="viewcode-back" href="../../../api/_generated/physioex.train.replication.html#physioex.train.replication.align">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">align</span><span class="p">(</span><span class="n">pred</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">labels</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">"tuple[np.ndarray, np.ndarray, int]"</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Cut prediction and labels to their common length.</span>
+
+<span class="sd">    Whole-night models with a fixed input grid (Wav2Sleep, SleepPPG-Net: 1200</span>
+<span class="sd">    epochs) produce predictions for padded epochs when the night is shorter</span>
+<span class="sd">    than the grid, and the authors' inference drops the tail labels of</span>
+<span class="sd">    nights longer than the grid. Both effects leave pred and labels at</span>
+<span class="sd">    different lengths; cutting both to ``min(len)`` recovers the epochs that</span>
+<span class="sd">    are scored and predicted alike.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        pred: prediction array, ``(L_p,)`` class indices (any length).</span>
+<span class="sd">        labels: label array, ``(L_l,)`` class indices.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        ``(pred_aligned, labels_aligned, n_dropped)`` where the first two</span>
+<span class="sd">        have shape ``(min(L_p, L_l),)`` and ``n_dropped`` is the number of</span>
+<span class="sd">        *labelled* epochs that were dropped (``max(0, L_l - min(L_p, L_l))``)</span>
+<span class="sd">        so callers can report it.</span>
+<span class="sd">    """</span>
+    <span class="n">pred</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">pred</span><span class="p">)</span>
+    <span class="n">labels</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">labels</span><span class="p">)</span>
+    <span class="n">n</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">pred</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">labels</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">n_dropped</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">labels</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">n</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">pred</span><span class="p">[:</span><span class="n">n</span><span class="p">],</span> <span class="n">labels</span><span class="p">[:</span><span class="n">n</span><span class="p">],</span> <span class="n">n_dropped</span></div>
+
+
+
+<span class="c1"># ---------------------------------------------------------------------------</span>
+<span class="c1"># Kappa evaluation</span>
+<span class="c1"># ---------------------------------------------------------------------------</span>
+
+
+<div class="viewcode-block" id="evaluate">
+<a class="viewcode-back" href="../../../api/_generated/physioex.train.replication.html#physioex.train.replication.evaluate">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">evaluate</span><span class="p">(</span>
+    <span class="n">y_true_records</span><span class="p">:</span> <span class="s2">"Sequence[np.ndarray]"</span><span class="p">,</span>
+    <span class="n">y_pred_records</span><span class="p">:</span> <span class="s2">"Sequence[np.ndarray]"</span><span class="p">,</span>
+    <span class="n">n_classes</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Compute the kappa metrics of one evaluation run.</span>
+
+<span class="sd">    Wraps :func:`physioex.train.metrics.pooled_kappa`,</span>
+<span class="sd">    :func:`physioex.train.metrics.median_record_kappa` and</span>
+<span class="sd">    :func:`physioex.train.metrics.per_record_kappa` (epochs with an unscored</span>
+<span class="sd">    true label are ignored there).</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        y_true_records: one label array (class indices, ``-1`` unscored) per</span>
+<span class="sd">            recording.</span>
+<span class="sd">        y_pred_records: one prediction array per recording, same order.</span>
+<span class="sd">        n_classes: number of classes (4 for Wav2Sleep/SleepPPG-Net, 5 for</span>
+<span class="sd">            Jones).</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        dict with ``"pooled_kappa"``, ``"median_record_kappa"``,</span>
+<span class="sd">        ``"per_record_kappa"`` (list), ``"n_records"`` and ``"n_epochs"``</span>
+<span class="sd">        (total scored epochs across recordings).</span>
+<span class="sd">    """</span>
+    <span class="n">trues</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">y_true_records</span><span class="p">)</span>
+    <span class="n">preds</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">y_pred_records</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">trues</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">preds</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"got </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">trues</span><span class="p">)</span><span class="si">}</span><span class="s2"> true records and </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">preds</span><span class="p">)</span><span class="si">}</span><span class="s2"> prediction records"</span>
+        <span class="p">)</span>
+    <span class="n">n_epochs</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">sum</span><span class="p">(</span><span class="nb">int</span><span class="p">((</span><span class="n">t</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">())</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">trues</span><span class="p">))</span>
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="s2">"pooled_kappa"</span><span class="p">:</span> <span class="n">pooled_kappa</span><span class="p">(</span><span class="n">trues</span><span class="p">,</span> <span class="n">preds</span><span class="p">,</span> <span class="n">n_classes</span><span class="p">),</span>
+        <span class="s2">"median_record_kappa"</span><span class="p">:</span> <span class="n">median_record_kappa</span><span class="p">(</span><span class="n">trues</span><span class="p">,</span> <span class="n">preds</span><span class="p">,</span> <span class="n">n_classes</span><span class="p">),</span>
+        <span class="s2">"per_record_kappa"</span><span class="p">:</span> <span class="n">per_record_kappa</span><span class="p">(</span><span class="n">trues</span><span class="p">,</span> <span class="n">preds</span><span class="p">,</span> <span class="n">n_classes</span><span class="p">)</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span>
+        <span class="s2">"n_records"</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">trues</span><span class="p">),</span>
+        <span class="s2">"n_epochs"</span><span class="p">:</span> <span class="n">n_epochs</span><span class="p">,</span>
+    <span class="p">}</span></div>
+
+
+
+<span class="c1"># ---------------------------------------------------------------------------</span>
+<span class="c1"># Comparison against the paper</span>
+<span class="c1"># ---------------------------------------------------------------------------</span>
+
+
+<div class="viewcode-block" id="check">
+<a class="viewcode-back" href="../../../api/_generated/physioex.train.replication.html#physioex.train.replication.check">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">check</span><span class="p">(</span>
+    <span class="n">results</span><span class="p">:</span> <span class="s2">"dict[tuple[str, str], dict]"</span><span class="p">,</span>
+    <span class="n">targets</span><span class="p">:</span> <span class="s2">"Sequence[PaperTarget]"</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">"""Compare measured results against the paper's claimed values.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        results: mapping ``(dataset, condition)`` -&gt; the dict returned by</span>
+<span class="sd">            :func:`evaluate`.</span>
+<span class="sd">        targets: the paper targets from :func:`load_paper_metrics`.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        One dict per target with keys ``dataset``, ``condition``, ``metric``,</span>
+<span class="sd">        ``paper``, ``ours``, ``delta``, ``tolerance``, ``status`` (plus</span>
+<span class="sd">        ``note``). ``status`` is ``"SKIP"`` when any dataset in the target's</span>
+<span class="sd">        ``requires`` has no results, ``"PASS"``/``"FAIL"`` when</span>
+<span class="sd">        ``assert_`` is true and ``|delta| &lt;= tolerance`` (or not), and</span>
+<span class="sd">        ``"REPORT"`` when ``assert_`` is false. ``ours``/``delta`` are</span>
+<span class="sd">        ``None`` for ``SKIP`` rows.</span>
+<span class="sd">    """</span>
+    <span class="n">rows</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">target</span> <span class="ow">in</span> <span class="n">targets</span><span class="p">:</span>
+        <span class="n">row</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">"dataset"</span><span class="p">:</span> <span class="n">target</span><span class="o">.</span><span class="n">dataset</span><span class="p">,</span>
+            <span class="s2">"condition"</span><span class="p">:</span> <span class="n">target</span><span class="o">.</span><span class="n">condition</span><span class="p">,</span>
+            <span class="s2">"metric"</span><span class="p">:</span> <span class="n">target</span><span class="o">.</span><span class="n">metric</span><span class="p">,</span>
+            <span class="s2">"paper"</span><span class="p">:</span> <span class="n">target</span><span class="o">.</span><span class="n">value</span><span class="p">,</span>
+            <span class="s2">"ours"</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s2">"delta"</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s2">"tolerance"</span><span class="p">:</span> <span class="n">target</span><span class="o">.</span><span class="n">tolerance</span><span class="p">,</span>
+            <span class="s2">"status"</span><span class="p">:</span> <span class="s2">""</span><span class="p">,</span>
+            <span class="s2">"note"</span><span class="p">:</span> <span class="n">target</span><span class="o">.</span><span class="n">note</span><span class="p">,</span>
+        <span class="p">}</span>
+        <span class="n">missing</span> <span class="o">=</span> <span class="p">[</span><span class="n">d</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">target</span><span class="o">.</span><span class="n">requires</span> <span class="k">if</span> <span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">target</span><span class="o">.</span><span class="n">condition</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">results</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">missing</span><span class="p">:</span>
+            <span class="n">row</span><span class="p">[</span><span class="s2">"status"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"SKIP"</span>
+            <span class="n">row</span><span class="p">[</span><span class="s2">"note"</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s2">"note"</span><span class="p">]</span> <span class="o">+</span> <span class="s2">" "</span> <span class="k">if</span> <span class="n">row</span><span class="p">[</span><span class="s2">"note"</span><span class="p">]</span> <span class="k">else</span> <span class="s2">""</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span>
+                <span class="s2">"missing results for: "</span> <span class="o">+</span> <span class="s2">", "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">missing</span><span class="p">)</span>
+            <span class="p">)</span>
+            <span class="n">rows</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">row</span><span class="p">)</span>
+            <span class="k">continue</span>
+
+        <span class="c1"># The primary (dataset, condition) result provides the metric.</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">results</span><span class="p">[(</span><span class="n">target</span><span class="o">.</span><span class="n">dataset</span><span class="p">,</span> <span class="n">target</span><span class="o">.</span><span class="n">condition</span><span class="p">)]</span>
+        <span class="n">ours</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">result</span><span class="p">[</span><span class="n">target</span><span class="o">.</span><span class="n">metric</span><span class="p">])</span>
+        <span class="n">delta</span> <span class="o">=</span> <span class="n">ours</span> <span class="o">-</span> <span class="n">target</span><span class="o">.</span><span class="n">value</span>
+        <span class="n">row</span><span class="p">[</span><span class="s2">"ours"</span><span class="p">]</span> <span class="o">=</span> <span class="n">ours</span>
+        <span class="n">row</span><span class="p">[</span><span class="s2">"delta"</span><span class="p">]</span> <span class="o">=</span> <span class="n">delta</span>
+        <span class="k">if</span> <span class="n">target</span><span class="o">.</span><span class="n">assert_</span><span class="p">:</span>
+            <span class="n">row</span><span class="p">[</span><span class="s2">"status"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"PASS"</span> <span class="k">if</span> <span class="nb">abs</span><span class="p">(</span><span class="n">delta</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="n">target</span><span class="o">.</span><span class="n">tolerance</span> <span class="k">else</span> <span class="s2">"FAIL"</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">row</span><span class="p">[</span><span class="s2">"status"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"REPORT"</span>
+        <span class="n">rows</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">row</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">rows</span></div>
+
+
+
+<span class="c1"># ---------------------------------------------------------------------------</span>
+<span class="c1"># Reporting</span>
+<span class="c1"># ---------------------------------------------------------------------------</span>
+
+
+<div class="viewcode-block" id="format_table">
+<a class="viewcode-back" href="../../../api/_generated/physioex.train.replication.html#physioex.train.replication.format_table">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">format_table</span><span class="p">(</span><span class="n">rows</span><span class="p">:</span> <span class="s2">"Sequence[dict]"</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Render comparison rows as a fixed-width text table.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        rows: the dicts returned by :func:`check` (any subset of their keys</span>
+<span class="sd">            is used, in the canonical column order).</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        The table as a string (no trailing newline).</span>
+<span class="sd">    """</span>
+    <span class="n">columns</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="s2">"dataset"</span><span class="p">,</span>
+        <span class="s2">"condition"</span><span class="p">,</span>
+        <span class="s2">"metric"</span><span class="p">,</span>
+        <span class="s2">"paper"</span><span class="p">,</span>
+        <span class="s2">"ours"</span><span class="p">,</span>
+        <span class="s2">"delta"</span><span class="p">,</span>
+        <span class="s2">"tolerance"</span><span class="p">,</span>
+        <span class="s2">"status"</span><span class="p">,</span>
+        <span class="s2">"note"</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">cells</span><span class="p">:</span> <span class="s2">"list[list[str]]"</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">rows</span><span class="p">:</span>
+        <span class="n">line</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">columns</span><span class="p">:</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">col</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">line</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">"-"</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">float</span><span class="p">):</span>
+                <span class="n">line</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">value</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">line</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">value</span><span class="p">))</span>
+        <span class="n">cells</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+
+    <span class="n">widths</span> <span class="o">=</span> <span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">c</span><span class="p">)</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">columns</span><span class="p">]</span>
+    <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">cells</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">cell</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">line</span><span class="p">):</span>
+            <span class="n">widths</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">widths</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="nb">len</span><span class="p">(</span><span class="n">cell</span><span class="p">))</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">fmt</span><span class="p">(</span><span class="n">line</span><span class="p">:</span> <span class="s2">"Sequence[str]"</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">"  "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">cell</span><span class="o">.</span><span class="n">ljust</span><span class="p">(</span><span class="n">widths</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">cell</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">line</span><span class="p">))</span><span class="o">.</span><span class="n">rstrip</span><span class="p">()</span>
+
+    <span class="n">out</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">fmt</span><span class="p">(</span><span class="n">columns</span><span class="p">),</span>
+        <span class="s2">"  "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s2">"-"</span> <span class="o">*</span> <span class="n">w</span> <span class="k">for</span> <span class="n">w</span> <span class="ow">in</span> <span class="n">widths</span><span class="p">),</span>
+    <span class="p">]</span>
+    <span class="n">out</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">fmt</span><span class="p">(</span><span class="n">line</span><span class="p">)</span> <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">cells</span><span class="p">)</span>
+    <span class="k">return</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">out</span><span class="p">)</span></div>
+
+</pre></div>
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer src="../../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2023, Guido Gagliardi.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 8.1.3.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.16.1.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

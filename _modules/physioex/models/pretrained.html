@@ -415,24 +415,337 @@ window.addEventListener("load", () => mermaid.run());
 <span class="sd">the architecture in advance.</span>
 
 <span class="sd">Cached locally under the standard HuggingFace cache directory.</span>
+
+<span class="sd">Third-party cardiorespiratory models (wav2sleep, SleepPPG-Net, Jones ECG)</span>
+<span class="sd">live in their authors' repos; they are registered in</span>
+<span class="sd">``THIRD_PARTY_PRETRAINED`` below and downloaded on demand to the</span>
+<span class="sd">foundation-model cache.  ``load_from_pretrained`` routes by name: registry</span>
+<span class="sd">names build the third-party model, anything else falls through to the</span>
+<span class="sd">4rooms/physioex behaviour.  ``list_pretrained()`` lists both families.</span>
 <span class="sd">"""</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">importlib</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">physioex.models.foundation_checkpoints</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">CheckpointSource</span><span class="p">,</span>
+    <span class="n">ensure_checkpoint</span><span class="p">,</span>
+    <span class="n">_register_checkpoint_source</span><span class="p">,</span>
+<span class="p">)</span>
 
 <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">"physioex.models"</span><span class="p">)</span>
 
 <span class="n">HF_REPO_ID</span> <span class="o">=</span> <span class="s2">"4rooms/physioex"</span>
+
+<span class="c1"># ── Third-party pretrained models ────────────────────────────────────</span>
+
+<span class="c1">#: Licenses that carry no known usage restriction and need no warning.</span>
+<span class="n">_PERMISSIVE_LICENSES</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">({</span><span class="s2">"MIT"</span><span class="p">,</span> <span class="s2">"Apache-2.0"</span><span class="p">,</span> <span class="s2">"BSD-3-Clause"</span><span class="p">})</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_resolve_class</span><span class="p">(</span><span class="n">spec</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""Import a class from a ``'module.path:ClassName'`` string."""</span>
     <span class="n">module_path</span><span class="p">,</span> <span class="n">class_name</span> <span class="o">=</span> <span class="n">spec</span><span class="o">.</span><span class="n">rsplit</span><span class="p">(</span><span class="s2">":"</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
     <span class="k">return</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">importlib</span><span class="o">.</span><span class="n">import_module</span><span class="p">(</span><span class="n">module_path</span><span class="p">),</span> <span class="n">class_name</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_load_wav2sleep</span><span class="p">(</span><span class="n">paths</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Build Wav2Sleep from downloaded ``config.yaml`` + ``state_dict.pth``."""</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">physioex.models.wav2sleep</span><span class="w"> </span><span class="kn">import</span> <span class="n">Wav2Sleep</span>
+
+    <span class="k">return</span> <span class="n">Wav2Sleep</span><span class="o">.</span><span class="n">from_original</span><span class="p">(</span><span class="n">paths</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">paths</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_load_wav2sleep_eog</span><span class="p">(</span><span class="n">paths</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Build Wav2Sleep (EOG variant) from ``config.yaml`` + ``state_dict.pth``."""</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">physioex.models.wav2sleep</span><span class="w"> </span><span class="kn">import</span> <span class="n">Wav2Sleep</span>
+
+    <span class="k">return</span> <span class="n">Wav2Sleep</span><span class="o">.</span><span class="n">from_original</span><span class="p">(</span><span class="n">paths</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">paths</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_load_sleepppgnet</span><span class="p">(</span><span class="n">paths</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Build SleepPPGNet from the authors' replica weights (``class_order="physioex"``)."""</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">physioex.models.sleepppgnet</span><span class="w"> </span><span class="kn">import</span> <span class="n">SleepPPGNet</span>
+
+    <span class="k">return</span> <span class="n">SleepPPGNet</span><span class="o">.</span><span class="n">from_original</span><span class="p">(</span><span class="n">paths</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">class_order</span><span class="o">=</span><span class="s2">"physioex"</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_load_jones_ecg</span><span class="p">(</span><span class="n">paths</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">variant</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"primary"</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Build JonesECGNet from a downloaded checkpoint (``variant`` = family name)."""</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">physioex.models.jones_ecg</span><span class="w"> </span><span class="kn">import</span> <span class="n">JonesECGNet</span>
+
+    <span class="k">return</span> <span class="n">JonesECGNet</span><span class="o">.</span><span class="n">from_original</span><span class="p">(</span><span class="n">paths</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">variant</span><span class="p">)</span>
+
+
+<span class="c1"># Base folder for the Jones et al. 2024 checkpoints (adammj/ecg-sleep-staging).</span>
+<span class="n">_JONES_RAW_BASE</span> <span class="o">=</span> <span class="s2">"https://raw.githubusercontent.com/adammj/ecg-sleep-staging/main/models"</span>
+
+<span class="c1"># (variant in physioex registry, Jones checkpoint filename, sub-folder in the repo)</span>
+<span class="n">_JONES_VARIANTS</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="p">(</span><span class="s2">"primary"</span><span class="p">,</span> <span class="s2">"epoch_0647_kappa_0.724.pt"</span><span class="p">,</span> <span class="s2">"1_paper_models/primary_model"</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">"realtime"</span><span class="p">,</span> <span class="s2">"epoch_0637_kappa_0.703.pt"</span><span class="p">,</span> <span class="s2">"1_paper_models/real-time_model"</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">"no-demographics"</span><span class="p">,</span> <span class="s2">"epoch_0552_kappa_0.718.pt"</span><span class="p">,</span> <span class="s2">"2_post-paper_models/primary_model_no_demographics"</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">"no-time"</span><span class="p">,</span> <span class="s2">"epoch_0490_kappa_0.724.pt"</span><span class="p">,</span> <span class="s2">"2_post-paper_models/primary_model_no_time"</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">"only-ecg"</span><span class="p">,</span> <span class="s2">"epoch_0369_kappa_0.721.pt"</span><span class="p">,</span> <span class="s2">"2_post-paper_models/primary_model_only_ecg"</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">"cyclic"</span><span class="p">,</span> <span class="s2">"epoch_0548_kappa_0.725.pt"</span><span class="p">,</span> <span class="s2">"3_cyclic-time_models/primary_model"</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">"cyclic-realtime"</span><span class="p">,</span> <span class="s2">"epoch_0472_kappa_0.703.pt"</span><span class="p">,</span> <span class="s2">"3_cyclic-time_models/real-time_model"</span><span class="p">),</span>
+<span class="p">)</span>
+
+<span class="c1">#: physioex's 5-class AASM order (W, N1, N2, N3, REM).</span>
+<span class="n">_AASM_CLASS_NAMES</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"W"</span><span class="p">,</span> <span class="s2">"N1"</span><span class="p">,</span> <span class="s2">"N2"</span><span class="p">,</span> <span class="s2">"N3"</span><span class="p">,</span> <span class="s2">"REM"</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_jones_spec</span><span class="p">(</span><span class="n">variant</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">filename</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">folder</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">CheckpointSource</span><span class="p">:</span>
+    <span class="n">url</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">_JONES_RAW_BASE</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">folder</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">filename</span><span class="si">}</span><span class="s2">"</span>
+    <span class="k">return</span> <span class="n">CheckpointSource</span><span class="p">(</span>
+        <span class="n">source_type</span><span class="o">=</span><span class="s2">"raw_url"</span><span class="p">,</span>
+        <span class="n">repo_id</span><span class="o">=</span><span class="s2">"adammj/ecg-sleep-staging"</span><span class="p">,</span>
+        <span class="n">filenames</span><span class="o">=</span><span class="p">[</span><span class="n">filename</span><span class="p">],</span>
+        <span class="n">raw_urls</span><span class="o">=</span><span class="p">[</span><span class="n">url</span><span class="p">],</span>
+        <span class="n">local_filename</span><span class="o">=</span><span class="n">filename</span><span class="p">,</span>
+    <span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_third_party_registry</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Build ``THIRD_PARTY_PRETRAINED`` (the seven Jones variants expand inline)."""</span>
+    <span class="n">registry</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">"wav2sleep"</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">"source"</span><span class="p">:</span> <span class="n">CheckpointSource</span><span class="p">(</span>
+                <span class="n">source_type</span><span class="o">=</span><span class="s2">"huggingface_file"</span><span class="p">,</span>
+                <span class="n">repo_id</span><span class="o">=</span><span class="s2">"joncarter/wav2sleep"</span><span class="p">,</span>
+                <span class="n">filenames</span><span class="o">=</span><span class="p">[</span><span class="s2">"config.yaml"</span><span class="p">,</span> <span class="s2">"state_dict.pth"</span><span class="p">],</span>
+            <span class="p">),</span>
+            <span class="s2">"loader"</span><span class="p">:</span> <span class="n">_load_wav2sleep</span><span class="p">,</span>
+            <span class="s2">"license"</span><span class="p">:</span> <span class="s2">"MIT"</span><span class="p">,</span>
+            <span class="s2">"license_note"</span><span class="p">:</span> <span class="s2">"MIT license from the authors' repository."</span><span class="p">,</span>
+            <span class="s2">"reference"</span><span class="p">:</span> <span class="p">(</span>
+                <span class="s2">"Carter, J. F. &amp; Tarassenko, L. (2024). wav2sleep: A Unified "</span>
+                <span class="s2">"Multi-Modal Approach to Sleep Stage Classification from "</span>
+                <span class="s2">"Physiological Signals. arXiv:2411.04644. "</span>
+                <span class="s2">"https://github.com/joncarter1/wav2sleep"</span>
+            <span class="p">),</span>
+            <span class="s2">"n_classes"</span><span class="p">:</span> <span class="mi">4</span><span class="p">,</span>
+            <span class="s2">"class_names"</span><span class="p">:</span> <span class="p">(</span><span class="s2">"W"</span><span class="p">,</span> <span class="s2">"Light"</span><span class="p">,</span> <span class="s2">"Deep"</span><span class="p">,</span> <span class="s2">"REM"</span><span class="p">),</span>
+            <span class="s2">"input"</span><span class="p">:</span> <span class="p">(</span>
+                <span class="s2">"Whole night (1200 x 30-s epochs) of any subset of ECG, PPG "</span>
+                <span class="s2">"(1024 samples/epoch) and ABD, THX (256 samples/epoch); absent "</span>
+                <span class="s2">"signals = -inf; preset </span><span class="se">\"</span><span class="s2">wav2sleep</span><span class="se">\"</span><span class="s2">"</span>
+            <span class="p">),</span>
+        <span class="p">},</span>
+        <span class="s2">"wav2sleep-eog"</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">"source"</span><span class="p">:</span> <span class="n">CheckpointSource</span><span class="p">(</span>
+                <span class="n">source_type</span><span class="o">=</span><span class="s2">"huggingface_file"</span><span class="p">,</span>
+                <span class="n">repo_id</span><span class="o">=</span><span class="s2">"joncarter/wav2sleep-eog"</span><span class="p">,</span>
+                <span class="n">filenames</span><span class="o">=</span><span class="p">[</span><span class="s2">"config.yaml"</span><span class="p">,</span> <span class="s2">"state_dict.pth"</span><span class="p">],</span>
+            <span class="p">),</span>
+            <span class="s2">"loader"</span><span class="p">:</span> <span class="n">_load_wav2sleep_eog</span><span class="p">,</span>
+            <span class="s2">"license"</span><span class="p">:</span> <span class="s2">"MIT"</span><span class="p">,</span>
+            <span class="s2">"license_note"</span><span class="p">:</span> <span class="s2">"MIT license from the authors' repository."</span><span class="p">,</span>
+            <span class="s2">"reference"</span><span class="p">:</span> <span class="p">(</span>
+                <span class="s2">"Carter, J. F. &amp; Tarassenko, L. (2024), wav2sleep EOG release. "</span>
+                <span class="s2">"https://huggingface.co/joncarter/wav2sleep-eog"</span>
+            <span class="p">),</span>
+            <span class="s2">"n_classes"</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span>
+            <span class="s2">"class_names"</span><span class="p">:</span> <span class="n">_AASM_CLASS_NAMES</span><span class="p">,</span>
+            <span class="s2">"input"</span><span class="p">:</span> <span class="p">(</span>
+                <span class="s2">"Whole night (1200 x 30-s epochs) of EOG-L, EOG-R at 4096 "</span>
+                <span class="s2">"samples/epoch; preset </span><span class="se">\"</span><span class="s2">wav2sleep</span><span class="se">\"</span><span class="s2">"</span>
+            <span class="p">),</span>
+        <span class="p">},</span>
+        <span class="s2">"sleepppgnet-replica"</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">"source"</span><span class="p">:</span> <span class="n">CheckpointSource</span><span class="p">(</span>
+                <span class="n">source_type</span><span class="o">=</span><span class="s2">"huggingface_file"</span><span class="p">,</span>
+                <span class="n">repo_id</span><span class="o">=</span><span class="s2">"sleep-is-all-you-need/SPPPPG-Net"</span><span class="p">,</span>
+                <span class="n">filenames</span><span class="o">=</span><span class="p">[</span><span class="s2">"modelStatebe14cbce-76c1a81b-dd25c9a2-SleepPPGNet-"</span>
+                           <span class="s2">"857c0582-b900d29c-6864dcd6-39dc88ff-0--current"</span><span class="p">],</span>
+                <span class="n">local_filename</span><span class="o">=</span><span class="s2">"sleepppgnet-replica.pt"</span><span class="p">,</span>
+            <span class="p">),</span>
+            <span class="s2">"loader"</span><span class="p">:</span> <span class="n">_load_sleepppgnet</span><span class="p">,</span>
+            <span class="s2">"license"</span><span class="p">:</span> <span class="s2">"fair-noncommercial-research"</span><span class="p">,</span>
+            <span class="s2">"license_note"</span><span class="p">:</span> <span class="p">(</span>
+                <span class="s2">"Third-party replica weights; non-commercial research use only, "</span>
+                <span class="s2">"see the SPPPPG-Net repository."</span>
+            <span class="p">),</span>
+            <span class="s2">"reference"</span><span class="p">:</span> <span class="p">(</span>
+                <span class="s2">"Architecture: Kotzen, K. et al. (2023). SleepPPG-Net: a deep "</span>
+                <span class="s2">"learning algorithm for robust sleep staging from continuous "</span>
+                <span class="s2">"photoplethysmography. IEEE JBHI, arXiv:2202.05735. Weights: "</span>
+                <span class="s2">"third-party replica https://huggingface.co/sleep-is-all-you-need/SPPPPG-Net"</span>
+            <span class="p">),</span>
+            <span class="s2">"n_classes"</span><span class="p">:</span> <span class="mi">4</span><span class="p">,</span>
+            <span class="s2">"class_names"</span><span class="p">:</span> <span class="p">(</span><span class="s2">"W"</span><span class="p">,</span> <span class="s2">"Light"</span><span class="p">,</span> <span class="s2">"Deep"</span><span class="p">,</span> <span class="s2">"REM"</span><span class="p">),</span>
+            <span class="s2">"input"</span><span class="p">:</span> <span class="p">(</span>
+                <span class="s2">"Whole night PPG, 1 channel, 1200 x 1024 samples (34.13 Hz); "</span>
+                <span class="s2">"preset </span><span class="se">\"</span><span class="s2">sleepppgnet</span><span class="se">\"</span><span class="s2">"</span>
+            <span class="p">),</span>
+        <span class="p">},</span>
+    <span class="p">}</span>
+    <span class="k">for</span> <span class="n">variant</span><span class="p">,</span> <span class="n">filename</span><span class="p">,</span> <span class="n">folder</span> <span class="ow">in</span> <span class="n">_JONES_VARIANTS</span><span class="p">:</span>
+        <span class="n">registry</span><span class="p">[</span><span class="sa">f</span><span class="s2">"jones-ecg-</span><span class="si">{</span><span class="n">variant</span><span class="si">}</span><span class="s2">"</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">"source"</span><span class="p">:</span> <span class="n">_jones_spec</span><span class="p">(</span><span class="n">variant</span><span class="p">,</span> <span class="n">filename</span><span class="p">,</span> <span class="n">folder</span><span class="p">),</span>
+            <span class="s2">"loader"</span><span class="p">:</span> <span class="p">(</span><span class="k">lambda</span> <span class="n">paths</span><span class="p">,</span> <span class="n">v</span><span class="o">=</span><span class="n">variant</span><span class="p">:</span> <span class="n">_load_jones_ecg</span><span class="p">(</span><span class="n">paths</span><span class="p">,</span> <span class="n">v</span><span class="p">)),</span>
+            <span class="s2">"license"</span><span class="p">:</span> <span class="s2">"AGPL-3.0"</span><span class="p">,</span>
+            <span class="s2">"license_note"</span><span class="p">:</span> <span class="p">(</span>
+                <span class="s2">"AGPL-3.0 per the authors' repository; note that AGPL copyleft "</span>
+                <span class="s2">"may propagate to derivative works."</span>
+            <span class="p">),</span>
+            <span class="s2">"reference"</span><span class="p">:</span> <span class="p">(</span>
+                <span class="s2">"Jones, A. M., Itti, L. &amp; Sheth, B. R. (2024). Expert-level sleep "</span>
+                <span class="s2">"staging using an electrocardiography-only feed-forward neural "</span>
+                <span class="s2">"network. Computers in Biology and Medicine. "</span>
+                <span class="s2">"doi:10.1016/j.compbiomed.2024.108545. "</span>
+                <span class="s2">"https://github.com/adammj/ecg-sleep-staging"</span>
+            <span class="p">),</span>
+            <span class="s2">"n_classes"</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span>
+            <span class="s2">"class_names"</span><span class="p">:</span> <span class="n">_AASM_CLASS_NAMES</span><span class="p">,</span>
+            <span class="s2">"input"</span><span class="p">:</span> <span class="p">(</span>
+                <span class="s2">"Whole night ECG, 1 channel at 256 Hz (7680 samples/epoch) plus "</span>
+                <span class="s2">"per-epoch additional features; preset </span><span class="se">\"</span><span class="s2">jones_ecg</span><span class="se">\"</span><span class="s2">"</span>
+            <span class="p">),</span>
+        <span class="p">}</span>
+    <span class="c1"># Alias: the paper's primary checkpoint.</span>
+    <span class="n">registry</span><span class="p">[</span><span class="s2">"jones-ecg"</span><span class="p">]</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span>
+        <span class="n">registry</span><span class="p">[</span><span class="s2">"jones-ecg-primary"</span><span class="p">],</span> <span class="n">alias</span><span class="o">=</span><span class="s2">"jones-ecg-primary"</span>
+    <span class="p">)</span>
+    <span class="c1"># Register all sources in the download-cache registry so ensure_checkpoint</span>
+    <span class="c1"># knows where (and whether) each checkpoint lives.</span>
+    <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">spec</span> <span class="ow">in</span> <span class="n">registry</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">_register_checkpoint_source</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">spec</span><span class="p">[</span><span class="s2">"source"</span><span class="p">])</span>
+    <span class="k">return</span> <span class="n">registry</span>
+
+
+<span class="n">THIRD_PARTY_PRETRAINED</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="n">_third_party_registry</span><span class="p">()</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_third_party_names</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Names in the registry, following aliases to their canonical target."""</span>
+    <span class="n">names</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">THIRD_PARTY_PRETRAINED</span><span class="p">:</span>
+        <span class="n">spec</span> <span class="o">=</span> <span class="n">THIRD_PARTY_PRETRAINED</span><span class="p">[</span><span class="n">name</span><span class="p">]</span>
+        <span class="n">target</span> <span class="o">=</span> <span class="n">spec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"alias"</span><span class="p">)</span> <span class="ow">or</span> <span class="n">name</span>
+        <span class="n">names</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">target</span> <span class="k">if</span> <span class="n">target</span> <span class="ow">in</span> <span class="n">THIRD_PARTY_PRETRAINED</span> <span class="k">else</span> <span class="n">name</span><span class="p">)</span>
+    <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">names</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_license_is_restrictive</span><span class="p">(</span><span class="n">license_</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""True unless the license is in :data:`_PERMISSIVE_LICENSES`."""</span>
+    <span class="k">return</span> <span class="n">license_</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">{</span><span class="n">l</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="k">for</span> <span class="n">l</span> <span class="ow">in</span> <span class="n">_PERMISSIVE_LICENSES</span><span class="p">}</span>
+
+
+<span class="c1"># (name, reference). License is "physioex" (permissive, Apache-2.0) for the</span>
+<span class="c1"># 4rooms family; n_classes=None means the model takes it from config.json.</span>
+<span class="n">_4ROOMS_PRETRAINED</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="p">(</span><span class="s2">"seqsleepnet-huy"</span><span class="p">,</span> <span class="s2">"Huy et al. (2022)"</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">"seqsleepnet-phan"</span><span class="p">,</span> <span class="s2">"Phan et al. (2021)"</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">"lseqsleepnet-phan"</span><span class="p">,</span> <span class="s2">"Phan et al. (2022)"</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">"sleeptransformer-phan"</span><span class="p">,</span> <span class="s2">"Phan et al. (2021)"</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">"tinysleepnet-supratak"</span><span class="p">,</span> <span class="s2">"Supratak et al. (2017)"</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">"chambon2018"</span><span class="p">,</span> <span class="s2">"Chambon et al. (2018)"</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">"tsinalis-2016"</span><span class="p">,</span> <span class="s2">"Tsinalis et al. (2016)"</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">"coresleep-kontras"</span><span class="p">,</span> <span class="s2">"Kontras et al. (2024)"</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">"protosleepnet-gagliardi"</span><span class="p">,</span> <span class="s2">"Gagliardi et al. (2026)"</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">"protosleeptransformer-gagliardi"</span><span class="p">,</span> <span class="s2">"Gagliardi et al. (2026)"</span><span class="p">),</span>
+<span class="p">)</span>
+
+
+<div class="viewcode-block" id="list_pretrained">
+<a class="viewcode-back" href="../../../api/_generated/physioex.models.pretrained.list_pretrained.html#physioex.models.list_pretrained">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">list_pretrained</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""List the pretrained models available through ``load_from_pretrained``.</span>
+
+<span class="sd">    Covers the third-party registry (wav2sleep, SleepPPG-Net, Jones ECG) and a</span>
+<span class="sd">    static list of the 4rooms/physioex models; no network access.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        One dict per model with keys ``name``, ``source``, ``license``,</span>
+<span class="sd">        ``reference``, ``n_classes`` (and ``class_names`` for the</span>
+<span class="sd">        third-party models).</span>
+<span class="sd">    """</span>
+    <span class="n">entries</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">THIRD_PARTY_PRETRAINED</span><span class="p">:</span>
+        <span class="n">spec</span> <span class="o">=</span> <span class="n">THIRD_PARTY_PRETRAINED</span><span class="p">[</span><span class="n">name</span><span class="p">]</span>
+        <span class="n">src</span> <span class="o">=</span> <span class="n">spec</span><span class="p">[</span><span class="s2">"source"</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">src</span><span class="o">.</span><span class="n">source_type</span> <span class="o">==</span> <span class="s2">"raw_url"</span><span class="p">:</span>
+            <span class="n">source</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"github: </span><span class="si">{</span><span class="n">src</span><span class="o">.</span><span class="n">repo_id</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">src</span><span class="o">.</span><span class="n">filenames</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">)"</span>
+        <span class="k">elif</span> <span class="n">src</span><span class="o">.</span><span class="n">source_type</span> <span class="o">==</span> <span class="s2">"huggingface_file"</span><span class="p">:</span>
+            <span class="n">source</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"hf: </span><span class="si">{</span><span class="n">src</span><span class="o">.</span><span class="n">repo_id</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="s1">', '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">src</span><span class="o">.</span><span class="n">filenames</span><span class="p">)</span><span class="si">}</span><span class="s2">)"</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">source</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"hf: </span><span class="si">{</span><span class="n">src</span><span class="o">.</span><span class="n">repo_id</span><span class="si">}</span><span class="s2">"</span>
+        <span class="n">entries</span><span class="o">.</span><span class="n">append</span><span class="p">({</span>
+            <span class="s2">"name"</span><span class="p">:</span> <span class="n">name</span><span class="p">,</span>
+            <span class="s2">"source"</span><span class="p">:</span> <span class="n">source</span><span class="p">,</span>
+            <span class="s2">"license"</span><span class="p">:</span> <span class="n">spec</span><span class="p">[</span><span class="s2">"license"</span><span class="p">],</span>
+            <span class="s2">"reference"</span><span class="p">:</span> <span class="n">spec</span><span class="p">[</span><span class="s2">"reference"</span><span class="p">],</span>
+            <span class="s2">"n_classes"</span><span class="p">:</span> <span class="n">spec</span><span class="p">[</span><span class="s2">"n_classes"</span><span class="p">],</span>
+            <span class="s2">"class_names"</span><span class="p">:</span> <span class="nb">list</span><span class="p">(</span><span class="n">spec</span><span class="p">[</span><span class="s2">"class_names"</span><span class="p">]),</span>
+        <span class="p">})</span>
+    <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">reference</span> <span class="ow">in</span> <span class="n">_4ROOMS_PRETRAINED</span><span class="p">:</span>
+        <span class="n">entries</span><span class="o">.</span><span class="n">append</span><span class="p">({</span>
+            <span class="s2">"name"</span><span class="p">:</span> <span class="n">name</span><span class="p">,</span>
+            <span class="s2">"source"</span><span class="p">:</span> <span class="sa">f</span><span class="s2">"hf: </span><span class="si">{</span><span class="n">HF_REPO_ID</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
+            <span class="s2">"license"</span><span class="p">:</span> <span class="s2">"Apache-2.0"</span><span class="p">,</span>
+            <span class="s2">"reference"</span><span class="p">:</span> <span class="n">reference</span><span class="p">,</span>
+            <span class="s2">"n_classes"</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s2">"class_names"</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="p">})</span>
+    <span class="k">return</span> <span class="n">entries</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_load_third_party</span><span class="p">(</span>
+    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">device</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">verbose</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span> <span class="n">repo_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Download (if needed) and build a third-party registered model."""</span>
+    <span class="n">spec</span> <span class="o">=</span> <span class="n">THIRD_PARTY_PRETRAINED</span><span class="p">[</span><span class="n">name</span><span class="p">]</span>
+    <span class="n">target</span> <span class="o">=</span> <span class="n">spec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"alias"</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">target</span> <span class="o">!=</span> <span class="n">name</span><span class="p">:</span>
+        <span class="n">spec</span> <span class="o">=</span> <span class="n">THIRD_PARTY_PRETRAINED</span><span class="p">[</span><span class="n">target</span><span class="p">]</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="n">target</span>
+    <span class="n">source</span> <span class="o">=</span> <span class="n">spec</span><span class="p">[</span><span class="s2">"source"</span><span class="p">]</span>
+
+    <span class="k">if</span> <span class="n">source</span><span class="o">.</span><span class="n">source_type</span> <span class="o">==</span> <span class="s2">"huggingface_file"</span><span class="p">:</span>
+        <span class="c1"># ensure_checkpoint returns the first file; all files land in the</span>
+        <span class="c1"># same directory (see _download_hf_file).</span>
+        <span class="n">primary</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">ensure_checkpoint</span><span class="p">(</span><span class="n">name</span><span class="p">))</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">source</span><span class="o">.</span><span class="n">filenames</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">paths</span> <span class="o">=</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">primary</span><span class="o">.</span><span class="n">parent</span> <span class="o">/</span> <span class="n">f</span><span class="p">)</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">source</span><span class="o">.</span><span class="n">filenames</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">paths</span> <span class="o">=</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">primary</span><span class="p">)]</span>
+    <span class="k">elif</span> <span class="n">source</span><span class="o">.</span><span class="n">source_type</span> <span class="o">==</span> <span class="s2">"raw_url"</span><span class="p">:</span>
+        <span class="n">paths</span> <span class="o">=</span> <span class="n">ensure_checkpoint</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">paths</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="n">paths</span> <span class="o">=</span> <span class="p">[</span><span class="n">paths</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"Unsupported source_type </span><span class="si">{</span><span class="n">source</span><span class="o">.</span><span class="n">source_type</span><span class="si">!r}</span><span class="s2"> for </span><span class="si">{</span><span class="n">name</span><span class="si">!r}</span><span class="s2">"</span>
+        <span class="p">)</span>
+
+    <span class="n">model</span> <span class="o">=</span> <span class="n">spec</span><span class="p">[</span><span class="s2">"loader"</span><span class="p">](</span><span class="n">paths</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">_license_is_restrictive</span><span class="p">(</span><span class="n">spec</span><span class="p">[</span><span class="s2">"license"</span><span class="p">]):</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+            <span class="s2">"</span><span class="si">%s</span><span class="s2">: weights under </span><span class="si">%s</span><span class="s2"> — </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span>
+            <span class="n">name</span><span class="p">,</span> <span class="n">spec</span><span class="p">[</span><span class="s2">"license"</span><span class="p">],</span> <span class="n">spec</span><span class="p">[</span><span class="s2">"license_note"</span><span class="p">],</span>
+        <span class="p">)</span>
+
+    <span class="n">model</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span><span class="o">.</span><span class="n">eval</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+        <span class="n">n_params</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">numel</span><span class="p">()</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">model</span><span class="o">.</span><span class="n">parameters</span><span class="p">())</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Model:     </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Class:     </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">model</span><span class="p">)</span><span class="o">.</span><span class="vm">__module__</span><span class="si">}</span><span class="s2">.</span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">model</span><span class="p">)</span><span class="o">.</span><span class="vm">__qualname__</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Params:    </span><span class="si">{</span><span class="n">n_params</span><span class="si">:</span><span class="s2">,</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Reference: </span><span class="si">{</span><span class="n">spec</span><span class="p">[</span><span class="s1">'reference'</span><span class="p">]</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"License:   </span><span class="si">{</span><span class="n">spec</span><span class="p">[</span><span class="s1">'license'</span><span class="p">]</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">spec</span><span class="p">[</span><span class="s1">'license_note'</span><span class="p">]</span><span class="si">}</span><span class="s2">)"</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Classes:   </span><span class="si">{</span><span class="s1">', '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">spec</span><span class="p">[</span><span class="s1">'class_names'</span><span class="p">])</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Input:     </span><span class="si">{</span><span class="n">spec</span><span class="p">[</span><span class="s1">'input'</span><span class="p">]</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">model</span>
 
 
 <span class="c1"># (key in metrics.json, column header, width). A column is printed only if at</span>
@@ -474,18 +787,27 @@ window.addEventListener("load", () => mermaid.run());
     <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">device</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"cpu"</span><span class="p">,</span> <span class="n">verbose</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="n">repo_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Load a pretrained model from HuggingFace Hub.</span>
+<span class="w">    </span><span class="sd">"""Load a pretrained model, downloading the weights if needed.</span>
 
-<span class="sd">    The model class and constructor kwargs are read from ``config.json``</span>
-<span class="sd">    stored alongside the weights on HuggingFace.  The caller only needs</span>
-<span class="sd">    to know the model identifier (e.g. ``"seqsleepnet-huy"``).</span>
+<span class="sd">    If ``name`` is a registered third-party model (see</span>
+<span class="sd">    :data:`THIRD_PARTY_PRETRAINED` — wav2sleep, wav2sleep-eog,</span>
+<span class="sd">    sleepppgnet-replica, ``jones-ecg-*``) and ``repo_id`` is not set, the</span>
+<span class="sd">    checkpoint is downloaded to the foundation-model cache</span>
+<span class="sd">    (``$PHYSIOEX_CACHE_DIR/v1/foundation_models/&lt;name&gt;/``) and the model is</span>
+<span class="sd">    built with the authors' ``from_original`` factory.  Licenses that are</span>
+<span class="sd">    not MIT/Apache/BSD are always logged as a warning.</span>
+
+<span class="sd">    Otherwise the 4rooms/physioex behaviour applies: the model class and</span>
+<span class="sd">    constructor kwargs are read from the ``config.json`` stored in the HF</span>
+<span class="sd">    repo (e.g. ``"seqsleepnet-huy"``).</span>
 
 <span class="sd">    Args:</span>
-<span class="sd">        name: Model identifier matching a sub-folder in the HF repo</span>
-<span class="sd">            (e.g. ``"seqsleepnet-huy"``).</span>
+<span class="sd">        name: Model identifier — a third-party registry name or a sub-folder</span>
+<span class="sd">            in the HF repo.</span>
 <span class="sd">        device: Device to load the model onto (default ``"cpu"``).</span>
-<span class="sd">        verbose: If True, print model info and per-dataset evaluation</span>
-<span class="sd">            metrics stored on HuggingFace.</span>
+<span class="sd">        verbose: If True, print model info; for third-party models also the</span>
+<span class="sd">            reference, license, classes and expected input.</span>
+<span class="sd">        repo_id: Override the HF repo for the 4rooms-style load.</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">        The pretrained ``nn.Module`` in eval mode on *device*.</span>
@@ -495,7 +817,11 @@ window.addEventListener("load", () => mermaid.run());
 <span class="sd">        from physioex.models import load_from_pretrained</span>
 
 <span class="sd">        model = load_from_pretrained("seqsleepnet-huy", verbose=True)</span>
+<span class="sd">        model = load_from_pretrained("wav2sleep", verbose=True)</span>
 <span class="sd">    """</span>
+    <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">THIRD_PARTY_PRETRAINED</span> <span class="ow">and</span> <span class="n">repo_id</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">_load_third_party</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">device</span><span class="p">,</span> <span class="n">verbose</span><span class="p">,</span> <span class="n">repo_id</span><span class="p">)</span>
+
     <span class="kn">from</span><span class="w"> </span><span class="nn">huggingface_hub</span><span class="w"> </span><span class="kn">import</span> <span class="n">hf_hub_download</span>
 
     <span class="n">repo</span> <span class="o">=</span> <span class="n">repo_id</span> <span class="ow">or</span> <span class="n">HF_REPO_ID</span>
