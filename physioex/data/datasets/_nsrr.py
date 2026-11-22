@@ -239,9 +239,7 @@ class _NSRRBaseDataset(BasePhysioDataset):
             with pyedflib.EdfReader(str(spec.edf_path)) as f:
                 dt = f.getStartdatetime()
             if dt is not None:
-                header.start_sec = float(
-                    dt.hour * 3600 + dt.minute * 60 + dt.second
-                )
+                header.start_sec = float(dt.hour * 3600 + dt.minute * 60 + dt.second)
         except Exception as exc:
             logger.debug(
                 "[%s] %s: could not read the EDF startdatetime: %s",

@@ -196,7 +196,9 @@ def iter_nights(
 
     for subject_id in subject_ids:
         if subject_id not in index:
-            raise KeyError(f"subject {subject_id!r} not in dataset {dataset.DATASET_NAME}")
+            raise KeyError(
+                f"subject {subject_id!r} not in dataset {dataset.DATASET_NAME}"
+            )
         item = dataset[index[subject_id]]
         info = item.get("channel_info", {})
         signals = {}
@@ -240,9 +242,7 @@ def has_scoring_issues(dataset: "BasePhysioDataset", subject_id: str) -> bool:
     return not np.isin(raw, (1, 3, 4)).any()
 
 
-def align(
-    pred: np.ndarray, labels: np.ndarray
-) -> "tuple[np.ndarray, np.ndarray, int]":
+def align(pred: np.ndarray, labels: np.ndarray) -> "tuple[np.ndarray, np.ndarray, int]":
     """Cut prediction and labels to their common length.
 
     Whole-night models with a fixed input grid (Wav2Sleep, SleepPPG-Net: 1200
@@ -301,7 +301,9 @@ def evaluate(
     trues = list(y_true_records)
     preds = list(y_pred_records)
     if len(trues) != len(preds):
-        raise ValueError(f"got {len(trues)} true records and {len(preds)} prediction records")
+        raise ValueError(
+            f"got {len(trues)} true records and {len(preds)} prediction records"
+        )
     n_epochs = int(sum(int((t != -1).sum()) for t in trues))
     return {
         "pooled_kappa": pooled_kappa(trues, preds, n_classes),
@@ -350,9 +352,7 @@ def check(
             "status": "",
             "note": target.note,
         }
-        missing = [
-            d for d in target.requires if (d, target.condition) not in results
-        ]
+        missing = [d for d in target.requires if (d, target.condition) not in results]
         if missing:
             row["status"] = "SKIP"
             row["note"] = (row["note"] + " " if row["note"] else "") + (

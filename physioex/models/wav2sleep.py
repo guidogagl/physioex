@@ -66,7 +66,9 @@ class ConvLayerNorm(nn.Module):
         return x_BCT
 
 
-def get_norm(name: Optional[str] = "batch", causal: bool = False, *args, **kwargs) -> nn.Module:
+def get_norm(
+    name: Optional[str] = "batch", causal: bool = False, *args, **kwargs
+) -> nn.Module:
     """Return a normalization module from its name.
 
     ``norm_eps`` is accepted for any norm type but only instance norm uses it.
@@ -120,11 +122,14 @@ class ConvLayer1D(nn.Module):
             stride=stride,
             padding=self.padding,
             groups=groups,
-            bias=bias or norm is None,  # Make sure bias is used if no normalization is applied.
+            bias=bias
+            or norm is None,  # Make sure bias is used if no normalization is applied.
             dilation=dilation,
         )
         norm_kwargs = {"norm_eps": norm_eps} if norm_eps is not None else {}
-        self.norm = get_norm(norm, causal=causal, num_features=output_dim, **norm_kwargs)
+        self.norm = get_norm(
+            norm, causal=causal, num_features=output_dim, **norm_kwargs
+        )
         self.activation = get_activation(activation)
         self.dropout = nn.Dropout(p=dropout)
 
@@ -134,7 +139,11 @@ class ConvLayer1D(nn.Module):
         # normalization stats. When using stride > 1, trim slightly less to preserve correct
         # downsampled length so that residual paths (e.g. 1x1, stride-2) align.
         if self.causal and self.padding > 0:
-            stride = self.conv.stride[0] if isinstance(self.conv.stride, tuple) else self.conv.stride
+            stride = (
+                self.conv.stride[0]
+                if isinstance(self.conv.stride, tuple)
+                else self.conv.stride
+            )
             right_trim = max(self.padding - (stride - 1), 0)
             if right_trim > 0:
                 out = out[:, :, :-right_trim]
@@ -161,7 +170,9 @@ class ConvBlock1D(nn.Module):
         super().__init__()
         self.use_residual = use_residual
 
-        def create_conv(input_dim: int, output_dim: int, stride: int = 1) -> ConvLayer1D:
+        def create_conv(
+            input_dim: int, output_dim: int, stride: int = 1
+        ) -> ConvLayer1D:
             return ConvLayer1D(
                 input_dim=input_dim,
                 output_dim=output_dim,
@@ -291,7 +302,9 @@ class Wav2Sleep(nn.Module):
         self.sequence_mixer = sequence_mixer
         self.feature_dim = self.epoch_mixer.feature_dim
         self.num_classes = num_classes
-        self.classifier = nn.Linear(in_features=self.feature_dim, out_features=num_classes)
+        self.classifier = nn.Linear(
+            in_features=self.feature_dim, out_features=num_classes
+        )
 
     @property
     def valid_signals(self) -> list[str]:
@@ -338,13 +351,13 @@ class Wav2Sleep(nn.Module):
                 B, L, T = x_st.shape
                 x_flat[signal_name] = x_st.reshape(B, L * T)
             else:
-                raise ValueError(f"Signal {signal_name!r} must have 2 or 3 dimensions, got {x_st.ndim}.")
+                raise ValueError(
+                    f"Signal {signal_name!r} must have 2 or 3 dimensions, got {x_st.ndim}."
+                )
         signals = sorted(x_flat.keys())
         if not signals:
             raise ValueError("At least one signal must be provided.")
-        any_absent = any(
-            bool(torch.isinf(x_flat[s]).all().item()) for s in signals
-        )
+        any_absent = any(bool(torch.isinf(x_flat[s]).all().item()) for s in signals)
         return x_flat, signals, any_absent
 
     def forward(self, x: dict[str, Tensor]) -> Tensor:
@@ -396,7 +409,9 @@ class Wav2Sleep(nn.Module):
         logits_BSF = self.forward(x)
         return logits_BSF.argmax(axis=-1)
 
-    def predict_night(self, signals: dict[str, "np.ndarray"], metadata: Optional[dict] = None) -> "np.ndarray":
+    def predict_night(
+        self, signals: dict[str, "np.ndarray"], metadata: Optional[dict] = None
+    ) -> "np.ndarray":
         """Classify one whole night, already preprocessed by the ``wav2sleep`` preset.
 
         Args:
@@ -442,7 +457,11 @@ class Wav2Sleep(nn.Module):
                 else:
                     pad = np.zeros((n_epochs - L) * t_e, dtype=np.float32)
                     arr = np.concatenate([arr.reshape(-1), pad])
-            x[sig] = torch.from_numpy(arr.astype(np.float32, copy=False)).reshape(1, -1).to(device)
+            x[sig] = (
+                torch.from_numpy(arr.astype(np.float32, copy=False))
+                .reshape(1, -1)
+                .to(device)
+            )
 
         was_training = self.training
         self.eval()
@@ -485,7 +504,9 @@ class Wav2Sleep(nn.Module):
                 if target is not None:
                     name = target.rsplit(".", 1)[-1]
                     if name not in known:
-                        raise ValueError(f"Unknown _target_ class {target!r} in config.")
+                        raise ValueError(
+                            f"Unknown _target_ class {target!r} in config."
+                        )
                     return known[name](**kwargs)
                 return kwargs
             if isinstance(node, list):
@@ -527,7 +548,9 @@ class SignalEncoders(nn.Module):
             if encoder_name in encoders:
                 continue
             if signal_name not in SAMPLES_PER_EPOCH:
-                raise ValueError(f"Column {signal_name} unrecognised. Doesn't have a sampling rate.")
+                raise ValueError(
+                    f"Column {signal_name} unrecognised. Doesn't have a sampling rate."
+                )
             samples_per_epoch = SAMPLES_PER_EPOCH[signal_name]
             encoders[encoder_name] = SignalEncoder(
                 input_dim=1,
@@ -545,9 +568,13 @@ class SignalEncoders(nn.Module):
         self.encoders = nn.ModuleDict(encoders)
         # Optionally add embedding to indicate signal source.
         self.embed_signals = embed_signals
-        self.sig_to_embedding_idx = {sig: i for i, sig in enumerate(sorted(signal_map.keys()))}
+        self.sig_to_embedding_idx = {
+            sig: i for i, sig in enumerate(sorted(signal_map.keys()))
+        }
         if self.embed_signals:
-            self.embedder = nn.Embedding(num_embeddings=len(signal_map), embedding_dim=self.feature_dim)
+            self.embedder = nn.Embedding(
+                num_embeddings=len(signal_map), embedding_dim=self.feature_dim
+            )
         else:
             self.register_parameter("embedder", None)
 
@@ -566,13 +593,23 @@ class SignalEncoders(nn.Module):
         z_dict: dict[str, Tensor] = {}
         # Apply signal encoder for each input signal.
         for signal_name, x_BT in x.items():
-            mask_B = torch.isinf(x_BT[:, 0])  # Identify inf. batch elements (missing signals during training).
-            x_BT = torch.where(torch.isinf(x_BT), 0.0, x_BT)  # Set inf. values to zero for stability.
+            mask_B = torch.isinf(
+                x_BT[:, 0]
+            )  # Identify inf. batch elements (missing signals during training).
+            x_BT = torch.where(
+                torch.isinf(x_BT), 0.0, x_BT
+            )  # Set inf. values to zero for stability.
             z_BSF = self.get_encoder(signal_name)(x_BT)
             # Re-fill output batch elements with neg. inf. values so embedder knows what is missing.
             z_BSF = torch.where(mask_B[:, None, None], float("-inf"), z_BSF)
-            if self.embed_signals:  # Add embedding to indicate signal source. (For shared encoders)
-                e_key = torch.tensor([self.sig_to_embedding_idx[signal_name]], device=z_BSF.device, dtype=torch.int64)
+            if (
+                self.embed_signals
+            ):  # Add embedding to indicate signal source. (For shared encoders)
+                e_key = torch.tensor(
+                    [self.sig_to_embedding_idx[signal_name]],
+                    device=z_BSF.device,
+                    dtype=torch.int64,
+                )
                 e_1F = self.embedder(e_key)
                 e_BSF = e_1F[None, :, :].repeat(z_BSF.size(0), z_BSF.size(1), 1)
                 z_BSF += e_BSF
@@ -614,12 +651,17 @@ class SignalEncoder(nn.Module):
         self.chunk_causal = chunk_causal
         # Check that samples_per_epoch is a power of 2
         if samples_per_epoch & (samples_per_epoch - 1) != 0:
-            raise ValueError(f"samples_per_epoch must be a power of 2, got {samples_per_epoch}")
+            raise ValueError(
+                f"samples_per_epoch must be a power of 2, got {samples_per_epoch}"
+            )
         # Calculate number of convolutional blocks to downsample the input to four feature vectors per sleep epoch (30 seconds).
         num_blocks = int(math.log2(samples_per_epoch)) - 2
         logger.debug(f"Creating {num_blocks=} convolutional blocks.")
         # Double number of channels every other block.
-        channels = [min(initial_channels * 2 ** (i // 2), max_channels) for i in range(num_blocks)]
+        channels = [
+            min(initial_channels * 2 ** (i // 2), max_channels)
+            for i in range(num_blocks)
+        ]
         blocks = []
         # Note: When causal=True, we can achieve causality by chunking the input into 30-second epochs OR by using causal convolutions.
         _causal_conv_mode = causal and not chunk_causal
@@ -647,7 +689,9 @@ class SignalEncoder(nn.Module):
             )
             input_dim = output_dim
         self.cnn = nn.Sequential(*blocks)
-        self.epoch_dim = channels[-1] * 4  # Flattened dimension for time-distributed dense layer.
+        self.epoch_dim = (
+            channels[-1] * 4
+        )  # Flattened dimension for time-distributed dense layer.
         self.linear = nn.Linear(self.epoch_dim, feature_dim)
         self.activation = get_activation(activation)
         # Optional output normalization - normalizes across feature_dim (causal-friendly).
@@ -662,7 +706,9 @@ class SignalEncoder(nn.Module):
             Tensor: shape [B, S, f_dim]
         """
         if x.size(-1) % self.samples_per_epoch:
-            raise ValueError(f"Input length {x.size(-1)} must be divisible by {self.samples_per_epoch=}.")
+            raise ValueError(
+                f"Input length {x.size(-1)} must be divisible by {self.samples_per_epoch=}."
+            )
         B = x.size(0)
         S = x.size(-1) // self.samples_per_epoch
 
@@ -714,10 +760,14 @@ class MultiModalAttentionEmbedder(nn.Module):
             norm_first=norm_first,
         )
         self.num_layers = layers
-        self.transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers=self.num_layers)
+        self.transformer_encoder = nn.TransformerEncoder(
+            encoder_layer, num_layers=self.num_layers
+        )
         # Learnable matrix of the CLS token + any register tokens.
         self.num_register_tokens = register_tokens
-        self.register_tokens = nn.Parameter(torch.randn(1, 1, self.feature_dim, register_tokens + 1))
+        self.register_tokens = nn.Parameter(
+            torch.randn(1, 1, self.feature_dim, register_tokens + 1)
+        )
 
     def forward(self, z_dict: dict[str, Tensor]) -> Tensor:
         """Turn multi-modal inputs into tokens.
@@ -746,13 +796,19 @@ class MultiModalAttentionEmbedder(nn.Module):
         m_BC = torch.stack(m_stack, dim=-1)  # True where signals unavailable.
         B, S, F, C = z_BSFC.size()
         if F != self.feature_dim:
-            raise ValueError(f"Feature dimension {F} does not match {self.feature_dim=}.")
+            raise ValueError(
+                f"Feature dimension {F} does not match {self.feature_dim=}."
+            )
         # Add CLS and register tokens per signal patch. D = C + R (no. register_tokens + 1)
         z_BSFD = torch.cat([self.register_tokens.repeat(B, S, 1, 1), z_BSFC], dim=-1)
         B, S, F, D = z_BSFD.size()
         # Create padding mask so transformer can't attend to unavailable signals.
         # Can always attend to CLS and any register tokens.
-        m_BR = torch.zeros_like(m_BC[:, 0]).bool()[:, None].repeat(1, self.num_register_tokens + 1)
+        m_BR = (
+            torch.zeros_like(m_BC[:, 0])
+            .bool()[:, None]
+            .repeat(1, self.num_register_tokens + 1)
+        )
         m_BD = torch.cat([m_BR, m_BC], dim=-1)
         # Reshape features for signal-wise per-patch attention.
         z_NDF = z_BSFD.flatten(start_dim=0, end_dim=1).permute(dims=(0, 2, 1))

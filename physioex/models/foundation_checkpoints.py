@@ -250,9 +250,7 @@ def ensure_checkpoint(
 
     elif source.source_type == "raw_url":
         primary = model_dir / (source.local_filename or Path(source.filenames[0]).name)
-        if primary.exists() and all(
-            (model_dir / f).exists() for f in source.filenames
-        ):
+        if primary.exists() and all((model_dir / f).exists() for f in source.filenames):
             logger.info(f"[{model_name}] Checkpoint cached at {model_dir}")
             return str(primary)
         return _download_raw_url(model_name, source, model_dir)
@@ -375,7 +373,9 @@ def _download_raw_url(
         part = target.with_name(target.name + ".part")
         logger.info(f"[{model_name}] Downloading {url} ...")
         try:
-            with urllib.request.urlopen(url, timeout=300) as resp, open(part, "wb") as f:
+            with urllib.request.urlopen(url, timeout=300) as resp, open(
+                part, "wb"
+            ) as f:
                 shutil.copyfileobj(resp, f)
             os.replace(part, target)
         except Exception as e:

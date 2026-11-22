@@ -223,7 +223,11 @@ class TimeDistributedDense(nn.Module):
     """A shared dense layer applied to every window of a time series."""
 
     def __init__(
-        self, input_dim: int, output_dim: int, activation: str = "leaky", norm: str = "batch"
+        self,
+        input_dim: int,
+        output_dim: int,
+        activation: str = "leaky",
+        norm: str = "batch",
     ):
         super().__init__()
         self.dense = nn.Linear(input_dim, output_dim)
@@ -286,7 +290,9 @@ class SleepPPGNet(nn.Module):
     ):
         super().__init__()
         if class_order not in ("physioex", "original"):
-            raise ValueError(f"class_order must be 'physioex' or 'original', got {class_order!r}")
+            raise ValueError(
+                f"class_order must be 'physioex' or 'original', got {class_order!r}"
+            )
         if n_classes != 4:
             raise ValueError("SleepPPGNet is a 4-class model; n_classes must be 4")
 
@@ -313,7 +319,9 @@ class SleepPPGNet(nn.Module):
             self.num_windows = 1200
         else:
             self.num_windows = self.fe_output_size
-        self.window_size = self.fe_output_size * self.fe_output_channels // self.num_windows
+        self.window_size = (
+            self.fe_output_size * self.fe_output_channels // self.num_windows
+        )
         self.window_layer = WindowLayer(
             self.fe_output_size, self.num_windows, self.window_size
         )
@@ -429,7 +437,9 @@ class SleepPPGNet(nn.Module):
         model.eval()
         return model
 
-    def predict_night(self, signals: "dict[str, np.ndarray]", metadata: "dict | None" = None) -> "np.ndarray":
+    def predict_night(
+        self, signals: "dict[str, np.ndarray]", metadata: "dict | None" = None
+    ) -> "np.ndarray":
         """Classify one whole night, already preprocessed by the ``sleepppgnet`` preset.
 
         Args:

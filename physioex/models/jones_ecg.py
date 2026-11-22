@@ -64,13 +64,48 @@ from torch import nn
 #: was trained with (``needs``); columns absent from ``needs`` are filled with
 #: standard-normal noise at inference.
 VARIANTS: Dict[str, Dict] = {
-    "primary": {"folder": "1_paper_models/primary_model", "causal": False, "cyclic": False, "needs": {"age", "sex", "start_time"}},
-    "realtime": {"folder": "1_paper_models/real-time_model", "causal": True, "cyclic": False, "needs": {"age", "sex", "start_time"}},
-    "no-demographics": {"folder": "2_post-paper_models/primary_model_no_demographics", "causal": False, "cyclic": False, "needs": {"start_time"}},
-    "no-time": {"folder": "2_post-paper_models/primary_model_no_time", "causal": False, "cyclic": False, "needs": {"age", "sex"}},
-    "only-ecg": {"folder": "2_post-paper_models/primary_model_only_ecg", "causal": False, "cyclic": False, "needs": set()},
-    "cyclic": {"folder": "3_cyclic-time_models/primary_model", "causal": False, "cyclic": True, "needs": {"age", "sex", "start_time"}},
-    "cyclic-realtime": {"folder": "3_cyclic-time_models/real-time_model", "causal": True, "cyclic": True, "needs": {"age", "sex", "start_time"}},
+    "primary": {
+        "folder": "1_paper_models/primary_model",
+        "causal": False,
+        "cyclic": False,
+        "needs": {"age", "sex", "start_time"},
+    },
+    "realtime": {
+        "folder": "1_paper_models/real-time_model",
+        "causal": True,
+        "cyclic": False,
+        "needs": {"age", "sex", "start_time"},
+    },
+    "no-demographics": {
+        "folder": "2_post-paper_models/primary_model_no_demographics",
+        "causal": False,
+        "cyclic": False,
+        "needs": {"start_time"},
+    },
+    "no-time": {
+        "folder": "2_post-paper_models/primary_model_no_time",
+        "causal": False,
+        "cyclic": False,
+        "needs": {"age", "sex"},
+    },
+    "only-ecg": {
+        "folder": "2_post-paper_models/primary_model_only_ecg",
+        "causal": False,
+        "cyclic": False,
+        "needs": set(),
+    },
+    "cyclic": {
+        "folder": "3_cyclic-time_models/primary_model",
+        "causal": False,
+        "cyclic": True,
+        "needs": {"age", "sex", "start_time"},
+    },
+    "cyclic-realtime": {
+        "folder": "3_cyclic-time_models/real-time_model",
+        "causal": True,
+        "cyclic": True,
+        "needs": {"age", "sex", "start_time"},
+    },
 }
 
 #: Number of 30-s epochs per day (256 Hz × 30 s).
@@ -94,7 +129,13 @@ class ECGConvNet(nn.Module):
     7680-sample epoch (256 Hz, 30 s) comes out at length 91 with 5 channels.
     """
 
-    def __init__(self, in_channels: int = 1, hidden_channels: int = 5, kernel_size: int = 31, n_layers: int = 6):
+    def __init__(
+        self,
+        in_channels: int = 1,
+        hidden_channels: int = 5,
+        kernel_size: int = 31,
+        n_layers: int = 6,
+    ):
         super().__init__()
         layers = []
         for i in range(n_layers):
@@ -102,7 +143,9 @@ class ECGConvNet(nn.Module):
             layers.append(nn.BatchNorm1d(in_ch))
             if i > 0:
                 layers.append(nn.LeakyReLU())
-            layers.append(nn.Conv1d(in_ch, hidden_channels, kernel_size, stride=2, bias=True))
+            layers.append(
+                nn.Conv1d(in_ch, hidden_channels, kernel_size, stride=2, bias=True)
+            )
         self.network = nn.Sequential(*layers)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -180,7 +223,7 @@ class Chomp(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         if self.causal:
-            return x[:, :, :-self.chomp] if self.chomp > 0 else x
+            return x[:, :, : -self.chomp] if self.chomp > 0 else x
         return x[:, :, self.chomp : -self.chomp] if self.chomp > 0 else x
 
 
@@ -192,7 +235,9 @@ class TemporalBlock(nn.Module):
     blocks use ``k=2`` and chomp ``d`` samples from the end only.
     """
 
-    def __init__(self, n_in: int, n_out: int, kernel_size: int, dilation: int, causal: bool):
+    def __init__(
+        self, n_in: int, n_out: int, kernel_size: int, dilation: int, causal: bool
+    ):
         super().__init__()
         padding = (kernel_size - 1) * dilation
         chomp = padding // 2 if not causal else padding
@@ -253,7 +298,9 @@ class JonesECGNet(nn.Module):
     def __init__(self, variant: str = "primary", n_classes: int = 5):
         super().__init__()
         if variant not in VARIANTS:
-            raise ValueError(f"unknown variant {variant!r}; expected one of {sorted(VARIANTS)}")
+            raise ValueError(
+                f"unknown variant {variant!r}; expected one of {sorted(VARIANTS)}"
+            )
         info = VARIANTS[variant]
         self.variant = variant
         self.causal = info["causal"]
@@ -261,7 +308,9 @@ class JonesECGNet(nn.Module):
         self.n_classes = n_classes
 
         # Per-epoch ECG front-end (7680 samples -> 91 frames x 5 channels)
-        self.ecg_cnns = ECGConvNet(in_channels=1, hidden_channels=5, kernel_size=31, n_layers=6)
+        self.ecg_cnns = ECGConvNet(
+            in_channels=1, hidden_channels=5, kernel_size=31, n_layers=6
+        )
         # Global pools over the 91-frame output: stride 91 // 25 = 3, kernel 91 - 24*3 = 19
         in_len = _conv_out_len(7680, kernel_size=31, stride=2, n_layers=6)  # 91
         pool_stride = in_len // 25
@@ -288,7 +337,9 @@ class JonesECGNet(nn.Module):
         if x.dim() == 3:
             x = x.unsqueeze(2)
         if x.dim() != 4 or x.shape[2] != 1:
-            raise ValueError(f"x must have shape (B, L, 1, 7680) or (B, L, 7680), got {tuple(x.shape)}")
+            raise ValueError(
+                f"x must have shape (B, L, 1, 7680) or (B, L, 7680), got {tuple(x.shape)}"
+            )
         batch, seqlen, _, samples = x.shape
 
         if additional is None:
@@ -296,7 +347,11 @@ class JonesECGNet(nn.Module):
             additional = additional.unsqueeze(0).expand(batch, -1, -1)
         additional = additional.to(device=x.device, dtype=x.dtype)
 
-        mask = padding_mask if padding_mask is not None else torch.ones(batch, seqlen, dtype=x.dtype, device=x.device)
+        mask = (
+            padding_mask
+            if padding_mask is not None
+            else torch.ones(batch, seqlen, dtype=x.dtype, device=x.device)
+        )
         if mask.dim() == 2:
             mask = mask.unsqueeze(-1)
         mask = mask.to(x.dtype)
@@ -304,11 +359,15 @@ class JonesECGNet(nn.Module):
         # Per-epoch ECG features: (B, L, 40)
         y = x.reshape(batch * seqlen, 1, samples)
         y = self.ecg_cnns(y)
-        pooled = torch.cat([self.avg_pool(y).flatten(1), self.max_pool(y).flatten(1)], dim=1)
+        pooled = torch.cat(
+            [self.avg_pool(y).flatten(1), self.max_pool(y).flatten(1)], dim=1
+        )
         ecg_feats = self.ecg_dense(pooled)  # (B*L, 40)
 
         # Per-epoch 44-dim features (additional first)
-        add_feats = self.additional_dense(additional.reshape(batch * seqlen, 4))  # (B*L, 4)
+        add_feats = self.additional_dense(
+            additional.reshape(batch * seqlen, 4)
+        )  # (B*L, 4)
         feats = torch.cat([add_feats, ecg_feats], dim=1)  # (B*L, 44)
 
         # Inner residual dense blocks, then mask out padded epochs
@@ -327,7 +386,9 @@ class JonesECGNet(nn.Module):
     # ── auxiliary features ──────────────────────────────────────────
 
     @staticmethod
-    def _fallback_additional(n_epochs: int, variant: str, device: "torch.device") -> "torch.Tensor":
+    def _fallback_additional(
+        n_epochs: int, variant: str, device: "torch.device"
+    ) -> "torch.Tensor":
         """Noise-filled (n_epochs, 4) auxiliaries for a variant whose required
         inputs are all missing.
 
@@ -343,9 +404,12 @@ class JonesECGNet(nn.Module):
         else:
             demo = torch.randn(2, device=device, generator=generator)
         if "start_time" in info["needs"] and info["cyclic"]:
-            t = 2.0 * math.pi * torch.arange(
-                n_epochs, dtype=torch.float32, device=device
-            ) / _EPOCHS_PER_DAY
+            t = (
+                2.0
+                * math.pi
+                * torch.arange(n_epochs, dtype=torch.float32, device=device)
+                / _EPOCHS_PER_DAY
+            )
             time = torch.stack([torch.cos(t), torch.sin(t)], dim=1)
         else:
             time = torch.randn(n_epochs, 2, device=device, generator=generator)
@@ -390,16 +454,24 @@ class JonesECGNet(nn.Module):
                 for a variant that was trained with it.
         """
         if variant not in VARIANTS:
-            raise ValueError(f"unknown variant {variant!r}; expected one of {sorted(VARIANTS)}")
+            raise ValueError(
+                f"unknown variant {variant!r}; expected one of {sorted(VARIANTS)}"
+            )
         info = VARIANTS[variant]
 
         missing = [
             name
-            for name, value in (("age", age), ("sex", sex), ("start_time", midnight_offset))
+            for name, value in (
+                ("age", age),
+                ("sex", sex),
+                ("start_time", midnight_offset),
+            )
             if value is None and name in info["needs"]
         ]
         if missing:
-            raise ValueError(f"variant {variant!r} needs {', '.join(missing)} but it was not provided")
+            raise ValueError(
+                f"variant {variant!r} needs {', '.join(missing)} but it was not provided"
+            )
 
         def _noise(shape):
             return torch.randn(shape, generator=generator)
@@ -414,12 +486,25 @@ class JonesECGNet(nn.Module):
         # Time columns
         if "start_time" in info["needs"]:
             if info["cyclic"]:
-                t = 2.0 * math.pi * (torch.arange(n_epochs, dtype=torch.float32) / _EPOCHS_PER_DAY + (midnight_offset % 1.0))
+                t = (
+                    2.0
+                    * math.pi
+                    * (
+                        torch.arange(n_epochs, dtype=torch.float32) / _EPOCHS_PER_DAY
+                        + (midnight_offset % 1.0)
+                    )
+                )
                 time = torch.stack([torch.cos(t), torch.sin(t)], dim=1)
             else:
                 e = torch.arange(n_epochs, dtype=torch.float32)
-                night_e = e / ((n_epochs - 1) / 2.0) - 1.0 if n_epochs > 1 else torch.zeros(n_epochs)
-                time = torch.stack([night_e, e / _EPOCHS_PER_DAY + midnight_offset], dim=1)
+                night_e = (
+                    e / ((n_epochs - 1) / 2.0) - 1.0
+                    if n_epochs > 1
+                    else torch.zeros(n_epochs)
+                )
+                time = torch.stack(
+                    [night_e, e / _EPOCHS_PER_DAY + midnight_offset], dim=1
+                )
         else:
             time = _noise((n_epochs, 2))  # one draw per epoch per column
 
@@ -428,7 +513,9 @@ class JonesECGNet(nn.Module):
     # ── checkpoint loading ──────────────────────────────────────────
 
     @classmethod
-    def from_original(cls, checkpoint_path: "str | Path", variant: str) -> "JonesECGNet":
+    def from_original(
+        cls, checkpoint_path: "str | Path", variant: str
+    ) -> "JonesECGNet":
         """Load one of the authors' released checkpoints.
 
         The checkpoints are plain dicts with a ``model_state_dict`` entry whose
@@ -452,7 +539,9 @@ class JonesECGNet(nn.Module):
 
     # ── whole-night inference ─────────────────────────────────────────
 
-    def predict_night(self, signals: "dict[str, np.ndarray]", metadata: "dict | None" = None) -> "np.ndarray":
+    def predict_night(
+        self, signals: "dict[str, np.ndarray]", metadata: "dict | None" = None
+    ) -> "np.ndarray":
         """Classify one whole night, already preprocessed by the ``jones_ecg`` preset.
 
         Args:
@@ -477,18 +566,28 @@ class JonesECGNet(nn.Module):
         import numpy as np
 
         if "ECG" not in signals:
-            raise ValueError(f"JonesECGNet needs an 'ECG' signal, got {sorted(signals)}")
+            raise ValueError(
+                f"JonesECGNet needs an 'ECG' signal, got {sorted(signals)}"
+            )
         arr = np.asarray(signals["ECG"], dtype=np.float32)
         if arr.ndim != 2 or arr.shape[1] != 7680:
-            raise ValueError(f"'ECG' must have shape (L, 7680 samples/epoch), got {arr.shape}")
+            raise ValueError(
+                f"'ECG' must have shape (L, 7680 samples/epoch), got {arr.shape}"
+            )
         L = arr.shape[0]
 
         metadata = metadata or {}
         age = metadata.get("age")
         sex_raw = metadata.get("sex")
-        sex = {"M": 1.0, "F": 0.0}.get(str(sex_raw).upper()) if sex_raw is not None else None
+        sex = (
+            {"M": 1.0, "F": 0.0}.get(str(sex_raw).upper())
+            if sex_raw is not None
+            else None
+        )
         start = metadata.get("recording_start")
-        if start is not None and not isinstance(start, (datetime.time, datetime.datetime)):
+        if start is not None and not isinstance(
+            start, (datetime.time, datetime.datetime)
+        ):
             raise ValueError(
                 f"metadata['recording_start'] must be a datetime.time or datetime.datetime, "
                 f"got {type(start).__name__}"
@@ -514,7 +613,11 @@ class JonesECGNet(nn.Module):
             additional[:, 1] = float(age) / 100.0
         if start is not None and "start_time" in needs:
             full = self.build_additional(
-                L, self.variant, age=0.0, sex=0.0, midnight_offset=self.midnight_offset(start)
+                L,
+                self.variant,
+                age=0.0,
+                sex=0.0,
+                midnight_offset=self.midnight_offset(start),
             )
             additional[:, 2:] = full[:, 2:]
         additional = additional.unsqueeze(0)
@@ -525,7 +628,12 @@ class JonesECGNet(nn.Module):
         self.eval()
         try:
             with torch.no_grad():
-                preds = self.forward(x, additional=additional)[0].argmax(dim=-1).cpu().numpy()
+                preds = (
+                    self.forward(x, additional=additional)[0]
+                    .argmax(dim=-1)
+                    .cpu()
+                    .numpy()
+                )
         finally:
             if was_training:
                 self.train()

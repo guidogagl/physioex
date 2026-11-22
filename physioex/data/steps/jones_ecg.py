@@ -71,12 +71,12 @@ JONES_ECG_FS_OUT = 256.0
 _ARCHETYPES_NAME = "jones-ecg-archetypes"
 
 # Local-variation / peak-picking constants (get_constants.m, fs=256).
-_LV_LOCAL_SAMPLES = 17        # next_odd(0.060 * 256)
-_LV_GROUP_SAMPLES = 257       # next_odd(1 * 256)
-_LV_MIN_PEAK_HEIGHT = 1.5     # min_peak_height
+_LV_LOCAL_SAMPLES = 17  # next_odd(0.060 * 256)
+_LV_GROUP_SAMPLES = 257  # next_odd(1 * 256)
+_LV_MIN_PEAK_HEIGHT = 1.5  # min_peak_height
 _LV_MIN_PEAK_SEPARATION = 77  # round(0.3 * 256)
-_LV_LP_PASS_HZ = 8.0          # low-pass passband edge
-_LV_LP_STOP_HZ = 10.0         # low-pass stopband edge
+_LV_LP_PASS_HZ = 8.0  # low-pass passband edge
+_LV_LP_STOP_HZ = 10.0  # low-pass stopband edge
 _LV_LP_STOP_DB = 30.0
 _LV_LP_PASS_RIPPLE_DB = 1.0
 
@@ -86,9 +86,9 @@ _FIND_NOISE_AMP_SPAN_S = 20.0
 _FIND_NOISE_AMP_FLOOR = 0.1
 _FIND_NOISE_SPECTRUM_HZ = 0.5
 _FIND_NOISE_MIN_FREQ_HZ = 10.0
-_FIND_NOISE_MIN_RATIO = 4.0   # ecg_noise_min_ratio
-_FIND_NOISE_MAX_ADD = 10      # max_additional_freqs
-_NOTCH_BW_HZ = 1.5            # ecg_filter_bw
+_FIND_NOISE_MIN_RATIO = 4.0  # ecg_noise_min_ratio
+_FIND_NOISE_MAX_ADD = 10  # max_additional_freqs
+_NOTCH_BW_HZ = 1.5  # ecg_filter_bw
 
 _warned_fallback = False
 _warned_lock = threading.Lock()
@@ -152,11 +152,16 @@ def _load_archetypes(archetypes_path: Optional[str]) -> Optional[np.ndarray]:
         import h5py
 
         with h5py.File(path, "r") as f:
-            mat = {k: np.asarray(f[k]).T for k in f.keys() if isinstance(f[k], h5py.Dataset)}
+            mat = {
+                k: np.asarray(f[k]).T
+                for k in f.keys()
+                if isinstance(f[k], h5py.Dataset)
+            }
     if "archetype_templates" not in mat:
         logger.warning(
             "JonesECGPreprocess: %s has no 'archetype_templates' variable; "
-            "using the median-of-beats template fallback", path
+            "using the median-of-beats template fallback",
+            path,
         )
         return None
     arch = np.asarray(mat["archetype_templates"], dtype=np.float64)
@@ -201,9 +206,7 @@ def _delayed_moving_mean(v: np.ndarray, window: int) -> np.ndarray:
     return d
 
 
-def _centered_moving_stat(
-    v: np.ndarray, window: int, stat: str = "var"
-) -> np.ndarray:
+def _centered_moving_stat(v: np.ndarray, window: int, stat: str = "var") -> np.ndarray:
     """Centered moving statistic (``movvar``/``movmedian``/``movmax``) with
     MATLAB's edge truncation.
 
@@ -259,7 +262,7 @@ def _centered_moving_stat(
         i for i in range(max(half, n - (window - half) + 1), n)
     ]
     for i in edge:
-        out[i] = reduce(v[lo[i]:hi[i]])
+        out[i] = reduce(v[lo[i] : hi[i]])
     return out
 
 
@@ -311,9 +314,7 @@ def _smooth_mask(mask: np.ndarray, transition_length: int) -> np.ndarray:
     return mask
 
 
-def _butter_lowpass_order(
-    pw: float, rp_db: float, sw: float, sa_db: float
-) -> int:
+def _butter_lowpass_order(pw: float, rp_db: float, sw: float, sa_db: float) -> int:
     """Minimal Butterworth order meeting the passband ripple spec."""
     for N in range(1, 41):
         b, a = _sig.butter(N, pw, btype="low")
@@ -327,9 +328,7 @@ def _butter_lowpass_order(
 # ── Stage 2: clip removal and noise filtering ────────────────────────
 
 
-def remove_large_clips(
-    x: np.ndarray, fs: float, clip_ratio: float = 0.5
-) -> np.ndarray:
+def remove_large_clips(x: np.ndarray, fs: float, clip_ratio: float = 0.5) -> np.ndarray:
     """Mirror of ``remove_large_clips.m`` (single-channel case).
 
     Marks stretches where >= ``clip_ratio`` of a 0.3 s one-sided window
@@ -462,7 +461,11 @@ def find_and_remove_noise(
             medp = np.median(sec[pk]) if len(pk) else sec.max()
             medt = np.median(sec[tr]) if len(tr) else sec.min()
             amps.append(medp + medt)
-        amp = max(_FIND_NOISE_AMP_FLOOR, float(np.median(amps))) if amps else _FIND_NOISE_AMP_FLOOR
+        amp = (
+            max(_FIND_NOISE_AMP_FLOOR, float(np.median(amps)))
+            if amps
+            else _FIND_NOISE_AMP_FLOOR
+        )
 
         # per-window scaled spectra, averaged
         grid = np.arange(0.0, nyq + 0.25, _FIND_NOISE_SPECTRUM_HZ)
@@ -513,8 +516,11 @@ def _lowpass_local_variation(lv: np.ndarray) -> np.ndarray:
     """Mirror of ``filter_local_variation.m``: zero-phase Butterworth LP,
     non-positive pre-filter positions forced back to 0, negatives clipped."""
     zero = lv <= 0
-    b, a = _sig.butter(_butter_lowpass_order(8.0 / 128.0, 1.0, 10.0 / 128.0, 30.0),
-                       _LV_LP_PASS_HZ / 128.0, btype="low")
+    b, a = _sig.butter(
+        _butter_lowpass_order(8.0 / 128.0, 1.0, 10.0 / 128.0, 30.0),
+        _LV_LP_PASS_HZ / 128.0,
+        btype="low",
+    )
     y = _sig.filtfilt(b, a, lv)
     y[zero] = 0.0
     return np.clip(y, 0.0, None)
@@ -714,7 +720,9 @@ class JonesECGPreprocess(PreprocessingStep):
                 x, _ = find_and_remove_noise(x, fs_in)
 
             # MATLAB: [p, q] = rat(256 / fs); resample(x, p, q).
-            ratio = (Fraction(JONES_ECG_FS_OUT) / Fraction(fs_in)).limit_denominator(10000)
+            ratio = (Fraction(JONES_ECG_FS_OUT) / Fraction(fs_in)).limit_denominator(
+                10000
+            )
             p, q = ratio.numerator, ratio.denominator
             if p != q:
                 x = _sig.resample_poly(x, p, q, window=("kaiser", 8.0))

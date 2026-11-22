@@ -36,11 +36,7 @@ def load_wav2sleep_split(
     path = d / f"{part}.txt"
     if not path.exists():
         return []
-    return [
-        line.strip()
-        for line in path.read_text().splitlines()
-        if line.strip()
-    ]
+    return [line.strip() for line in path.read_text().splitlines() if line.strip()]
 
 
 def load_sleepppgnet_replica_split(dataset: str, part: str = "test") -> List[str]:

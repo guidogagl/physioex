@@ -440,8 +440,12 @@ def record_confusion_matrix(
     if ignore_index is not None:
         keep = t != ignore_index
         t, p = t[keep], p[keep]
-    if t.size and (t.min() < 0 or t.max() >= n_classes or p.min() < 0 or p.max() >= n_classes):
-        raise ValueError(f"class index outside [0, {n_classes}) after removing ignore_index")
+    if t.size and (
+        t.min() < 0 or t.max() >= n_classes or p.min() < 0 or p.max() >= n_classes
+    ):
+        raise ValueError(
+            f"class index outside [0, {n_classes}) after removing ignore_index"
+        )
     return np.bincount(t * n_classes + p, minlength=n_classes * n_classes).reshape(
         n_classes, n_classes
     )
@@ -467,7 +471,10 @@ def kappa_from_confusion(cm) -> float:
 
 
 def pooled_kappa(
-    y_true_records, y_pred_records, n_classes: int, ignore_index: typing.Optional[int] = -1
+    y_true_records,
+    y_pred_records,
+    n_classes: int,
+    ignore_index: typing.Optional[int] = -1,
 ) -> float:
     """Kappa of the confusion matrix summed over all recordings (kappa_T)."""
     import numpy as np
@@ -479,7 +486,10 @@ def pooled_kappa(
 
 
 def per_record_kappa(
-    y_true_records, y_pred_records, n_classes: int, ignore_index: typing.Optional[int] = -1
+    y_true_records,
+    y_pred_records,
+    n_classes: int,
+    ignore_index: typing.Optional[int] = -1,
 ) -> "np.ndarray":
     """One kappa per recording (NaN where kappa is undefined)."""
     import numpy as np
@@ -494,7 +504,10 @@ def per_record_kappa(
 
 
 def median_record_kappa(
-    y_true_records, y_pred_records, n_classes: int, ignore_index: typing.Optional[int] = -1
+    y_true_records,
+    y_pred_records,
+    n_classes: int,
+    ignore_index: typing.Optional[int] = -1,
 ) -> float:
     """Median of the per-recording kappas, ignoring undefined (NaN) ones."""
     import numpy as np
