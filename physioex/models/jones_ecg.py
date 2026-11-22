@@ -238,15 +238,16 @@ class JonesECGNet(nn.Module):
         n_classes: number of sleep classes (5: W, N1, N2, N3, REM).
 
     Forward input:
-        x: (B, L, 1, 7680) or (B, L, 7680) float32 ECG, 256 Hz, in [-1, 1].
-        additional: (B, L, 4) auxiliary features; if ``None`` it is built with
-            :meth:`build_additional`, filling the columns the variant was not
-            trained with by standard-normal noise.
-        padding_mask: (B, L) or (B, L, 1) bool/float, 1 = real epoch; default
-            all ones.
 
-    Forward returns:
-        (B, L, n_classes) log-probabilities over [W, N1, N2, N3, REM].
+    - ``x``: (B, L, 1, 7680) or (B, L, 7680) float32 ECG, 256 Hz, in [-1, 1].
+    - ``additional``: (B, L, 4) auxiliary features; if ``None`` it is built
+      with :meth:`build_additional`, filling the columns the variant was not
+      trained with by standard-normal noise.
+    - ``padding_mask``: (B, L) or (B, L, 1) bool/float, 1 = real epoch;
+      default all ones.
+
+    Forward returns (B, L, n_classes) log-probabilities over
+    [W, N1, N2, N3, REM].
     """
 
     def __init__(self, variant: str = "primary", n_classes: int = 5):

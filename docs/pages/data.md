@@ -19,14 +19,14 @@ see the [data-layer architecture](architecture/library/data.md) page.
 
 ## Resolving a dataset by name
 
-`physioex.data.datasets` exposes a registry of the 13 concrete datasets:
+`physioex.data.datasets` exposes a registry of the 15 concrete datasets:
 
 ```python
 from physioex.data.datasets import get_dataset, available_datasets
 
 available_datasets()
-# ['alzheimers', 'ccshs', 'dcsm', 'hmc', 'hpap', 'mass', 'mesa', 'mros',
-#  'parkinsons', 'shhs', 'sleepedf', 'stages', 'wsc']
+# ['alzheimers', 'ccshs', 'cfs', 'chat', 'dcsm', 'hmc', 'hpap', 'mass', 'mesa',
+#  'mros', 'parkinsons', 'shhs', 'sleepedf', 'stages', 'wsc']
 
 HMCDataset = get_dataset("hmc")   # the class, not an instance
 ```
@@ -81,6 +81,48 @@ time-domain presets yield `(L, C, T)` samples, while spectrogram presets
 `BasePhysioDataset.split(fold)` and `get_splits(fold)` produce reproducible
 train/validation/test subject splits (70/15/15, seeded by `42 + fold`). See the
 API reference for the exact return types.
+
+## Whole nights and cardiorespiratory signals
+
+With `sequence_length=0` (or any value `<= 0`) an item is one whole night, and
+item `i` is subject `i`. Channels a subject lacks are zero-filled and flagged
+with `channel_info[key]["available"] = False`. This mode is used by the
+cardiorespiratory models (wav2sleep, Jones et al. 2024, SleepPPG-Net), which
+stage the full night at once.
+
+- **Channels.** Besides EEG/EOG/EMG, the NSRR datasets resolve `ECG`, `PPG`
+  (its own modality, no longer grouped with SpO2) and the respiratory
+  effort belts `ABD` and `THX`.
+- **Labels.** `label_transform="aasm4"` maps the AASM labels to four classes
+  (W, Light = N1+N2, Deep = N3, REM); `-1` stays unscored. The default keeps
+  the five AASM classes.
+- **Visits.** `shhs`, `mros` and `wsc` take a `visit` argument; each visit is
+  a separate dataset instance with its own cache.
+- **Subject metadata.** NSRR datasets return
+  `{"age", "sex", "recording_start"}` from `subject_metadata(subject_id)`.
+- **Published splits.** Besides the 70/15/15 folds, `get_splits(split=...)`
+  returns the lists used by published work: `"wav2sleep"` (the per-dataset
+  train/validation/test sessions of Carter & Tarassenko, 2024),
+  `"wav2sleep-census"` (the census-balanced held-out set of Jones et al., 2024)
+  and `"sleepppgnet-replica"` (the 204 MESA test nights of the SleepPPG-Net
+  replica).
+
+```python
+from physioex.data.datasets import get_dataset
+from physioex.train.replication import iter_nights
+
+data = get_dataset("shhs")(
+    channels=["ECG", "THX", "ABD"],
+    pipelines="wav2sleep",
+    sequence_length=0,
+    label_transform="aasm4",
+    trim_excess_wake=False,
+    visit=2,
+)
+test = data.get_splits(split="wav2sleep")[2]
+for subject, signals, labels, metadata in iter_nights(data, test):
+    signals["ECG"].shape   # (n_epochs, 1024)
+```
 
 ## Merging datasets
 

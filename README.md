@@ -38,6 +38,13 @@ PhysioEx ships two families of models under `physioex.models`.
 - CoReSleep — multimodal architecture.
 - ProtoSleepNet — prototype-based, interpretable-by-design architecture.
 
+**Cardiorespiratory models** (whole-night staging from ECG, PPG and respiratory
+effort, with published weights loaded by `load_from_pretrained`):
+[wav2sleep](https://arxiv.org/abs/2411.04644) (`Wav2Sleep`),
+Jones et al. 2024 (`JonesECGNet`, ECG only) and
+[SleepPPG-Net](https://arxiv.org/abs/2202.05735) (`SleepPPGNet`, PPG only,
+third-party replica weights).
+
 **Foundation encoders** (pretrained backbones exposed through a uniform
 `(B, L, C, T) -> (B, L, D)` `encode()` interface, for embedding extraction and
 linear probing): `CBraMod`, `BENDR`, `LaBraM`, `BIOT`, `SleepFM`, `TFC`, `REVE`,
@@ -46,7 +53,7 @@ linear probing): `CBraMod`, `BENDR`, `LaBraM`, `BIOT`, `SleepFM`, `TFC`, `REVE`,
 ## Supported datasets
 
 All datasets are resolved by name via `get_dataset(name)`; `available_datasets()` returns:
-`alzheimers`, `ccshs`, `dcsm`, `hmc`, `hpap`, `mass`, `mesa`, `mros`, `parkinsons`, `shhs`, `sleepedf`, `stages`, `wsc`.
+`alzheimers`, `ccshs`, `cfs`, `chat`, `dcsm`, `hmc`, `hpap`, `mass`, `mesa`, `mros`, `parkinsons`, `shhs`, `sleepedf`, `stages`, `wsc`.
 
 ### Publicly Available:
 
@@ -67,6 +74,8 @@ These datasets can be obtained from the NSRR archive. Once downloaded, point Phy
 - [WSC (The Wisconsin Sleep Cohort)](https://sleepdata.org/datasets/wsc) A longitudinal study of the causes, consequences, and natural history of sleep disorders using overnight in-laboratory sleep recordings gathered at the University of Wisconsin, United States, with a baseline sample of 1,500 subjects assessed at four-year intervals. The study consists of multiple visits with overnight PSG data acquisition. PSG recordings included C3/M2 EEG, EMG, and left-right EOG, all sampled at 200 Hz.
 - [STAGES (Stanford Technology Analytics and Genomics in Sleep)](https://sleepdata.org/datasets/stages), 1,914 recordings across 13 clinical sites with a bipolar EEG montage (C4-M1 / C3-M2 equivalent), EOG and chin EMG, plus rich respiratory / arousal / PLM event annotations. Selectable by site and by recording (`first` / `second` / `all`).
 - [CCSHS (Cleveland Children's Sleep and Health Study)](https://sleepdata.org/datasets/ccshs) (`ccshs`), 515 children and adolescents with one in-home PSG each (NSRR `ccshs-trec`): C3/A2 and C4/A1 EEG (128 Hz), LOC/ROC EOG (128 Hz) and chin EMG (256 Hz), stages scored by Rechtschaffen & Kales and merged to N3. Eleven recordings whose hypnogram cannot be reconciled with the NSRR summary table are excluded by default (`exclude_subjects=[]` keeps them).
+- [CFS (Cleveland Family Study)](https://sleepdata.org/datasets/cfs) (`cfs`), the visit-5 in-lab PSGs of a family-based study of sleep apnea, in NSRR format.
+- [CHAT (Childhood Adenotonsillectomy Trial)](https://sleepdata.org/datasets/chat) (`chat`), PSGs of children at baseline and follow-up (plus the non-randomized baseline group), in NSRR format.
 - [HomePAP](https://sleepdata.org/datasets/homepap) (`hpap`), a positive-airway-pressure study in NSRR format, with three subsets — `lab-full`, `lab-split` and `home` — selectable via the `subset` parameter.
 
 ### Others

@@ -1,4 +1,4 @@
-"""CFS (Cardiovascular Health Study) sleep dataset, NSRR format.
+"""CFS (Cleveland Family Study) sleep dataset, NSRR format.
 
 Layout on disk::
 

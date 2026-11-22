@@ -384,7 +384,7 @@ def load_from_pretrained(
 
     If ``name`` is a registered third-party model (see
     :data:`THIRD_PARTY_PRETRAINED` — wav2sleep, wav2sleep-eog,
-    sleepppgnet-replica, jones-ecg-*) and ``repo_id`` is not set, the
+    sleepppgnet-replica, ``jones-ecg-*``) and ``repo_id`` is not set, the
     checkpoint is downloaded to the foundation-model cache
     (``$PHYSIOEX_CACHE_DIR/v1/foundation_models/<name>/``) and the model is
     built with the authors' ``from_original`` factory.  Licenses that are

@@ -1,4 +1,4 @@
-"""CHAT (Cardiovascular Health and Aging Telemetry) sleep dataset, NSRR format.
+"""CHAT (Childhood Adenotonsillectomy Trial) sleep dataset, NSRR format.
 
 CHAT has three session groups: baseline, followup and the nonrandomized
 baseline subset, all with one recording per subject::

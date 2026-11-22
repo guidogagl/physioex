@@ -34,12 +34,31 @@ their own modules and referenced by dotted `module:Class` spec in the CLIs:
 | Tsinalis CNN | `physioex.models.tsinalis:TsinalisCNN` |
 | CoRe-Sleep | `physioex.models.coresleep:CoReSleep` |
 | ProtoSleepNet | `physioex.models.protosleepnet:ProtoSleepNet` |
+| wav2sleep | `physioex.models.wav2sleep:Wav2Sleep` |
+| SleepPPG-Net | `physioex.models.sleepppgnet:SleepPPGNet` |
+| Jones et al. 2024 | `physioex.models.jones_ecg:JonesECGNet` |
 
 `ProtoSleepNet` additionally provides prototype quantization and factory
 constructors from a `SleepTransformer`/`SeqSleepNet` epoch encoder. Two pretrained
 multi-dataset checkpoints (`protosleepnet-gagliardi`, `protosleeptransformer-gagliardi`) are
 described, with their performance on every training site, in
 [ProtoSleepNet and ProtoSleepTransformer](networks/protosleepnet.md).
+
+## Cardiorespiratory sleep staging
+
+Three published models stage sleep from cardiac and respiratory signals
+instead of EEG. They run on whole nights (`sequence_length=0`), load the
+authors' (or, for SleepPPG-Net, a third-party) weights with
+`load_from_pretrained`, and expose `predict_night(signals, metadata)`, which
+returns one class per 30-s epoch. Each has a preprocessing preset of the same
+name and a verification script under `examples/pretrained/` that compares
+its results with the paper.
+
+| Model | Inputs | Pretrained names | Weights license |
+|---|---|---|---|
+| [wav2sleep](networks/wav2sleep.md) | any subset of ECG, PPG, ABD, THX (or EOG) | `wav2sleep`, `wav2sleep-eog` | MIT |
+| [Jones et al. 2024](networks/jones_ecg.md) | ECG + age, sex, time of night | `jones-ecg` and six `jones-ecg-<variant>` | AGPL-3.0 |
+| [SleepPPG-Net](networks/sleepppgnet.md) | PPG | `sleepppgnet-replica` (third-party replica) | non-commercial research |
 
 ## Foundation encoders
 
@@ -80,4 +99,7 @@ compatible with `Trainer` and the CLIs — pass it as a `module:Class` spec to
 
 networks/chambon2018
 networks/protosleepnet
+networks/wav2sleep
+networks/jones_ecg
+networks/sleepppgnet
 ```

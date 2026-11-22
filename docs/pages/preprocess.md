@@ -30,7 +30,9 @@ available_presets()
 # includes: 'raw', 'seqsleepnet', 'identity', 'time_domain', 'time_frequency',
 #           per-modality ('eeg', 'eog', 'emg', 'ecg'), 'coresleep',
 #           and foundation-model presets ('biot', 'bendr', 'cbramod',
-#           'labram', 'sleepfm', 'tfc', 'reve', 'sjepa', 'neurolm')
+#           'labram', 'sleepfm', 'tfc', 'reve', 'sjepa', 'neurolm'),
+#           and cardiorespiratory presets ('wav2sleep', 'sleepppgnet',
+#           'jones_ecg')
 
 pipe = get_preset("seqsleepnet")   # a PreprocessingPipeline
 ```
@@ -55,6 +57,19 @@ td_ds = get_dataset("hmc")(channels=["EEG", "EOG", "EMG"],
 tf_ds = get_dataset("hmc")(channels=["EEG"], pipelines="time_frequency",
                            sequence_length=21)
 ```
+
+### Cardiorespiratory presets
+
+Three presets reproduce the preprocessing of published cardiorespiratory
+models; each is meant for whole nights (`sequence_length=0`):
+
+| Preset | Signals | Steps |
+|---|---|---|
+| `wav2sleep` | ECG, PPG, ABD, THX, EOG | `PhysicalScale` (mV or physical range) → `InterpResample` (1024 samples per epoch; 256 for ABD/THX, 4096 for EOG) → `FixedLength` (10 h, zero fill) → `ZScore` over the whole grid |
+| `sleepppgnet` | PPG | `ChebyshevLowpass` (8 Hz) → `FFTResample` (1024 samples per epoch) → `Clip` (3 SD) → `ZScore` → `FixedLength` (10 h) |
+| `jones_ecg` | ECG | `JonesECGPreprocess`: port of the authors' MATLAB pipeline, 256 Hz output in [-1, 1] |
+
+`wav2sleep` is a per-modality bundle, the other two are single pipelines.
 
 ## Composing a pipeline manually
 

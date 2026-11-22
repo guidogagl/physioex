@@ -628,7 +628,7 @@ class JonesECGPreprocess(PreprocessingStep):
     4. resample to 256 Hz with ``resample_poly`` (p/q from
        ``Fraction(256/fs).limit_denominator()``);
     5. R-wave detection (local variation + template; archetypes when
-       available) and normalization factor = 2 x P90 of per-beat max |x|;
+       available) and normalization factor = 2 x P90 of per-beat ``max |x|``;
     6. divide by the factor, clip to ``[-1, 1]``.
 
     Parameters

@@ -13,7 +13,7 @@ class PhysicalScale(PreprocessingStep):
     -----
     ``"mV"``
         Convert a voltage channel to millivolts from its header unit:
-        ``uV``/``µV`` -> *1e-3, ``mV`` -> *1, ``V`` -> *1e3. An
+        ``uV``/``µV`` -> ``* 1e-3``, ``mV`` -> ``* 1``, ``V`` -> ``* 1e3``. An
         unknown or blank unit leaves the signal unchanged (with a logged
         warning), which matches the historical convention that
         unrecognised units are already in the expected unit.

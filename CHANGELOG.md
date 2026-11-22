@@ -4,6 +4,25 @@ All notable changes to PhysioEx are documented here. Versions follow the
 `physioex.__version__` string (read dynamically by the build) and the `v*` git tags
 that publish to PyPI.
 
+## Unreleased
+
+### Added
+- **Cardiorespiratory sleep staging.** Three published whole-night models, re-implemented in `physioex.models` with their
+  weights downloaded from the original sources by `load_from_pretrained`: `Wav2Sleep` (Carter & Tarassenko, 2024;
+  `wav2sleep`, `wav2sleep-eog`, MIT), `JonesECGNet` (Jones, Itti & Sheth, 2024; `jones-ecg` and six variants, AGPL-3.0) and
+  `SleepPPGNet` (Kotzen et al., 2023; `sleepppgnet-replica`, third-party replica weights, non-commercial). Each exposes
+  `predict_night(signals, metadata)`. Documentation pages under User Guide → Model architectures.
+- Preprocessing presets `wav2sleep`, `sleepppgnet` and `jones_ecg`, with the new steps `InterpResample`, `FixedLength`,
+  `PhysicalScale`, `ChebyshevLowpass`, `FFTResample`, `Clip`, `ZScore` and `JonesECGPreprocess` (port of the authors'
+  MATLAB ECG pipeline).
+- Datasets `cfs` and `chat` (NSRR); `PPG` as its own modality; ECG/PPG/ABD/THX channel preferences for the NSRR datasets;
+  a `visit` argument for `mros`; `subject_metadata()` (age, sex, recording start) for NSRR datasets and WSC.
+- `label_transform="aasm4"` (W, Light, Deep, REM) and the published splits `get_splits(split="wav2sleep" |
+  "wav2sleep-census" | "sleepppgnet-replica")`.
+- `physioex.train.replication` (`iter_nights`, `align`, `evaluate`, `check`, `has_scoring_issues`, paper-metric files) and
+  per-recording / pooled kappa in `physioex.train.metrics`; `examples/pretrained/{wav2sleep,jones-ecg,sleepppgnet}/verify.py`
+  compare each model with its paper.
+
 ## 2.0.5 — 2026-10-28
 
 ### Added

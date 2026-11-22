@@ -62,7 +62,7 @@ class WSCDataset(_NSRRBaseDataset):
     parameter.
 
     Args:
-        visit: int (1, 2, or 3). Selects which visit's recordings to load.
+        visit: int (1 to 5). Selects which visit's recordings to load.
         root: path to the WSC data directory
               (default: ``$PHYSIOEX_DATA/wsc``).
     """
