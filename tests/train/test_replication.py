@@ -479,3 +479,16 @@ def test_has_scoring_issues_reads_raw_labels():
     assert has_scoring_issues(ds, "a") is True
     assert has_scoring_issues(ds, "b") is False
     assert has_scoring_issues(ds, "c") is False
+
+
+def test_load_paper_metrics_top_level_assert_default(tmp_path):
+    p = tmp_path / "m.json"
+    p.write_text(json.dumps({
+        "model": "m", "metric": "pooled_kappa", "tolerance": 0.01, "assert": False,
+        "targets": [
+            {"dataset": "a", "condition": "x", "value": 0.7},
+            {"dataset": "b", "condition": "x", "value": 0.7, "assert": True},
+        ],
+    }))
+    _, targets = load_paper_metrics(p)
+    assert [t.assert_ for t in targets] == [False, True]

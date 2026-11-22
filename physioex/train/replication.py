@@ -94,7 +94,8 @@ def load_paper_metrics(path: "str | Path") -> "tuple[dict, list[PaperTarget]]":
     ``"tolerance"`` and ``"targets"`` (a list of objects with keys
     ``dataset``, ``condition``, ``value`` and optional ``metric``,
     ``tolerance``, ``assert`` (bool, default true), ``requires``, ``note``).
-    A target's optional ``metric``/``tolerance`` override the top-level ones.
+    A target's optional ``metric``/``tolerance``/``assert`` override the
+    top-level ones.
 
     Args:
         path: path to the JSON file.
@@ -108,6 +109,7 @@ def load_paper_metrics(path: "str | Path") -> "tuple[dict, list[PaperTarget]]":
     targets_spec = doc.pop("targets", [])
     default_metric = doc.get("metric", "pooled_kappa")
     default_tolerance = doc.get("tolerance", 0.05)
+    default_assert = bool(doc.get("assert", True))
     targets = [
         PaperTarget(
             dataset=spec["dataset"],
@@ -115,7 +117,7 @@ def load_paper_metrics(path: "str | Path") -> "tuple[dict, list[PaperTarget]]":
             value=float(spec["value"]),
             metric=spec.get("metric", default_metric),
             tolerance=float(spec.get("tolerance", default_tolerance)),
-            assert_=bool(spec.get("assert", True)),
+            assert_=bool(spec.get("assert", default_assert)),
             requires=list(spec.get("requires", [])),
             note=spec.get("note", ""),
         )

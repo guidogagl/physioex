@@ -27,7 +27,7 @@ Carter & Tarassenko's Table 6, per input condition (`all`, `ecg_thx`, `ecg`,
 `ppg`), and pools the census-balanced 500-night set of Jones et al. (2024):
 
 ```bash
-# Slurm note: run on the cluster where the NSRR data live (Sofia), with the
+# Slurm note: run on the cluster where the NSRR data live, with the
 # data/cache env vars from the login profile.
 sbatch verify.sbatch        # or
 python verify.py --data-root $PHYSIOEX_DATA --cache-dir $PHYSIOEX_CACHE_DIR
@@ -37,6 +37,23 @@ python verify.py --max-nights 2     # smoke run (PASS/FAIL reported as REPORT)
 Results are printed as a table and written to `./verify_results.json`.
 Datasets whose raw data is missing are reported as SKIP (never a crash);
 `census` rows SKIP when any of the datasets they require is absent.
+
+**Status of the replication.** The targets are reported, not asserted
+(`"assert": false` in `paper_metrics.json`). The public checkpoint
+(`joncarter/wav2sleep` on Hugging Face, uploaded 2026-01-30) postdates the
+paper and its model card gives no kappa. The physioex inputs were checked
+against the authors' own pipeline: the sleep-stage labels match on every test
+night of SHHS, MROS, MESA and CCSHS, and the preprocessed ECG matches
+(r = 1.0000, per-night kappa within 0.0004 on 10 MESA/CCSHS nights). With
+that checkpoint, pooled kappa minus the Table 6 value is:
+
+| dataset | all | ECG+THX | ECG | PPG |
+|---|---|---|---|---|
+| SHHS (visits 1+2) | -0.007 | -0.008 | -0.007 | - |
+| MESA | -0.006 | -0.019 | -0.021 | -0.011 |
+| WSC (visits 1-4) | -0.003 | -0.003 | -0.011 | - |
+| CCSHS | +0.015 | +0.014 | +0.021 | - |
+| MROS (visits 1+2) | -0.005 | -0.006 | -0.005 | - |
 
 **Missing data:** the census set includes CFS and CHAT recordings that are not
 distributed through the usual NSRR channels and may be absent locally; the
