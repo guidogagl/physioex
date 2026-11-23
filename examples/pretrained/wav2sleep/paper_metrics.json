@@ -4,7 +4,7 @@
   "metric": "pooled_kappa",
   "tolerance": 0.005,
   "assert": false,
-  "assert_note": "Reported, not asserted. The public checkpoint (Hugging Face joncarter/wav2sleep, uploaded 2026-01-30) postdates the paper (ML4H 2024) and its model card reports no kappa. physioex labels and ECG input were checked against the authors' own pipeline (identical labels on every test night; ECG r = 1.0000, kappa within 0.0004 on 10 MESA/CCSHS nights), so the remaining per-dataset gap (-0.02 to +0.02) is attributed to the checkpoint.",
+  "assert_note": "Reported, not asserted. The public checkpoint (Hugging Face joncarter/wav2sleep, uploaded 2026-01-30) is a later version than the paper's model (ML4H 2024): the authors confirmed (joncarter1/wav2sleep#2) a receptive field of about 2 h instead of 10 h and about 1 % lower scores on the original test sets; Table 6 is the mean over three seeds. physioex labels and ECG input were checked against the authors' own pipeline (identical labels on every test night; ECG r = 1.0000, kappa within 0.0004 on 10 MESA/CCSHS nights), so the remaining per-dataset gap (-0.02 to +0.02) is attributed to the checkpoint.",
   "split": "wav2sleep",
   "conditions": {
     "all": "ABD+THX+ECG, plus PPG for MESA, CHAT, CFS and CCSHS",

@@ -4,6 +4,15 @@ All notable changes to PhysioEx are documented here. Versions follow the
 `physioex.__version__` string (read dynamically by the build) and the `v*` git tags
 that publish to PyPI.
 
+## Unreleased
+
+### Documentation
+- wav2sleep: the public Hugging Face checkpoint is a later version than the paper's model (receptive field of about 2 h
+  instead of 10 h, about 1 % lower on the original test sets; confirmed by the authors in joncarter1/wav2sleep#2), and
+  Table 6 is a mean over three seeds. Noted in the model page, the example README and `paper_metrics.json`.
+- README: table of the cardiorespiratory models (inputs, `load_from_pretrained` names, weight sources, licenses) and a
+  whole-night quick start.
+
 ## 2.0.6 — 2026-11-22
 
 ### Added

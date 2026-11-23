@@ -40,8 +40,12 @@ Datasets whose raw data is missing are reported as SKIP (never a crash);
 
 **Status of the replication.** The targets are reported, not asserted
 (`"assert": false` in `paper_metrics.json`). The public checkpoint
-(`joncarter/wav2sleep` on Hugging Face, uploaded 2026-01-30) postdates the
-paper and its model card gives no kappa. The physioex inputs were checked
+(`joncarter/wav2sleep` on Hugging Face, uploaded 2026-01-30) is not the model
+of the paper: the authors confirmed
+([joncarter1/wav2sleep#2](https://github.com/joncarter1/wav2sleep/issues/2))
+that it has a receptive field of about 2 h instead of the whole 10-h night and
+scores about 1 % lower on the original test sets; Table 6 is moreover the mean
+over three random seeds. The physioex inputs were checked
 against the authors' own pipeline: the sleep-stage labels match on every test
 night of SHHS, MROS, MESA and CCSHS, and the preprocessed ECG matches
 (r = 1.0000, per-night kappa within 0.0004 on 10 MESA/CCSHS nights). With
