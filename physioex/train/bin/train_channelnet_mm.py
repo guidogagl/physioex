@@ -226,6 +226,9 @@ def main():
     mf.write(json.dumps({"step": 0, "valid": v0, "gates": model.gates()}) + "\n")
 
     t0, step, best, stop, run_loss = time.time(), 0, None, False, []
+    if args.init:            # S3: the starting checkpoint competes for best.pt, so fine-tuning can never end worse
+        best = v0["loss"]
+        torch.save(model.state_dict(), out / "best.pt")
     for ep in range(args.passes):
         model.train()
         for x, y, off in dl:
