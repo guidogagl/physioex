@@ -160,3 +160,120 @@ def class_counts(nights: List[Night]) -> np.ndarray:
         v = nt.y[nt.y >= 0]
         c += np.bincount(v, minlength=5)
     return c
+
+
+# ---------------------------------------------------------------------------------------------------------------------
+# Three modalities of the same night, aligned (multimodal ChannelNet, physioex/models/channelnet_mm.py)
+# ---------------------------------------------------------------------------------------------------------------------
+
+@dataclass
+class MultiNight:
+    dataset: str
+    subject: str
+    x: Dict[str, np.ndarray]     # {m: (n, 3000)} at 100 Hz
+    y: np.ndarray                # (n,) int64, -1 = masked
+    offset_db: Dict[str, float]
+
+
+def load_multimodal_night(root: Path, dataset: str, subject: str,
+                          modalities: Sequence[str] = ("EEG", "EOG", "EMG")) -> Tuple[Optional[MultiNight], str]:
+    """One night with all modalities: truncated to the shortest of signals and labels (aligned from the first epoch),
+    margins trimmed where any modality is fully flat, labels masked where any modality is flat or partly flat."""
+    lab = root / dataset / "labels" / f"{subject}.npy"
+    if not lab.exists():
+        return None, "no labels"
+    y = np.load(lab).astype(np.int64)
+    xs, fss = {}, {}
+    for m in modalities:
+        sig = [p for p in (root / dataset / "signals" / subject).glob(f"{m}_clean_*/*/signal.npy")
+               if p.parent.name != "night"]
+        if len(sig) != 1:
+            return None, f"no {m}"
+        fss[m] = float(json.loads((sig[0].parent / "signal.meta.json").read_text())["fs_out"])
+        xs[m] = np.load(sig[0], mmap_mode="r")
+        if m != "EMG" and fss[m] != 100.0:
+            return None, f"{m} fs {fss[m]}"
+    n = min([len(y)] + [len(v) for v in xs.values()])
+    y = y[:n].copy()
+    full = np.zeros(n, bool)
+    part = np.zeros(n, bool)
+    for m in modalities:
+        xs[m] = np.asarray(xs[m][:n])
+        f, p = flat_epochs(xs[m].astype(np.float32), fss[m])
+        full |= f
+        part |= p
+    keep = np.where(~full)[0]
+    if len(keep) == 0:
+        return None, "all flat"
+    a, b = keep[0], keep[-1] + 1
+    y, full, part = y[a:b], full[a:b], part[a:b]
+    y[(y < 0) | (y > 4) | full | part] = -1
+    if (y >= 0).sum() == 0:
+        return None, "no scored epoch"
+    offs = {}
+    for m in modalities:
+        x = xs[m][a:b]
+        if m == "EMG":
+            xs[m] = to_100hz(x, fss[m]).astype(np.float16)
+            offs[m] = float(10 * np.log10((min(100.0, fss[m] / 2) - 10.0) / 40.0))
+        else:
+            xs[m] = x
+            offs[m] = 0.0
+    return MultiNight(dataset, subject, xs, y, offs), "ok"
+
+
+class CleanCacheMultiNights:
+    """All nights with every requested modality, grouped by split (explicit split file or subject hash)."""
+
+    def __init__(self, root: str, datasets: Sequence[str], modalities: Sequence[str] = ("EEG", "EOG", "EMG"),
+                 log=print, split: Optional[Dict[str, Dict[str, List[str]]]] = None):
+        self.root, self.modalities = Path(root), list(modalities)
+        self.nights: Dict[str, List[MultiNight]] = {"train": [], "valid": [], "test": []}
+        self.skipped: Dict[str, int] = {}
+        for ds in datasets:
+            where = None if split is None else {s: k for k, ids in split[ds].items() for s in ids}
+            for subj in sorted(p.name for p in (self.root / ds / "signals").iterdir()):
+                if where is not None and subj not in where:
+                    self.skipped["not in split"] = self.skipped.get("not in split", 0) + 1
+                    continue
+                night, why = load_multimodal_night(self.root, ds, subj, self.modalities)
+                if night is None:
+                    self.skipped[why] = self.skipped.get(why, 0) + 1
+                    continue
+                self.nights[where[subj] if where is not None else split_of(ds, subj)].append(night)
+        log(f"[clean_cache] {'+'.join(self.modalities)}: "
+            + ", ".join(f"{k} {len(v)} nights" for k, v in self.nights.items()) + f"; skipped {self.skipped}")
+
+
+class MultiSequenceDataset(Dataset):
+    """Windows of L consecutive epochs over all modalities: ({m: (L, 3000)}, (L,), {m: offset_db})."""
+
+    def __init__(self, nights: List[MultiNight], seq_len: int = 20, stride: Optional[int] = None):
+        self.nights, self.L = nights, seq_len
+        stride = stride or seq_len
+        self.windows: List[Tuple[int, int]] = []
+        for k, nt in enumerate(nights):
+            n = len(nt.y)
+            if n < seq_len:
+                continue
+            starts = list(range(0, n - seq_len + 1, stride))
+            if starts[-1] != n - seq_len:
+                starts.append(n - seq_len)
+            self.windows += [(k, s) for s in starts if (nt.y[s:s + seq_len] >= 0).any()]
+
+    def __len__(self):
+        return len(self.windows)
+
+    def __getitem__(self, i):
+        k, s = self.windows[i]
+        nt = self.nights[k]
+        x = {m: torch.from_numpy(np.array(v[s:s + self.L], dtype=np.float32)) for m, v in nt.x.items()}
+        off = {m: torch.tensor(v, dtype=torch.float32) for m, v in nt.offset_db.items()}
+        return x, torch.from_numpy(nt.y[s:s + self.L]), off
+
+
+def multi_class_counts(nights: List[MultiNight]) -> np.ndarray:
+    c = np.zeros(5, np.int64)
+    for nt in nights:
+        c += np.bincount(nt.y[nt.y >= 0], minlength=5)
+    return c
