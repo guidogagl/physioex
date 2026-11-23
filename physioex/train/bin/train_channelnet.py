@@ -210,6 +210,7 @@ def main():
 
     better = (lambda a, b: a < b) if P["select"] == "loss" else (lambda a, b: a > b)
     t0, step, best, bad, stop = time.time(), 0, None, 0, False
+    improved, bad_passes = False, 0
     probe = next(iter(DataLoader(SequenceDataset(data.nights["valid"] or train_n, L), batch_size=16)))
     mf = open(out / "metrics.jsonl", "a")
     sat0 = saturation(model.eval(), probe[0].to(device), probe[2].to(device))
@@ -245,13 +246,19 @@ def main():
                     f"κ {v.get('kappa', float('nan')):.4f} sat L1 {rec['sat']['h_sat_L1']:.3f}/"
                     f"{rec['sat']['gate_sat_L1']:.3f}")
                 if best is None or better(score, best):
-                    best, bad = score, 0
+                    best, bad, improved = score, 0, True
                     torch.save(model.state_dict(), out / "best.pt")
                 else:
                     bad += 1
-                if timeout or bad >= args.patience:
+                # proof: patience in validations; phan: in passes, as the physioex Trainer (checked below)
+                if timeout or (args.protocol != "phan" and bad >= args.patience):
                     stop = True
                     break
+        if args.protocol == "phan":
+            bad_passes = 0 if improved else bad_passes + 1
+            improved = False
+            if bad_passes >= args.patience:
+                stop = True
         if stop:
             break
 

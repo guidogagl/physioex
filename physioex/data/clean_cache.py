@@ -74,7 +74,9 @@ class Night:
 
 
 def load_night(root: Path, dataset: str, subject: str, modality: str) -> Tuple[Optional[Night], str]:
-    sig = list((root / dataset / "signals" / subject).glob(f"{modality}_clean_*/*/signal.npy"))
+    # <hash>/ holds the epoched pipeline output; night/ (full cache) is the continuous cleaned night: not used here
+    sig = [p for p in (root / dataset / "signals" / subject).glob(f"{modality}_clean_*/*/signal.npy")
+           if p.parent.name != "night"]
     lab = root / dataset / "labels" / f"{subject}.npy"
     if len(sig) != 1 or not lab.exists():
         return None, "no signal or labels"
