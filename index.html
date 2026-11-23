@@ -402,12 +402,45 @@ Relevance Propagation</strong> for CNN, recurrent and attention/transformer mode
 <li><p>CoReSleep — multimodal architecture.</p></li>
 <li><p>ProtoSleepNet — prototype-based, interpretable-by-design architecture.</p></li>
 </ul>
-<p><strong>Cardiorespiratory models</strong> (whole-night staging from ECG, PPG and respiratory
-effort, with published weights loaded by <code class="docutils literal notranslate"><span class="pre">load_from_pretrained</span></code>):
-<a class="reference external" href="https://arxiv.org/abs/2411.04644">wav2sleep</a> (<code class="docutils literal notranslate"><span class="pre">Wav2Sleep</span></code>),
-Jones et al. 2024 (<code class="docutils literal notranslate"><span class="pre">JonesECGNet</span></code>, ECG only) and
-<a class="reference external" href="https://arxiv.org/abs/2202.05735">SleepPPG-Net</a> (<code class="docutils literal notranslate"><span class="pre">SleepPPGNet</span></code>, PPG only,
-third-party replica weights).</p>
+<p><strong>Cardiorespiratory models</strong> (since 2.0.6): whole-night sleep staging from ECG,
+PPG and respiratory effort. The architectures are re-implemented in physioex;
+the published weights are downloaded from the original sources by
+<code class="docutils literal notranslate"><span class="pre">load_from_pretrained(name)</span></code>, and each model has a matching preprocessing preset.</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>model</p></th>
+<th class="head"><p>input</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">load_from_pretrained</span></code> name</p></th>
+<th class="head"><p>weights</p></th>
+<th class="head"><p>license</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><a class="reference external" href="https://arxiv.org/abs/2411.04644">wav2sleep</a> (<code class="docutils literal notranslate"><span class="pre">Wav2Sleep</span></code>)</p></td>
+<td><p>any subset of ECG, PPG, ABD, THX (or EOG)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">wav2sleep</span></code>, <code class="docutils literal notranslate"><span class="pre">wav2sleep-eog</span></code></p></td>
+<td><p>authors (Hugging Face)</p></td>
+<td><p>MIT</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference external" href="https://doi.org/10.1016/j.compbiomed.2024.108545">Jones et al. 2024</a> (<code class="docutils literal notranslate"><span class="pre">JonesECGNet</span></code>)</p></td>
+<td><p>ECG + age, sex, start time</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">jones-ecg</span></code> and six variants</p></td>
+<td><p>authors (GitHub)</p></td>
+<td><p>AGPL-3.0</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference external" href="https://arxiv.org/abs/2202.05735">SleepPPG-Net</a> (<code class="docutils literal notranslate"><span class="pre">SleepPPGNet</span></code>)</p></td>
+<td><p>PPG</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">sleepppgnet-replica</span></code></p></td>
+<td><p>third-party replica</p></td>
+<td><p>non-commercial</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">examples/pretrained/&lt;model&gt;/verify.py</span></code> compares each model with its paper on
+the published test splits. The public wav2sleep checkpoint is a later version
+than the paper’s model (about 1 % lower, as confirmed by the authors), so its
+results are reported next to the paper’s numbers rather than matched.</p>
 <p><strong>Foundation encoders</strong> (pretrained backbones exposed through a uniform
 <code class="docutils literal notranslate"><span class="pre">(B,</span> <span class="pre">L,</span> <span class="pre">C,</span> <span class="pre">T)</span> <span class="pre">-&gt;</span> <span class="pre">(B,</span> <span class="pre">L,</span> <span class="pre">D)</span></code> <code class="docutils literal notranslate"><span class="pre">encode()</span></code> interface, for embedding extraction and
 linear probing): <code class="docutils literal notranslate"><span class="pre">CBraMod</span></code>, <code class="docutils literal notranslate"><span class="pre">BENDR</span></code>, <code class="docutils literal notranslate"><span class="pre">LaBraM</span></code>, <code class="docutils literal notranslate"><span class="pre">BIOT</span></code>, <code class="docutils literal notranslate"><span class="pre">SleepFM</span></code>, <code class="docutils literal notranslate"><span class="pre">TFC</span></code>, <code class="docutils literal notranslate"><span class="pre">REVE</span></code>,
@@ -485,7 +518,7 @@ $<span class="w"> </span><span class="nb">cd</span><span class="w"> </span>physi
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>physioex
 </pre></div>
 </div>
-<p>Note: the github version of the library is kept updated weekly, the PiPy version may be outdated depending on the last commit of the github version. We recommend to use the github version if possible.</p>
+<p>Note: PyPI releases follow the <code class="docutils literal notranslate"><span class="pre">main</span></code> branch of the GitHub repository; installing from source gives the latest unreleased changes.</p>
 <p><strong>Optional extras</strong> (heavyweight, feature-specific deps installed lazily):</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"physioex[foundation]"</span><span class="w">   </span><span class="c1"># transformers, for the REVE encoder</span>
 $<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"physioex[datasets]"</span><span class="w">     </span><span class="c1"># mne, for the HOMEPAP EDF fallback reader</span>
@@ -534,10 +567,30 @@ data layer, the model zoo, and the training loop:</p>
 <span class="kn">from</span><span class="w"> </span><span class="nn">physioex.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">CBraModEncoder</span>
 
 <span class="n">model</span> <span class="o">=</span> <span class="n">load_from_pretrained</span><span class="p">(</span><span class="s2">"protosleepnet-gagliardi"</span><span class="p">)</span>  <span class="c1"># from the HF model zoo</span>
+<span class="c1"># list_pretrained() lists every model load_from_pretrained can fetch</span>
 <span class="n">encoder</span> <span class="o">=</span> <span class="n">CBraModEncoder</span><span class="p">()</span>
 <span class="n">ds</span> <span class="o">=</span> <span class="n">encoder</span><span class="o">.</span><span class="n">get_dataset</span><span class="p">(</span><span class="s2">"hmc"</span><span class="p">)</span>                          <span class="c1"># matched preprocessing</span>
 <span class="n">emb</span> <span class="o">=</span> <span class="n">extract_embeddings</span><span class="p">(</span><span class="n">encoder</span><span class="p">,</span> <span class="n">ds</span><span class="p">)</span>
 <span class="n">scores</span> <span class="o">=</span> <span class="n">linear_probe</span><span class="p">(</span><span class="n">emb</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Stage whole nights with a cardiorespiratory model (<code class="docutils literal notranslate"><span class="pre">sequence_length=0</span></code> makes
+one item one night):</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">physioex.data.datasets</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_dataset</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">physioex.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">load_from_pretrained</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">physioex.train</span><span class="w"> </span><span class="kn">import</span> <span class="n">replication</span> <span class="k">as</span> <span class="n">rep</span>
+
+<span class="n">model</span> <span class="o">=</span> <span class="n">load_from_pretrained</span><span class="p">(</span><span class="s2">"wav2sleep"</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">data</span> <span class="o">=</span> <span class="n">get_dataset</span><span class="p">(</span><span class="s2">"mesa"</span><span class="p">)(</span>
+    <span class="n">channels</span><span class="o">=</span><span class="p">[</span><span class="s2">"ECG"</span><span class="p">,</span> <span class="s2">"PPG"</span><span class="p">,</span> <span class="s2">"ABD"</span><span class="p">,</span> <span class="s2">"THX"</span><span class="p">],</span>
+    <span class="n">pipelines</span><span class="o">=</span><span class="s2">"wav2sleep"</span><span class="p">,</span>        <span class="c1"># the authors' preprocessing</span>
+    <span class="n">sequence_length</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+    <span class="n">label_transform</span><span class="o">=</span><span class="s2">"aasm4"</span><span class="p">,</span>      <span class="c1"># W, Light, Deep, REM</span>
+    <span class="n">trim_excess_wake</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">test</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get_splits</span><span class="p">(</span><span class="n">split</span><span class="o">=</span><span class="s2">"wav2sleep"</span><span class="p">)[</span><span class="mi">2</span><span class="p">]</span>
+<span class="k">for</span> <span class="n">subject</span><span class="p">,</span> <span class="n">signals</span><span class="p">,</span> <span class="n">labels</span><span class="p">,</span> <span class="n">metadata</span> <span class="ow">in</span> <span class="n">rep</span><span class="o">.</span><span class="n">iter_nights</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">test</span><span class="p">[:</span><span class="mi">1</span><span class="p">]):</span>
+    <span class="n">stages</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">predict_night</span><span class="p">(</span><span class="n">signals</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>The same dataset spec drives the CLI (<code class="docutils literal notranslate"><span class="pre">train</span></code> / <code class="docutils literal notranslate"><span class="pre">finetune</span></code> / <code class="docutils literal notranslate"><span class="pre">test_model</span></code>) — see

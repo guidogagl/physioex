@@ -74,10 +74,16 @@ public checkpoint, pooled kappa minus Table 6 is:
 | CCSHS | +0.015 | +0.014 | +0.021 | - |
 | MROS | -0.005 | -0.006 | -0.005 | - |
 
-The checkpoint on the Hub was uploaded in January 2026, after the paper, and
-its model card reports no kappa; the targets are therefore reported, not
-asserted. CFS and CHAT (and the census rows that need them) are skipped when
-their data are not available.
+The gap comes from the checkpoint, not from the data handling. The authors
+confirmed ([joncarter1/wav2sleep#2](https://github.com/joncarter1/wav2sleep/issues/2))
+that the model on the Hub is a later version: its effective receptive field is
+about 2 h instead of the whole 10-h night (fewer convolutional layers and
+smaller kernels), chosen to generalise to inputs of arbitrary length, and it
+scores about 1 % below the paper's model on the original test sets. Table 6 is
+also the mean over three random seeds, so no single checkpoint reproduces it
+exactly. The targets are therefore reported, not asserted. CFS and CHAT (and
+the census rows that need them) are skipped when their data are not
+available.
 
 ## Training
 
