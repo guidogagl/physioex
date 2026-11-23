@@ -7,16 +7,17 @@ cache on Sofia:
     <root>/<dataset>/labels/<subject>.npy
 
 Per night:
-- signal and labels may differ by one epoch (truncated to the shorter); larger differences are skipped (MASS 20-s
-  cohorts, whose labels are not aligned with the 30-s cached epochs);
+- signal and labels both start at the first epoch and may differ in length at the end (labels beyond the
+  recording, or unscored recording tail): both are truncated to the shorter, as physioex does with label -1;
 - the cleaner zeroes everything outside the recording window, which RobustScale turns into a constant: flat epochs
   (std < 1e-3 over the epoch or over any 1-s segment) at the start and end of the night are trimmed away, inner
   flat or partly flat epochs and unscored epochs stay in the sequence context but are masked in the loss (label -1);
 - EMG is resampled to 100 Hz once for the whole night (continuous signal) and carries the band correction
   offset_db = 10 log10(B / 40), B = min(100, fs/2) - 10, applied to the band power by the model.
 
-Splits are per subject, from a hash of "<dataset>/<subject>" (70/15/15), so the EEG, EOG and EMG networks see the
-same subjects in the same split whatever nights each modality has.
+Splits are per subject: either given explicitly ({dataset: {train, valid, test}}, e.g. physioex fold 0 written by
+``BasePhysioDataset.get_splits``), or from a hash of "<dataset>/<subject>" (70/15/15). Either way the EEG, EOG and
+EMG networks see the same subjects in the same split.
 """
 
 from __future__ import annotations
@@ -80,8 +81,6 @@ def load_night(root: Path, dataset: str, subject: str, modality: str) -> Tuple[O
     fs = float(json.loads((sig[0].parent / "signal.meta.json").read_text())["fs_out"])
     x = np.load(sig[0], mmap_mode="r")
     y = np.load(lab).astype(np.int64)
-    if abs(len(x) - len(y)) > 1:
-        return None, "length mismatch"
     n = min(len(x), len(y))
     x, y = np.asarray(x[:n]), y[:n]
     full, part = flat_epochs(x.astype(np.float32), fs)
@@ -105,17 +104,22 @@ def load_night(root: Path, dataset: str, subject: str, modality: str) -> Tuple[O
 class CleanCacheNights:
     """All nights of some datasets for one modality, grouped by split."""
 
-    def __init__(self, root: str, datasets: Sequence[str], modality: str, log=print):
+    def __init__(self, root: str, datasets: Sequence[str], modality: str, log=print,
+                 split: Optional[Dict[str, Dict[str, List[str]]]] = None):
         self.root, self.modality = Path(root), modality
         self.nights: Dict[str, List[Night]] = {"train": [], "valid": [], "test": []}
         self.skipped: Dict[str, int] = {}
         for ds in datasets:
+            where = None if split is None else {s: k for k, ids in split[ds].items() for s in ids}
             for subj in sorted(p.name for p in (self.root / ds / "signals").iterdir()):
+                if where is not None and subj not in where:
+                    self.skipped["not in split"] = self.skipped.get("not in split", 0) + 1
+                    continue
                 night, why = load_night(self.root, ds, subj, modality)
                 if night is None:
                     self.skipped[why] = self.skipped.get(why, 0) + 1
                     continue
-                self.nights[split_of(ds, subj)].append(night)
+                self.nights[where[subj] if where is not None else split_of(ds, subj)].append(night)
         log(f"[clean_cache] {modality}: " + ", ".join(f"{k} {len(v)} nights" for k, v in self.nights.items())
             + f"; skipped {self.skipped}")
 

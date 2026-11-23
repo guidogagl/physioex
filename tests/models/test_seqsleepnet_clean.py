@@ -99,11 +99,12 @@ def test_flat_epochs_trimmed_and_masked(tmp_path):
     assert full[10] and part[20] and not full[20]
 
 
-def test_length_mismatch_skipped(tmp_path):
+def test_length_mismatch_truncated_at_end(tmp_path):
     x = np.random.default_rng(2).standard_normal((30, 3000))
-    _write_night(tmp_path, "ds", "s1", "EEG", x, np.zeros(45, int), 100.0)
+    _write_night(tmp_path, "ds", "s1", "EEG", x, np.r_[np.arange(30) % 5, np.zeros(15, int)], 100.0)
     night, why = load_night(tmp_path, "ds", "s1", "EEG")
-    assert night is None and why == "length mismatch"
+    assert why == "ok" and len(night.y) == 30
+    np.testing.assert_array_equal(night.y, np.arange(30) % 5)   # aligned from the first epoch
 
 
 def test_emg_resampled_to_100hz(tmp_path):
