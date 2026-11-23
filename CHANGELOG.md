@@ -12,6 +12,8 @@ that publish to PyPI.
   Table 6 is a mean over three seeds. Noted in the model page, the example README and `paper_metrics.json`.
 - README: table of the cardiorespiratory models (inputs, `load_from_pretrained` names, weight sources, licenses) and a
   whole-night quick start.
+- README rewritten in one style (overview, installation, quickstart, model and dataset tables, citation, license); the
+  dataset descriptions moved to the Data page of the documentation.
 
 ## 2.0.6 — 2026-11-22
 
