@@ -17,6 +17,66 @@ Concrete datasets are resolved **by name** from a string registry rather than
 imported directly. For the full class diagram and how the pieces fit together,
 see the [data-layer architecture](architecture/library/data.md) page.
 
+## Supported datasets
+
+PhysioEx reads the original recordings; obtain them from the source of each
+dataset and point `PHYSIOEX_DATA` at the directory that holds them.
+
+### Public datasets
+
+- **Sleep-EDF Expanded** (`sleepedf`, [PhysioNet](https://physionet.org/content/sleep-edfx/1.0.0/)).
+  197 whole-night polysomnographic recordings with EEG, EOG, chin EMG and event markers.
+- **HMC, Haaglanden Medisch Centrum** (`hmc`, [PhysioNet](https://physionet.org/content/hmc-sleep-staging/1.1/)).
+  151 whole-night recordings from 85 men and 66 women: four EEG channels (F4/M1, C4/M1, O2/M1, C3/M2),
+  two EOG channels (E1/M2, E2/M2) and one bipolar chin EMG, all at 256 Hz.
+- **DCSM, Danish Center for Sleep Medicine** (`dcsm`, [ERDA](https://erda.ku.dk/public/archives/db553715ecbe1f3ac66c1dc569826eef/published-archive.html)).
+  255 randomly selected, fully anonymized overnight lab recordings of patients referred for non-specific
+  sleep disorders; EEG, EOG and EMG at 256 Hz.
+
+### NSRR datasets
+
+Available from the [National Sleep Research Resource](https://sleepdata.org) after a data access request.
+
+- **SHHS, Sleep Heart Health Study** (`shhs`). A multi-center cohort on the cardiovascular consequences of
+  sleep-disordered breathing: 5,793 participants aged 40 or older at visit 1, recorded at home. C3/A2 and
+  C4/A1 EEG at 125 Hz, left and right EOG at 50 Hz, bipolar submental EMG at 125 Hz.
+- **MESA, Multi-Ethnic Study of Atherosclerosis** (`mesa`). 2,237 ethnically diverse men and women aged
+  45 to 84 from six US communities, recorded at home: central C4-M1 EEG, bilateral EOG and chin EMG at
+  256 Hz, scored by certified polysomnologists.
+- **MrOS, Osteoporotic Fractures in Men Study** (`mros`). 2,911 home recordings of men aged 65 or older
+  from six clinical centers: C3/A2 and C4/A1 EEG, chin EMG and left and right EOG at 256 Hz. The `visit`
+  argument selects the visit.
+- **WSC, Wisconsin Sleep Cohort** (`wsc`). A longitudinal study of sleep disorders with in-lab recordings
+  every four years from a baseline sample of 1,500 participants: C3/M2 EEG, EMG and left and right EOG
+  at 200 Hz. The `visit` argument selects the visit.
+- **STAGES, Stanford Technology Analytics and Genomics in Sleep** (`stages`). 1,914 recordings from 13
+  clinical sites with a bipolar EEG montage (C4-M1 / C3-M2 equivalent), EOG and chin EMG, plus respiratory,
+  arousal and limb-movement events. Selectable by site and by recording (`first`, `second`, `all`).
+- **CCSHS, Cleveland Children's Sleep and Health Study** (`ccshs`). 515 children and adolescents with one
+  home recording each (NSRR `ccshs-trec`): C3/A2 and C4/A1 EEG and LOC/ROC EOG at 128 Hz, chin EMG at
+  256 Hz; stages scored with Rechtschaffen & Kales and merged to N3. Eleven recordings whose hypnogram
+  does not match the NSRR summary table are excluded by default (`exclude_subjects=[]` keeps them).
+- **CFS, Cleveland Family Study** (`cfs`). The visit-5 in-lab recordings of a family-based study of sleep
+  apnea.
+- **CHAT, Childhood Adenotonsillectomy Trial** (`chat`). Recordings of children at baseline and follow-up,
+  plus the non-randomized baseline group.
+- **HomePAP** (`hpap`). A positive-airway-pressure study with three subsets, `lab-full`, `lab-split` and
+  `home`, selected with the `subset` argument.
+
+The `cfs` and `chat` readers follow the other NSRR readers but have not yet been
+tested on the real recordings.
+
+### Other datasets
+
+- **MASS, Montreal Archive of Sleep Studies** (`mass`, [CEAMS](http://ceams-carsm.ca/mass/)). 200 complete
+  lab nights from 97 men and 103 women aged 18 to 76, at 256 Hz, with 4 to 20 EEG channels, EOG and EMG.
+- **Alzheimer's disease dataset** (`alzheimers`, UZ Leuven). 69 participants (37 with Alzheimer's disease,
+  32 healthy controls), one night each: average-reference EEG, differential EOG, chin EMG and ECG at 200 Hz.
+  The `subset` argument selects patients or controls.
+- **Parkinson's disease dataset** (`parkinsons`, UZ Leuven). 87 participants (48 with Parkinson's disease,
+  40 healthy older adults) with up to 157 recordings (night and nap): bipolar EEG, EOG, chin EMG and ECG
+  at 500 Hz.
+
 ## Resolving a dataset by name
 
 `physioex.data.datasets` exposes a registry of the 15 concrete datasets:

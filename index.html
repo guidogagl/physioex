@@ -375,174 +375,92 @@
 </p>
 <section class="tex2jax_ignore mathjax_ignore" id="physioex">
 <h1>PhysioEx<a class="headerlink" href="#physioex" title="Link to this heading">#</a></h1>
-<p><img alt="Python Version" src="https://img.shields.io/badge/python-3.11%2B-blue" />
-<a class="reference external" href="https://pypi.org/project/physioex/"><img alt="PyPI Version" src="https://img.shields.io/pypi/v/physioex?cacheSeconds=3600" /></a></p>
-<p><strong>PhysioEx ( Physiological Signal Explainer )</strong> is a versatile python library tailored for building, training, and explaining deep learning models for physiological signal analysis.</p>
-<p>The main purpose of the library is to propose a standard and fast methodology to train and evalutate state-of-the-art deep learning architectures for physiological signal analysis, to shift the attention from the architecture building task to the explainability task.</p>
-<p>With PhysioEx you can simulate a state-of-the-art experiment just running the <code class="docutils literal notranslate"><span class="pre">train</span></code>, <code class="docutils literal notranslate"><span class="pre">test_model</span></code>  and <code class="docutils literal notranslate"><span class="pre">finetune</span></code> commands; evaluating and saving the trained model; and start focusing on the explainability task!</p>
-<p>Beyond training classic architectures from scratch, PhysioEx wraps a family of
-<strong>pretrained foundation encoders</strong> behind a uniform interface, so you can extract
-embeddings, run linear probes, and apply the explainability tools on top of them.</p>
-<p>The explainability toolkit (<code class="docutils literal notranslate"><span class="pre">physioex.explain</span></code>) offers gradient-based attribution
-(Saliency, Input×Gradient, Integrated / Expected Gradients and their DFT/STFT
-variants), concept and prototype methods, and — since 2.0.1 — <strong>Layer-wise
-Relevance Propagation</strong> for CNN, recurrent and attention/transformer models
-(<code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">&quot;physioex[explain]&quot;</span></code>), with built-in conservation diagnostics.</p>
-<section id="supported-deep-learning-architectures">
-<h2>Supported deep learning architectures<a class="headerlink" href="#supported-deep-learning-architectures" title="Link to this heading">#</a></h2>
-<p>PhysioEx ships two families of models under <code class="docutils literal notranslate"><span class="pre">physioex.models</span></code>.</p>
-<p><strong>Classic sleep-staging architectures</strong> (trained from scratch):</p>
+<p><strong>PhysioEx (Physiological Signal Explainer)</strong> is a Python library for explainable sleep staging with deep learning.</p>
+<p><a class="reference external" href="https://pypi.org/project/physioex/"><img alt="PyPI Version" src="https://img.shields.io/pypi/v/physioex?cacheSeconds=3600" /></a>
+<a class="reference external" href="https://pypi.org/project/physioex/"><img alt="Python Version" src="https://img.shields.io/badge/python-3.11%2B-blue" /></a>
+<a class="reference external" href="https://github.com/guidogagl/physioex/actions/workflows/test.yml"><img alt="Tests" src="https://github.com/guidogagl/physioex/actions/workflows/test.yml/badge.svg" /></a>
+<a class="reference external" href="https://guidogagl.github.io/physioex/"><img alt="Docs" src="https://github.com/guidogagl/physioex/actions/workflows/ci.yml/badge.svg" /></a>
+<a class="reference external" href="https://github.com/guidogagl/physioex/blob/main/LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-green" /></a></p>
+<section id="overview">
+<h2>Overview<a class="headerlink" href="#overview" title="Link to this heading">#</a></h2>
+<p>PhysioEx provides a standard, reproducible way to train and evaluate
+state-of-the-art sleep-staging models, so that the effort can go into
+understanding what the models learn rather than into re-implementing them.</p>
 <ul class="simple">
-<li><p><a class="reference external" href="https://ieeexplore.ieee.org/document/8307462">Chambon2018</a> — raw time series as input.</p></li>
-<li><p><a class="reference external" href="https://github.com/akaraspt/tinysleepnet">TinySleepNet</a> — raw time series as input.</p></li>
-<li><p>Tsinalis (<code class="docutils literal notranslate"><span class="pre">TsinalisCNN</span></code>) — raw time series as input.</p></li>
-<li><p><a class="reference external" href="https://arxiv.org/pdf/1809.10932.pdf">SeqSleepNet</a> — time-frequency images as input.</p></li>
-<li><p>L-SeqSleepNet (<code class="docutils literal notranslate"><span class="pre">LSeqSleepNet</span></code>) — long-sequence time-frequency modelling.</p></li>
-<li><p><a class="reference external" href="https://arxiv.org/pdf/2105.11043">SleepTransformer</a> — time-frequency images as input.</p></li>
-<li><p>CoReSleep — multimodal architecture.</p></li>
-<li><p>ProtoSleepNet — prototype-based, interpretable-by-design architecture.</p></li>
+<li><p><strong>Data.</strong> Fifteen sleep datasets are read directly from the raw recordings;
+preprocessing runs lazily, per channel, and is cached on disk.</p></li>
+<li><p><strong>Models.</strong> Classic sleep-staging architectures, cardiorespiratory models and
+pretrained foundation encoders share one interface; published weights are
+loaded with <code class="docutils literal notranslate"><span class="pre">load_from_pretrained</span></code>.</p></li>
+<li><p><strong>Training.</strong> A PyTorch training and evaluation loop, also available from the
+command line (<code class="docutils literal notranslate"><span class="pre">train</span></code>, <code class="docutils literal notranslate"><span class="pre">finetune</span></code>, <code class="docutils literal notranslate"><span class="pre">test_model</span></code>).</p></li>
+<li><p><strong>Foundation encoders.</strong> Embedding extraction and linear probing on top of
+pretrained EEG and biosignal backbones.</p></li>
+<li><p><strong>Explainability.</strong> Gradient-based attribution (Saliency, Input×Gradient,
+Integrated and Expected Gradients, and their DFT/STFT variants), concept and
+prototype methods, and Layer-wise Relevance Propagation for CNN, recurrent
+and transformer models, with conservation diagnostics.</p></li>
 </ul>
-<p><strong>Cardiorespiratory models</strong> (since 2.0.6): whole-night sleep staging from ECG,
-PPG and respiratory effort. The architectures are re-implemented in physioex;
-the published weights are downloaded from the original sources by
-<code class="docutils literal notranslate"><span class="pre">load_from_pretrained(name)</span></code>, and each model has a matching preprocessing preset.</p>
+<p>The full documentation is at <a class="reference external" href="https://guidogagl.github.io/physioex/">https://guidogagl.github.io/physioex/</a>.</p>
+</section>
+<section id="installation">
+<h2>Installation<a class="headerlink" href="#installation" title="Link to this heading">#</a></h2>
+<p>Install the latest release from PyPI (Python 3.11 or later):</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>physioex
+</pre></div>
+</div>
+<p>Optional extras add dependencies that only some features need:</p>
 <div class="pst-scrollable-table-container"><table class="table">
 <thead>
-<tr class="row-odd"><th class="head"><p>model</p></th>
-<th class="head"><p>input</p></th>
-<th class="head"><p><code class="docutils literal notranslate"><span class="pre">load_from_pretrained</span></code> name</p></th>
-<th class="head"><p>weights</p></th>
-<th class="head"><p>license</p></th>
+<tr class="row-odd"><th class="head"><p>Extra</p></th>
+<th class="head"><p>Enables</p></th>
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p><a class="reference external" href="https://arxiv.org/abs/2411.04644">wav2sleep</a> (<code class="docutils literal notranslate"><span class="pre">Wav2Sleep</span></code>)</p></td>
-<td><p>any subset of ECG, PPG, ABD, THX (or EOG)</p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">wav2sleep</span></code>, <code class="docutils literal notranslate"><span class="pre">wav2sleep-eog</span></code></p></td>
-<td><p>authors (Hugging Face)</p></td>
-<td><p>MIT</p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">foundation</span></code></p></td>
+<td><p>the REVE encoder (<code class="docutils literal notranslate"><span class="pre">transformers</span></code>)</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference external" href="https://doi.org/10.1016/j.compbiomed.2024.108545">Jones et al. 2024</a> (<code class="docutils literal notranslate"><span class="pre">JonesECGNet</span></code>)</p></td>
-<td><p>ECG + age, sex, start time</p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">jones-ecg</span></code> and six variants</p></td>
-<td><p>authors (GitHub)</p></td>
-<td><p>AGPL-3.0</p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">datasets</span></code></p></td>
+<td><p>the HomePAP EDF fallback reader (<code class="docutils literal notranslate"><span class="pre">mne</span></code>)</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference external" href="https://arxiv.org/abs/2202.05735">SleepPPG-Net</a> (<code class="docutils literal notranslate"><span class="pre">SleepPPGNet</span></code>)</p></td>
-<td><p>PPG</p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">sleepppgnet-replica</span></code></p></td>
-<td><p>third-party replica</p></td>
-<td><p>non-commercial</p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">tracking</span></code></p></td>
+<td><p>TensorBoard and Weights &amp; Biases logging</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">explain</span></code></p></td>
+<td><p>Layer-wise Relevance Propagation (<code class="docutils literal notranslate"><span class="pre">zennit</span></code>)</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">gpu-monitor</span></code></p></td>
+<td><p>GPU monitoring during training (<code class="docutils literal notranslate"><span class="pre">nvitop</span></code>)</p></td>
 </tr>
 </tbody>
 </table>
 </div>
-<p><code class="docutils literal notranslate"><span class="pre">examples/pretrained/&lt;model&gt;/verify.py</span></code> compares each model with its paper on
-the published test splits. The public wav2sleep checkpoint is a later version
-than the paper’s model (about 1 % lower, as confirmed by the authors), so its
-results are reported next to the paper’s numbers rather than matched.</p>
-<p><strong>Foundation encoders</strong> (pretrained backbones exposed through a uniform
-<code class="docutils literal notranslate"><span class="pre">(B,</span> <span class="pre">L,</span> <span class="pre">C,</span> <span class="pre">T)</span> <span class="pre">-&gt;</span> <span class="pre">(B,</span> <span class="pre">L,</span> <span class="pre">D)</span></code> <code class="docutils literal notranslate"><span class="pre">encode()</span></code> interface, for embedding extraction and
-linear probing): <code class="docutils literal notranslate"><span class="pre">CBraMod</span></code>, <code class="docutils literal notranslate"><span class="pre">BENDR</span></code>, <code class="docutils literal notranslate"><span class="pre">LaBraM</span></code>, <code class="docutils literal notranslate"><span class="pre">BIOT</span></code>, <code class="docutils literal notranslate"><span class="pre">SleepFM</span></code>, <code class="docutils literal notranslate"><span class="pre">TFC</span></code>, <code class="docutils literal notranslate"><span class="pre">REVE</span></code>,
-<code class="docutils literal notranslate"><span class="pre">S-JEPA</span></code>, <code class="docutils literal notranslate"><span class="pre">NeuroLM</span></code>.</p>
-</section>
-<section id="supported-datasets">
-<h2>Supported datasets<a class="headerlink" href="#supported-datasets" title="Link to this heading">#</a></h2>
-<p>All datasets are resolved by name via <code class="docutils literal notranslate"><span class="pre">get_dataset(name)</span></code>; <code class="docutils literal notranslate"><span class="pre">available_datasets()</span></code> returns:
-<code class="docutils literal notranslate"><span class="pre">alzheimers</span></code>, <code class="docutils literal notranslate"><span class="pre">ccshs</span></code>, <code class="docutils literal notranslate"><span class="pre">cfs</span></code>, <code class="docutils literal notranslate"><span class="pre">chat</span></code>, <code class="docutils literal notranslate"><span class="pre">dcsm</span></code>, <code class="docutils literal notranslate"><span class="pre">hmc</span></code>, <code class="docutils literal notranslate"><span class="pre">hpap</span></code>, <code class="docutils literal notranslate"><span class="pre">mass</span></code>, <code class="docutils literal notranslate"><span class="pre">mesa</span></code>, <code class="docutils literal notranslate"><span class="pre">mros</span></code>, <code class="docutils literal notranslate"><span class="pre">parkinsons</span></code>, <code class="docutils literal notranslate"><span class="pre">shhs</span></code>, <code class="docutils literal notranslate"><span class="pre">sleepedf</span></code>, <code class="docutils literal notranslate"><span class="pre">stages</span></code>, <code class="docutils literal notranslate"><span class="pre">wsc</span></code>.</p>
-<section id="publicly-available">
-<h3>Publicly Available:<a class="headerlink" href="#publicly-available" title="Link to this heading">#</a></h3>
-<p>These datasets are supported out of the box — PhysioEx reads the raw recordings directly (preprocessing is applied lazily, on the fly).</p>
-<ul class="simple">
-<li><p><a class="reference external" href="https://physionet.org/content/sleep-edfx/1.0.0/">Sleep-EDF(78)</a>, The sleep-edf database contains 197 whole-night PolySomnoGraphic sleep recordings, containing EEG, EOG, chin EMG, and event markers.</p></li>
-<li><p><a class="reference external" href="https://physionet.org/content/hmc-sleep-staging/1.1/">HMC (Haaglanden Medisch Centrum)</a>, is a collection of 151 whole-night PSG recordings from 85 men and 66 women, gathered at the Haaglanden Medisch Centrum sleep center. The PSG data includes 4 EEG channels (F4/M1, C4/M1, O2/M1, and C3/M2), two EOG channels (E1/M2 and E2/M2), and one bipolar chin EMG, with all signals sampled at 256 Hz.</p></li>
-<li><p><a class="reference external" href="https://erda.ku.dk/public/archives/db553715ecbe1f3ac66c1dc569826eef/published-archive.html">DCSM (Danish Center for Sleep Medicine)</a>, is a collection of 255 randomly selected and fully anonymized overnight lab-based PSG recordings from patients seeking diagnosis for non-specific sleep-related disorders at the DCSM. The PSG setup included EEG, EOG, and EMG channels, all sampled at 256 Hz.</p></li>
-</ul>
-</section>
-<section id="nsrr-datasets">
-<h3><a class="reference external" href="https://sleepdata.org">NSRR</a> Datasets<a class="headerlink" href="#nsrr-datasets" title="Link to this heading">#</a></h3>
-<p>These datasets can be obtained from the NSRR archive. Once downloaded, point PhysioEx at the dataset root and it will read the recordings directly.</p>
-<ul class="simple">
-<li><p><a class="reference external" href="https://sleepdata.org/datasets/shhs">SHHS (Sleep Heart Health Study)</a>, is a multi-center cohort study designed to investigate the cardiovascular and other consequences of sleep-disordered breathing. At visit 1, it included 5,793 participants aged 40 years or older. PSG recordings were typically conducted in the subjects’ homes by trained and certified technicians. The recording montage included C3/A2 and C4/A1 EEGs sampled at 125 Hz, right and left EOGs sampled at 50 Hz, and a bipolar submental EMG sampled at 125 Hz.</p></li>
-<li><p><a class="reference external" href="https://sleepdata.org/datasets/mesa">MESA (Multi-Ethnic Study of Atherosclerosis)</a>, is a multi-center prospective study of 2.237 ethnically diverse men and women aged 45-84 from six communities in the United States. PSGs recordings were obtained using in-home settings including central C4-M1 EEG, bilateral EOG and chin EMG sampled at 256Hz. PSGs were scored by one of 3 MESA certified, registered polysomnologists.</p></li>
-<li><p><a class="reference external" href="https://sleepdata.org/datasets/mros">MrOS (The Osteoporotic Fractures in Men Study)</a>, is a multicenter study comprising 2,911 PSG recordings from men aged 65 years or older, enrolled at six clinical centers. PSG recordings were conducted in home settings and included C3/A2 and C4/A1 EEGs, chin EMG, and left-right EOG, all sampled at 256 Hz.</p></li>
-<li><p><a class="reference external" href="https://sleepdata.org/datasets/wsc">WSC (The Wisconsin Sleep Cohort)</a> A longitudinal study of the causes, consequences, and natural history of sleep disorders using overnight in-laboratory sleep recordings gathered at the University of Wisconsin, United States, with a baseline sample of 1,500 subjects assessed at four-year intervals. The study consists of multiple visits with overnight PSG data acquisition. PSG recordings included C3/M2 EEG, EMG, and left-right EOG, all sampled at 200 Hz.</p></li>
-<li><p><a class="reference external" href="https://sleepdata.org/datasets/stages">STAGES (Stanford Technology Analytics and Genomics in Sleep)</a>, 1,914 recordings across 13 clinical sites with a bipolar EEG montage (C4-M1 / C3-M2 equivalent), EOG and chin EMG, plus rich respiratory / arousal / PLM event annotations. Selectable by site and by recording (<code class="docutils literal notranslate"><span class="pre">first</span></code> / <code class="docutils literal notranslate"><span class="pre">second</span></code> / <code class="docutils literal notranslate"><span class="pre">all</span></code>).</p></li>
-<li><p><a class="reference external" href="https://sleepdata.org/datasets/ccshs">CCSHS (Cleveland Children’s Sleep and Health Study)</a> (<code class="docutils literal notranslate"><span class="pre">ccshs</span></code>), 515 children and adolescents with one in-home PSG each (NSRR <code class="docutils literal notranslate"><span class="pre">ccshs-trec</span></code>): C3/A2 and C4/A1 EEG (128 Hz), LOC/ROC EOG (128 Hz) and chin EMG (256 Hz), stages scored by Rechtschaffen &amp; Kales and merged to N3. Eleven recordings whose hypnogram cannot be reconciled with the NSRR summary table are excluded by default (<code class="docutils literal notranslate"><span class="pre">exclude_subjects=[]</span></code> keeps them).</p></li>
-<li><p><a class="reference external" href="https://sleepdata.org/datasets/cfs">CFS (Cleveland Family Study)</a> (<code class="docutils literal notranslate"><span class="pre">cfs</span></code>), the visit-5 in-lab PSGs of a family-based study of sleep apnea, in NSRR format.</p></li>
-<li><p><a class="reference external" href="https://sleepdata.org/datasets/chat">CHAT (Childhood Adenotonsillectomy Trial)</a> (<code class="docutils literal notranslate"><span class="pre">chat</span></code>), PSGs of children at baseline and follow-up (plus the non-randomized baseline group), in NSRR format.</p></li>
-<li><p><a class="reference external" href="https://sleepdata.org/datasets/homepap">HomePAP</a> (<code class="docutils literal notranslate"><span class="pre">hpap</span></code>), a positive-airway-pressure study in NSRR format, with three subsets — <code class="docutils literal notranslate"><span class="pre">lab-full</span></code>, <code class="docutils literal notranslate"><span class="pre">lab-split</span></code> and <code class="docutils literal notranslate"><span class="pre">home</span></code> — selectable via the <code class="docutils literal notranslate"><span class="pre">subset</span></code> parameter.</p></li>
-</ul>
-</section>
-<section id="others">
-<h3>Others<a class="headerlink" href="#others" title="Link to this heading">#</a></h3>
-<ul class="simple">
-<li><p><a class="reference external" href="http://ceams-carsm.ca/mass/">MASS (Montreal Archive of Sleep Studies)</a>, is an open-access collaborative database containing laboratory-based PSG recordings. It includes 200 complete nights recorded from 97 men and 103 women, aged 18 to 76 years. All recordings have a sampling frequency of 256 Hz and feature an EEG montage of 4–20 channels, along with standard EOG and EMG.</p></li>
-<li><p><strong>Alzheimer’s disease dataset</strong> (<code class="docutils literal notranslate"><span class="pre">alzheimers</span></code>, UZ Leuven), 69 subjects (37 Alzheimer’s + 32 healthy controls), one night each with an average-reference EEG montage, differential EOG, chin EMG and ECG at 200 Hz. The <code class="docutils literal notranslate"><span class="pre">subset</span></code> parameter selects only AD or HC subjects.</p></li>
-<li><p><strong>Parkinson’s disease dataset</strong> (<code class="docutils literal notranslate"><span class="pre">parkinsons</span></code>, UZ Leuven), 87 subjects (48 Parkinson’s + 40 healthy older adults) with up to 157 recordings (night and nap), bipolar EEG montage, EOG, chin EMG and ECG at 500 Hz.</p></li>
-</ul>
-</section>
-</section>
-<section id="installation-guidelines">
-<h2>Installation guidelines<a class="headerlink" href="#installation-guidelines" title="Link to this heading">#</a></h2>
-<section id="create-a-virtual-environment-optional-but-recommended">
-<h3>Create a Virtual Environment (Optional but Recommended)<a class="headerlink" href="#create-a-virtual-environment-optional-but-recommended" title="Link to this heading">#</a></h3>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>conda<span class="w"> </span>create<span class="w"> </span>-n<span class="w"> </span>physioex<span class="w"> </span><span class="nv">python</span><span class="o">==</span><span class="m">3</span>.11
-$<span class="w"> </span>conda<span class="w"> </span>activate<span class="w"> </span>physioex
-$<span class="w"> </span>conda<span class="w"> </span>install<span class="w"> </span>pip
-$<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>--upgrade<span class="w"> </span>pip<span class="w">  </span><span class="c1"># On Windows, use `venv\Scripts\activate`</span>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"physioex[explain]"</span>
 </pre></div>
 </div>
-</section>
-<section id="install-from-source-recommended">
-<span id="install-from-source--recommended-"></span><h3>Install from source ( Recommended )<a class="headerlink" href="#install-from-source-recommended" title="Link to this heading">#</a></h3>
-<ol class="arabic simple">
-<li><p><strong>Clone the Repository:</strong></p></li>
-</ol>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/guidogagl/physioex.git
-$<span class="w"> </span><span class="nb">cd</span><span class="w"> </span>physioex
-</pre></div>
-</div>
-<ol class="arabic simple" start="2">
-<li><p><strong>Install Dependencies and Package in Development Mode</strong></p></li>
-</ol>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span>.
-</pre></div>
-</div>
-</section>
-<section id="install-via-pip">
-<h3>Install via pip<a class="headerlink" href="#install-via-pip" title="Link to this heading">#</a></h3>
-<ol class="arabic simple">
-<li><p><strong>Install PhysioEx from PyPI:</strong></p></li>
-</ol>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>physioex
-</pre></div>
-</div>
-<p>Note: PyPI releases follow the <code class="docutils literal notranslate"><span class="pre">main</span></code> branch of the GitHub repository; installing from source gives the latest unreleased changes.</p>
-<p><strong>Optional extras</strong> (heavyweight, feature-specific deps installed lazily):</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"physioex[foundation]"</span><span class="w">   </span><span class="c1"># transformers, for the REVE encoder</span>
-$<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"physioex[datasets]"</span><span class="w">     </span><span class="c1"># mne, for the HOMEPAP EDF fallback reader</span>
-$<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"physioex[tracking]"</span><span class="w">     </span><span class="c1"># tensorboard / wandb logging</span>
-$<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"physioex[explain]"</span><span class="w">      </span><span class="c1"># zennit, for Layer-wise Relevance Propagation</span>
+<p>To install from source, which includes changes not yet released on PyPI:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/guidogagl/physioex.git
+<span class="nb">cd</span><span class="w"> </span>physioex
+pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span>.
 </pre></div>
 </div>
 <blockquote>
-<div><p><strong>Note on <code class="docutils literal notranslate"><span class="pre">torchvision</span></code> (CPU-only installs).</strong> The <code class="docutils literal notranslate"><span class="pre">explain</span></code> extra depends on
-<code class="docutils literal notranslate"><span class="pre">zennit</span></code>, which requires <code class="docutils literal notranslate"><span class="pre">torchvision</span></code>. If your <code class="docutils literal notranslate"><span class="pre">torch</span></code> comes from the PyTorch
-CPU index, install <code class="docutils literal notranslate"><span class="pre">torchvision</span></code> from the <strong>same</strong> index <em>before</em> the extra,
-otherwise pip pulls a CUDA build from PyPI that fails at import with
+<div><p><strong>CPU-only installs and <code class="docutils literal notranslate"><span class="pre">torchvision</span></code>.</strong> The <code class="docutils literal notranslate"><span class="pre">explain</span></code> extra depends on
+<code class="docutils literal notranslate"><span class="pre">zennit</span></code>, which requires <code class="docutils literal notranslate"><span class="pre">torchvision</span></code>. If <code class="docutils literal notranslate"><span class="pre">torch</span></code> comes from the PyTorch CPU
+index, install <code class="docutils literal notranslate"><span class="pre">torchvision</span></code> from the same index before the extra; otherwise
+pip installs a CUDA build that fails at import with
 <code class="docutils literal notranslate"><span class="pre">operator</span> <span class="pre">torchvision::nms</span> <span class="pre">does</span> <span class="pre">not</span> <span class="pre">exist</span></code>:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>torch<span class="w"> </span>torchvision<span class="w"> </span>--index-url<span class="w"> </span>https://download.pytorch.org/whl/cpu
-$<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"physioex[explain]"</span>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>torch<span class="w"> </span>torchvision<span class="w"> </span>--index-url<span class="w"> </span>https://download.pytorch.org/whl/cpu
+pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"physioex[explain]"</span>
 </pre></div>
 </div>
 </div></blockquote>
 </section>
-</section>
 <section id="quickstart">
 <h2>Quickstart<a class="headerlink" href="#quickstart" title="Link to this heading">#</a></h2>
-<p>Set <code class="docutils literal notranslate"><span class="pre">PHYSIOEX_DATA</span></code> to the directory holding your datasets, then use the raw-EDF
-data layer, the model zoo, and the training loop:</p>
+<p>Set <code class="docutils literal notranslate"><span class="pre">PHYSIOEX_DATA</span></code> to the directory that holds your datasets.</p>
+<section id="train-a-model">
+<h3>Train a model<a class="headerlink" href="#train-a-model" title="Link to this heading">#</a></h3>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
 <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">"PHYSIOEX_DATA"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"/path/to/datasets"</span>
 
@@ -550,7 +468,7 @@ data layer, the model zoo, and the training loop:</p>
 <span class="kn">from</span><span class="w"> </span><span class="nn">physioex.models.tinysleepnet</span><span class="w"> </span><span class="kn">import</span> <span class="n">TinySleepNet</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">physioex.train.trainer</span><span class="w"> </span><span class="kn">import</span> <span class="n">Trainer</span>
 
-<span class="nb">print</span><span class="p">(</span><span class="n">available_datasets</span><span class="p">())</span>  <span class="c1"># -&gt; ['hmc', 'sleepedf', 'dcsm', 'mass', ...]</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">available_datasets</span><span class="p">())</span>  <span class="c1"># -&gt; ['alzheimers', 'ccshs', 'cfs', 'chat', 'dcsm', ...]</span>
 
 <span class="n">dataset</span> <span class="o">=</span> <span class="n">get_dataset</span><span class="p">(</span><span class="s2">"hmc"</span><span class="p">)(</span>
     <span class="n">channels</span><span class="o">=</span><span class="p">[</span><span class="s2">"EEG"</span><span class="p">,</span> <span class="s2">"EOG"</span><span class="p">,</span> <span class="s2">"EMG"</span><span class="p">],</span>
@@ -562,20 +480,25 @@ data layer, the model zoo, and the training loop:</p>
 <span class="n">model</span> <span class="o">=</span> <span class="n">Trainer</span><span class="o">.</span><span class="n">train</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span> <span class="n">dataset</span><span class="o">=</span><span class="n">dataset</span><span class="p">,</span> <span class="n">max_epochs</span><span class="o">=</span><span class="mi">20</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>Load a pretrained model or extract foundation-model embeddings:</p>
+<p>The same dataset specification drives the command-line tools; see the CLI page
+in the documentation.</p>
+</section>
+<section id="load-a-pretrained-model-or-extract-embeddings">
+<h3>Load a pretrained model or extract embeddings<a class="headerlink" href="#load-a-pretrained-model-or-extract-embeddings" title="Link to this heading">#</a></h3>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">physioex.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">load_from_pretrained</span><span class="p">,</span> <span class="n">extract_embeddings</span><span class="p">,</span> <span class="n">linear_probe</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">physioex.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">CBraModEncoder</span>
 
-<span class="n">model</span> <span class="o">=</span> <span class="n">load_from_pretrained</span><span class="p">(</span><span class="s2">"protosleepnet-gagliardi"</span><span class="p">)</span>  <span class="c1"># from the HF model zoo</span>
-<span class="c1"># list_pretrained() lists every model load_from_pretrained can fetch</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">load_from_pretrained</span><span class="p">(</span><span class="s2">"protosleepnet-gagliardi"</span><span class="p">)</span>  <span class="c1"># list_pretrained() lists all names</span>
 <span class="n">encoder</span> <span class="o">=</span> <span class="n">CBraModEncoder</span><span class="p">()</span>
 <span class="n">ds</span> <span class="o">=</span> <span class="n">encoder</span><span class="o">.</span><span class="n">get_dataset</span><span class="p">(</span><span class="s2">"hmc"</span><span class="p">)</span>                          <span class="c1"># matched preprocessing</span>
 <span class="n">emb</span> <span class="o">=</span> <span class="n">extract_embeddings</span><span class="p">(</span><span class="n">encoder</span><span class="p">,</span> <span class="n">ds</span><span class="p">)</span>
 <span class="n">scores</span> <span class="o">=</span> <span class="n">linear_probe</span><span class="p">(</span><span class="n">emb</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>Stage whole nights with a cardiorespiratory model (<code class="docutils literal notranslate"><span class="pre">sequence_length=0</span></code> makes
-one item one night):</p>
+</section>
+<section id="stage-whole-nights-from-cardiorespiratory-signals">
+<h3>Stage whole nights from cardiorespiratory signals<a class="headerlink" href="#stage-whole-nights-from-cardiorespiratory-signals" title="Link to this heading">#</a></h3>
+<p>With <code class="docutils literal notranslate"><span class="pre">sequence_length=0</span></code>, one dataset item is one whole night.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">physioex.data.datasets</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_dataset</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">physioex.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">load_from_pretrained</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">physioex.train</span><span class="w"> </span><span class="kn">import</span> <span class="n">replication</span> <span class="k">as</span> <span class="n">rep</span>
@@ -593,20 +516,259 @@ one item one night):</p>
     <span class="n">stages</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">predict_night</span><span class="p">(</span><span class="n">signals</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>The same dataset spec drives the CLI (<code class="docutils literal notranslate"><span class="pre">train</span></code> / <code class="docutils literal notranslate"><span class="pre">finetune</span></code> / <code class="docutils literal notranslate"><span class="pre">test_model</span></code>) — see
-the CLI page in the <a class="reference external" href="https://guidogagl.github.io/physioex/">documentation</a>.</p>
 </section>
-<section id="cite-us">
-<h2>Cite Us!<a class="headerlink" href="#cite-us" title="Link to this heading">#</a></h2>
+</section>
+<section id="models">
+<h2>Models<a class="headerlink" href="#models" title="Link to this heading">#</a></h2>
+<p>All models live in <code class="docutils literal notranslate"><span class="pre">physioex.models</span></code>.</p>
+<section id="classic-sleep-staging-architectures">
+<h3>Classic sleep-staging architectures<a class="headerlink" href="#classic-sleep-staging-architectures" title="Link to this heading">#</a></h3>
+<p>Trained from scratch on epoch sequences.</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Model</p></th>
+<th class="head"><p>Class</p></th>
+<th class="head"><p>Input</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><a class="reference external" href="https://ieeexplore.ieee.org/document/8307462">Chambon et al. 2018</a></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">Chambon2018Net</span></code></p></td>
+<td><p>raw signals</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference external" href="https://github.com/akaraspt/tinysleepnet">TinySleepNet</a></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">TinySleepNet</span></code></p></td>
+<td><p>raw signals</p></td>
+</tr>
+<tr class="row-even"><td><p>Tsinalis et al. 2016</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">TsinalisCNN</span></code></p></td>
+<td><p>raw signals</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference external" href="https://arxiv.org/abs/1809.10932">SeqSleepNet</a></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">SeqSleepNet</span></code></p></td>
+<td><p>time-frequency images</p></td>
+</tr>
+<tr class="row-even"><td><p>L-SeqSleepNet</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">LSeqSleepNet</span></code></p></td>
+<td><p>time-frequency images, long sequences</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference external" href="https://arxiv.org/abs/2105.11043">SleepTransformer</a></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">SleepTransformer</span></code></p></td>
+<td><p>time-frequency images</p></td>
+</tr>
+<tr class="row-even"><td><p>CoRe-Sleep</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">CoReSleep</span></code></p></td>
+<td><p>multimodal</p></td>
+</tr>
+<tr class="row-odd"><td><p>ProtoSleepNet</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">ProtoSleepNet</span></code></p></td>
+<td><p>prototype-based, interpretable by design</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="cardiorespiratory-models">
+<h3>Cardiorespiratory models<a class="headerlink" href="#cardiorespiratory-models" title="Link to this heading">#</a></h3>
+<p>Whole-night staging from ECG, PPG and respiratory effort. The architectures are
+re-implemented in PhysioEx; the published weights are downloaded from the
+original sources, and each model has a matching preprocessing preset.</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Model</p></th>
+<th class="head"><p>Class</p></th>
+<th class="head"><p>Input</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">load_from_pretrained</span></code> name</p></th>
+<th class="head"><p>Weights</p></th>
+<th class="head"><p>License</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><a class="reference external" href="https://arxiv.org/abs/2411.04644">wav2sleep</a></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">Wav2Sleep</span></code></p></td>
+<td><p>any subset of ECG, PPG, ABD, THX (or EOG)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">wav2sleep</span></code>, <code class="docutils literal notranslate"><span class="pre">wav2sleep-eog</span></code></p></td>
+<td><p>authors (Hugging Face)</p></td>
+<td><p>MIT</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference external" href="https://doi.org/10.1016/j.compbiomed.2024.108545">Jones et al. 2024</a></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">JonesECGNet</span></code></p></td>
+<td><p>ECG, age, sex, start time</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">jones-ecg</span></code> and six variants</p></td>
+<td><p>authors (GitHub)</p></td>
+<td><p>AGPL-3.0</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference external" href="https://arxiv.org/abs/2202.05735">SleepPPG-Net</a></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">SleepPPGNet</span></code></p></td>
+<td><p>PPG</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">sleepppgnet-replica</span></code></p></td>
+<td><p>third-party replica</p></td>
+<td><p>non-commercial</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">examples/pretrained/&lt;model&gt;/verify.py</span></code> compares each model with its paper on
+the published test splits. The public wav2sleep checkpoint is a later version
+than the paper’s model (about 1 % lower, as confirmed by the authors), so its
+results are reported next to the paper’s numbers rather than matched.</p>
+</section>
+<section id="foundation-encoders">
+<h3>Foundation encoders<a class="headerlink" href="#foundation-encoders" title="Link to this heading">#</a></h3>
+<p>Pretrained backbones behind a uniform <code class="docutils literal notranslate"><span class="pre">encode:</span> <span class="pre">(B,</span> <span class="pre">L,</span> <span class="pre">C,</span> <span class="pre">T)</span> <span class="pre">-&gt;</span> <span class="pre">(B,</span> <span class="pre">L,</span> <span class="pre">D)</span></code>
+interface, for embedding extraction and linear probing.</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Encoder</p></th>
+<th class="head"><p>Class</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>CBraMod</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">CBraModEncoder</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>BENDR</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">BENDREncoder</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>LaBraM</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">LaBraMEncoder</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>BIOT</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">BIOTEncoder</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>SleepFM</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">SleepFMEncoder</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>TF-C</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">TFCEncoder</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>REVE</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">REVEEncoder</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>S-JEPA</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">SJEEncoder</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>NeuroLM</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">NeuroLMEncoder</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+</section>
+<section id="datasets">
+<h2>Datasets<a class="headerlink" href="#datasets" title="Link to this heading">#</a></h2>
+<p>Datasets are resolved by name with <code class="docutils literal notranslate"><span class="pre">get_dataset(name)</span></code>; <code class="docutils literal notranslate"><span class="pre">available_datasets()</span></code>
+lists them. PhysioEx reads the original recordings, which you obtain from the
+source below. Descriptions of each dataset are in the
+<a class="reference external" href="https://guidogagl.github.io/physioex/pages/data.html">Data</a> page of the
+documentation.</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Name</p></th>
+<th class="head"><p>Dataset</p></th>
+<th class="head"><p>Source</p></th>
+<th class="head"><p>Size</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">sleepedf</span></code></p></td>
+<td><p><a class="reference external" href="https://physionet.org/content/sleep-edfx/1.0.0/">Sleep-EDF Expanded</a></p></td>
+<td><p>PhysioNet</p></td>
+<td><p>197 recordings</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">hmc</span></code></p></td>
+<td><p><a class="reference external" href="https://physionet.org/content/hmc-sleep-staging/1.1/">Haaglanden Medisch Centrum</a></p></td>
+<td><p>PhysioNet</p></td>
+<td><p>151 recordings</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">dcsm</span></code></p></td>
+<td><p><a class="reference external" href="https://erda.ku.dk/public/archives/db553715ecbe1f3ac66c1dc569826eef/published-archive.html">Danish Center for Sleep Medicine</a></p></td>
+<td><p>ERDA</p></td>
+<td><p>255 recordings</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">shhs</span></code></p></td>
+<td><p><a class="reference external" href="https://sleepdata.org/datasets/shhs">Sleep Heart Health Study</a></p></td>
+<td><p>NSRR</p></td>
+<td><p>5,793 participants at visit 1</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">mesa</span></code></p></td>
+<td><p><a class="reference external" href="https://sleepdata.org/datasets/mesa">Multi-Ethnic Study of Atherosclerosis</a></p></td>
+<td><p>NSRR</p></td>
+<td><p>2,237 participants</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">mros</span></code></p></td>
+<td><p><a class="reference external" href="https://sleepdata.org/datasets/mros">Osteoporotic Fractures in Men Study</a></p></td>
+<td><p>NSRR</p></td>
+<td><p>2,911 recordings</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">wsc</span></code></p></td>
+<td><p><a class="reference external" href="https://sleepdata.org/datasets/wsc">Wisconsin Sleep Cohort</a></p></td>
+<td><p>NSRR</p></td>
+<td><p>1,500 participants at baseline, several visits</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">stages</span></code></p></td>
+<td><p><a class="reference external" href="https://sleepdata.org/datasets/stages">Stanford Technology Analytics and Genomics in Sleep</a></p></td>
+<td><p>NSRR</p></td>
+<td><p>1,914 recordings, 13 sites</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ccshs</span></code></p></td>
+<td><p><a class="reference external" href="https://sleepdata.org/datasets/ccshs">Cleveland Children’s Sleep and Health Study</a></p></td>
+<td><p>NSRR</p></td>
+<td><p>515 children</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">cfs</span></code></p></td>
+<td><p><a class="reference external" href="https://sleepdata.org/datasets/cfs">Cleveland Family Study</a></p></td>
+<td><p>NSRR</p></td>
+<td><p>visit-5 recordings</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">chat</span></code></p></td>
+<td><p><a class="reference external" href="https://sleepdata.org/datasets/chat">Childhood Adenotonsillectomy Trial</a></p></td>
+<td><p>NSRR</p></td>
+<td><p>baseline and follow-up recordings</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">hpap</span></code></p></td>
+<td><p><a class="reference external" href="https://sleepdata.org/datasets/homepap">HomePAP</a></p></td>
+<td><p>NSRR</p></td>
+<td><p>three subsets (lab-full, lab-split, home)</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">mass</span></code></p></td>
+<td><p><a class="reference external" href="http://ceams-carsm.ca/mass/">Montreal Archive of Sleep Studies</a></p></td>
+<td><p>CEAMS</p></td>
+<td><p>200 recordings</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">alzheimers</span></code></p></td>
+<td><p>Alzheimer’s disease dataset</p></td>
+<td><p>UZ Leuven</p></td>
+<td><p>69 participants</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">parkinsons</span></code></p></td>
+<td><p>Parkinson’s disease dataset</p></td>
+<td><p>UZ Leuven</p></td>
+<td><p>87 participants, up to 157 recordings</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="citation">
+<h2>Citation<a class="headerlink" href="#citation" title="Link to this heading">#</a></h2>
+<p>If you use PhysioEx, please cite:</p>
 <div class="highlight-bib notranslate"><div class="highlight"><pre><span></span><span class="nc">@article</span><span class="p">{</span><span class="nl">10.1088/1361-6579/adaf73</span><span class="p">,</span>
-<span class="w">	</span><span class="na">author</span><span class="p">=</span><span class="s">{Gagliardi, Guido and Alfeo, Luca and Cimino, Mario G C A and Valenza, Gaetano and De Vos, Maarten}</span><span class="p">,</span>
-<span class="w">	</span><span class="na">title</span><span class="p">=</span><span class="s">{PhysioEx, a new Python library for explainable sleep staging through deep learning}</span><span class="p">,</span>
-<span class="w">	</span><span class="na">journal</span><span class="p">=</span><span class="s">{Physiological Measurement}</span><span class="p">,</span>
-<span class="w">	</span><span class="na">url</span><span class="p">=</span><span class="s">{http://iopscience.iop.org/article/10.1088/1361-6579/adaf73}</span><span class="p">,</span>
-<span class="w">	</span><span class="na">year</span><span class="p">=</span><span class="s">{2025}</span><span class="p">,</span>
+<span class="w">  </span><span class="na">author</span><span class="w">  </span><span class="p">=</span><span class="w"> </span><span class="s">{Gagliardi, Guido and Alfeo, Luca and Cimino, Mario G C A and Valenza, Gaetano and De Vos, Maarten}</span><span class="p">,</span>
+<span class="w">  </span><span class="na">title</span><span class="w">   </span><span class="p">=</span><span class="w"> </span><span class="s">{PhysioEx, a new Python library for explainable sleep staging through deep learning}</span><span class="p">,</span>
+<span class="w">  </span><span class="na">journal</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">{Physiological Measurement}</span><span class="p">,</span>
+<span class="w">  </span><span class="na">url</span><span class="w">     </span><span class="p">=</span><span class="w"> </span><span class="s">{http://iopscience.iop.org/article/10.1088/1361-6579/adaf73}</span><span class="p">,</span>
+<span class="w">  </span><span class="na">year</span><span class="w">    </span><span class="p">=</span><span class="w"> </span><span class="s">{2025}</span><span class="p">,</span>
 <span class="p">}</span>
 </pre></div>
 </div>
+</section>
+<section id="license">
+<h2>License<a class="headerlink" href="#license" title="Link to this heading">#</a></h2>
+<p>PhysioEx is released under the <a class="reference external" href="https://github.com/guidogagl/physioex/blob/main/LICENSE">MIT License</a>.
+Pretrained weights from third parties keep their own licenses, listed in the
+model tables above and printed when they are loaded.</p>
 <div class="toctree-wrapper compound">
 </div>
 </section>
@@ -650,21 +812,23 @@ the CLI page in the <a class="reference external" href="https://guidogagl.github
   </div>
   <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#supported-deep-learning-architectures">Supported deep learning architectures</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#supported-datasets">Supported datasets</a><ul class="nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#publicly-available">Publicly Available:</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#nsrr-datasets">NSRR Datasets</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#others">Others</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#overview">Overview</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#installation">Installation</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#quickstart">Quickstart</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#train-a-model">Train a model</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#load-a-pretrained-model-or-extract-embeddings">Load a pretrained model or extract embeddings</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#stage-whole-nights-from-cardiorespiratory-signals">Stage whole nights from cardiorespiratory signals</a></li>
 </ul>
 </li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#installation-guidelines">Installation guidelines</a><ul class="nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#create-a-virtual-environment-optional-but-recommended">Create a Virtual Environment (Optional but Recommended)</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#install-from-source-recommended">Install from source ( Recommended )</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#install-via-pip">Install via pip</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#models">Models</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#classic-sleep-staging-architectures">Classic sleep-staging architectures</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cardiorespiratory-models">Cardiorespiratory models</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#foundation-encoders">Foundation encoders</a></li>
 </ul>
 </li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#quickstart">Quickstart</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#cite-us">Cite Us!</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#datasets">Datasets</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#citation">Citation</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#license">License</a></li>
 </ul>
   </nav></div>
 

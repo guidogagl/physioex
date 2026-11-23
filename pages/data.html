@@ -437,6 +437,70 @@ dict samples for a <code class="docutils literal notranslate"><span class="pre">
 <p>Concrete datasets are resolved <strong>by name</strong> from a string registry rather than
 imported directly. For the full class diagram and how the pieces fit together,
 see the <a class="reference internal" href="architecture/library/data.html"><span class="std std-doc">data-layer architecture</span></a> page.</p>
+<section id="supported-datasets">
+<h2>Supported datasets<a class="headerlink" href="#supported-datasets" title="Link to this heading">#</a></h2>
+<p>PhysioEx reads the original recordings; obtain them from the source of each
+dataset and point <code class="docutils literal notranslate"><span class="pre">PHYSIOEX_DATA</span></code> at the directory that holds them.</p>
+<section id="public-datasets">
+<h3>Public datasets<a class="headerlink" href="#public-datasets" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p><strong>Sleep-EDF Expanded</strong> (<code class="docutils literal notranslate"><span class="pre">sleepedf</span></code>, <a class="reference external" href="https://physionet.org/content/sleep-edfx/1.0.0/">PhysioNet</a>).
+197 whole-night polysomnographic recordings with EEG, EOG, chin EMG and event markers.</p></li>
+<li><p><strong>HMC, Haaglanden Medisch Centrum</strong> (<code class="docutils literal notranslate"><span class="pre">hmc</span></code>, <a class="reference external" href="https://physionet.org/content/hmc-sleep-staging/1.1/">PhysioNet</a>).
+151 whole-night recordings from 85 men and 66 women: four EEG channels (F4/M1, C4/M1, O2/M1, C3/M2),
+two EOG channels (E1/M2, E2/M2) and one bipolar chin EMG, all at 256 Hz.</p></li>
+<li><p><strong>DCSM, Danish Center for Sleep Medicine</strong> (<code class="docutils literal notranslate"><span class="pre">dcsm</span></code>, <a class="reference external" href="https://erda.ku.dk/public/archives/db553715ecbe1f3ac66c1dc569826eef/published-archive.html">ERDA</a>).
+255 randomly selected, fully anonymized overnight lab recordings of patients referred for non-specific
+sleep disorders; EEG, EOG and EMG at 256 Hz.</p></li>
+</ul>
+</section>
+<section id="nsrr-datasets">
+<h3>NSRR datasets<a class="headerlink" href="#nsrr-datasets" title="Link to this heading">#</a></h3>
+<p>Available from the <a class="reference external" href="https://sleepdata.org">National Sleep Research Resource</a> after a data access request.</p>
+<ul class="simple">
+<li><p><strong>SHHS, Sleep Heart Health Study</strong> (<code class="docutils literal notranslate"><span class="pre">shhs</span></code>). A multi-center cohort on the cardiovascular consequences of
+sleep-disordered breathing: 5,793 participants aged 40 or older at visit 1, recorded at home. C3/A2 and
+C4/A1 EEG at 125 Hz, left and right EOG at 50 Hz, bipolar submental EMG at 125 Hz.</p></li>
+<li><p><strong>MESA, Multi-Ethnic Study of Atherosclerosis</strong> (<code class="docutils literal notranslate"><span class="pre">mesa</span></code>). 2,237 ethnically diverse men and women aged
+45 to 84 from six US communities, recorded at home: central C4-M1 EEG, bilateral EOG and chin EMG at
+256 Hz, scored by certified polysomnologists.</p></li>
+<li><p><strong>MrOS, Osteoporotic Fractures in Men Study</strong> (<code class="docutils literal notranslate"><span class="pre">mros</span></code>). 2,911 home recordings of men aged 65 or older
+from six clinical centers: C3/A2 and C4/A1 EEG, chin EMG and left and right EOG at 256 Hz. The <code class="docutils literal notranslate"><span class="pre">visit</span></code>
+argument selects the visit.</p></li>
+<li><p><strong>WSC, Wisconsin Sleep Cohort</strong> (<code class="docutils literal notranslate"><span class="pre">wsc</span></code>). A longitudinal study of sleep disorders with in-lab recordings
+every four years from a baseline sample of 1,500 participants: C3/M2 EEG, EMG and left and right EOG
+at 200 Hz. The <code class="docutils literal notranslate"><span class="pre">visit</span></code> argument selects the visit.</p></li>
+<li><p><strong>STAGES, Stanford Technology Analytics and Genomics in Sleep</strong> (<code class="docutils literal notranslate"><span class="pre">stages</span></code>). 1,914 recordings from 13
+clinical sites with a bipolar EEG montage (C4-M1 / C3-M2 equivalent), EOG and chin EMG, plus respiratory,
+arousal and limb-movement events. Selectable by site and by recording (<code class="docutils literal notranslate"><span class="pre">first</span></code>, <code class="docutils literal notranslate"><span class="pre">second</span></code>, <code class="docutils literal notranslate"><span class="pre">all</span></code>).</p></li>
+<li><p><strong>CCSHS, Cleveland Children’s Sleep and Health Study</strong> (<code class="docutils literal notranslate"><span class="pre">ccshs</span></code>). 515 children and adolescents with one
+home recording each (NSRR <code class="docutils literal notranslate"><span class="pre">ccshs-trec</span></code>): C3/A2 and C4/A1 EEG and LOC/ROC EOG at 128 Hz, chin EMG at
+256 Hz; stages scored with Rechtschaffen &amp; Kales and merged to N3. Eleven recordings whose hypnogram
+does not match the NSRR summary table are excluded by default (<code class="docutils literal notranslate"><span class="pre">exclude_subjects=[]</span></code> keeps them).</p></li>
+<li><p><strong>CFS, Cleveland Family Study</strong> (<code class="docutils literal notranslate"><span class="pre">cfs</span></code>). The visit-5 in-lab recordings of a family-based study of sleep
+apnea.</p></li>
+<li><p><strong>CHAT, Childhood Adenotonsillectomy Trial</strong> (<code class="docutils literal notranslate"><span class="pre">chat</span></code>). Recordings of children at baseline and follow-up,
+plus the non-randomized baseline group.</p></li>
+<li><p><strong>HomePAP</strong> (<code class="docutils literal notranslate"><span class="pre">hpap</span></code>). A positive-airway-pressure study with three subsets, <code class="docutils literal notranslate"><span class="pre">lab-full</span></code>, <code class="docutils literal notranslate"><span class="pre">lab-split</span></code> and
+<code class="docutils literal notranslate"><span class="pre">home</span></code>, selected with the <code class="docutils literal notranslate"><span class="pre">subset</span></code> argument.</p></li>
+</ul>
+<p>The <code class="docutils literal notranslate"><span class="pre">cfs</span></code> and <code class="docutils literal notranslate"><span class="pre">chat</span></code> readers follow the other NSRR readers but have not yet been
+tested on the real recordings.</p>
+</section>
+<section id="other-datasets">
+<h3>Other datasets<a class="headerlink" href="#other-datasets" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p><strong>MASS, Montreal Archive of Sleep Studies</strong> (<code class="docutils literal notranslate"><span class="pre">mass</span></code>, <a class="reference external" href="http://ceams-carsm.ca/mass/">CEAMS</a>). 200 complete
+lab nights from 97 men and 103 women aged 18 to 76, at 256 Hz, with 4 to 20 EEG channels, EOG and EMG.</p></li>
+<li><p><strong>Alzheimer’s disease dataset</strong> (<code class="docutils literal notranslate"><span class="pre">alzheimers</span></code>, UZ Leuven). 69 participants (37 with Alzheimer’s disease,
+32 healthy controls), one night each: average-reference EEG, differential EOG, chin EMG and ECG at 200 Hz.
+The <code class="docutils literal notranslate"><span class="pre">subset</span></code> argument selects patients or controls.</p></li>
+<li><p><strong>Parkinson’s disease dataset</strong> (<code class="docutils literal notranslate"><span class="pre">parkinsons</span></code>, UZ Leuven). 87 participants (48 with Parkinson’s disease,
+40 healthy older adults) with up to 157 recordings (night and nap): bipolar EEG, EOG, chin EMG and ECG
+at 500 Hz.</p></li>
+</ul>
+</section>
+</section>
 <section id="resolving-a-dataset-by-name">
 <h2>Resolving a dataset by name<a class="headerlink" href="#resolving-a-dataset-by-name" title="Link to this heading">#</a></h2>
 <p><code class="docutils literal notranslate"><span class="pre">physioex.data.datasets</span></code> exposes a registry of the 15 concrete datasets:</p>
@@ -1031,6 +1095,12 @@ The collate sorts channels by (modality, index) for deterministic ordering.</p>
   </div>
   <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#supported-datasets">Supported datasets</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#public-datasets">Public datasets</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#nsrr-datasets">NSRR datasets</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#other-datasets">Other datasets</a></li>
+</ul>
+</li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#resolving-a-dataset-by-name">Resolving a dataset by name</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#instantiating-a-dataset">Instantiating a dataset</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#splitting">Splitting</a></li>
