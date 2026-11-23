@@ -38,12 +38,21 @@ PhysioEx ships two families of models under `physioex.models`.
 - CoReSleep — multimodal architecture.
 - ProtoSleepNet — prototype-based, interpretable-by-design architecture.
 
-**Cardiorespiratory models** (whole-night staging from ECG, PPG and respiratory
-effort, with published weights loaded by `load_from_pretrained`):
-[wav2sleep](https://arxiv.org/abs/2411.04644) (`Wav2Sleep`),
-Jones et al. 2024 (`JonesECGNet`, ECG only) and
-[SleepPPG-Net](https://arxiv.org/abs/2202.05735) (`SleepPPGNet`, PPG only,
-third-party replica weights).
+**Cardiorespiratory models** (since 2.0.6): whole-night sleep staging from ECG,
+PPG and respiratory effort. The architectures are re-implemented in physioex;
+the published weights are downloaded from the original sources by
+`load_from_pretrained(name)`, and each model has a matching preprocessing preset.
+
+| model | input | `load_from_pretrained` name | weights | license |
+|---|---|---|---|---|
+| [wav2sleep](https://arxiv.org/abs/2411.04644) (`Wav2Sleep`) | any subset of ECG, PPG, ABD, THX (or EOG) | `wav2sleep`, `wav2sleep-eog` | authors (Hugging Face) | MIT |
+| [Jones et al. 2024](https://doi.org/10.1016/j.compbiomed.2024.108545) (`JonesECGNet`) | ECG + age, sex, start time | `jones-ecg` and six variants | authors (GitHub) | AGPL-3.0 |
+| [SleepPPG-Net](https://arxiv.org/abs/2202.05735) (`SleepPPGNet`) | PPG | `sleepppgnet-replica` | third-party replica | non-commercial |
+
+`examples/pretrained/<model>/verify.py` compares each model with its paper on
+the published test splits. The public wav2sleep checkpoint is a later version
+than the paper's model (about 1 % lower, as confirmed by the authors), so its
+results are reported next to the paper's numbers rather than matched.
 
 **Foundation encoders** (pretrained backbones exposed through a uniform
 `(B, L, C, T) -> (B, L, D)` `encode()` interface, for embedding extraction and
@@ -115,7 +124,7 @@ $ pip install -e .
 $ pip install physioex
 ```
 
-Note: the github version of the library is kept updated weekly, the PiPy version may be outdated depending on the last commit of the github version. We recommend to use the github version if possible.  
+Note: PyPI releases follow the `main` branch of the GitHub repository; installing from source gives the latest unreleased changes.
 
 **Optional extras** (heavyweight, feature-specific deps installed lazily):
 
@@ -169,10 +178,32 @@ from physioex.models import load_from_pretrained, extract_embeddings, linear_pro
 from physioex.models import CBraModEncoder
 
 model = load_from_pretrained("protosleepnet-gagliardi")  # from the HF model zoo
+# list_pretrained() lists every model load_from_pretrained can fetch
 encoder = CBraModEncoder()
 ds = encoder.get_dataset("hmc")                          # matched preprocessing
 emb = extract_embeddings(encoder, ds)
 scores = linear_probe(emb)
+```
+
+Stage whole nights with a cardiorespiratory model (`sequence_length=0` makes
+one item one night):
+
+```python
+from physioex.data.datasets import get_dataset
+from physioex.models import load_from_pretrained
+from physioex.train import replication as rep
+
+model = load_from_pretrained("wav2sleep", verbose=True)
+data = get_dataset("mesa")(
+    channels=["ECG", "PPG", "ABD", "THX"],
+    pipelines="wav2sleep",        # the authors' preprocessing
+    sequence_length=0,
+    label_transform="aasm4",      # W, Light, Deep, REM
+    trim_excess_wake=False,
+)
+test = data.get_splits(split="wav2sleep")[2]
+for subject, signals, labels, metadata in rep.iter_nights(data, test[:1]):
+    stages = model.predict_night(signals)
 ```
 
 The same dataset spec drives the CLI (`train` / `finetune` / `test_model`) — see
