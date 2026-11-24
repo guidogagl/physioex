@@ -131,3 +131,44 @@ def test_sequence_windows_cover_night(tmp_path):
     assert starts == [0, 21, 29]
     xb, yb, off = ds[0]
     assert xb.shape == (21, 3000) and yb.shape == (21,) and float(off) == 0.0
+
+
+def test_dropout_zero_unchanged_and_eval_deterministic():
+    torch.manual_seed(0)
+    ref = ChannelNet("EEG").eval()
+    torch.manual_seed(0)
+    reg = ChannelNet("EEG", dropout=0.3)
+    assert set(reg.state_dict()) == set(ref.state_dict())      # no new parameters: old checkpoints load strict
+    reg.load_state_dict(ref.state_dict(), strict=True)
+    x = torch.randn(2, 20, 3000)
+    reg.eval()
+    torch.testing.assert_close(reg(x)[0], ref(x)[0], rtol=0, atol=0)
+    reg.train()
+    a, b = reg(x)[0], reg(x)[0]
+    assert not torch.allclose(a, b)                             # dropout active in train mode only
+
+
+def test_random_offset_windows(tmp_path):
+    from physioex.data.clean_cache import RandomOffsetSequences
+    n, L = 107, 20
+    x = np.arange(n * 3000, dtype=np.float64).reshape(n, 3000) % 977 + np.random.default_rng(5).standard_normal(
+        (n, 3000))
+    _write_night(tmp_path, "ds", "s1", "EEG", x, np.arange(n) % 5, 100.0)
+    night, _ = load_night(tmp_path, "ds", "s1", "EEG")
+    ds = RandomOffsetSequences([night], L, max_shift=0, seed=0)
+    seen_sets = []
+    for k in range(4):
+        ds.set_epoch(k)
+        cover = np.zeros(len(night.y), int)
+        for _, s in ds.windows:
+            cover[s:s + L] += 1
+        assert (cover >= 1).all() and cover.max() <= 2       # every epoch once, twice only at the night edges
+        seen_sets.append(tuple(s for _, s in ds.windows))
+    assert len(set(seen_sets)) > 1                            # boundaries change across passes
+    xb, yb, _ = ds[1]
+    s = ds.windows[1][1]
+    np.testing.assert_array_equal(xb.numpy(), night.x[s:s + L].astype(np.float32))   # no shift = plain window
+    ds2 = RandomOffsetSequences([night], L, max_shift=300, seed=0)
+    xs, ys, _ = ds2[1]
+    s2 = ds2.windows[1][1]
+    assert xs.shape == (L, 3000) and torch.equal(ys, torch.from_numpy(night.y[s2:s2 + L]))   # labels not shifted

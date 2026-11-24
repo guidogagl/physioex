@@ -175,20 +175,22 @@ def scale_db(power: torch.Tensor, offset_db: Optional[torch.Tensor] = None) -> t
 class SplitRNN(nn.Module):
     """Stack of 1-layer bidirectional RNNs (LSTM or GRU), LayerNorm after each; every layer output exposed."""
 
-    def __init__(self, cell: str, d_in: int, hidden: int, layers: int, prefix: str):
+    def __init__(self, cell: str, d_in: int, hidden: int, layers: int, prefix: str, dropout: float = 0.0):
         super().__init__()
         rnn = nn.LSTM if cell == "lstm" else nn.GRU
         self.rnns = nn.ModuleList(
             rnn(d_in if i == 0 else 2 * hidden, hidden, batch_first=True, bidirectional=True) for i in range(layers))
         self.norms = nn.ModuleList(nn.LayerNorm(2 * hidden) for _ in range(layers))
         self.prefix = prefix
+        self.drop = nn.Dropout(dropout)                    # on each layer output fed onward (train mode only)
 
     def forward(self, x: torch.Tensor, out: Dict[str, torch.Tensor]) -> torch.Tensor:
         for i, (rnn, ln) in enumerate(zip(self.rnns, self.norms)):
             h, _ = rnn(x)
             out[f"{self.prefix}{i + 1}_raw"] = h           # before LayerNorm (saturation diagnostics)
             x = ln(h)
-            out[f"{self.prefix}{i + 1}"] = x
+            out[f"{self.prefix}{i + 1}"] = x                # exposed before dropout
+            x = self.drop(x)
         return x
 
 
@@ -196,7 +198,7 @@ class ChannelNet(nn.Module):
     """Single-channel corrected SeqSleepNet. forward(x (B, L, 3000), offset_db (B,) or None) -> (logits, out)."""
 
     def __init__(self, modality: str = "EEG", deformable: bool = False, n_classes: int = 5, hidden1: int = 64,
-                 layers1: int = 4, attention: int = 32, hidden2: int = 64, layers2: int = 4):
+                 layers1: int = 4, attention: int = 32, hidden2: int = 64, layers2: int = 4, dropout: float = 0.0):
         super().__init__()
         cfg = MODALITY[modality]
         self.modality, self.bins = modality, cfg["bins"]
@@ -204,10 +206,11 @@ class ChannelNet(nn.Module):
         edges = filter_edges(cfg["spacing"], cfg["nfilt"], float(freqs[0]), float(freqs[-1]))
         self.frontend = SpectralFrontend()
         self.filterbank = (DeformableFilterbank if deformable else StaticFilterbank)(freqs, edges)
-        self.epoch_rnn = SplitRNN("lstm", cfg["nfilt"], hidden1, layers1, "L")
+        self.epoch_rnn = SplitRNN("lstm", cfg["nfilt"], hidden1, layers1, "L", dropout)
         self.attention = AttentionLayer(2 * hidden1, attention)
         self.e_norm = nn.LayerNorm(2 * hidden1)
-        self.seq_rnn = SplitRNN("gru", 2 * hidden1, hidden2, layers2, "G")
+        self.e_drop = nn.Dropout(dropout)
+        self.seq_rnn = SplitRNN("gru", 2 * hidden1, hidden2, layers2, "G", dropout)
         self.clf = nn.Linear(2 * hidden2, n_classes)
 
     def forward(self, x: torch.Tensor, offset_db: Optional[torch.Tensor] = None):
@@ -224,7 +227,7 @@ class ChannelNet(nn.Module):
         out["alpha"] = alpha.view(B, L, -1)
         e = self.e_norm(e).view(B, L, -1)
         out["e"] = e
-        q = self.seq_rnn(e, out)
+        q = self.seq_rnn(self.e_drop(e), out)
         out["q"] = q
         logits = self.clf(q)
         out["logits"] = logits

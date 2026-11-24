@@ -9,6 +9,10 @@ Protocols:
   weight decay 0, unweighted CE, batch 32, 10 passes over training windows taken at every epoch (stride 1),
   validation every 10 % of a pass, best checkpoint by validation loss, test with ``Trainer.voting_evaluate``
   (L offsets, averaged logits).
+- ``reg1`` / ``reg12`` / ``reg123``: phan plus, cumulatively, (1) dropout 0.1 + l2 1e-4; (2) windows re-cut at a
+  random offset every pass with a +-300-sample time shift (``RandomOffsetSequences``), budget 48,760 steps (= phan),
+  validation every 487 steps; (3) cosine learning-rate decay, best checkpoint by validation kappa, early stopping
+  after 20 validations (xmai-lab/sleep-mechinterp#21).
 
 --split-file takes {dataset: {train, valid, test}} subject lists (e.g. physioex fold 0).
 --overfit N trains on the first N training nights only and reports training loss (pipeline check).
@@ -31,14 +35,22 @@ import torch
 from sklearn.metrics import accuracy_score, cohen_kappa_score, confusion_matrix, f1_score
 from torch.utils.data import DataLoader
 
-from physioex.data.clean_cache import CleanCacheNights, SequenceDataset, class_counts
+import math
+
+from physioex.data.clean_cache import CleanCacheNights, RandomOffsetSequences, SequenceDataset, class_counts
 from physioex.models.seqsleepnet_clean import ChannelNet, saturation
 
+_REG = dict(seq_len=20, stride=1, batch=32, lr=1e-4, wd=1e-4, optim="adam", weighted=False, dropout=0.1)
 PROTOCOLS = {
     "proof": dict(seq_len=21, stride=10, batch=32, lr=1e-3, wd=1e-4, optim="adamw", weighted=True,
                   max_passes=100, select="kappa"),
     "phan": dict(seq_len=20, stride=1, batch=32, lr=1e-4, wd=0.0, optim="adam", weighted=False,
-                 max_passes=10, select="loss", val_ratio=0.1, patience=10),
+                 max_passes=10, select="loss", val_ratio=0.1, patience=10, patience_unit="pass"),
+    "reg1": dict(_REG, max_passes=10, select="loss", val_ratio=0.1, patience=10, patience_unit="pass"),
+    "reg12": dict(_REG, sampler="random", max_shift=300, steps=48760, val_every=487, select="loss",
+                  patience=10 ** 9, patience_unit="val"),
+    "reg123": dict(_REG, sampler="random", max_shift=300, steps=48760, val_every=487, select="kappa",
+                   sched="cosine", patience=20, patience_unit="val"),
 }
 
 
@@ -66,11 +78,15 @@ def evaluate(model, nights, device, L, crit=None, bs=64):
     ds = SequenceDataset(nights, L, stride=L)
     pred = [np.full(len(n.y), -1) for n in nights]
     dl = DataLoader(ds, batch_size=bs, shuffle=False, num_workers=0)
-    k, losses = 0, []
+    k, losses, conf, hit = 0, [], [], []
     for x, y, off in dl:
         logits, _ = model(x.to(device), off.to(device))
         if crit is not None:
             losses.append(float(crit(logits.reshape(-1, 5), y.to(device).reshape(-1))))
+        pr, yy = logits.softmax(-1).reshape(-1, 5).cpu(), y.reshape(-1)
+        msk = yy >= 0
+        conf.append(pr.max(-1).values[msk].numpy())
+        hit.append((pr.argmax(-1) == yy)[msk].numpy())
         for row in logits.argmax(-1).cpu().numpy():
             ni, s = ds.windows[k]
             pred[ni][s:s + L] = row
@@ -80,7 +96,16 @@ def evaluate(model, nights, device, L, crit=None, bs=64):
     res = _metrics(yt[m], yp[m])
     if losses:
         res["loss"] = float(np.mean(losses))
+    res["ece"] = ece(np.concatenate(conf), np.concatenate(hit))
     return res
+
+
+def ece(conf, hit, bins=15):
+    """Expected calibration error (equal-width confidence bins) over scored validation epochs (tiled windows)."""
+    edges = np.linspace(0, 1, bins + 1)
+    idx = np.clip(np.digitize(conf, edges[1:-1]), 0, bins - 1)
+    return float(sum(abs(conf[idx == b].mean() - hit[idx == b].mean()) * (idx == b).mean()
+                     for b in range(bins) if (idx == b).any()))
 
 
 @torch.no_grad()
@@ -140,6 +165,12 @@ def main():
     ap.add_argument("--lr", type=float)
     ap.add_argument("--wd", type=float)
     ap.add_argument("--max-passes", type=int)
+    ap.add_argument("--dropout", type=float)
+    ap.add_argument("--sampler", choices=["stride", "random"])
+    ap.add_argument("--max-shift", type=int)
+    ap.add_argument("--sched", choices=["const", "cosine"])
+    ap.add_argument("--select", choices=["loss", "kappa"])
+    ap.add_argument("--steps", type=int, help="step budget (overrides --max-passes)")
     ap.add_argument("--minutes", type=float, default=1e9)
     ap.add_argument("--val-every", type=int, default=200, help="steps between validations (proof protocol)")
     ap.add_argument("--patience", type=int, default=5, help="validations without improvement")
@@ -150,7 +181,8 @@ def main():
     ap.add_argument("--seed", type=int, default=42)
     args = ap.parse_args()
     P = dict(PROTOCOLS[args.protocol])
-    for k in ("seq_len", "stride", "batch", "lr", "wd", "max_passes"):
+    for k in ("seq_len", "stride", "batch", "lr", "wd", "max_passes", "dropout", "sampler", "max_shift", "sched",
+              "select", "steps"):
         if getattr(args, k) is not None:
             P[k] = getattr(args, k)
     if "patience" in P and args.patience == 5:
@@ -184,7 +216,7 @@ def main():
         w = (w / w.mean()).to(device)
     log(f"train class counts {counts.tolist()}, CE weights {None if w is None else [round(float(v), 2) for v in w]}")
 
-    model = ChannelNet(args.modality, deformable=args.deformable).to(device)
+    model = ChannelNet(args.modality, deformable=args.deformable, dropout=P.get("dropout", 0.0)).to(device)
     if P["optim"] == "adam":
         opt = torch.optim.Adam(model.parameters(), lr=P["lr"], weight_decay=P["wd"])
     else:
@@ -201,10 +233,26 @@ def main():
            "started": time.strftime("%Y-%m-%dT%H:%M:%S")}
     (out / "run.json").write_text(json.dumps(run, indent=2))
 
-    train_ds = SequenceDataset(train_n, L, stride=P["stride"])
-    dl = DataLoader(train_ds, batch_size=P["batch"], shuffle=True, num_workers=args.num_workers,
-                    persistent_workers=args.num_workers > 0)
-    val_every = max(1, int(len(dl) * P["val_ratio"])) if "val_ratio" in P else args.val_every
+    random_sampler = P.get("sampler") == "random"
+    if random_sampler:
+        train_ds = RandomOffsetSequences(train_n, L, max_shift=P.get("max_shift", 300), seed=args.seed)
+    else:
+        train_ds = SequenceDataset(train_n, L, stride=P["stride"])
+
+    def loader():           # rebuilt every pass for the random sampler (the workers must see the new windows)
+        return DataLoader(train_ds, batch_size=P["batch"], shuffle=True, num_workers=args.num_workers,
+                          persistent_workers=args.num_workers > 0 and not random_sampler)
+
+    dl = loader()
+    val_every = (max(1, int(len(dl) * P["val_ratio"])) if "val_ratio" in P
+                 else P.get("val_every", args.val_every))
+    total_steps = P.get("steps") or P["max_passes"] * len(dl)
+    max_passes = math.ceil(total_steps / len(dl)) + 1 if P.get("steps") else P["max_passes"]
+    sched = torch.optim.lr_scheduler.LambdaLR(
+        opt, (lambda st: 0.5 * (1 + math.cos(math.pi * min(st, total_steps) / total_steps)))
+        if P.get("sched") == "cosine" else (lambda st: 1.0))
+    per_pass = P.get("patience_unit") == "pass"
+    curve = []
     log(f"{args.modality}: {n_par} params, {len(train_ds)} train windows, {len(dl)} steps/pass, "
         f"validation every {val_every} steps, device {device}")
 
@@ -216,7 +264,10 @@ def main():
     sat0 = saturation(model.eval(), probe[0].to(device), probe[2].to(device))
     log(f"saturation at init {sat0}")
     run_loss = []
-    for ep in range(P["max_passes"]):
+    for ep in range(max_passes):
+        if random_sampler and ep > 0:
+            train_ds.set_epoch(ep)
+            dl = loader()
         model.train()
         for x, y, off in dl:
             logits, _ = model(x.to(device), off.to(device))
@@ -226,6 +277,7 @@ def main():
             if args.protocol == "proof":
                 torch.nn.utils.clip_grad_norm_(model.parameters(), 5.0)
             opt.step()
+            sched.step()
             step += 1
             run_loss.append(float(loss))
             timeout = time.time() - t0 > args.minutes * 60
@@ -236,6 +288,9 @@ def main():
                     rec["valid"] = evaluate(model, data.nights["valid"], device, L, crit)
                 rec["sat"] = saturation(model.eval(), probe[0].to(device), probe[2].to(device))
                 model.train()
+                rec["lr"] = opt.param_groups[0]["lr"]
+                if "valid" in rec:
+                    curve.append((step, ep, rec["train_loss"], rec["valid"]["loss"], rec["valid"]["kappa"]))
                 mf.write(json.dumps(rec) + "\n")
                 mf.flush()
                 v = rec.get("valid", {})
@@ -251,10 +306,13 @@ def main():
                 else:
                     bad += 1
                 # proof: patience in validations; phan: in passes, as the physioex Trainer (checked below)
-                if timeout or (args.protocol != "phan" and bad >= args.patience):
+                if timeout or (not per_pass and bad >= args.patience) or step >= total_steps:
                     stop = True
                     break
-        if args.protocol == "phan":
+            if step >= total_steps:
+                stop = True
+                break
+        if per_pass:
             bad_passes = 0 if improved else bad_passes + 1
             improved = False
             if bad_passes >= args.patience:
@@ -264,6 +322,15 @@ def main():
 
     final = {"steps": step, "passes": ep + 1, "minutes": round((time.time() - t0) / 60, 2), "sat_init": sat0,
              "train_loss_last": float(np.mean(run_loss[-50:]))}
+    if curve:               # overfitting diagnostics over the validation curve
+        c = np.array(curve)
+        ib, il = int(c[:, 4].argmax()), int(c[:, 3].argmin())
+        final["overfit"] = {"best_kappa_step": int(c[ib, 0]), "best_kappa_pass": int(c[ib, 1]),
+                            "max_val_kappa": float(c[ib, 4]), "final_val_kappa": float(c[-1, 4]),
+                            "kappa_drop": float(c[ib, 4] - c[-1, 4]),
+                            "min_val_loss_step": int(c[il, 0]), "min_val_loss": float(c[il, 3]),
+                            "final_val_loss": float(c[-1, 3]), "final_train_loss": float(c[-1, 2]),
+                            "final_gap": float(c[-1, 3] - c[-1, 2])}
     if not args.overfit:
         model.load_state_dict(torch.load(out / "best.pt", map_location=device))
         final["valid_best"] = {"select": P["select"], "value": best}

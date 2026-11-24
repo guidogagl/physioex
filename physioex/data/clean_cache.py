@@ -154,6 +154,52 @@ class SequenceDataset(Dataset):
         return x, y, torch.tensor(nt.offset_db, dtype=torch.float32)
 
 
+class RandomOffsetSequences(Dataset):
+    """Training windows re-cut at every pass (TinySleepNet-style sequence augmentation).
+
+    ``set_epoch(k)`` draws one offset o ~ U[0, L) per night and cuts non-overlapping windows starting at o; the epochs
+    before o and after the last full window are covered by one extra window aligned to the night start / end, so
+    every epoch is seen at least once per pass (twice at most, only at the night edges). Each window is read from the
+    contiguous night signal shifted by a random number of samples in [-max_shift, max_shift], clamped to the night;
+    labels are unchanged. Workers must be re-created after ``set_epoch`` (build a new DataLoader every pass)."""
+
+    def __init__(self, nights: List[Night], seq_len: int = 20, max_shift: int = 300, seed: int = 0):
+        self.nights, self.L, self.max_shift, self.seed = nights, seq_len, max_shift, seed
+        self.windows: List[Tuple[int, int]] = []
+        self.set_epoch(0)
+
+    def set_epoch(self, k: int):
+        rng = np.random.default_rng(self.seed + k)
+        L, self.windows = self.L, []
+        for i, nt in enumerate(self.nights):
+            n = len(nt.y)
+            if n < L:
+                continue
+            o = int(rng.integers(0, L))
+            starts = list(range(o, n - L + 1, L))
+            if o > 0:
+                starts.insert(0, 0)
+            if not starts or starts[-1] + L < n:
+                starts.append(n - L)
+            self.windows += [(i, s) for s in starts if (nt.y[s:s + L] >= 0).any()]
+
+    def __len__(self):
+        return len(self.windows)
+
+    def __getitem__(self, j):
+        i, s = self.windows[j]
+        nt = self.nights[i]
+        E = nt.x.shape[1]
+        a = s * E
+        if self.max_shift > 0:
+            a += int(torch.randint(-self.max_shift, self.max_shift + 1, ()))   # torch RNG: distinct per worker
+            a = min(max(a, 0), (len(nt.y) - self.L) * E)
+        flat = nt.x.reshape(-1)
+        x = np.array(flat[a:a + self.L * E], dtype=np.float32).reshape(self.L, E)
+        return torch.from_numpy(x), torch.from_numpy(nt.y[s:s + self.L]), torch.tensor(nt.offset_db,
+                                                                                       dtype=torch.float32)
+
+
 def class_counts(nights: List[Night]) -> np.ndarray:
     c = np.zeros(5, np.int64)
     for nt in nights:
