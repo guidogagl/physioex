@@ -61,9 +61,10 @@ def load_branches(bdir: Path, mods, dropout: float = 0.0, prefix: str = ""):
 
 
 @torch.no_grad()
-def voting(model, nights, device, L, occlude=None, disabled=(), head="fused", bs=64):
+def voting(model, nights, device, L, occlude=None, disabled=(), head="fused", bs=64, return_preds=False):
     """Trainer.voting_evaluate protocol: L offsets, logits averaged per epoch. occlude: set of hidden modalities;
-    disabled: connection sites switched off; head: 'fused' or a modality (its auxiliary head)."""
+    disabled: connection sites switched off; head: 'fused' or a modality (its auxiliary head).
+    return_preds: also res["preds"] = [(y_true, y_pred) per evaluated night]."""
     model.eval()
     model.disabled = set(disabled)
     yt_all, yp_all, per_ds = [], [], {}
@@ -102,6 +103,8 @@ def voting(model, nights, device, L, occlude=None, disabled=(), head="fused", bs
         yt = np.concatenate([yt_all[i] for i in idx])
         yp = np.concatenate([yp_all[i] for i in idx])
         res["per_dataset"][ds] = {"kappa": float(cohen_kappa_score(yt, yp)), "nights": len(idx)}
+    if return_preds:
+        res["preds"] = list(zip(yt_all, yp_all))
     return res
 
 
