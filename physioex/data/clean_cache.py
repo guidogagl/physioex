@@ -25,6 +25,7 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import dataclass
+from functools import lru_cache
 from fractions import Fraction
 from pathlib import Path
 from typing import Dict, List, Optional, Sequence, Tuple
@@ -63,6 +64,94 @@ def to_100hz(x: np.ndarray, fs: float) -> np.ndarray:
     return y.reshape(n, EPOCH).astype(np.float32)
 
 
+class LazyArray:
+    """Read-only (n, E) array kept on local disk and memory-mapped on access, with a small per-process LRU of open
+    maps (``local_dir`` option of the readers): RAM stays free and only a few files are open at a time (a few
+    hundred open memory maps on GPFS stall the client; SHHS has ~12k signal files)."""
+
+    def __init__(self, path: str, shape: Tuple[int, ...], dtype: str):
+        self.path, self.shape, self.dtype = str(path), tuple(shape), np.dtype(dtype)
+
+    def _arr(self) -> np.ndarray:
+        return _open_map(self.path)
+
+    def __len__(self):
+        return self.shape[0]
+
+    def __getitem__(self, idx):
+        return self._arr()[idx]
+
+    def reshape(self, *shape):
+        return self._arr().reshape(*shape)
+
+    def __array__(self, dtype=None, copy=None):
+        a = np.asarray(self._arr())
+        return a if dtype is None else a.astype(dtype)
+
+
+@lru_cache(maxsize=64)
+def _open_map(path: str) -> np.ndarray:
+    return np.load(path, mmap_mode="r")
+
+
+def _spill(x: np.ndarray, path: Path) -> LazyArray:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    np.save(path, np.ascontiguousarray(x))
+    return LazyArray(path, x.shape, str(x.dtype))
+
+
+def _load_spilled(args):
+    """Worker of the parallel readers: load one night, write its signals to local disk, return it with LazyArrays."""
+    kind, root, ds, subj, mods, pipe, local = args
+    try:
+        if kind == "single":
+            night, why = load_night(Path(root), ds, subj, mods, pipe=pipe)
+        else:
+            night, why = load_multimodal_night(Path(root), ds, subj, mods, pipe=pipe)
+    except Exception as e:                       # unreadable night: counted, never fatal
+        return ds, subj, None, f"error {type(e).__name__}"
+    if night is None:
+        return ds, subj, None, why
+    base = Path(local) / ds / subj
+    if kind == "single":
+        night.x = _spill(night.x, base / f"{mods}.npy")
+    else:
+        night.x = {m: _spill(v, base / f"{m}.npy") for m, v in night.x.items()}
+    return ds, subj, night, why
+
+
+def _read_all(kind, root, datasets, mods, split, local_dir, workers, pipe=None):
+    """[(split name, night)] and skip counts. With local_dir the nights are read in parallel and spilled to disk."""
+    jobs, where_of, skipped = [], {}, {}
+    for ds in datasets:
+        where = None if split is None else {s: k for k, ids in split[ds].items() for s in ids}
+        for subj in sorted(p.name for p in (Path(root) / ds / "signals").iterdir()):
+            if where is not None and subj not in where:
+                skipped["not in split"] = skipped.get("not in split", 0) + 1
+                continue
+            where_of[(ds, subj)] = where[subj] if where is not None else split_of(ds, subj)
+            jobs.append((kind, str(root), ds, subj, mods, pipe, None if local_dir is None else str(local_dir)))
+    if local_dir is None:
+        results = []
+        for j in jobs:
+            if kind == "single":
+                night, why = load_night(Path(root), j[2], j[3], mods, pipe=pipe)
+            else:
+                night, why = load_multimodal_night(Path(root), j[2], j[3], mods, pipe=pipe)
+            results.append((j[2], j[3], night, why))
+    else:
+        import multiprocessing as mp
+        with mp.get_context("fork").Pool(max(1, workers)) as pool:
+            results = pool.map(_load_spilled, jobs, chunksize=4)
+    out = []
+    for ds, subj, night, why in results:
+        if night is None:
+            skipped[why] = skipped.get(why, 0) + 1
+        else:
+            out.append((where_of[(ds, subj)], night))
+    return out, skipped
+
+
 @dataclass
 class Night:
     dataset: str
@@ -73,10 +162,13 @@ class Night:
     fs: float
 
 
-def load_night(root: Path, dataset: str, subject: str, modality: str) -> Tuple[Optional[Night], str]:
+def load_night(root: Path, dataset: str, subject: str, modality: str,
+               pipe: Optional[str] = None) -> Tuple[Optional[Night], str]:
     # <hash>/ holds the epoched pipeline output; night/ (full cache) is the continuous cleaned night: not used here
     sig = [p for p in (root / dataset / "signals" / subject).glob(f"{modality}_clean_*/*/signal.npy")
            if p.parent.name != "night"]
+    if len(sig) > 1 and pipe is not None:          # several epoching pipelines: keep the requested one
+        sig = [p for p in sig if p.parent.name == pipe]
     lab = root / dataset / "labels" / f"{subject}.npy"
     if len(sig) != 1 or not lab.exists():
         return None, "no signal or labels"
@@ -104,24 +196,17 @@ def load_night(root: Path, dataset: str, subject: str, modality: str) -> Tuple[O
 
 
 class CleanCacheNights:
-    """All nights of some datasets for one modality, grouped by split."""
+    """All nights of some datasets for one modality, grouped by split. ``local_dir``: read the nights in parallel
+    (``workers`` processes) and keep their signals on that local disk, memory-mapped on access (large datasets)."""
 
     def __init__(self, root: str, datasets: Sequence[str], modality: str, log=print,
-                 split: Optional[Dict[str, Dict[str, List[str]]]] = None):
+                 split: Optional[Dict[str, Dict[str, List[str]]]] = None, local_dir: Optional[str] = None,
+                 workers: int = 8, pipe: Optional[str] = None):
         self.root, self.modality = Path(root), modality
         self.nights: Dict[str, List[Night]] = {"train": [], "valid": [], "test": []}
-        self.skipped: Dict[str, int] = {}
-        for ds in datasets:
-            where = None if split is None else {s: k for k, ids in split[ds].items() for s in ids}
-            for subj in sorted(p.name for p in (self.root / ds / "signals").iterdir()):
-                if where is not None and subj not in where:
-                    self.skipped["not in split"] = self.skipped.get("not in split", 0) + 1
-                    continue
-                night, why = load_night(self.root, ds, subj, modality)
-                if night is None:
-                    self.skipped[why] = self.skipped.get(why, 0) + 1
-                    continue
-                self.nights[where[subj] if where is not None else split_of(ds, subj)].append(night)
+        read, self.skipped = _read_all("single", root, datasets, modality, split, local_dir, workers, pipe)
+        for k, night in read:
+            self.nights[k].append(night)
         log(f"[clean_cache] {modality}: " + ", ".join(f"{k} {len(v)} nights" for k, v in self.nights.items())
             + f"; skipped {self.skipped}")
 
@@ -275,24 +360,17 @@ def load_multimodal_night(root: Path, dataset: str, subject: str,
 
 
 class CleanCacheMultiNights:
-    """All nights with every requested modality, grouped by split (explicit split file or subject hash)."""
+    """All nights with every requested modality, grouped by split (explicit split file or subject hash).
+    ``local_dir`` / ``workers`` / ``pipe``: as ``CleanCacheNights`` and ``load_multimodal_night``."""
 
     def __init__(self, root: str, datasets: Sequence[str], modalities: Sequence[str] = ("EEG", "EOG", "EMG"),
-                 log=print, split: Optional[Dict[str, Dict[str, List[str]]]] = None):
+                 log=print, split: Optional[Dict[str, Dict[str, List[str]]]] = None,
+                 local_dir: Optional[str] = None, workers: int = 8, pipe: Optional[str] = None):
         self.root, self.modalities = Path(root), list(modalities)
         self.nights: Dict[str, List[MultiNight]] = {"train": [], "valid": [], "test": []}
-        self.skipped: Dict[str, int] = {}
-        for ds in datasets:
-            where = None if split is None else {s: k for k, ids in split[ds].items() for s in ids}
-            for subj in sorted(p.name for p in (self.root / ds / "signals").iterdir()):
-                if where is not None and subj not in where:
-                    self.skipped["not in split"] = self.skipped.get("not in split", 0) + 1
-                    continue
-                night, why = load_multimodal_night(self.root, ds, subj, self.modalities)
-                if night is None:
-                    self.skipped[why] = self.skipped.get(why, 0) + 1
-                    continue
-                self.nights[where[subj] if where is not None else split_of(ds, subj)].append(night)
+        read, self.skipped = _read_all("multi", root, datasets, self.modalities, split, local_dir, workers, pipe)
+        for k, night in read:
+            self.nights[k].append(night)
         log(f"[clean_cache] {'+'.join(self.modalities)}: "
             + ", ".join(f"{k} {len(v)} nights" for k, v in self.nights.items()) + f"; skipped {self.skipped}")
 

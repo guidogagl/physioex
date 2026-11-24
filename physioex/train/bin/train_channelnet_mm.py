@@ -7,6 +7,10 @@ pass, best checkpoint by validation loss of the fused head, voting test):
     S3  fine-tuning from an S1/S2 checkpoint: new parameters lr 1e-4, branches lr 1e-5, 1-pass linear warmup then
         cosine decay; optional L2-SP penalty towards the pretrained branch weights (--l2sp)
 
+Branches: ChannelNet or SleepTransformerChannel (read from each branch run.json; xmai-lab/sleep-mechinterp#26).
+S0 trains a 3-channel baseline from scratch: --arch ssn3ch (SeqSleepNet) or st3ch (SleepTransformer).
+SleepTransformer paper protocol: --seq-len 21 --eps 1e-7 --val-every 100 --patience 200 --min-vals 5000.
+
 Occlusion (on unless --no-occlusion): per sample, modality m hidden with p_m = 0.5 kappa_m / max kappa, kappa from the
 pretrained branches' run.json. Loss = CE(fused) + lambda * sum_m CE(aux_m).
 
@@ -39,6 +43,7 @@ from physioex.data.clean_cache import (CleanCacheMultiNights, MultiRandomOffsetS
 from physioex.models.channelnet_mm import MODALITIES, MultiChannelNet, occlusion_probs, sample_occlusion
 from physioex.models.seqsleepnet_3ch_clean import SeqSleepNet3chClean
 from physioex.models.seqsleepnet_clean import ChannelNet
+from physioex.models.sleeptransformer_clean import SleepTransformer3chClean, SleepTransformerChannel
 from physioex.train.bin.train_channelnet import _metrics, git_sha
 
 STAGE_LR = {"S0": (1e-4, None), "S1": (1e-3, None), "S2": (1e-3, None), "S3": (1e-4, 1e-5)}   # (new params, branches)
@@ -49,13 +54,19 @@ def to_dev(d, device):
 
 
 def load_branches(bdir: Path, mods, dropout: float = 0.0, prefix: str = ""):
+    """Pretrained branches <bdir>/<prefix><m>/{best.pt, run.json}; the backbone is read from each run.json
+    (ChannelNet, or SleepTransformerChannel with the dropout it was trained with)."""
     branches, kappa = {}, {}
     for m in mods:
         bdir_m = bdir / f"{prefix}{m}"
-        net = ChannelNet(m, dropout=dropout)
+        run = json.loads((bdir_m / "run.json").read_text())
+        cfg = run.get("config", {})
+        if cfg.get("arch", "channelnet") == "sleeptransformer":
+            net = SleepTransformerChannel(m, dropout=cfg.get("resolved", {}).get("dropout", 0.1))
+        else:
+            net = ChannelNet(m, dropout=dropout)
         net.load_state_dict(torch.load(bdir_m / "best.pt", map_location="cpu"))
         branches[m] = net
-        run = json.loads((bdir_m / "run.json").read_text())
         kappa[m] = float(run["final"]["test"]["kappa"])
     return branches, kappa
 
@@ -138,7 +149,7 @@ def tiled_eval(model, nights, device, L, crit, bs=64):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--arch", default="mm", choices=["mm", "ssn3ch"],
+    ap.add_argument("--arch", default="mm", choices=["mm", "ssn3ch", "st3ch"],
                     help="mm: MultiChannelNet from pretrained branches; ssn3ch: 3-channel SeqSleepNet baseline (S0)")
     ap.add_argument("--stage", required=True, choices=["S0", "S1", "S2", "S3"], help="S0: train from scratch")
     ap.add_argument("--points", nargs="*", default=[], choices=["F", "E", "Q"])
@@ -156,6 +167,12 @@ def main():
     ap.add_argument("--patience", type=int, default=10 ** 9, help="validations without improvement")
     ap.add_argument("--sched", default="const", choices=["const", "cosine"], help="S0-S2 (S3: warmup + cosine)")
     ap.add_argument("--warmup", type=int, default=None, help="S3 warmup steps (default one stride-1 pass)")
+    ap.add_argument("--warmup-frac", type=float, default=None, help="S3 warmup as a fraction of the step budget")
+    ap.add_argument("--eps", type=float, default=1e-8, help="Adam epsilon (SleepTransformer paper: 1e-7)")
+    ap.add_argument("--min-vals", type=int, default=0, help="validations before early stopping can trigger")
+    ap.add_argument("--local-dir", default=None, help="node-local folder: nights read in parallel and memory-mapped")
+    ap.add_argument("--workers", type=int, default=8, help="reader processes with --local-dir")
+    ap.add_argument("--pipe", default="702cb90947921189", help="epoching pipeline where a channel has several")
     ap.add_argument("--root", required=True)
     ap.add_argument("--datasets", nargs="+", required=True)
     ap.add_argument("--split-file", default=None)
@@ -178,8 +195,8 @@ def main():
     args = ap.parse_args()
     if args.stage == "S1" and args.points:
         ap.error("S1 is late fusion: no connection points")
-    if (args.arch == "ssn3ch") != (args.stage == "S0"):
-        ap.error("S0 is the stage of --arch ssn3ch (and only of it)")
+    if (args.arch in ("ssn3ch", "st3ch")) != (args.stage == "S0"):
+        ap.error("S0 is the stage of the 3-channel baselines --arch ssn3ch / st3ch (and only of them)")
     if args.arch == "mm" and not args.branches:
         ap.error("--branches required for --arch mm")
 
@@ -205,7 +222,8 @@ def main():
         model = MultiChannelNet(branches, args.points, hook=args.hook).to(device)
     else:
         kappa, args.aux, args.no_occlusion, args.skip_test_extras = None, 0.0, True, True
-        model = SeqSleepNet3chClean(mods, dropout=args.dropout).to(device)
+        model = (SeqSleepNet3chClean(mods, dropout=args.dropout) if args.arch == "ssn3ch"
+                 else SleepTransformer3chClean(mods)).to(device)       # st3ch: native dropout 0.1
     if args.init:
         init = Path(args.init).expanduser() / "best.pt"
         model.load_state_dict(torch.load(init, map_location=device))
@@ -214,17 +232,20 @@ def main():
               if args.l2sp > 0 and args.arch == "mm" else None)
 
     lr_new, lr_branch = STAGE_LR[args.stage]
+    if args.arch == "mm":
+        model.frozen_branches = lr_branch is None       # S1/S2: frozen branches run without dropout
     for p in model.branch_parameters():
         p.requires_grad_(lr_branch is not None)
     groups = [{"params": model.new_parameters(), "lr": lr_new}]
     if lr_branch is not None:
         groups.append({"params": model.branch_parameters(), "lr": lr_branch})
-    opt = torch.optim.Adam(groups, weight_decay=args.wd)
+    opt = torch.optim.Adam(groups, weight_decay=args.wd, eps=args.eps)
     crit = torch.nn.CrossEntropyLoss(ignore_index=-1)
     probs = None if args.no_occlusion else occlusion_probs(kappa, args.occ_scale)
 
     split = json.loads(Path(args.split_file).read_text()) if args.split_file else None
-    data = CleanCacheMultiNights(args.root, args.datasets, mods, log=log, split=split)
+    data = CleanCacheMultiNights(args.root, args.datasets, mods, log=log, split=split, local_dir=args.local_dir,
+                                 workers=args.workers, pipe=args.pipe)
     random_sampler = args.sampler == "random"
     if random_sampler:
         train_ds = MultiRandomOffsetSequences(data.nights["train"], L, max_shift=args.max_shift, seed=args.seed)
@@ -240,7 +261,7 @@ def main():
     n_passes = math.ceil(steps_total / len(dl)) + 1 if args.steps else args.passes
     val_every = args.val_every or max(1, int(len(dl) * args.val_ratio))
     stride1_pass = sum(max(0, len(nt.y) - L + 1) for nt in data.nights["train"]) // args.batch
-    if args.arch == "ssn3ch":   # input standardisation from ~200 training windows (Phan's scaling.npz)
+    if args.arch in ("ssn3ch", "st3ch"):   # input standardisation from ~200 training windows (Phan's scaling.npz)
         sdl = DataLoader(MultiSequenceDataset(data.nights["train"], L, stride=L), batch_size=16, shuffle=True)
         it = iter(sdl)
         model.fit_scaling([(to_dev(x, device), to_dev(o, device)) for x, _, o in (next(it) for _ in range(12))])
@@ -251,7 +272,7 @@ def main():
             if args.sched == "cosine":
                 return 0.5 * (1 + math.cos(math.pi * min(step, steps_total) / steps_total))
             return 1.0
-        warm = args.warmup or stride1_pass
+        warm = int(args.warmup_frac * steps_total) if args.warmup_frac else (args.warmup or stride1_pass)
         if step < warm:
             return (step + 1) / warm
         return 0.5 * (1 + math.cos(math.pi * (step - warm) / max(1, steps_total - warm)))
@@ -277,7 +298,7 @@ def main():
     def score_of(v):         # higher is better
         return v["kappa"] if args.select == "kappa" else -v["loss"]
 
-    t0, step, best, stop, run_loss, bad, curve = time.time(), 0, None, False, [], 0, []
+    t0, step, best, stop, run_loss, bad, curve, n_vals = time.time(), 0, None, False, [], 0, [], 0
     if args.init:            # S3: the starting checkpoint competes for best.pt, so fine-tuning can never end worse
         best = score_of(v0)
         torch.save(model.state_dict(), out / "best.pt")
@@ -321,7 +342,8 @@ def main():
                 else:
                     bad += 1
                 model.train()
-                if timeout or bad >= args.patience:
+                n_vals += 1
+                if timeout or (n_vals >= args.min_vals and bad >= args.patience):
                     stop = True
                     break
             if step >= steps_total:

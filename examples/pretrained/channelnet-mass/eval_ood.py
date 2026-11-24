@@ -1,8 +1,9 @@
-"""Out-of-domain evaluation of models trained on MASS (xmai-lab/sleep-mechinterp#25).
+"""Out-of-domain evaluation of models trained on one source (MASS: #25; SHHS-1: #30, xmai-lab/sleep-mechinterp).
 
-Each model is rebuilt from its run folder (run.json config + best.pt): the multimodal ChannelNet (``--arch mm``) or
-the 3-channel SeqSleepNet on clean channels (``--arch ssn3ch``). Every model sees the same nights (clean cache v1, all
-three modalities, same loader as training) and is scored with the voting protocol of the MASS test.
+Each model is rebuilt from its run folder (run.json config + best.pt): the multimodal model (``--arch mm``; the
+branch backbone, ChannelNet or SleepTransformer, is read from the branch run.json) or a 3-channel baseline on clean
+channels (``--arch ssn3ch`` / ``st3ch``); L comes from the model run.json. Every model sees the same nights (clean
+cache v1, all three modalities, same loader as training) and is scored with the voting protocol of the in-domain test.
 
 Per dataset: pooled metrics (kappa, acc, macro-F1, per-class F1, confusion) and per-night kappa for every model, plus
 paired comparisons against the first model (per-night delta kappa, Wilcoxon signed-rank, bootstrap 95 % CI over nights
@@ -30,6 +31,7 @@ from sklearn.metrics import cohen_kappa_score
 from physioex.data.clean_cache import load_multimodal_night
 from physioex.models.channelnet_mm import MultiChannelNet
 from physioex.models.seqsleepnet_3ch_clean import SeqSleepNet3chClean
+from physioex.models.sleeptransformer_clean import SleepTransformer3chClean
 from physioex.train.bin.train_channelnet import _metrics, git_sha
 from physioex.train.bin.train_channelnet_mm import load_branches, voting
 
@@ -40,6 +42,8 @@ def build(run_dir: Path, device):
     if cfg.get("arch", "mm") == "mm":
         branches, _ = load_branches(Path(cfg["branches"]), mods, 0.0, cfg.get("branch_prefix", ""))
         model = MultiChannelNet(branches, cfg.get("points", []), hook=cfg.get("hook", "identity"))
+    elif cfg["arch"] == "st3ch":
+        model = SleepTransformer3chClean(mods)
     else:
         model = SeqSleepNet3chClean(mods)
     model.load_state_dict(torch.load(run_dir / "best.pt", map_location="cpu"))

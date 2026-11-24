@@ -1,7 +1,8 @@
 """Multimodal ChannelNet: the three single-channel networks (EEG, EOG, EMG) joined by gated cross-modal connections.
 
-The branches are pretrained ``ChannelNet`` models (physioex/models/seqsleepnet_clean.py), used unchanged and run in
-lockstep, block by block. All modalities share the same 29 STFT frames per epoch, so frame-level states are aligned.
+The branches are pretrained single-channel networks with the block API of ``ChannelNet``
+(physioex/models/seqsleepnet_clean.py) or ``SleepTransformerChannel`` (physioex/models/sleeptransformer_clean.py),
+used unchanged and run in lockstep, block by block. All modalities share the same 29 STFT frames per epoch, so frame-level states are aligned.
 
 Connection points (every one on a LayerNorm output, which also feeds the branch's own next block):
     F  epoch-LSTM layers L1..L4  (B*L, 29, 128), per frame
@@ -26,7 +27,7 @@ from typing import Dict, Iterable, Optional, Sequence
 import torch
 from torch import nn
 
-from physioex.models.seqsleepnet_clean import ChannelNet, GradHook, scale_db
+from physioex.models.seqsleepnet_clean import ChannelNet, GradHook
 
 MODALITIES = ("EEG", "EOG", "EMG")
 
@@ -85,12 +86,19 @@ class MultiChannelNet(nn.Module):
         self.mods = [m for m in MODALITIES if m in branches]
         self.branches = nn.ModuleDict({m: branches[m] for m in self.mods})
         b0 = self.branches[self.mods[0]]
-        self.n_lstm, self.n_gru = len(b0.epoch_rnn.rnns), len(b0.seq_rnn.rnns)
-        dim = b0.clf.in_features
+        self.n_lstm, self.n_gru = b0.n_epoch_blocks, b0.n_seq_blocks
+        dim = b0.dim
         self.sites = point_names(set(points), self.n_lstm, self.n_gru)
         self.conn = nn.ModuleDict({s: CrossConnection(self.mods, dim, hook) for s in self.sites})
         self.fused = nn.Linear(len(self.mods) * dim, n_classes)
         self.disabled: set = set()          # sites switched off (ablation / forgetting check)
+        self.frozen_branches = False         # True (stages S1/S2): branches stay in eval() mode while training
+
+    def train(self, mode: bool = True):
+        super().train(mode)
+        if mode and self.frozen_branches:
+            self.branches.eval()             # frozen features without dropout noise
+        return self
 
     # --- helpers -------------------------------------------------------------------------------------------------
     def _connect(self, site: str, h: Dict[str, torch.Tensor], send) -> Dict[str, torch.Tensor]:
@@ -116,54 +124,45 @@ class MultiChannelNet(nn.Module):
         send_e = None if occlude is None else {m: 1.0 - occlude[m].float() for m in self.mods}       # (B,)
         send_f = None if send_e is None else {m: v.repeat_interleave(L) for m, v in send_e.items()}  # (B*L,)
 
-        # spectral front end and filterbank, per branch (no connection: F output is not normalised)
+        # input chain per branch (no connection here: its output is not normalised)
         h = {}
         for m in self.mods:
-            br = self.branches[m]
-            P = br.frontend(x[m])[..., br.bins]
-            off = None if offset_db is None or m not in offset_db else offset_db[m].view(B, 1, 1, 1)
-            xs = scale_db(br.filterbank(P, scale_db(P, off)), off)
-            out[f"{m}.F"] = xs
-            h[m] = xs.reshape(B * L, xs.shape[2], -1)
+            off = None if offset_db is None or m not in offset_db else offset_db[m]
+            h[m], out[f"{m}.F"] = self.branches[m].stem(x[m], off)
 
-        # epoch encoder, layer by layer, with frame-level connections
+        # epoch encoder, block by block, with frame-level connections
         for i in range(self.n_lstm):
             for m in self.mods:
-                br = self.branches[m].epoch_rnn
-                raw, _ = br.rnns[i](h[m])
-                out[f"{m}.L{i + 1}_raw"] = raw
-                h[m] = br.norms[i](raw)
+                h[m], raw = self.branches[m].epoch_block(i, h[m])
+                if raw is not None:
+                    out[f"{m}.L{i + 1}_raw"] = raw
             h = self._connect(f"F{i + 1}", h, send_f)
             for m in self.mods:
                 out[f"{m}.L{i + 1}"] = h[m]
-                h[m] = self.branches[m].epoch_rnn.drop(h[m])      # branch dropout (identity unless p > 0)
+                h[m] = self.branches[m].drop_epoch(h[m])          # branch dropout (identity unless p > 0)
 
-        # attention pooling, epoch embedding, epoch-level connection
+        # pooling, epoch embedding, epoch-level connection
         e = {}
         for m in self.mods:
-            br = self.branches[m]
-            em, alpha = br.attention(h[m], r_alphas=True)
-            out[f"{m}.alpha"] = alpha.view(B, L, -1)
-            e[m] = br.e_norm(em).view(B, L, -1)
+            e[m], out[f"{m}.alpha"] = self.branches[m].pool(h[m], B, L)
         e = self._connect("E", e, send_e)
         for m in self.mods:
             out[f"{m}.e"] = e[m]
-            e[m] = self.branches[m].e_drop(e[m])
+            e[m] = self.branches[m].drop_e(e[m])
 
-        # sequence encoder, layer by layer, with epoch-level connections
-        q = e
+        # sequence encoder, block by block, with epoch-level connections
+        q = {m: self.branches[m].seq_start(e[m]) for m in self.mods}
         for i in range(self.n_gru):
             for m in self.mods:
-                br = self.branches[m].seq_rnn
-                raw, _ = br.rnns[i](q[m])
-                out[f"{m}.G{i + 1}_raw"] = raw
-                q[m] = br.norms[i](raw)
+                q[m], raw = self.branches[m].seq_block(i, q[m])
+                if raw is not None:
+                    out[f"{m}.G{i + 1}_raw"] = raw
             q = self._connect(f"Q{i + 1}", q, send_e)
             for m in self.mods:
                 out[f"{m}.G{i + 1}"] = q[m]
-                q[m] = self.branches[m].seq_rnn.drop(q[m])
+                q[m] = self.branches[m].drop_seq(q[m])
 
-        aux = {m: self.branches[m].clf(q[m]) for m in self.mods}
+        aux = {m: self.branches[m].head(q[m]) for m in self.mods}
         qs = [q[m] for m in self.mods]
         if send_e is not None:
             keep = torch.stack([send_e[m] for m in self.mods], -1)                      # (B, M)

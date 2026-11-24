@@ -9,6 +9,9 @@ Protocols:
   weight decay 0, unweighted CE, batch 32, 10 passes over training windows taken at every epoch (stride 1),
   validation every 10 % of a pass, best checkpoint by validation loss, test with ``Trainer.voting_evaluate``
   (L offsets, averaged logits).
+- ``st-phan``: the SleepTransformer paper protocol (``--arch sleeptransformer``, xmai-lab/sleep-mechinterp#26):
+  L = 21, Adam lr 1e-4 eps 1e-7, batch 32, stride 1, native dropout 0.1, validation every 100 steps, best by
+  validation loss, early stopping after 200 validations without improvement and never before 5,000 validations.
 - ``reg1`` / ``reg12`` / ``reg123``: phan plus, cumulatively, (1) dropout 0.1 + l2 1e-4; (2) windows re-cut at a
   random offset every pass with a +-300-sample time shift (``RandomOffsetSequences``), budget 48,760 steps (= phan),
   validation every 487 steps; (3) cosine learning-rate decay, best checkpoint by validation kappa, early stopping
@@ -39,6 +42,7 @@ import math
 
 from physioex.data.clean_cache import CleanCacheNights, RandomOffsetSequences, SequenceDataset, class_counts
 from physioex.models.seqsleepnet_clean import ChannelNet, saturation
+from physioex.models.sleeptransformer_clean import SleepTransformerChannel
 
 _REG = dict(seq_len=20, stride=1, batch=32, lr=1e-4, wd=1e-4, optim="adam", weighted=False, dropout=0.1)
 PROTOCOLS = {
@@ -51,6 +55,11 @@ PROTOCOLS = {
                   patience=10 ** 9, patience_unit="val"),
     "reg123": dict(_REG, sampler="random", max_shift=300, steps=48760, val_every=487, select="kappa",
                    sched="cosine", patience=20, patience_unit="val"),
+    # SleepTransformer paper (Phan et al. 2022, SHHS): Adam 1e-4 eps 1e-7, batch 32, L 21, dropout 0.1 (native),
+    # validation every 100 steps, stop after 200 validations without improvement, never before 5,000 validations
+    "st-phan": dict(seq_len=21, stride=1, batch=32, lr=1e-4, wd=0.0, eps=1e-7, optim="adam", weighted=False,
+                    dropout=0.1, max_passes=1000, val_every=100, select="loss", patience=200, patience_unit="val",
+                    min_vals=5000),
 }
 
 
@@ -154,6 +163,11 @@ def voting_evaluate(model, nights, device, L, bs=64):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--modality", required=True, choices=["EEG", "EOG", "EMG"])
+    ap.add_argument("--arch", default="channelnet", choices=["channelnet", "sleeptransformer"])
+    ap.add_argument("--local-dir", default=None, help="node-local folder: nights read in parallel and memory-mapped")
+    ap.add_argument("--workers", type=int, default=8, help="reader processes with --local-dir")
+    ap.add_argument("--pipe", default="702cb90947921189", help="epoching pipeline where a channel has several")
+    ap.add_argument("--min-vals", type=int, help="validations before early stopping can trigger")
     ap.add_argument("--root", required=True)
     ap.add_argument("--datasets", nargs="+", required=True)
     ap.add_argument("--out", required=True)
@@ -182,7 +196,7 @@ def main():
     args = ap.parse_args()
     P = dict(PROTOCOLS[args.protocol])
     for k in ("seq_len", "stride", "batch", "lr", "wd", "max_passes", "dropout", "sampler", "max_shift", "sched",
-              "select", "steps"):
+              "select", "steps", "min_vals"):
         if getattr(args, k) is not None:
             P[k] = getattr(args, k)
     if "patience" in P and args.patience == 5:
@@ -207,7 +221,8 @@ def main():
     L = P["seq_len"]
 
     split = json.loads(Path(args.split_file).read_text()) if args.split_file else None
-    data = CleanCacheNights(args.root, args.datasets, args.modality, log=log, split=split)
+    data = CleanCacheNights(args.root, args.datasets, args.modality, log=log, split=split, local_dir=args.local_dir,
+                            workers=args.workers, pipe=args.pipe)
     train_n = data.nights["train"][: args.overfit] if args.overfit else data.nights["train"]
     counts = class_counts(train_n)
     w = None
@@ -216,9 +231,17 @@ def main():
         w = (w / w.mean()).to(device)
     log(f"train class counts {counts.tolist()}, CE weights {None if w is None else [round(float(v), 2) for v in w]}")
 
-    model = ChannelNet(args.modality, deformable=args.deformable, dropout=P.get("dropout", 0.0)).to(device)
+    if args.arch == "sleeptransformer":
+        model = SleepTransformerChannel(args.modality, dropout=P.get("dropout", 0.1)).to(device)
+    else:
+        model = ChannelNet(args.modality, deformable=args.deformable, dropout=P.get("dropout", 0.0)).to(device)
+    is_cn = args.arch == "channelnet"
+
+    def sat(probe):        # saturation diagnostics exist for the LSTM branch only
+        return saturation(model.eval(), probe[0].to(device), probe[2].to(device)) if is_cn else {}
+
     if P["optim"] == "adam":
-        opt = torch.optim.Adam(model.parameters(), lr=P["lr"], weight_decay=P["wd"])
+        opt = torch.optim.Adam(model.parameters(), lr=P["lr"], weight_decay=P["wd"], eps=P.get("eps", 1e-8))
     else:
         lstm1 = [p for n, p in model.named_parameters() if n.startswith("epoch_rnn.rnns.0.weight_ih")]
         rest = [p for n, p in model.named_parameters() if not n.startswith("epoch_rnn.rnns.0.weight_ih")]
@@ -257,11 +280,11 @@ def main():
         f"validation every {val_every} steps, device {device}")
 
     better = (lambda a, b: a < b) if P["select"] == "loss" else (lambda a, b: a > b)
-    t0, step, best, bad, stop = time.time(), 0, None, 0, False
+    t0, step, best, bad, stop, n_vals = time.time(), 0, None, 0, False, 0
     improved, bad_passes = False, 0
     probe = next(iter(DataLoader(SequenceDataset(data.nights["valid"] or train_n, L), batch_size=16)))
     mf = open(out / "metrics.jsonl", "a")
-    sat0 = saturation(model.eval(), probe[0].to(device), probe[2].to(device))
+    sat0 = sat(probe)
     log(f"saturation at init {sat0}")
     run_loss = []
     for ep in range(max_passes):
@@ -286,7 +309,7 @@ def main():
                        "train_loss": float(np.mean(run_loss[-val_every:]))}
                 if not args.overfit:
                     rec["valid"] = evaluate(model, data.nights["valid"], device, L, crit)
-                rec["sat"] = saturation(model.eval(), probe[0].to(device), probe[2].to(device))
+                rec["sat"] = sat(probe)
                 model.train()
                 rec["lr"] = opt.param_groups[0]["lr"]
                 if "valid" in rec:
@@ -297,16 +320,19 @@ def main():
                 score = rec["train_loss"] if args.overfit else (v["loss"] if P["select"] == "loss" else v["kappa"])
                 if args.overfit and P["select"] != "loss":
                     score = -score
+                st = rec["sat"]
                 log(f"step {step} pass {ep} loss {rec['train_loss']:.4f} val_loss {v.get('loss', float('nan')):.4f} "
-                    f"κ {v.get('kappa', float('nan')):.4f} sat L1 {rec['sat']['h_sat_L1']:.3f}/"
-                    f"{rec['sat']['gate_sat_L1']:.3f}")
+                    f"κ {v.get('kappa', float('nan')):.4f}"
+                    + (f" sat L1 {st['h_sat_L1']:.3f}/{st['gate_sat_L1']:.3f}" if st else ""))
+                n_vals += 1
                 if best is None or better(score, best):
                     best, bad, improved = score, 0, True
                     torch.save(model.state_dict(), out / "best.pt")
                 else:
                     bad += 1
                 # proof: patience in validations; phan: in passes, as the physioex Trainer (checked below)
-                if timeout or (not per_pass and bad >= args.patience) or step >= total_steps:
+                patience_on = n_vals >= P.get("min_vals", 0)
+                if timeout or (not per_pass and patience_on and bad >= args.patience) or step >= total_steps:
                     stop = True
                     break
             if step >= total_steps:
@@ -336,7 +362,7 @@ def main():
         final["valid_best"] = {"select": P["select"], "value": best}
         final["test_voting"] = voting_evaluate(model, data.nights["test"], device, L)
         final["test"] = final["test_voting"]
-        final["sat_best"] = saturation(model.eval(), probe[0].to(device), probe[2].to(device))
+        final["sat_best"] = sat(probe)
     run["final"] = final
     run["finished"] = time.strftime("%Y-%m-%dT%H:%M:%S")
     (out / "run.json").write_text(json.dumps(run, indent=2))

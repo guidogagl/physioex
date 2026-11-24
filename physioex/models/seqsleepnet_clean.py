@@ -233,6 +233,57 @@ class ChannelNet(nn.Module):
         out["logits"] = logits
         return logits, out
 
+    # --- block API: the steps of forward, one at a time, for the multimodal lockstep model (channelnet_mm) -------
+    # Shared with SleepTransformerChannel (sleeptransformer_clean.py); no parameters, so state_dicts are unchanged.
+    @property
+    def n_epoch_blocks(self) -> int:
+        return len(self.epoch_rnn.rnns)
+
+    @property
+    def n_seq_blocks(self) -> int:
+        return len(self.seq_rnn.rnns)
+
+    @property
+    def dim(self) -> int:
+        return self.clf.in_features
+
+    def stem(self, x: torch.Tensor, offset_db: Optional[torch.Tensor] = None):
+        """(B, L, 3000) -> (frame features (B*L, 29, nfilt), input record (B, L, 29, nfilt))."""
+        B, L, _ = x.shape
+        P = self.frontend(x)[..., self.bins]
+        off = None if offset_db is None else offset_db.view(B, 1, 1, 1)
+        xs = scale_db(self.filterbank(P, scale_db(P, off)), off)
+        return xs.reshape(B * L, xs.shape[2], -1), xs
+
+    def epoch_block(self, i: int, h: torch.Tensor):
+        """Epoch-encoder block i -> (output after LayerNorm, raw output before it)."""
+        raw, _ = self.epoch_rnn.rnns[i](h)
+        return self.epoch_rnn.norms[i](raw), raw
+
+    def drop_epoch(self, h):
+        return self.epoch_rnn.drop(h)
+
+    def pool(self, h: torch.Tensor, B: int, L: int):
+        """(B*L, 29, d) -> (epoch embedding (B, L, d), attention weights (B, L, 29))."""
+        em, alpha = self.attention(h, r_alphas=True)
+        return self.e_norm(em).view(B, L, -1), alpha.view(B, L, -1)
+
+    def drop_e(self, e):
+        return self.e_drop(e)
+
+    def seq_start(self, e):
+        return e
+
+    def seq_block(self, i: int, q: torch.Tensor):
+        raw, _ = self.seq_rnn.rnns[i](q)
+        return self.seq_rnn.norms[i](raw), raw
+
+    def drop_seq(self, q):
+        return self.seq_rnn.drop(q)
+
+    def head(self, q):
+        return self.clf(q)
+
 
 @torch.no_grad()
 def saturation(model: ChannelNet, x: torch.Tensor, offset_db: Optional[torch.Tensor] = None) -> Dict[str, float]:
