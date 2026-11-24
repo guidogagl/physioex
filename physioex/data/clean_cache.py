@@ -222,9 +222,11 @@ class MultiNight:
 
 
 def load_multimodal_night(root: Path, dataset: str, subject: str,
-                          modalities: Sequence[str] = ("EEG", "EOG", "EMG")) -> Tuple[Optional[MultiNight], str]:
+                          modalities: Sequence[str] = ("EEG", "EOG", "EMG"),
+                          pipe: Optional[str] = None) -> Tuple[Optional[MultiNight], str]:
     """One night with all modalities: truncated to the shortest of signals and labels (aligned from the first epoch),
-    margins trimmed where any modality is fully flat, labels masked where any modality is flat or partly flat."""
+    margins trimmed where any modality is fully flat, labels masked where any modality is flat or partly flat.
+    pipe: epoching-pipeline folder to use when a channel has several (e.g. "702cb90947921189", the one of MASS)."""
     lab = root / dataset / "labels" / f"{subject}.npy"
     if not lab.exists():
         return None, "no labels"
@@ -233,6 +235,8 @@ def load_multimodal_night(root: Path, dataset: str, subject: str,
     for m in modalities:
         sig = [p for p in (root / dataset / "signals" / subject).glob(f"{m}_clean_*/*/signal.npy")
                if p.parent.name != "night"]
+        if len(sig) > 1 and pipe is not None:      # several epoching pipelines: keep the requested one
+            sig = [p for p in sig if p.parent.name == pipe]
         if len(sig) != 1:
             return None, f"no {m}"
         fss[m] = float(json.loads((sig[0].parent / "signal.meta.json").read_text())["fs_out"])
@@ -240,6 +244,8 @@ def load_multimodal_night(root: Path, dataset: str, subject: str,
         if m != "EMG" and fss[m] != 100.0:
             return None, f"{m} fs {fss[m]}"
     n = min([len(y)] + [len(v) for v in xs.values()])
+    if n == 0:
+        return None, "empty"
     y = y[:n].copy()
     full = np.zeros(n, bool)
     part = np.zeros(n, bool)

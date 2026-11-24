@@ -69,6 +69,8 @@ def main():
     ap.add_argument("--datasets", nargs="+", required=True)
     ap.add_argument("--max-nights", type=int, default=300)
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--pipe", default="702cb90947921189",
+                    help="epoching pipeline used where a channel has several (the one of the MASS training data)")
     ap.add_argument("--out", required=True)
     ap.add_argument("--issue", default="xmai-lab/sleep-mechinterp#25")
     args = ap.parse_args()
@@ -97,7 +99,10 @@ def main():
         for j in order:
             if len(used) >= args.max_nights:
                 break
-            night, why = load_multimodal_night(root, ds, subjects[j], mods)
+            try:
+                night, why = load_multimodal_night(root, ds, subjects[j], mods, pipe=args.pipe)
+            except Exception as e:                      # unreadable night: count it, do not stop the dataset
+                night, why = None, f"error {type(e).__name__}"
             if night is None or (night.y >= 0).sum() == 0:
                 skipped[why] = skipped.get(why, 0) + 1
                 continue
