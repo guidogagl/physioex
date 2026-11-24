@@ -1,0 +1,25 @@
+{
+ "train": {
+  "benchmark": 4065,
+  "kept": 3841,
+  "not_in_cache": 7,
+  "missing_stage": 217
+ },
+ "valid": {
+  "benchmark": 100,
+  "kept": 90,
+  "not_in_cache": 1,
+  "missing_stage": 9
+ },
+ "test": {
+  "benchmark": 1639,
+  "kept": 1532,
+  "not_in_cache": 3,
+  "missing_stage": 104
+ },
+ "ratio": {
+  "train": 0.7031,
+  "valid": 0.0165,
+  "test": 0.2804
+ }
+}
