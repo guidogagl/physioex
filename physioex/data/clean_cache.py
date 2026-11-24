@@ -323,3 +323,21 @@ def multi_class_counts(nights: List[MultiNight]) -> np.ndarray:
     for nt in nights:
         c += np.bincount(nt.y[nt.y >= 0], minlength=5)
     return c
+
+
+class MultiRandomOffsetSequences(RandomOffsetSequences):
+    """``RandomOffsetSequences`` over ``MultiNight``: same windows, one time shift shared by all modalities
+    (they stay aligned): ({m: (L, 3000)}, (L,), {m: offset_db})."""
+
+    def __getitem__(self, j):
+        i, s = self.windows[j]
+        nt = self.nights[i]
+        E = next(iter(nt.x.values())).shape[1]
+        a = s * E
+        if self.max_shift > 0:
+            a += int(torch.randint(-self.max_shift, self.max_shift + 1, ()))
+            a = min(max(a, 0), (len(nt.y) - self.L) * E)
+        x = {m: torch.from_numpy(np.array(v.reshape(-1)[a:a + self.L * E], dtype=np.float32).reshape(self.L, E))
+             for m, v in nt.x.items()}
+        off = {m: torch.tensor(v, dtype=torch.float32) for m, v in nt.offset_db.items()}
+        return x, torch.from_numpy(nt.y[s:s + self.L]), off

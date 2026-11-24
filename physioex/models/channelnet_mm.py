@@ -136,6 +136,7 @@ class MultiChannelNet(nn.Module):
             h = self._connect(f"F{i + 1}", h, send_f)
             for m in self.mods:
                 out[f"{m}.L{i + 1}"] = h[m]
+                h[m] = self.branches[m].epoch_rnn.drop(h[m])      # branch dropout (identity unless p > 0)
 
         # attention pooling, epoch embedding, epoch-level connection
         e = {}
@@ -147,6 +148,7 @@ class MultiChannelNet(nn.Module):
         e = self._connect("E", e, send_e)
         for m in self.mods:
             out[f"{m}.e"] = e[m]
+            e[m] = self.branches[m].e_drop(e[m])
 
         # sequence encoder, layer by layer, with epoch-level connections
         q = e
@@ -159,6 +161,7 @@ class MultiChannelNet(nn.Module):
             q = self._connect(f"Q{i + 1}", q, send_e)
             for m in self.mods:
                 out[f"{m}.G{i + 1}"] = q[m]
+                q[m] = self.branches[m].seq_rnn.drop(q[m])
 
         aux = {m: self.branches[m].clf(q[m]) for m in self.mods}
         qs = [q[m] for m in self.mods]

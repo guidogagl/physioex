@@ -135,3 +135,48 @@ def test_multimodal_loader(tmp_path):
     xb, yb, ob = ds[0]
     assert set(xb) == set(MODALITIES) and xb["EMG"].shape == (20, 3000) and yb.shape == (20,)
     assert len(ds) == n - 2 - 20 + 1
+
+
+def test_branch_dropout_off_in_eval_and_active_in_train():
+    torch.manual_seed(0)
+    br = {m: ChannelNet(m, dropout=0.3).eval() for m in MODALITIES}
+    x, off = _inputs()
+    ref = {m: br[m](x[m], off[m])[0] for m in MODALITIES}
+    mm = MultiChannelNet(br, ("F", "E", "Q")).eval()
+    with torch.no_grad():
+        _, aux, _ = mm(x, off)
+    for m in MODALITIES:
+        torch.testing.assert_close(aux[m], ref[m], rtol=0, atol=1e-6)
+    mm.train()
+    with torch.no_grad():
+        assert not torch.allclose(mm(x, off)[0], mm(x, off)[0])
+
+
+def test_ssn3ch_baseline_shapes_and_scaling():
+    from physioex.models.seqsleepnet_3ch_clean import SeqSleepNet3chClean
+    x, off = _inputs(B=3, L=4)
+    net = SeqSleepNet3chClean(dropout=0.1)
+    net.fit_scaling([(x, off)])
+    s = (net.spectrogram(x, off) - net.mean[:, None, :]) / net.std[:, None, :]
+    assert s.shape == (3, 4, 3, 29, 129)
+    assert abs(float(s.mean())) < 1e-3 and abs(float(s.std()) - 1) < 0.05     # standardised on the fit data
+    net.eval()
+    logits, aux, _ = net(x, off)
+    assert logits.shape == (3, 4, 5) and aux == {}
+    assert "mean" in net.state_dict() and "std" in net.state_dict()
+
+
+def test_multi_random_offsets_aligned(tmp_path):
+    from physioex.data.clean_cache import MultiRandomOffsetSequences
+    rng = np.random.default_rng(1)
+    n = 50
+    base = rng.standard_normal((n, 3000))
+    for c in ("EEG", "EOG", "EMG"):
+        _write(tmp_path, "ds", "s1", c, base, 100.0)
+    (tmp_path / "ds" / "labels").mkdir()
+    np.save(tmp_path / "ds" / "labels" / "s1.npy", rng.integers(0, 5, n))
+    night, _ = load_multimodal_night(tmp_path, "ds", "s1")
+    ds = MultiRandomOffsetSequences([night], 20, max_shift=300, seed=0)
+    for j in range(len(ds)):
+        x, y, _ = ds[j]
+        torch.testing.assert_close(x["EEG"], x["EOG"])         # one shift shared by all modalities
