@@ -182,3 +182,12 @@ def test_sampler_batches_and_equal_budget_accounting():
                 assert (b["y"][i, n:] == -1).all() and (b["y"][i, :n] >= 0).all()
             if mix == "l20":
                 assert L == 20
+
+
+@pytest.mark.parametrize("config", list(CONFIGS))
+def test_optimiser_groups_partition_trainable_parameters(config):
+    wn = _wn(config)
+    groups = [wn.seq_parameters(), wn.head_parameters(), wn.gain_parameters()]
+    ids = [id(p) for g in groups for p in g]
+    assert len(ids) == len(set(ids))
+    assert set(ids) == {id(p) for p in wn.parameters() if p.requires_grad}

@@ -109,6 +109,7 @@ def main():
     ap.add_argument("--n-vals", type=int, default=30)
     ap.add_argument("--lr-seq", type=float, default=1e-5)
     ap.add_argument("--lr-head", type=float, default=1e-4)
+    ap.add_argument("--lr-gain", type=float, default=None, help="residual gains (default: --lr-head)")
     ap.add_argument("--warmup-frac", type=float, default=0.05)
     ap.add_argument("--aux", type=float, default=0.3)
     ap.add_argument("--occ-scale", type=float, default=0.5)
@@ -153,7 +154,8 @@ def main():
     budget = int(args.budget_passes * n_train_epochs)
     val_at = [int(budget * (i + 1) / args.n_vals) for i in range(args.n_vals)]
     groups = [{"params": ps, "lr": lr} for ps, lr in ((model.seq_parameters(), args.lr_seq),
-                                                      (model.head_parameters(), args.lr_head)) if ps]
+                                                      (model.head_parameters(), args.lr_head),
+                                                      (model.gain_parameters(), args.lr_gain or args.lr_head)) if ps]
     opt = torch.optim.Adam(groups)
 
     def lr_factor(frac):

@@ -107,8 +107,12 @@ class WholeNightNet(nn.Module):
 
     def head_parameters(self):
         ps = [] if self.freeze_seq else [p for m in self.mods for p in self.mm.branches[m].clf.parameters()]
-        ps += list(self.mm.fused.parameters()) + list(self.gain.parameters())
-        return ps + ([] if self.night is None else list(self.night.parameters()))
+        ps += list(self.mm.fused.parameters())
+        return ps + ([] if self.night is None else [p for n, p in self.night.named_parameters() if n != "c"])
+
+    def gain_parameters(self):
+        """Residual gains of the loops and of the night head (all initialised to 0)."""
+        return list(self.gain.parameters()) + ([] if self.night is None else [self.night.c])
 
     def train(self, mode: bool = True):
         super().train(mode)
