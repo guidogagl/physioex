@@ -321,7 +321,11 @@ def channel_pipelines(a: dict) -> dict:
 
 
 def model_from_args(a: dict):
-    """Untrained MSAE / MSVQ / MSAEFactor built from the ``args`` of a run's ``run.json``."""
+    """Untrained MSAE / MSVQ / MSAEFactor / PatchCodec built from the ``args`` of a run's ``run.json``."""
+    if a.get("model") == "patch_codec":
+        from physioex.models.patch_codec import build_from_args
+
+        return build_from_args(a)
     if a.get("model") == "psg_gen":
         from physioex.models.psg_gen.model import build_from_args
 
