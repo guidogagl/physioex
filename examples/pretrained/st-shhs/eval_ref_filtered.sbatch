@@ -13,4 +13,7 @@
 source /sofia/projects/2026_101/WORK/.venv/physioex-pip/bin/activate
 export PYTHONUNBUFFERED=1 HF_HUB_OFFLINE=1 PYTHONPATH=$CODE CUBLAS_WORKSPACE_CONFIG=:4096:8
 cd $CODE
-python examples/pretrained/st-shhs/eval_ref_filtered.py --out $OUT
+for S in $(seq 0 250 1750); do                    # fresh process per chunk: the dataset leaks open files across calls
+  python examples/pretrained/st-shhs/eval_ref_filtered.py --out $OUT --start $S --stop $((S + 250)) || exit 1
+done
+python examples/pretrained/st-shhs/eval_ref_filtered.py --out $OUT --merge
