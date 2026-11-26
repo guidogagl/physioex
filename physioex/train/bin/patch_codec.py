@@ -25,13 +25,14 @@ the period) and decoded for every prefix of levels. Metrics on the scored epochs
   the error within ±0.1 s of the patch centres, a window of the same width;
 * comb: whitened residual PSD at the multiples of 0.5 Hz (0.5-35 Hz) over the median of the
   neighbouring bins (±0.075-0.2 Hz), median over the lines <= 1.1 (the same ratio of ``x`` is the control).
-  Control added after the pilot (``on_over_off``): that median over the median of the same ratio off the
-  grid (0.25 Hz + multiples of 0.5 Hz), because ``x`` itself gave 1.066 on the grid in the pilot;
+  Since 26.11.2026 (decision after the pilot, xmai-lab/sleep-lens#19) the gate is ``on_over_off`` <= 1.1:
+  that median over the median of the same ratio off the grid (0.25 Hz + multiples of 0.5 Hz), because
+  ``x`` itself gave 1.066 on the grid in the pilot. The registered statistic stays in the report;
 * phase test (reported, no gate): whitened R^2 of 30 s epochs coded alone, real epochs against
   phase-randomised surrogates with the same amplitude spectrum.
 
-``L*`` is the shortest prefix that passes every gate (``L_star``; ``L_star_controlled`` with the two
-controls in place of the seam and comb ratios). Writes ``gates.json``: aggregate numbers only.
+``L*`` is the shortest prefix that passes every gate (``L_star``; ``L_star_registered`` with the comb
+statistic of the plan, ``L_star_controlled`` with both controls). Writes ``gates.json``: aggregate numbers only.
 
 ``dump``: the codes of whole main sleep periods for the autoregressive model (S3) and the evaluation
 (S5): ``--train`` takes the train nights of the run's splits (``splits_train_subset.json``), and
@@ -519,10 +520,11 @@ def _eval(a):
         lines, off = _line_ratios(pk, freqs), _line_ratios(pk, freqs, offset=0.25)
         comb_rel = float(np.median(lines) / np.median(off))
         ph = {n: float(1 - v[0] / max(v[1], 1e-12)) for n, v in phase[k].items()}
-        checks = {"f1": all(g0[r]["f1"] >= GATE["f1"] for r in RULES),
-                  "logpow": all(br["logpow"][b] >= GATE["logpow"] for b in GATE_BANDS),
-                  "seam": seam_ratio <= GATE["seam"], "comb": float(np.median(lines)) <= GATE["comb"]}
-        controlled = {**checks, "seam": seam_centre <= GATE["seam"], "comb": comb_rel <= GATE["comb"]}
+        registered = {"f1": all(g0[r]["f1"] >= GATE["f1"] for r in RULES),
+                      "logpow": all(br["logpow"][b] >= GATE["logpow"] for b in GATE_BANDS),
+                      "seam": seam_ratio <= GATE["seam"], "comb": float(np.median(lines)) <= GATE["comb"]}
+        checks = {**registered, "comb": comb_rel <= GATE["comb"]}  # binding since 26.11.2026
+        controlled = {**checks, "seam": seam_centre <= GATE["seam"]}
         res["prefix"][str(k)] = {"bits_per_patch": model.bits_per_patch(k), "gate0": g0, "gate0_per_unit": per_unit,
                                  "band_r2": br, "seam_ratio": seam_ratio, "seam_vs_centre": seam_centre,
                                  "comb": {"median": float(np.median(lines)), "max": float(lines.max()),
@@ -531,15 +533,18 @@ def _eval(a):
                                  "phase_test": {"r2_w_real": ph["real"], "r2_w_surrogate": ph["surr"],
                                                 "gap": ph["real"] - ph["surr"]},
                                  "checks": checks, "pass": all(checks.values()),
+                                 "checks_registered": registered, "pass_registered": all(registered.values()),
                                  "checks_controlled": controlled, "pass_controlled": all(controlled.values())}
         print(f"[patch_codec eval] L{k}: " + " ".join(f"{r} {g0[r]['f1']:.3f}" for r in RULES)
               + f" | logpow min {min(br['logpow'][b] for b in GATE_BANDS):.3f} | seam {seam_ratio:.3f}"
               + f" (vs centre {seam_centre:.3f}) | comb {np.median(lines):.3f} (on/off {comb_rel:.3f})"
               + f" | phase gap {ph['real'] - ph['surr']:+.3f} | pass {all(checks.values())}"
-              + f" (controlled {all(controlled.values())})",
+              + f" (registered {all(registered.values())}, controlled {all(controlled.values())})",
               flush=True)
     passing = [k for k in prefixes if res["prefix"][str(k)]["pass"]]
     res["L_star"] = min(passing) if passing else None
+    passing_r = [k for k in prefixes if res["prefix"][str(k)]["pass_registered"]]
+    res["L_star_registered"] = min(passing_r) if passing_r else None
     passing_c = [k for k in prefixes if res["prefix"][str(k)]["pass_controlled"]]
     res["L_star_controlled"] = min(passing_c) if passing_c else None
     res["minutes"] = round((time.time() - t0) / 60, 1)
