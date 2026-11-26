@@ -71,7 +71,9 @@ def main():
     ap.add_argument("--models", nargs="+", required=True, help="name=run_folder; the first is the reference")
     ap.add_argument("--root", required=True)
     ap.add_argument("--datasets", nargs="+", required=True)
-    ap.add_argument("--max-nights", type=int, default=300)
+    ap.add_argument("--max-nights", type=int, default=300, help="0 = all nights")
+    ap.add_argument("--split-file", default=None, help="in-domain mode: score only the --split-part subjects of this split")
+    ap.add_argument("--split-part", default="test")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--pipe", default="702cb90947921189",
                     help="epoching pipeline used where a channel has several (the one of the MASS training data)")
@@ -97,11 +99,14 @@ def main():
             continue
         t0 = time.time()
         subjects = sorted(p.name for p in (root / ds / "signals").iterdir())
+        if args.split_file:                                  # in-domain test nights of the training split
+            part = set(json.loads(Path(args.split_file).read_text())[ds][args.split_part])
+            subjects = [s for s in subjects if s in part]
         order = np.random.default_rng(args.seed).permutation(len(subjects))
         preds = {n: [] for n in names}
         used, skipped = [], {}
         for j in order:
-            if len(used) >= args.max_nights:
+            if args.max_nights and len(used) >= args.max_nights:
                 break
             try:
                 night, why = load_multimodal_night(root, ds, subjects[j], mods, pipe=args.pipe)
@@ -148,6 +153,9 @@ def main():
                        "host": socket.gethostname(), "job_id": os.environ.get("SLURM_JOB_ID"),
                        "model_runs": {n: str(models[n][0]) for n in names}})
         f_out.write_text(json.dumps(result, indent=1))
+        np.savez_compressed(out / f"{ds}_preds.npz", ids=np.array(used),
+                            **{f"{n}|{s}|{k}": preds[n][i][j] for n in names for i, s in enumerate(used)
+                               for j, k in enumerate("yp")})
         line = " | ".join(f"{n} κ {result['models'][n]['kappa']:.4f}" for n in names)
         print(f"{ds} ({len(used)} nights, {result['minutes']} min): {line}", flush=True)
     print("DONE", flush=True)
