@@ -69,6 +69,9 @@ def main(argv=None):
     f = sub.add_parser("fit")
     f.add_argument("--items", required=True, help="comma-separated pool items (physioex.data.merged)")
     f.add_argument("--splits", required=True)
+    f.add_argument("--train-subjects", type=int, default=0,
+                   help="keep this many train nights over the items, the same number per item "
+                        "(<out>/splits_train_subset.json, reused by the dump); 0: all")
     f.add_argument("--cache-dir", default=None)
     f.add_argument("--local-cache", action="store_true", help="copy the train/val cache files to node-local disk")
     f.add_argument("--channel", default="EEG_clean", choices=("EEG_clean",))
@@ -117,6 +120,11 @@ def main(argv=None):
     os.makedirs(a.out, exist_ok=True)
     torch.manual_seed(a.fold)
     t0 = time.time()
+    if a.train_subjects:
+        sub, quota = subset_splits(json.load(open(a.splits)), a.items.split(","), a.train_subjects, a.fold)
+        a.splits_src, a.splits = a.splits, os.path.join(a.out, "splits_train_subset.json")
+        json.dump(sub, open(a.splits, "w"), indent=1)
+        print(f"[patch_codec] train nights per item {quota} -> {a.splits}", flush=True)
     local = None
     if a.local_cache:
         from physioex.data.merged import stage_local
@@ -132,6 +140,30 @@ def main(argv=None):
     finally:
         if local:
             shutil.rmtree(local, ignore_errors=True)
+
+
+def subset_splits(splits: dict, items, total: int, seed: int = 0):
+    """Copy of ``splits`` whose train lists keep ``total`` nights over the pool ``items``, the same
+    number per item (an item with fewer ids gives all of them and the rest is shared by the others),
+    drawn uniformly within the item, hence in proportion to its sites. val and test are unchanged.
+    Returns ``(splits, ids per item)``."""
+    from physioex.data.merged import UNITS
+
+    rng = np.random.default_rng(seed)
+    sites = {it: sorted({u["site"] for u in UNITS if u.get("item") == it and u["site"] in splits}) for it in items}
+    avail = {it: sum(len(splits[s]["train"]) for s in sites[it]) for it in items}
+    quota, left, todo = {}, total, sorted(items, key=lambda it: avail[it])
+    while todo:
+        it = todo.pop(0)
+        quota[it] = min(avail[it], left // (len(todo) + 1))
+        left -= quota[it]
+    out = json.loads(json.dumps(splits))
+    for it in items:
+        ids = [tuple(x) for s in sites[it] for x in splits[s]["train"]]  # [unit, night id]
+        keep = {ids[i] for i in rng.choice(len(ids), quota[it], replace=False)}
+        for s in sites[it]:
+            out[s]["train"] = [x for x in splits[s]["train"] if tuple(x) in keep]
+    return out, quota
 
 
 @torch.no_grad()

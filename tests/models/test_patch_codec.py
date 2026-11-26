@@ -174,3 +174,22 @@ def test_overfit_sinusoids_without_seams():
     edge = (torch.arange(800) < PATCH) | (torch.arange(800) >= 800 - PATCH)  # crop edges see zero padding
     assert float(r2) > 0.9
     assert err[seam & ~edge].mean() <= 1.5 * err[~seam & ~edge].mean()
+
+
+def test_subset_splits_same_number_per_item():
+    from physioex.train.bin.patch_codec import subset_splits
+
+    def unit(name, n):
+        return {"train": [[name, f"{name}-{i}"] for i in range(n)], "val": [[name, "v"]], "test": [[name, "t"]]}
+
+    sp = {"dcsm": unit("dcsm", 10), "hmc": unit("hmc", 3), "mass_ss02": unit("mass_ss02", 4),
+          "mass_ss03": unit("mass_ss03", 6), "mesa": unit("mesa", 50)}
+    sub, quota = subset_splits(sp, ["dcsm", "hmc", "mass"], 12, seed=0)
+    assert quota == {"hmc": 3, "dcsm": 4, "mass": 5}  # ties keep the item order; the remainder goes last
+    assert len(sub["mass_ss02"]["train"]) + len(sub["mass_ss03"]["train"]) == 5
+    for k in sp:
+        assert sub[k]["val"] == sp[k]["val"] and sub[k]["test"] == sp[k]["test"]
+        assert all(x in sp[k]["train"] for x in sub[k]["train"])
+        idx = [sp[k]["train"].index(x) for x in sub[k]["train"]]
+        assert idx == sorted(idx)  # original order kept
+    assert sub["mesa"] == sp["mesa"]  # not an item: untouched
