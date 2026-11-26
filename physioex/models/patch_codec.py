@@ -10,7 +10,10 @@ One residual-VQ code stack per non-overlapping 2 s patch (200 samples at 100 Hz)
   ``levels`` levels, EMA codebooks, dead-code restart, quantizer dropout (with probability
   ``q_dropout`` a random prefix of levels), so one model serves every prefix;
 * **decoder**: the latent of each patch is unfolded into 5 frames of 0.4 s, then convolutions over the
-  whole sequence of patches upsample to 100 Hz (strides 5, 4, 2). The receptive field is shorter than
+  whole sequence of patches upsample to 100 Hz (strides 5, 4, 2). Each upsampling step repeats every sample
+  ``s`` times and convolves with ``s`` or ``s + 1`` taps (``upsample="resize"``). The transposed convolution
+  of the pilot of 26.11.2026 (``"convT"``) turned the mean of its input into a fixed pattern with the period
+  of its stride, seen as lines at 12.5 and 25 Hz in the residual. The receptive field is shorter than
   ±200 samples, so the output inside patch ``i`` depends only on the codes of patches ``i - 1``, ``i``
   and ``i + 1`` (``tests/models/test_patch_codec.py``). An edit of the codes of a span changes the
   signal only within that span ± 1 patch. Adjacent patches are drawn by the same convolutions across
@@ -182,22 +185,32 @@ class PatchEncoder(nn.Module):
         return self.out(self.down(self.stem(p[:, None])))
 
 
-def _up(c_in: int, c_out: int, s: int, dilations) -> nn.Sequential:
-    p = (s + 1) // 2
-    return nn.Sequential(nn.ELU(), nn.ConvTranspose1d(c_in, c_out, 2 * s, stride=s, padding=p, output_padding=2 * p - s),
-                         *[_ResUnit(c_out, d) for d in dilations])
+def _up(c_in: int, c_out: int, s: int, dilations, mode: str = "resize") -> nn.Sequential:
+    """Upsampling by ``s``. ``"resize"``: repeat each sample ``s`` times, then a convolution of ``s`` taps
+    (``s + 1`` when ``s`` is even): a constant input stays constant and each output sees at most two input
+    samples. ``"convT"``: transposed convolution of ``2 s`` taps (pilot of 26.11.2026)."""
+    if mode == "resize":
+        k = s if s % 2 else s + 1
+        up = [nn.Upsample(scale_factor=s, mode="nearest"), nn.Conv1d(c_in, c_out, k, padding=k // 2)]
+    elif mode == "convT":
+        p = (s + 1) // 2
+        up = [nn.ConvTranspose1d(c_in, c_out, 2 * s, stride=s, padding=p, output_padding=2 * p - s)]
+    else:
+        raise ValueError(f"upsample {mode!r}: 'resize' or 'convT'")
+    return nn.Sequential(nn.ELU(), *up, *[_ResUnit(c_out, d) for d in dilations])
 
 
 class PatchDecoder(nn.Module):
     """``(B, P, dim) -> (B, P * 200)``, receptive field shorter than ±200 samples."""
 
-    def __init__(self, width: int = 64, dim: int = 128):
+    def __init__(self, width: int = 64, dim: int = 128, upsample: str = "resize"):
         super().__init__()
         ch = [width * 2 ** i for i in range(len(DEC_STRIDES), -1, -1)]
         self.c0 = ch[0]
         self.unfold = nn.Linear(dim, ch[0] * FRAMES)
         self.frame = nn.Conv1d(ch[0], ch[0], 3, padding=1)
-        self.up = nn.Sequential(*[_up(ch[i], ch[i + 1], s, DEC_DILATIONS[i]) for i, s in enumerate(DEC_STRIDES)])
+        self.up = nn.Sequential(*[_up(ch[i], ch[i + 1], s, DEC_DILATIONS[i], upsample)
+                                  for i, s in enumerate(DEC_STRIDES)])
         self.post = nn.Sequential(nn.ELU(), nn.Conv1d(ch[-1], 1, 7, padding=3))
 
     def forward(self, z: torch.Tensor) -> torch.Tensor:
@@ -211,7 +224,7 @@ class PatchCodec(nn.Module):
 
     def __init__(self, width: int = 64, dim: int = 128, codes: int = 1024, levels: int = 8,
                  q_dropout: float = 0.5, order: int = 32, stft_weight: float = 0.1, restart_after: int = 30,
-                 crop_sec: float = 16.0, fs: int = FS):
+                 crop_sec: float = 16.0, upsample: str = "resize", fs: int = FS):
         super().__init__()
         assert fs == FS, "PatchCodec: 100 Hz only"
         self.fs, self.patch = fs, PATCH
@@ -221,7 +234,8 @@ class PatchCodec(nn.Module):
         self.whitener = Whitener(order, fs)
         self.encoder = PatchEncoder(width, dim, fs)
         self.rvq = ResidualVQ(levels, codes, dim, restart_after=restart_after)
-        self.decoder = PatchDecoder(width, dim)
+        self.upsample = upsample
+        self.decoder = PatchDecoder(width, dim, upsample)
         self.bypass_vq = False
 
     def _k(self) -> int:
@@ -381,4 +395,4 @@ def build_from_args(a: dict) -> PatchCodec:
     """Untrained :class:`PatchCodec` from the ``args`` of a ``run.json`` (``model: patch_codec``)."""
     return PatchCodec(width=a["width"], dim=a["dim"], codes=a["codes"], levels=a["levels"], q_dropout=a["q_dropout"],
                       order=a["order"], stft_weight=a["stft_weight"], restart_after=a["restart_after"],
-                      crop_sec=a["crop_sec"])
+                      crop_sec=a["crop_sec"], upsample=a.get("upsample", "convT"))  # no key: runs before 27.11.2026

@@ -65,9 +65,10 @@ def test_encoder_is_local_to_the_patch():
     assert torch.all(changed[[0, 1, 3, 4, 5]] == 0)
 
 
-def test_decoder_receptive_field_is_one_patch():
+@pytest.mark.parametrize("upsample", ["resize", "convT"])
+def test_decoder_receptive_field_is_one_patch(upsample):
     """Output inside patch i depends on the codes of i - 1, i, i + 1 only (exact locality of edits)."""
-    m = PatchCodec(width=8, dim=16, codes=32, levels=2).eval()
+    m = PatchCodec(width=8, dim=16, codes=32, levels=2, upsample=upsample).eval()
     with torch.no_grad():
         for p in m.decoder.parameters():  # break the ELU near-linearity of a fresh init a little
             p.add_(0.05 * torch.randn_like(p))
@@ -79,6 +80,34 @@ def test_decoder_receptive_field_is_one_patch():
     per_patch = d.amax(1)
     assert torch.all(per_patch[[0, 1, 2, 6, 7, 8]] <= 1e-6 * per_patch.max())
     assert torch.all(per_patch[[3, 4, 5]] > 0)
+
+
+def test_resize_upsampling_keeps_a_constant_constant():
+    """A transposed convolution draws a pattern with the period of its stride from a constant input (the
+    12.5 and 25 Hz lines of the pilot); repetition followed by a convolution does not."""
+    from physioex.models.patch_codec import _up
+
+    torch.manual_seed(0)
+    x = torch.full((1, 4, 30), 0.7)
+    with torch.no_grad():
+        y_r = _up(4, 4, 4, (), "resize")(x)
+        y_t = _up(4, 4, 4, (), "convT")(x)
+    assert y_r.shape == y_t.shape == (1, 4, 120)
+    assert y_r[..., 8:-8].std(-1).max() < 1e-6
+    assert y_t[..., 8:-8].std(-1).max() > 1e-3
+
+
+def test_line_ratios_on_and_off_the_grid():
+    from physioex.train.bin.patch_codec import COMB_SEG, _line_ratios, _welch_sum
+
+    g = torch.Generator().manual_seed(0)
+    t = torch.arange(200_000) / FS
+    x = torch.randn(200_000, generator=g) + 0.1 * torch.sin(2 * np.pi * 25 * t)
+    p, c = _welch_sum(x)
+    f = np.fft.rfftfreq(COMB_SEG, 1 / FS)
+    on, off = _line_ratios(p / c, f), _line_ratios(p / c, f, offset=0.25)
+    assert on[49] > 3 and off.max() < 2  # 25 Hz is the 50th line
+    assert abs(np.median(on) - 1) < 0.05 and abs(np.median(off) - 1) < 0.05
 
 
 def test_levinson_min_phase_and_whitening_flattens_the_spectrum():

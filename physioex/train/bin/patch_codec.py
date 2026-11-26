@@ -21,13 +21,17 @@ the period) and decoded for every prefix of levels. Metrics on the scored epochs
   which also gives the R^2 with phase, of the amplitude, on the grid shifted by 0.5 s and per 5 s)
   >= 0.9 on the bands 1 ... 17-30 Hz, on ``--per-night`` random scored epochs of every night;
 * seams: whitened squared error within ±0.1 s of the patch boundaries over the error inside the
-  patches <= 1.1;
+  patches <= 1.1. Control added after the pilot of 26.11.2026 (``seam_vs_centre``): the same error over
+  the error within ±0.1 s of the patch centres, a window of the same width;
 * comb: whitened residual PSD at the multiples of 0.5 Hz (0.5-35 Hz) over the median of the
-  neighbouring bins (±0.075-0.2 Hz), median over the lines <= 1.1 (the same ratio of ``x`` is the control);
+  neighbouring bins (±0.075-0.2 Hz), median over the lines <= 1.1 (the same ratio of ``x`` is the control).
+  Control added after the pilot (``on_over_off``): that median over the median of the same ratio off the
+  grid (0.25 Hz + multiples of 0.5 Hz), because ``x`` itself gave 1.066 on the grid in the pilot;
 * phase test (reported, no gate): whitened R^2 of 30 s epochs coded alone, real epochs against
   phase-randomised surrogates with the same amplitude spectrum.
 
-``L*`` is the shortest prefix that passes every gate. Writes ``gates.json``: aggregate numbers only.
+``L*`` is the shortest prefix that passes every gate (``L_star``; ``L_star_controlled`` with the two
+controls in place of the seam and comb ratios). Writes ``gates.json``: aggregate numbers only.
 
 ``dump``: the codes of whole main sleep periods for the autoregressive model (S3) and the evaluation
 (S5): ``--train`` takes the train nights of the run's splits (``splits_train_subset.json``), and
@@ -104,6 +108,8 @@ def main(argv=None):
     f.add_argument("--q-dropout", type=float, default=0.5)
     f.add_argument("--order", type=int, default=32, help="order of the LPC whitening filter")
     f.add_argument("--stft-weight", type=float, default=0.1)
+    f.add_argument("--upsample", choices=("resize", "convT"), default="resize",
+                   help="decoder upsampling: repeat + convolution, or transposed convolution (pilot 26.11.2026)")
     f.add_argument("--restart-after", type=int, default=30)
     f.add_argument("--crop-sec", type=float, default=16.0)
     f.add_argument("--whiten-batches", type=int, default=50)
@@ -227,7 +233,8 @@ def _fit(a, t0):
     tr, n_tr, va, n_va = _merged_loaders(a, md, ds)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = PatchCodec(width=a.width, dim=a.dim, codes=a.codes, levels=a.levels, q_dropout=a.q_dropout, order=a.order,
-                       stft_weight=a.stft_weight, restart_after=a.restart_after, crop_sec=a.crop_sec).to(device)
+                       stft_weight=a.stft_weight, restart_after=a.restart_after, crop_sec=a.crop_sec,
+                       upsample=a.upsample).to(device)
     n_par = sum(p.numel() for p in model.parameters())
     print(f"[patch_codec] windows: train {n_tr}, valid {n_va}; {n_par / 1e6:.2f} M parameters, "
           f"{model.bits_per_patch()} bits per 2 s patch at {a.levels} levels", flush=True)
@@ -377,13 +384,14 @@ def _dump(a):
     print("[patch_codec dump] DONE", flush=True)
 
 
-def _line_ratios(psd: np.ndarray, freqs: np.ndarray, base: float = 0.5, f_max: float = 35.0):
-    """PSD at ``k * base`` Hz over the median of the bins at ±0.075-0.2 Hz, for ``k * base <= f_max``."""
+def _line_ratios(psd: np.ndarray, freqs: np.ndarray, base: float = 0.5, f_max: float = 35.0, offset: float = 0.0):
+    """PSD at ``k * base - offset`` Hz over the median of the bins at ±0.075-0.2 Hz, for ``k * base <= f_max``
+    (``offset=0.25``: the same statistic off the grid, as a control)."""
     df = freqs[1] - freqs[0]
     near = [j for j in range(int(round(0.075 / df)), int(round(0.2 / df)) + 1)]
     out = []
     for k in range(1, int(f_max / base) + 1):
-        i = int(round(k * base / df))
+        i = int(round((k * base - offset) / df))
         nb = [psd[i + s * j] for j in near for s in (-1, 1) if 0 <= i + s * j < len(psd)]
         out.append(float(psd[i] / np.median(nb)))
     return np.array(out)
@@ -431,7 +439,7 @@ def _eval(a):
     W = model.whitener
     R = len(RULES)
     cnt = {k: {"all": np.zeros((R, 3))} for k in prefixes}  # tp, fp, fn per rule
-    seam = {k: np.zeros(4) for k in prefixes}  # seam sum, seam n, interior sum, interior n
+    seam = {k: np.zeros(6) for k in prefixes}  # seam sum, n; interior sum, n; patch-centre sum, n (control)
     comb = {k: [0.0, 0] for k in prefixes}
     comb_x = [0.0, 0]
     phase = {k: {"real": np.zeros(2), "surr": np.zeros(2)} for k in prefixes}  # SSE, SST
@@ -452,6 +460,7 @@ def _eval(a):
         in_scored[sc] = True
         in_scored = in_scored.repeat_interleave(3000)
         near = ((pos % model.patch) < SEAM) | ((pos % model.patch) >= model.patch - SEAM)
+        centre = ((pos % model.patch) >= model.patch // 2 - SEAM) & ((pos % model.patch) < model.patch // 2 + SEAM)
         xw = W(sig[None])[0]
         p_, n_ = _welch_sum(xw)
         comb_x[0], comb_x[1] = comb_x[0] + p_, comb_x[1] + n_
@@ -471,7 +480,8 @@ def _eval(a):
             cnt[k][unit] += c
             ew = (W(h[None])[0] - xw).pow(2)
             seam[k] += [float(ew[near & in_scored].sum()), int((near & in_scored).sum()),
-                        float(ew[~near & in_scored].sum()), int((~near & in_scored).sum())]
+                        float(ew[~near & in_scored].sum()), int((~near & in_scored).sum()),
+                        float(ew[centre & in_scored].sum()), int((centre & in_scored).sum())]
             p_, n_ = _welch_sum(W(h[None])[0] - xw)
             comb[k][0], comb[k][1] = comb[k][0] + p_, comb[k][1] + n_
             sub_h[k].append(H[sub].cpu().numpy())
@@ -485,11 +495,13 @@ def _eval(a):
 
     freqs = np.fft.rfftfreq(COMB_SEG, 1 / model.fs)
     xs = np.concatenate(sub_x)
-    ctrl = _line_ratios(comb_x[0] / max(comb_x[1], 1), freqs)
+    px = comb_x[0] / max(comb_x[1], 1)
+    ctrl, ctrl_off = _line_ratios(px, freqs), _line_ratios(px, freqs, offset=0.25)
     res = {"run": os.path.abspath(a.run), "n_nights": len(used),
            "units": {u: sum(1 for n in used if n.startswith(u + "/")) for u in a.units.split(",")},
            "n_band_epochs": int(len(xs)), "gate": {**GATE, "bands": GATE_BANDS},
-           "comb_control_x": {"median": float(np.median(ctrl)), "max": float(ctrl.max())}, "prefix": {}}
+           "comb_control_x": {"median": float(np.median(ctrl)), "max": float(ctrl.max()),
+                              "median_offgrid": float(np.median(ctrl_off))}, "prefix": {}}
 
     def f1(c):
         tp, fp, fn = c
@@ -502,29 +514,39 @@ def _eval(a):
         per_unit = {u: {r: f1(v[i]) for i, r in enumerate(RULES)} for u, v in cnt[k].items() if u != "all"}
         s = seam[k]
         seam_ratio = float((s[0] / max(s[1], 1)) / max(s[2] / max(s[3], 1), 1e-12))
-        lines = _line_ratios(comb[k][0] / max(comb[k][1], 1), freqs)
+        seam_centre = float((s[0] / max(s[1], 1)) / max(s[4] / max(s[5], 1), 1e-12))
+        pk = comb[k][0] / max(comb[k][1], 1)
+        lines, off = _line_ratios(pk, freqs), _line_ratios(pk, freqs, offset=0.25)
+        comb_rel = float(np.median(lines) / np.median(off))
         ph = {n: float(1 - v[0] / max(v[1], 1e-12)) for n, v in phase[k].items()}
         checks = {"f1": all(g0[r]["f1"] >= GATE["f1"] for r in RULES),
                   "logpow": all(br["logpow"][b] >= GATE["logpow"] for b in GATE_BANDS),
                   "seam": seam_ratio <= GATE["seam"], "comb": float(np.median(lines)) <= GATE["comb"]}
+        controlled = {**checks, "seam": seam_centre <= GATE["seam"], "comb": comb_rel <= GATE["comb"]}
         res["prefix"][str(k)] = {"bits_per_patch": model.bits_per_patch(k), "gate0": g0, "gate0_per_unit": per_unit,
-                                 "band_r2": br, "seam_ratio": seam_ratio,
+                                 "band_r2": br, "seam_ratio": seam_ratio, "seam_vs_centre": seam_centre,
                                  "comb": {"median": float(np.median(lines)), "max": float(lines.max()),
-                                          "worst_hz": float(0.5 * (1 + int(lines.argmax())))},
+                                          "worst_hz": float(0.5 * (1 + int(lines.argmax()))),
+                                          "median_offgrid": float(np.median(off)), "on_over_off": comb_rel},
                                  "phase_test": {"r2_w_real": ph["real"], "r2_w_surrogate": ph["surr"],
                                                 "gap": ph["real"] - ph["surr"]},
-                                 "checks": checks, "pass": all(checks.values())}
+                                 "checks": checks, "pass": all(checks.values()),
+                                 "checks_controlled": controlled, "pass_controlled": all(controlled.values())}
         print(f"[patch_codec eval] L{k}: " + " ".join(f"{r} {g0[r]['f1']:.3f}" for r in RULES)
               + f" | logpow min {min(br['logpow'][b] for b in GATE_BANDS):.3f} | seam {seam_ratio:.3f}"
-              + f" | comb {np.median(lines):.3f} | phase gap {ph['real'] - ph['surr']:+.3f} | pass {all(checks.values())}",
+              + f" (vs centre {seam_centre:.3f}) | comb {np.median(lines):.3f} (on/off {comb_rel:.3f})"
+              + f" | phase gap {ph['real'] - ph['surr']:+.3f} | pass {all(checks.values())}"
+              + f" (controlled {all(controlled.values())})",
               flush=True)
     passing = [k for k in prefixes if res["prefix"][str(k)]["pass"]]
     res["L_star"] = min(passing) if passing else None
+    passing_c = [k for k in prefixes if res["prefix"][str(k)]["pass_controlled"]]
+    res["L_star_controlled"] = min(passing_c) if passing_c else None
     res["minutes"] = round((time.time() - t0) / 60, 1)
     res["git_sha"] = _git("rev-parse", "HEAD")
     out = a.out or os.path.join(a.run, "gates.json")
     json.dump(res, open(out, "w"), indent=1)
-    print(f"[patch_codec eval] L* = {res['L_star']} -> {out}", flush=True)
+    print(f"[patch_codec eval] L* = {res['L_star']} (controlled {res['L_star_controlled']}) -> {out}", flush=True)
     print("[patch_codec eval] DONE", flush=True)
 
 
