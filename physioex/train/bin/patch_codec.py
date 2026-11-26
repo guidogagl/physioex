@@ -3,6 +3,7 @@
     python -m physioex.train.bin.patch_codec fit --items shhs,mesa,... --splits S.json --cache-dir C \\
         [--local-cache] --out RUN [--levels 8 --steps-per-epoch 5000 --epochs 30 --batch 128]
     python -m physioex.train.bin.patch_codec eval --run RUN [--cache-dir C] [--per-unit 10] [--prefixes 1 2 4 8]
+    python -m physioex.train.bin.patch_codec dump --run RUN [--train] [--nights-from DUMP/meta.json] [--out RUN/dump]
 
 ``fit``: whitening filter on the training pool (``whitener.json``), then encoder, RVQ and decoder
 together on 16 s crops at a random alignment (site-balanced windows of the train split; validation
@@ -27,6 +28,15 @@ the period) and decoded for every prefix of levels. Metrics on the scored epochs
   phase-randomised surrogates with the same amplitude spectrum.
 
 ``L*`` is the shortest prefix that passes every gate. Writes ``gates.json``: aggregate numbers only.
+
+``dump``: the codes of whole main sleep periods for the autoregressive model (S3) and the evaluation
+(S5): ``--train`` takes the train nights of the run's splits (``splits_train_subset.json``), and
+``--nights-from`` takes the nights of an existing dump (``concept_scan``: pool test, MASS SS01,
+DREAMS). Every night is coded on 4 patch grids shifted by 0, 0.5, 1 and 1.5 s (``OFFSETS``), which
+together cover the 0.5 s token grid. One ``<out>/<unit>/<sid>.npz`` per night: ``c0``, ``c50``,
+``c100``, ``c150`` ``(P, levels)`` int16 codes (patch ``p`` of grid ``o`` starts at sample ``o + 200 p``
+of the period), ``e0`` (first epoch of the period in the recording), ``n`` (samples of the period)
+and ``y`` (stage of every epoch of the period, -1 when not scored); ``<out>/meta.json``.
 """
 import argparse
 import json
@@ -112,9 +122,20 @@ def main(argv=None):
     e.add_argument("--prefixes", type=int, nargs="*", default=None)
     e.add_argument("--seed", type=int, default=0)
     e.add_argument("--out", default=None, help="default: <run>/gates.json")
+    d = sub.add_parser("dump")
+    d.add_argument("--run", required=True)
+    d.add_argument("--train", action="store_true", help="train nights of the run's splits (pool items)")
+    d.add_argument("--nights-from", default=None, help="meta.json of a dump whose nights to code (unit/sid keys)")
+    d.add_argument("--splits", default=None, help="default: the run's")
+    d.add_argument("--cache-dir", default=None, help="default: the run's source cache")
+    d.add_argument("--levels", type=int, default=None, help="default: all the levels of the model")
+    d.add_argument("--max-nights", type=int, default=0, help="per group (smoke tests); 0: all")
+    d.add_argument("--out", default=None, help="default: <run>/dump")
     a = ap.parse_args(argv)
     if a.cmd == "eval":
         return _eval(a)
+    if a.cmd == "dump":
+        return _dump(a)
     a.model, a.dataset, a.load_fs, a.fs, a.root, a.resample = "patch_codec", None, None, None, None, None
     a.cache_dir_src = a.cache_dir or os.environ.get("PHYSIOEX_CACHE_DIR")
     os.makedirs(a.out, exist_ok=True)
@@ -281,6 +302,79 @@ def decode_signal(model, codes: torch.Tensor, chunk: int = 2048, margin: int = 2
         n = min(chunk, P - s)
         out.append(y[(s - lo) * model.patch:(s - lo + n) * model.patch])
     return torch.cat(out)
+
+
+OFFSETS = (0, 50, 100, 150)  # samples: 4 shifts of the 2 s patch grid, one per 0.5 s
+
+
+def _dump(a):
+    from physioex.data.datasets import get_dataset
+    from physioex.data.merged import BY_NAME, UNITS, cached_subjects
+    from physioex.models.recon_eval import channel_pipelines
+    from physioex.train.bin.pretrain_combo import Nights, open_unit
+
+    t0 = time.time()
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    run, model = load_codec(a.run, device)
+    ra = run["args"]
+    levels = a.levels or model.max_levels
+    cache = a.cache_dir or ra.get("cache_dir_src") or ra.get("cache_dir")
+    out = a.out or os.path.join(a.run, "dump")
+    os.makedirs(out, exist_ok=True)
+    jobs = []  # (group, unit, sid)
+    if a.train:
+        sp = json.load(open(a.splits or ra["splits"]))
+        sites = sorted({u["site"] for it in ra["items"].split(",") for u in UNITS
+                        if u.get("item") == it and u["site"] in sp})
+        tr = [("train", u, s) for site in sites for u, s in sp[site]["train"]]
+        jobs += tr[: a.max_nights] if a.max_nights else tr
+    if a.nights_from:
+        ev = [("eval",) + tuple(k.split("/", 1)) for k in sorted(json.load(open(a.nights_from))["nights"])]
+        jobs += ev[: a.max_nights] if a.max_nights else ev
+    mp = os.path.join(out, "meta.json")
+    meta = json.load(open(mp)) if os.path.exists(mp) else {"nights": {}}
+    meta.update({"run": os.path.abspath(a.run), "git_sha": _git("rev-parse", "HEAD"), "levels": levels,
+                 "n_codes": model.n_codes, "offsets": list(OFFSETS), "patch": model.patch, "fs": model.fs})
+    print(f"[patch_codec dump] {len(jobs)} nights ({sum(g == 'train' for g, _, _ in jobs)} train), "
+          f"{levels} levels -> {out}", flush=True)
+    readers, skipped = {}, []
+    for i, (group, unit, sid) in enumerate(jobs):
+        key = f"{unit}/{sid}"
+        path = os.path.join(out, unit, f"{sid}.npz")
+        if key in meta["nights"] and os.path.exists(path):
+            continue
+        if unit not in readers:
+            if unit == "dreams":
+                ds = get_dataset("dreams")(channels=[ra["channel"]], pipelines=channel_pipelines(ra),
+                                           sequence_length=1, cache_dir=cache)
+            else:
+                ds = open_unit(unit, ra, cache)
+            readers[unit] = (Nights(ds, ra), cached_subjects(ds))
+        night, cached = readers[unit]
+        if sid not in cached:  # a night outside the cache would start the cleaner
+            skipped.append(key)
+            continue
+        x, y, ts = night.get(sid)
+        if unit == "dreams":
+            ts = np.flatnonzero(y >= 0)  # excerpts: every scored epoch
+        if len(ts) < 20:
+            skipped.append(key)
+            continue
+        e0, e1 = int(ts.min()), int(ts.max()) + 1
+        sig = torch.from_numpy(np.ascontiguousarray(x[e0:e1].reshape(-1))).to(device)
+        arr = {f"c{o}": encode_signal(model, sig[o:], levels).cpu().numpy().astype(np.int16) for o in OFFSETS}
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        np.savez(path, e0=e0, n=len(sig), y=y[e0:e1].astype(np.int8), **arr)
+        meta["nights"][key] = {"group": group, "unit": unit, "site": BY_NAME.get(unit, {}).get("site", unit),
+                               "e0": e0, "n_epochs": e1 - e0, "n_scored": int(len(ts)), "n_patches": len(arr["c0"])}
+        if (i + 1) % 50 == 0 or i + 1 == len(jobs):
+            json.dump(meta, open(mp, "w"))
+            print(f"[patch_codec dump] {i + 1}/{len(jobs)} ({(time.time() - t0) / 60:.1f} min)", flush=True)
+    meta["skipped"] = sorted(set(meta.get("skipped", [])) | set(skipped))
+    json.dump(meta, open(mp, "w"))
+    print(f"[patch_codec dump] {len(meta['nights'])} nights, {len(meta['skipped'])} skipped "
+          f"({(time.time() - t0) / 60:.1f} min)", flush=True)
+    print("[patch_codec dump] DONE", flush=True)
 
 
 def _line_ratios(psd: np.ndarray, freqs: np.ndarray, base: float = 0.5, f_max: float = 35.0):
