@@ -62,7 +62,12 @@ the first steps (every value at the bound, no gradient). Options, all off by def
   start; ``arch="linear"``: only the linear paths, the reference transform codec;
 * ``fsq_norm``: batch normalisation without affine parameters on the FSQ projection before the bound (running
   statistics in eval). It keeps the inputs of ``tanh`` near unit scale per dimension without removing the
-  amplitude of a patch, as a per-patch layer norm would.
+  amplitude of a patch, as a per-patch layer norm would;
+* ``fsq_scale``: multiplies the normalised input of ``tanh`` (default 1). At unit scale, a Gaussian latent puts
+  30 % of its values in the two outer cells of 9 levels, whose width is unbounded: the rounding error after the
+  best decoder (cell centroids) is 0.064 of the latent variance (Monte Carlo, 2 M samples). At 0.5, the
+  ``tanh`` is close to the MSE-optimal compander of a Gaussian (Panter-Dite, ``2 Phi(u / sqrt 3) - 1``): 0.029
+  with 9 levels, 0.020 with 11, against 0.050 with 11 levels at unit scale.
 
 Input: ``(B, n)`` clean EEG at 100 Hz, ``RobustScale`` units (cache of the clean channels); ``n`` is
 cut to a multiple of 200. Sleep stages and concept labels are never used.
@@ -357,12 +362,14 @@ class PatchCodec(nn.Module):
                  q_dropout: float = 0.5, order: int = 32, stft_weight: float = 0.1, restart_after: int = 30,
                  crop_sec: float = 16.0, upsample: str = "convT", fs: int = FS, quantizer: str = "rvq",
                  fsq_levels: int = 9, fsq_group: int = 4, whiten: str = "patch", ctx_enc: int = 0,
-                 ctx_dec: int = 0, dec_out: str = "raw", arch: str = "conv", fsq_norm: bool = False):
+                 ctx_dec: int = 0, dec_out: str = "raw", arch: str = "conv", fsq_norm: bool = False,
+                 fsq_scale: float = 1.0):
         super().__init__()
         assert fs == FS, "PatchCodec: 100 Hz only"
         assert quantizer in ("rvq", "fsq") and whiten in ("patch", "signal")
         assert dec_out in ("raw", "white") and arch in ("conv", "skip", "linear")
         assert arch == "conv" or dec_out == "white", "the linear paths draw the whitened patch"
+        assert fsq_scale > 0, "fsq_scale > 0"
         self.fs, self.patch = fs, PATCH
         self.quantizer, self.whiten, self.dec_out, self.arch = quantizer, whiten, dec_out, arch
         self.dim, self.max_levels, self.vq_levels = dim, levels, levels
@@ -372,7 +379,7 @@ class PatchCodec(nn.Module):
         self.encoder = nn.Linear(PATCH, dim) if arch == "linear" else PatchEncoder(width, dim, fs)
         self.enc_skip = nn.Linear(PATCH, dim) if arch == "skip" else None
         self.enc_ctx = PatchContext(dim, ctx_enc)
-        self.fsq_bn = None
+        self.fsq_bn, self.fsq_scale = None, float(fsq_scale)
         if quantizer == "rvq":
             self.rvq = ResidualVQ(levels, codes, dim, restart_after=restart_after)
             self.n_codes = codes
@@ -413,13 +420,18 @@ class PatchCodec(nn.Module):
             z = z + self.enc_skip(w)
         return self.enc_ctx(z.view(B, P, -1))
 
+    def _fsq_u(self, z: torch.Tensor) -> torch.Tensor:
+        """Input of the FSQ bound: projection, batch norm (``fsq_norm``), scale (``fsq_scale``)."""
+        u = self.fsq_in(z)
+        if self.fsq_bn is not None:
+            u = self.fsq_bn(u.reshape(-1, u.shape[-1])).view(u.shape)
+        return u if self.fsq_scale == 1.0 else u * self.fsq_scale
+
     def quantize(self, z: torch.Tensor, k: Optional[int] = None):
         """``(B, P, dim)`` -> quantized latents, codes ``(B, P, k)`` and commitment loss (0 for FSQ)."""
         B, P, D = z.shape
         if self.quantizer == "fsq":
-            u = self.fsq_in(z)
-            if self.fsq_bn is not None:
-                u = self.fsq_bn(u.reshape(-1, u.shape[-1])).view(u.shape)
+            u = self._fsq_u(z)
             if self.bypass_vq:  # bounded, not rounded
                 return self.fsq_out(self.fsq.bound(u) / self.fsq.half), None, z.new_zeros(())
             q, codes = self.fsq(u, self._k() if k is None else k)
@@ -594,7 +606,8 @@ def build_from_args(a: dict) -> PatchCodec:
                       fsq_group=a.get("fsq_group", 4), whiten=a.get("whiten", "patch"), ctx_enc=a.get("ctx_enc", 0),
                       ctx_dec=a.get("ctx_dec", 0),  # no keys: runs before revision 2 (27.11.2026)
                       dec_out=a.get("dec_out", "raw"), arch=a.get("arch", "conv"),
-                      fsq_norm=a.get("fsq_norm", False))  # no keys: runs before revision 3
+                      fsq_norm=a.get("fsq_norm", False),  # no keys: runs before revision 3
+                      fsq_scale=a.get("fsq_scale", 1.0))  # no key: runs before 28.11.2026
 
 
 # ---------------------------------------------------------------------------- spectral twin (S3, #20)

@@ -380,10 +380,33 @@ def test_fsq_norm_keeps_the_bound_unsaturated():
         m = PatchCodec(width=8, dim=16, levels=2, quantizer="fsq", fsq_levels=5, fsq_group=2, q_dropout=0.0,
                        fsq_norm=norm).train()
         z = 1e3 * torch.randn(8, 6, 16)
-        u = m.fsq_in(z)
-        if norm:
-            u = m.fsq_bn(u.reshape(-1, u.shape[-1])).view(u.shape)
+        u = m._fsq_u(z)
         sat[norm] = float((torch.tanh(u).abs() > 0.99).float().mean())
         zq, codes, _ = m.quantize(z)
         assert codes.unique().numel() > 1 and torch.isfinite(zq).all()
     assert sat[False] > 0.9 and sat[True] < 0.05
+
+
+def test_fsq_scale_shrinks_the_rounding_error():
+    """``fsq_scale`` multiplies the normalised input of the bound and adds no parameter. On a unit-variance Gaussian
+    input, the rounding error after the best decoder (cell centroids) at 9 levels is about half at 0.5 (0.029)
+    of what it is at 1 (0.064), and below the 11 levels at unit scale (0.050)."""
+    torch.manual_seed(0)
+    kw = dict(width=8, dim=16, levels=2, quantizer="fsq", fsq_levels=9, fsq_group=2, q_dropout=0.0, fsq_norm=True)
+    a, b = PatchCodec(**kw).eval(), PatchCodec(**kw, fsq_scale=0.5).eval()
+    b.load_state_dict(a.state_dict())
+    z = torch.randn(4, 6, 16)
+    assert torch.allclose(b._fsq_u(z), 0.5 * a._fsq_u(z))
+    zq, codes, _ = b.quantize(z)
+    assert codes.shape == (4, 6, 2) and torch.isfinite(zq).all()
+
+    def centroid_mse(scale, levels):
+        u = torch.randn(400_000, generator=torch.Generator().manual_seed(1)).double()
+        half = (levels - 1) // 2
+        idx = (torch.round(torch.tanh(scale * u) * (half + 0.5 - 1e-3)) + half).long()
+        cnt = torch.bincount(idx, minlength=levels).clamp(min=1)
+        cen = torch.bincount(idx, weights=u, minlength=levels) / cnt
+        return float(((u - cen[idx]) ** 2).mean())
+
+    m1, m05, m11 = centroid_mse(1.0, 9), centroid_mse(0.5, 9), centroid_mse(1.0, 11)
+    assert 0.058 < m1 < 0.070 and 0.025 < m05 < 0.033 and m05 < 0.6 * m1 and m05 < m11

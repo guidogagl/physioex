@@ -142,6 +142,8 @@ def main(argv=None):
     f.add_argument("--arch", choices=("conv", "skip", "linear"), default="conv",
                    help="skip: linear paths added to the convolutional ones; linear: linear paths only (dec-out white)")
     f.add_argument("--fsq-norm", action="store_true", help="batch norm (no affine) before the FSQ bound")
+    f.add_argument("--fsq-scale", type=float, default=1.0,
+                   help="scale of the (normalised) FSQ input before tanh; 0.5 ~ MSE-optimal for a Gaussian latent")
     f.add_argument("--crop-sec", type=float, default=16.0)
     f.add_argument("--whiten-batches", type=int, default=50)
     f.add_argument("--vq-warmup", type=int, default=2000,
@@ -271,7 +273,7 @@ def _fit(a, t0):
                        stft_weight=a.stft_weight, restart_after=a.restart_after, crop_sec=a.crop_sec,
                        upsample=a.upsample, quantizer=a.quantizer, fsq_levels=a.fsq_levels, fsq_group=a.fsq_group,
                        whiten=a.whiten, ctx_enc=a.ctx_enc, ctx_dec=a.ctx_dec, dec_out=a.dec_out, arch=a.arch,
-                       fsq_norm=a.fsq_norm).to(device)
+                       fsq_norm=a.fsq_norm, fsq_scale=a.fsq_scale).to(device)
     n_par = sum(p.numel() for p in model.parameters())
     print(f"[patch_codec] windows: train {n_tr}, valid {n_va}; {n_par / 1e6:.2f} M parameters, "
           f"{model.bits_per_patch()} bits per 2 s patch at {a.levels} levels", flush=True)
