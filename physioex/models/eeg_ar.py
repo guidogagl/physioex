@@ -257,3 +257,64 @@ def token_scores(per_grid: Dict[int, np.ndarray], n_samples: int, patch: int = 2
             np.add.at(cnt, j[ok], 1)
     with np.errstate(invalid="ignore"):
         return np.where(cnt > 0, acc / np.maximum(cnt, 1), np.nan)
+
+
+# ---------------------------------------------------------------------------- edits (S6, #23)
+@torch.no_grad()
+def window_surprise(model: EEGAR, items, batch: int = 16, device=None):
+    """Surprise ``S = sum_l (nll - H)`` per patch of short stretches, plain layout, one window each.
+
+    ``items``: list of ``(codes (W, L), lo, hi)``; returns one ``(hi - lo,)`` array per item, the patches
+    ``lo .. hi - 1`` of its window scored with the window's earlier patches as context. Windows of the
+    same length are batched."""
+    device = device or model.emb.weight.device
+    out = [None] * len(items)
+    by_len: Dict[int, list] = {}
+    for i, (c, lo, hi) in enumerate(items):
+        by_len.setdefault(len(c), []).append(i)
+    for _, idx in by_len.items():
+        for j in range(0, len(idx), batch):
+            ii = idx[j: j + batch]
+            b = {k: v.to(device) for k, v in collate([make_example(np.asarray(items[i][0]), model.n_codes)
+                                                      for i in ii]).items()}
+            with torch.autocast(device_type=device.type, dtype=torch.bfloat16, enabled=device.type == "cuda"):
+                n, e = model.nll_entropy(b)
+            s = (n - e).float().cpu().numpy()
+            for k, i in enumerate(ii):
+                c, lo, hi = items[i]
+                W, L = np.asarray(c).shape
+                out[i] = s[k, : W * L].reshape(W, L).sum(1)[lo:hi]
+    return out
+
+
+def window_around(P: int, lo: int, hi: int, window: int, centre: bool = True) -> int:
+    """Start of a window of ``min(window, P)`` patches that contains ``lo .. hi - 1``: centred on the
+    stretch (``centre``) or ending at ``hi`` (plain scoring needs only the past), clipped to the night."""
+    W = min(window, P)
+    s = lo - (W - (hi - lo)) // 2 if centre else hi - W
+    return int(min(max(s, 0), P - W))
+
+
+@torch.no_grad()
+def close_event(model: EEGAR, codes: np.ndarray, a: int, thr: float, max_len: int = 10, follow: int = 3,
+                window: int = 150, temperature: float = 1.0, generator: Optional[torch.Generator] = None):
+    """Closure rule of the plan (rev. 1, point 5). From the start patch ``a`` the end ``b`` grows up to
+    ``a + max_len``; for each ``b`` the stretch ``a .. b - 1`` is refilled by FIM (one sample) and the
+    ``follow`` patches after it are scored in the plain layout with the refilled stretch as their past.
+    The end is the first ``b`` whose ``follow`` patches have a mean surprise ``<= thr``. Returns
+    ``(b, fill (b - a, L))``, or ``(None, None)`` when no ``b`` works: a state transition, not an event."""
+    P, L = codes.shape
+    dev = model.emb.weight.device
+    for b in range(a + 1, min(a + max_len, P - follow) + 1):
+        s = window_around(P, a, b, window)
+        W = min(window, P)
+        with torch.autocast(device_type=dev.type, dtype=torch.bfloat16, enabled=dev.type == "cuda"):
+            fill = model.infill(torch.from_numpy(np.ascontiguousarray(codes[s: s + W])), a - s, b - s, 1,
+                                temperature, generator)[0].cpu().numpy()
+        new = codes.copy()
+        new[a:b] = fill
+        s2 = window_around(P, b, b + follow, window, centre=False)
+        S = window_surprise(model, [(new[s2: s2 + W], b - s2, b + follow - s2)])[0]
+        if float(S.mean()) <= thr:
+            return b, fill
+    return None, None

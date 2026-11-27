@@ -8,7 +8,8 @@ import pytest
 import torch
 
 from physioex.models.eeg_ar import (
-    BOS, EEGAR, IGNORE, MID, N_SPECIAL, PRE, SUF, collate, make_example, score_codes, token_scores,
+    BOS, EEGAR, IGNORE, MID, N_SPECIAL, PRE, SUF, close_event, collate, make_example, score_codes, token_scores,
+    window_around, window_surprise,
 )
 from physioex.models.patch_codec import SpectralTwin, patch_spectra
 
@@ -93,6 +94,55 @@ def test_rare_code_gives_a_surprise_peak():
     S = (nll - ent).sum(1)
     assert S.argmax() == 30
     assert S[30] > 5 * max(np.median(np.abs(S)), 0.1)
+
+
+def _periodic(n=400):
+    return np.stack([np.arange(n) % 4, (np.arange(n) + 1) % 4], 1)
+
+
+def _train_fim(seq, steps=300, window=12, seed=0):
+    """Tiny model trained on a periodic sequence, half of the windows in the FIM layout."""
+    m = _tiny()
+    opt = torch.optim.AdamW(m.parameters(), lr=3e-3)
+    rng = np.random.default_rng(seed)
+    for _ in range(steps):
+        ex = []
+        for _ in range(16):
+            s = int(rng.integers(0, len(seq) - window))
+            span = None
+            if rng.random() < 0.5:
+                a = int(rng.integers(1, window - 2))
+                span = (a, int(rng.integers(a + 1, min(window - 1, a + 4) + 1)))
+            ex.append(make_example(seq[s:s + window], K, span))
+        loss, _ = m(collate(ex))
+        opt.zero_grad()
+        loss.backward()
+        opt.step()
+    return m.eval()
+
+
+def test_window_surprise_matches_score_codes():
+    m = _tiny().eval()
+    c = _codes(30, 3)
+    nll, ent = score_codes(m, c, window=30, hop=30, batch=1)
+    S = window_surprise(m, [(c, 5, 12), (c[:20], 0, 20)])
+    assert np.allclose(S[0], (nll - ent).sum(1)[5:12], atol=1e-4)
+    assert np.allclose(S[1], (nll - ent).sum(1)[:20], atol=1e-4)
+    assert window_around(100, 40, 43, 12) == 36 and window_around(100, 40, 43, 12, centre=False) == 31
+    assert window_around(100, 2, 4, 12) == 0 and window_around(100, 97, 99, 12) == 88 and window_around(8, 2, 4, 12) == 0
+
+
+def test_closure_rule_ends_a_burst_and_flags_a_transition():
+    """A 3-patch burst of an unseen code closes at its end; a switch to an unseen state never closes."""
+    seq = _periodic()
+    m = _train_fim(seq)
+    g = torch.Generator().manual_seed(0)
+    burst = seq[:60].copy()
+    burst[30:33] = 7
+    b, fill = close_event(m, burst, 30, thr=1.0, window=12, generator=g)
+    assert b == 33 and fill.shape == (3, L) and int(fill.max()) < 4  # refilled with the periodic codes
+    trans = np.concatenate([seq[:30], np.full((30, L), 7)])
+    assert close_event(m, trans, 30, thr=1.0, window=12, generator=g) == (None, None)
 
 
 def test_infill_shapes_and_range():
