@@ -16,7 +16,8 @@ Rules fixed before the first result (27.11.2026):
   the reference's stratum (N2+N3 for K-complexes and spindles, as in ``concept_scan.TARGETS``; sleep N1-R
   for arousals) and, for context, on all tokens;
 * **gate** (plan S5): ``AP(codes) - AP(twin) >= +0.05`` with the 95 % CI of a paired bootstrap over the
-  nights above 0, on DREAMS K-complexes (``k_complex_vis1``) and spindles (``spindle_vis1``), stratum tokens;
+  nights (2000 resamples) above 0, on DREAMS K-complexes (``k_complex_vis1``) and spindles (``spindle_vis1``),
+  stratum tokens; the other sets get 200 resamples (context, not gated);
 * **events**: runs of tokens with ``z > 2`` (mu + 2 sigma of the night); F1 with IoU >= 0.2 and night
   bootstrap (:func:`physioex.train.bin.concept_refs_eval.bootstrap`), restricted to the stratum; the
   rule detectors (``refs/``) and the manual rules (``m1/``) are scored the same way at their own masks;
@@ -118,7 +119,9 @@ def main(argv=None):
     ap_.add_argument("--surprise", required=True, help="surprise folder of the model on the codec's codes")
     ap_.add_argument("--twin", required=True, help="surprise folder of the model on the spectral twin")
     ap_.add_argument("--out", required=True)
-    ap_.add_argument("--n-boot", type=int, default=2000)
+    ap_.add_argument("--n-boot", type=int, default=2000, help="night resamples of the gate sets")
+    ap_.add_argument("--n-boot-other", type=int, default=200,
+                     help="night resamples of the other sets (pooled AP over millions of tokens)")
     ap_.add_argument("--seed", type=int, default=0)
     a = ap_.parse_args(argv)
     from physioex.train.bin.concept_refs_eval import IOU, bootstrap, events, night_counts, prf
@@ -171,7 +174,9 @@ def main(argv=None):
         for scope in ("stratum", "all"):
             keep = [n["stratum"] if scope == "stratum" else n["ok"] for n in nights]
             trip = [(n["z"][k], n["zt"][k], n["ref"][k]) for n, k in zip(nights, keep)]
-            o = paired_delta(trip, a.n_boot if scope == "stratum" else 0, a.seed)
+            nb = (a.n_boot if name in GATE_SETS else a.n_boot_other) if scope == "stratum" else 0
+            o = paired_delta(trip, nb, a.seed)
+            o["n_boot"] = nb
             o["n_tokens"] = int(sum(k.sum() for k in keep))
             o["base_rate"] = float(sum(n["ref"][k].sum() for n, k in zip(nights, keep)) / max(o["n_tokens"], 1))
             o["ap_rules"] = {r: ap(np.concatenate([n["rule"][r][k] for n, k in zip(nights, keep)]).astype(float),
