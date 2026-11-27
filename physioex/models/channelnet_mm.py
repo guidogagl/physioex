@@ -98,6 +98,11 @@ class MultiChannelNet(nn.Module):
         super().train(mode)
         if mode and self.frozen_branches:
             self.branches.eval()             # frozen features without dropout noise
+            # cuDNN RNNs cannot run backward in eval mode, and the F/Q connections need gradients through the frozen
+            # recurrent layers: keep them in train mode (1-layer RNNs: no internal dropout, same output as eval)
+            for mod in self.branches.modules():
+                if isinstance(mod, nn.RNNBase):
+                    mod.train(True)
         return self
 
     # --- helpers -------------------------------------------------------------------------------------------------

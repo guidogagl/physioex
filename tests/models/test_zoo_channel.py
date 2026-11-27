@@ -135,3 +135,17 @@ def test_raw_scale_fixed_monotone_bounded():
     # EMG gain: offset_db = 20 dB is a factor 10 on the input
     torch.testing.assert_close(raw_scale(a, torch.tensor([20.0])), raw_scale(10 * a))
     assert RAW_K > 0 and RAW_ZMAX > RAW_K
+
+
+@pytest.mark.skipif(not torch.cuda.is_available(), reason="cuDNN RNN backward check needs a GPU")
+def test_frozen_rnn_branches_backward_on_cuda():
+    br = {m: ZooChannel(m, "lstm", "gru").cuda() for m in ("EEG", "EOG", "EMG")}
+    mm = MultiChannelNet(br, ("F",)).cuda()
+    mm.frozen_branches = True
+    mm.train()
+    for p in mm.branches.parameters():
+        p.requires_grad_(False)
+    x = {m: _x(i)[0].cuda() for i, m in enumerate(br)}
+    logits, _, _ = mm(x)
+    logits.sum().backward()
+    assert all(p.grad is not None for n, p in mm.named_parameters() if n.startswith("conn."))
