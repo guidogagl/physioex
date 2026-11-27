@@ -32,46 +32,6 @@ class DFTLayer(torch.nn.Module):
         return X
 
 
-class _IDFTObserveFn(torch.autograd.Function):
-    """Custom autograd for IDFT with explicit backward (DFT of grad).
-
-    When ``real_valued=True`` the input is a real tensor of shape
-    ``(..., 2*F)`` representing ``[Re(X), Im(X)]`` concatenated along
-    *dim*.  The backward pass returns gradients in the same format.
-    """
-
-    @staticmethod
-    def forward(ctx, x, n, dim, use_rfft, real_valued):
-        ctx.n = n
-        ctx.dim = dim
-        ctx.use_rfft = use_rfft
-        ctx.real_valued = real_valued
-
-        if real_valued:
-            n_freq = x.shape[dim] // 2
-            re = x.narrow(dim, 0, n_freq)
-            im = x.narrow(dim, n_freq, n_freq)
-            x_complex = torch.complex(re, im)
-        else:
-            x_complex = x
-
-        if use_rfft:
-            return torch.fft.irfft(x_complex, n=n, dim=dim)
-        return torch.fft.ifft(x_complex, dim=dim)
-
-    @staticmethod
-    def backward(ctx, grad_output):
-        if ctx.use_rfft:
-            G = torch.fft.rfft(grad_output, dim=ctx.dim)
-        else:
-            G = torch.fft.fft(grad_output, dim=ctx.dim)
-        if ctx.real_valued:
-            grad_input = torch.cat([G.real, G.imag], dim=ctx.dim)
-        else:
-            grad_input = G
-        return grad_input, None, None, None, None
-
-
 class IDFTLayer(torch.nn.Module):
     """Compute the inverse (real) DFT with a differentiable backward pass.
 
@@ -83,7 +43,9 @@ class IDFTLayer(torch.nn.Module):
             input and produces real gradients in the same format.
     """
 
-    def __init__(self, n: int, dim: int = -1, use_rfft: bool = True, real_valued: bool = False):
+    def __init__(
+        self, n: int, dim: int = -1, use_rfft: bool = True, real_valued: bool = False
+    ):
         super().__init__()
         if n <= 0:
             raise ValueError(f"n must be > 0, got {n}")
@@ -93,7 +55,17 @@ class IDFTLayer(torch.nn.Module):
         self.real_valued = real_valued
 
     def forward(self, x):
-        return _IDFTObserveFn.apply(x, self.n, self.dim, self.use_rfft, self.real_valued)
+        if self.real_valued:
+            n_freq = x.shape[self.dim] // 2
+            re = x.narrow(self.dim, 0, n_freq)
+            im = x.narrow(self.dim, n_freq, n_freq)
+            x_complex = torch.complex(re, im)
+        else:
+            x_complex = x
+
+        if self.use_rfft:
+            return torch.fft.irfft(x_complex, n=self.n, dim=self.dim)
+        return torch.fft.ifft(x_complex, dim=self.dim)
 
 
 # ---------------------------------------------------------------------------
