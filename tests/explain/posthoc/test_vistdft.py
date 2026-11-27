@@ -1,6 +1,6 @@
 """Extensive unit tests for explain.posthoc.vistdft.
 
-Covers: STFTLayer, ISTFTLayer, _ISTFTObserveFn backward shape,
+Covers: STFTLayer, ISTFTLayer backward (native autograd),
         STFTSaliency, STFTInputXGradient, STFTIntegratedGradients,
         STFTExpectedGradients.
 """
@@ -104,13 +104,13 @@ class TestISTFTLayer:
 
 
 # ---------------------------------------------------------------------------
-# _ISTFTObserveFn backward count
+# ISTFTLayer backward (native torch.istft autograd)
 # ---------------------------------------------------------------------------
 
 
 class TestISTFTBackward:
     def test_backward_returns_correct_count(self):
-        """backward must return exactly 9 values (matching 9 forward inputs after ctx)."""
+        """Gradients flow through ISTFTLayer back to the time-domain input."""
         stft = STFTLayer(**_stft_kwargs())
         istft = ISTFTLayer(**_stft_explainer_kwargs())
 
@@ -118,8 +118,6 @@ class TestISTFTBackward:
         X = stft(x)
         y = istft(X)
         loss = (y**2).sum()
-        # This should not raise — if backward return count is wrong,
-        # autograd will error here.
         loss.backward()
         assert x.grad is not None
         assert x.grad.shape == x.shape

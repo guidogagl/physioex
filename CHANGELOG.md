@@ -15,6 +15,23 @@ that publish to PyPI.
 - README rewritten in one style (overview, installation, quickstart, model and dataset tables, citation, license); the
   dataset descriptions moved to the Data page of the documentation.
 
+## 2.0.7 — 2026-11-27
+
+### Fixed
+- `explain.posthoc`: `IDFTLayer` and `ISTFTLayer` now differentiate through native `torch.fft.irfft`/`ifft` and
+  `torch.istft` autograd. The previous custom backward (`_IDFTObserveFn`, `_ISTFTObserveFn`) returned the plain
+  `rfft`/`fft`/`stft` of the gradient, which is not the adjoint of the inverse transform: it omitted the `1/n`
+  normalisation, the 2x weight of the interior onesided bins and the overlap-add window envelope. Gradients are now
+  exact (`torch.autograd.gradcheck`), and Integrated Gradients in the DFT/STFT domain satisfies completeness, as in
+  the virtual inspection layers of Vielhaben et al. (2024). Contributed by Chen-Yang Su (#28).
+
+### Changed
+- **Behaviour change.** Attributions of all DFT/STFT gradient explainers (`DFTSaliency`, `DFTInputXGradient`,
+  `DFTIntegratedGradients`, `STFTSaliency`, `STFTInputXGradient`, `STFTIntegratedGradients` and the expected-gradients
+  variants) differ from versions <= 2.0.6: by a global scale, by the relative weight of the DC/Nyquist bins against the
+  interior bins and, for the STFT, at the signal edges where the window envelope is not constant. Results computed
+  with <= 2.0.6 are not comparable with 2.0.7.
+
 ## 2.0.6 — 2026-11-22
 
 ### Added
