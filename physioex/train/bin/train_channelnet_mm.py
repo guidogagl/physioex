@@ -44,6 +44,7 @@ from physioex.models.channelnet_mm import MODALITIES, MultiChannelNet, occlusion
 from physioex.models.seqsleepnet_3ch_clean import SeqSleepNet3chClean
 from physioex.models.seqsleepnet_clean import ChannelNet
 from physioex.models.sleeptransformer_clean import SleepTransformer3chClean, SleepTransformerChannel
+from physioex.models.zoo_channel import ZooChannel
 from physioex.train.bin.train_channelnet import _metrics, git_sha
 
 STAGE_LR = {"S0": (1e-4, None), "S1": (1e-3, None), "S2": (1e-3, None), "S3": (1e-4, 1e-5)}   # (new params, branches)
@@ -55,13 +56,16 @@ def to_dev(d, device):
 
 def load_branches(bdir: Path, mods, dropout: float = 0.0, prefix: str = ""):
     """Pretrained branches <bdir>/<prefix><m>/{best.pt, run.json}; the backbone is read from each run.json
-    (ChannelNet, or SleepTransformerChannel with the dropout it was trained with)."""
+    (ChannelNet, SleepTransformerChannel or ZooChannel, the last two with the dropout they were trained with)."""
     branches, kappa = {}, {}
     for m in mods:
         bdir_m = bdir / f"{prefix}{m}"
         run = json.loads((bdir_m / "run.json").read_text())
         cfg = run.get("config", {})
-        if cfg.get("arch", "channelnet") == "sleeptransformer":
+        if cfg.get("arch") == "zoo":
+            net = ZooChannel(m, cfg.get("epoch_enc", "lstm"), cfg.get("seq_enc", "gru"),
+                             dropout=cfg.get("resolved", {}).get("dropout", 0.0))
+        elif cfg.get("arch", "channelnet") == "sleeptransformer":
             net = SleepTransformerChannel(m, dropout=cfg.get("resolved", {}).get("dropout", 0.1))
         else:
             net = ChannelNet(m, dropout=dropout)

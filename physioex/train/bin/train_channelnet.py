@@ -43,6 +43,7 @@ import math
 from physioex.data.clean_cache import CleanCacheNights, RandomOffsetSequences, SequenceDataset, class_counts
 from physioex.models.seqsleepnet_clean import ChannelNet, saturation
 from physioex.models.sleeptransformer_clean import SleepTransformerChannel
+from physioex.models.zoo_channel import EPOCH_ENCODERS, SEQ_ENCODERS, ZooChannel
 
 _REG = dict(seq_len=20, stride=1, batch=32, lr=1e-4, wd=1e-4, optim="adam", weighted=False, dropout=0.1)
 PROTOCOLS = {
@@ -163,7 +164,9 @@ def voting_evaluate(model, nights, device, L, bs=64):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--modality", required=True, choices=["EEG", "EOG", "EMG"])
-    ap.add_argument("--arch", default="channelnet", choices=["channelnet", "sleeptransformer"])
+    ap.add_argument("--arch", default="channelnet", choices=["channelnet", "sleeptransformer", "zoo"])
+    ap.add_argument("--epoch-enc", default="lstm", choices=EPOCH_ENCODERS, help="--arch zoo: epoch encoder")
+    ap.add_argument("--seq-enc", default="gru", choices=SEQ_ENCODERS, help="--arch zoo: sequence encoder")
     ap.add_argument("--local-dir", default=None, help="node-local folder: nights read in parallel and memory-mapped")
     ap.add_argument("--workers", type=int, default=8, help="reader processes with --local-dir")
     ap.add_argument("--pipe", default="702cb90947921189", help="epoching pipeline where a channel has several")
@@ -231,7 +234,9 @@ def main():
         w = (w / w.mean()).to(device)
     log(f"train class counts {counts.tolist()}, CE weights {None if w is None else [round(float(v), 2) for v in w]}")
 
-    if args.arch == "sleeptransformer":
+    if args.arch == "zoo":
+        model = ZooChannel(args.modality, args.epoch_enc, args.seq_enc, dropout=P.get("dropout", 0.0)).to(device)
+    elif args.arch == "sleeptransformer":
         model = SleepTransformerChannel(args.modality, dropout=P.get("dropout", 0.1)).to(device)
     else:
         model = ChannelNet(args.modality, deformable=args.deformable, dropout=P.get("dropout", 0.0)).to(device)
