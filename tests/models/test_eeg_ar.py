@@ -135,3 +135,42 @@ def test_spectral_twin_codes_and_r2():
     assert 0 < r2[0] < r2[1] < r2[2] < 1
     tw2 = SpectralTwin.from_state(tw.state_dict())
     assert torch.equal(tw2.codes(feats, 2), c[:, :2])
+
+
+def test_surprise_eval_on_synthetic_nights(tmp_path):
+    """The codes' surprise follows the expert KC, the twin's is noise: AP codes > twin and the gate passes."""
+    import json
+
+    from physioex.train.bin import surprise_eval
+
+    rng = np.random.default_rng(0)
+    for i in range(6):
+        sid = f"kc_excerpt{i}"
+        n = 60
+        ts = np.arange(10, 10 + n)
+        y = np.full(n, 2)
+        ref = np.zeros(n * 60, bool)
+        for st in rng.choice(n * 60 - 4, 25, replace=False):
+            ref[st:st + 3] = True
+        dirs = {k: tmp_path / k / "dreams" for k in ("dump", "dump/refs", "dump/m1", "s", "t")}
+        for d in dirs.values():
+            d.mkdir(parents=True, exist_ok=True)
+        np.savez(dirs["dump"] / f"{sid}.npz", ts=ts, y=y)
+        np.savez(dirs["dump/refs"] / f"{sid}.npz", k_complex_vis1=ref, k_complex_vis2=np.roll(ref, 1),
+                 k_complex_rule=np.roll(ref, 2), _len_x=np.zeros(1))
+        np.savez(dirs["dump/m1"] / f"{sid}.npz", kc_m1=ref & (rng.random(len(ref)) < 0.5))
+        e0 = 5  # the surprise starts 5 epochs before the first dumped epoch
+        s = rng.standard_normal((n + 5) * 60)
+        s[5 * 60:][ref] += 3.0
+        np.savez(dirs["s"] / f"{sid}.npz", s=s, e0=e0)
+        np.savez(dirs["t"] / f"{sid}.npz", s=rng.standard_normal((n + 5) * 60), e0=e0)
+    out = tmp_path / "res.json"
+    surprise_eval.main(["--dump", str(tmp_path / "dump"), "--surprise", str(tmp_path / "s"), "--twin",
+                        str(tmp_path / "t"), "--out", str(out), "--n-boot", "200"])
+    r = json.load(open(out))
+    o = r["sets"]["dreams_kc"]["token_stratum"]
+    assert r["sets"]["dreams_kc"]["n_nights"] == 6
+    assert o["ap_codes"] > 0.5 > o["ap_twin"] and o["ci_delta"][0] > 0
+    assert r["gate"]["sets"]["dreams_kc"]["pass"] and not r["gate"]["pass"]  # no spindle set: the gate is incomplete
+    ev = r["sets"]["dreams_kc"]["events"]
+    assert ev["codes"]["recall"] > ev["twin"]["recall"] and ev["codes"]["explained"] > ev["codes"]["explained_shifted"]
