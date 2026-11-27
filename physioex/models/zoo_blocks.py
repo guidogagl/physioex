@@ -176,10 +176,11 @@ class MambaMixer(nn.Module):
         dBx = dt[..., None] * Bm[:, :, None, :] * x[..., None]              # (N, T, E, N)
         h = torch.zeros(x.shape[0], self.E, self.N, device=x.device, dtype=x.dtype)
         ys = []
-        for t in range(x.shape[1]):
-            h = dA[:, t] * h + dBx[:, t]
-            ys.append((h * Cm[:, t, None, :]).sum(-1))
-        return torch.stack(ys, 1) + x * self.D
+        # unbind, not dA[:, t]: the backward of an indexed slice writes a full-size gradient at every step
+        for dA_t, dBx_t, C_t in zip(dA.unbind(1), dBx.unbind(1), Cm.unbind(1)):
+            h = dA_t * h + dBx_t
+            ys.append(h @ C_t.unsqueeze(-1))
+        return torch.cat(ys, -1).transpose(1, 2) + x * self.D
 
     def forward(self, x):
         T = x.shape[1]
@@ -313,9 +314,9 @@ class SLSTMCell(nn.Module):
         c, n = torch.zeros_like(h), torch.zeros_like(h)
         m = torch.full_like(h, float("-inf"))
         out = []
-        for t in range(T):
+        for wx_t in wx.unbind(1):
             r = torch.einsum("bhd,ghde->bghe", h, self.R)                    # (N, 4, H, Dh)
-            pre = wx[:, t] + r
+            pre = wx_t + r
             zt, it, ft, ot = torch.tanh(pre[:, 0]), pre[:, 1], F.logsigmoid(pre[:, 2]), torch.sigmoid(pre[:, 3])
             m_new = torch.maximum(ft + m, it)
             ip, fp = torch.exp(it - m_new), torch.exp(ft + m - m_new)
