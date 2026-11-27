@@ -95,14 +95,17 @@ for d in sorted(p for p in root.iterdir() if p.is_dir() and NAME.match(p.name)):
     rec["population"] = group(d, "population")
     rec["indomain"] = group(d, "indomain")
     for g in ("eval_only", "population"):
-        if rec[g]:
+        rec[f"{g}_complete"] = (d / "eval" / g / ".done").exists()
+        if rec[g] and rec[f"{g}_complete"]:             # means only over a finished group
             rec[f"{g}_mean_kappa"] = float(np.mean([v["kappa"] for v in rec[g].values()]))
+    if rec["status"] == "final" and not (d / "eval" / "population" / ".done").exists():
+        rec["status"] = "eval"
     members[d.name] = rec
 
 ref = args.ref
 ref_val = members.get(ref, {}).get("val_kappa")
 for n, r in members.items():
-    if r["status"] != "final":
+    if r["status"] not in ("final", "eval"):
         r["pruned"] = None
     elif ref_val is None or r.get("val_kappa") is None:
         r["pruned"] = None
@@ -142,7 +145,7 @@ if cohorts:
     ref_n = {ds: night_data(ref, ds, ref) for ds in cohorts}
     W = {ds: None for ds in cohorts}
     for n, r in members.items():
-        if n == ref or set(r["eval_only"]) != set(cohorts):
+        if n == ref or not r["eval_only_complete"] or set(r["eval_only"]) != set(cohorts):
             continue
         rows, boot = {}, []
         for ds in cohorts:
@@ -172,7 +175,7 @@ if cohorts:
         paired[n]["beats_reference"] = bool(paired[n]["wins"] >= args.min_wins and paired[n]["mean_delta_ci95"][0] > 0)
 
 # --- Friedman + Nemenyi over the evaluation-only cohorts ---------------------------------------------------------
-complete = [n for n, r in members.items() if cohorts and set(r["eval_only"]) == set(cohorts)]
+complete = [n for n, r in members.items() if cohorts and r["eval_only_complete"] and set(r["eval_only"]) == set(cohorts)]
 friedman = None
 if len(complete) >= 3:
     K = np.array([[members[n]["eval_only"][ds]["kappa"] for n in complete] for ds in cohorts])   # (cohorts, members)
@@ -185,7 +188,7 @@ if len(complete) >= 3:
 # --- seed means per (epoch, seq) -------------------------------------------------------------------------------
 pairs = defaultdict(list)
 for n, r in members.items():
-    if r["status"] == "final":
+    if r["status"] == "final" and r["eval_only_complete"]:
         pairs[f"{r['epoch']}-{r['seq']}"].append(r)
 pair_table = {p: {"seeds": [r["seed"] for r in rs],
                   "S3_test_kappa": float(np.mean([r["S3_test"]["kappa"] for r in rs])),
