@@ -42,6 +42,10 @@ together cover the 0.5 s token grid. One ``<out>/<unit>/<sid>.npz`` per night: `
 ``c100``, ``c150`` ``(P, levels)`` int16 codes (patch ``p`` of grid ``o`` starts at sample ``o + 200 p``
 of the period), ``e0`` (first epoch of the period in the recording), ``n`` (samples of the period)
 and ``y`` (stage of every epoch of the period, -1 when not scored); ``<out>/meta.json``.
+``--twin-out DIR`` also writes the spectral twin of the codes in the same layout (S3, xmai-lab/sleep-lens#20):
+:func:`~physioex.models.patch_codec.patch_spectra` of every patch, coded by a residual k-means with the
+codec's K and levels (:class:`~physioex.models.patch_codec.SpectralTwin`, fitted on ``--twin-fit-nights``
+train nights of the same call, ``twin.pt`` and ``twin_fit.json``).
 """
 import argparse
 import json
@@ -138,6 +142,10 @@ def main(argv=None):
     d.add_argument("--levels", type=int, default=None, help="default: all the levels of the model")
     d.add_argument("--max-nights", type=int, default=0, help="per group (smoke tests); 0: all")
     d.add_argument("--out", default=None, help="default: <run>/dump")
+    d.add_argument("--twin-out", default=None,
+                   help="also write the spectral twin of the codes here (S3): residual k-means of patch spectra")
+    d.add_argument("--twin-fit-nights", type=int, default=300, help="train nights for the twin's codebooks")
+    d.add_argument("--twin-fit-vectors", type=int, default=1_000_000)
     a = ap.parse_args(argv)
     if a.cmd == "eval":
         return _eval(a)
@@ -346,11 +354,9 @@ def _dump(a):
     print(f"[patch_codec dump] {len(jobs)} nights ({sum(g == 'train' for g, _, _ in jobs)} train), "
           f"{levels} levels -> {out}", flush=True)
     readers, skipped = {}, []
-    for i, (group, unit, sid) in enumerate(jobs):
-        key = f"{unit}/{sid}"
-        path = os.path.join(out, unit, f"{sid}.npz")
-        if key in meta["nights"] and os.path.exists(path):
-            continue
+
+    def period(unit, sid):
+        """Main sleep period of a night as one contiguous signal on the device, or None (skipped)."""
         if unit not in readers:
             if unit == "dreams":
                 ds = get_dataset("dreams")(channels=[ra["channel"]], pipelines=channel_pipelines(ra),
@@ -360,26 +366,76 @@ def _dump(a):
             readers[unit] = (Nights(ds, ra), cached_subjects(ds))
         night, cached = readers[unit]
         if sid not in cached:  # a night outside the cache would start the cleaner
-            skipped.append(key)
-            continue
+            return None
         x, y, ts = night.get(sid)
         if unit == "dreams":
             ts = np.flatnonzero(y >= 0)  # excerpts: every scored epoch
         if len(ts) < 20:
+            return None
+        e0, e1 = int(ts.min()), int(ts.max()) + 1
+        return torch.from_numpy(np.ascontiguousarray(x[e0:e1].reshape(-1))).to(device), y, ts, e0, e1
+
+    twin, tmeta, tmp = None, None, None
+    if a.twin_out:  # spectral twin of the codes (S3, #20): fitted once on train nights, then coded alongside
+        from physioex.models.patch_codec import SpectralTwin, patch_spectra
+
+        os.makedirs(a.twin_out, exist_ok=True)
+        tp = os.path.join(a.twin_out, "twin.pt")
+        if os.path.exists(tp):
+            twin = SpectralTwin.from_state(torch.load(tp), device)
+        else:
+            tr = [(u, s) for g, u, s in jobs if g == "train"] or [(u, s) for _, u, s in jobs]  # smoke tests: any
+            pick = np.random.default_rng(0).permutation(len(tr))[: a.twin_fit_nights]
+            feats = [patch_spectra(got[0]) for got in (period(*tr[j]) for j in pick) if got is not None]
+            feats = torch.cat(feats)
+            feats = feats[torch.randperm(len(feats), generator=torch.Generator().manual_seed(0))[: a.twin_fit_vectors]
+                          .to(feats.device)]
+            twin = SpectralTwin.fit(feats, model.n_codes, levels)
+            r2 = {l: twin.residual_r2(feats, l) for l in default_prefixes(levels)}
+            torch.save(twin.state_dict(), tp)
+            json.dump({"nights": len(pick), "vectors": len(feats), "levels": levels, "n_codes": model.n_codes,
+                       "r2_per_prefix": r2}, open(os.path.join(a.twin_out, "twin_fit.json"), "w"), indent=1)
+            print(f"[patch_codec dump] spectral twin fitted on {len(feats)} patches of {len(pick)} nights, "
+                  f"R^2 per prefix {r2} ({(time.time() - t0) / 60:.1f} min)", flush=True)
+        tmp = os.path.join(a.twin_out, "meta.json")
+        tmeta = json.load(open(tmp)) if os.path.exists(tmp) else {"nights": {}}
+        tmeta.update({k: meta[k] for k in ("git_sha", "levels", "n_codes", "offsets", "patch", "fs")})
+        tmeta.update({"run": None, "twin_of": os.path.abspath(out), "features": "patch_spectra"})
+    for i, (group, unit, sid) in enumerate(jobs):
+        key = f"{unit}/{sid}"
+        path = os.path.join(out, unit, f"{sid}.npz")
+        need = not (key in meta["nights"] and os.path.exists(path))
+        tpath = os.path.join(a.twin_out, unit, f"{sid}.npz") if twin is not None else None
+        need_twin = twin is not None and not (key in tmeta["nights"] and os.path.exists(tpath))
+        if not (need or need_twin):
+            continue
+        got = period(unit, sid)
+        if got is None:
             skipped.append(key)
             continue
-        e0, e1 = int(ts.min()), int(ts.max()) + 1
-        sig = torch.from_numpy(np.ascontiguousarray(x[e0:e1].reshape(-1))).to(device)
-        arr = {f"c{o}": encode_signal(model, sig[o:], levels).cpu().numpy().astype(np.int16) for o in OFFSETS}
-        os.makedirs(os.path.dirname(path), exist_ok=True)
-        np.savez(path, e0=e0, n=len(sig), y=y[e0:e1].astype(np.int8), **arr)
-        meta["nights"][key] = {"group": group, "unit": unit, "site": BY_NAME.get(unit, {}).get("site", unit),
-                               "e0": e0, "n_epochs": e1 - e0, "n_scored": int(len(ts)), "n_patches": len(arr["c0"])}
+        sig, y, ts, e0, e1 = got
+        info = {"group": group, "unit": unit, "site": BY_NAME.get(unit, {}).get("site", unit),
+                "e0": e0, "n_epochs": e1 - e0, "n_scored": int(len(ts)), "n_patches": len(sig) // model.patch}
+        if need:
+            arr = {f"c{o}": encode_signal(model, sig[o:], levels).cpu().numpy().astype(np.int16) for o in OFFSETS}
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            np.savez(path, e0=e0, n=len(sig), y=y[e0:e1].astype(np.int8), **arr)
+            meta["nights"][key] = info
+        if need_twin:
+            arr = {f"c{o}": twin.codes(patch_spectra(sig[o:]), levels).cpu().numpy().astype(np.int16) for o in OFFSETS}
+            os.makedirs(os.path.dirname(tpath), exist_ok=True)
+            np.savez(tpath, e0=e0, n=len(sig), y=y[e0:e1].astype(np.int8), **arr)
+            tmeta["nights"][key] = info
         if (i + 1) % 50 == 0 or i + 1 == len(jobs):
             json.dump(meta, open(mp, "w"))
+            if tmeta is not None:
+                json.dump(tmeta, open(tmp, "w"))
             print(f"[patch_codec dump] {i + 1}/{len(jobs)} ({(time.time() - t0) / 60:.1f} min)", flush=True)
     meta["skipped"] = sorted(set(meta.get("skipped", [])) | set(skipped))
     json.dump(meta, open(mp, "w"))
+    if tmeta is not None:
+        tmeta["skipped"] = meta["skipped"]
+        json.dump(tmeta, open(tmp, "w"))
     print(f"[patch_codec dump] {len(meta['nights'])} nights, {len(meta['skipped'])} skipped "
           f"({(time.time() - t0) / 60:.1f} min)", flush=True)
     print("[patch_codec dump] DONE", flush=True)

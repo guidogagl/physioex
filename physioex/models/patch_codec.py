@@ -404,3 +404,86 @@ def build_from_args(a: dict) -> PatchCodec:
     return PatchCodec(width=a["width"], dim=a["dim"], codes=a["codes"], levels=a["levels"], q_dropout=a["q_dropout"],
                       order=a["order"], stft_weight=a["stft_weight"], restart_after=a["restart_after"],
                       crop_sec=a["crop_sec"], upsample=a.get("upsample", "convT"))  # no key: runs before 27.11.2026
+
+
+# ---------------------------------------------------------------------------- spectral twin (S3, #20)
+TWIN_BANDS = {"so": (0.5, 2), "delta": (2, 4), "theta": (4, 7), "alpha": (8, 13), "sigma": (11, 16), "beta": (16, 30)}
+
+
+def patch_spectra(x: torch.Tensor, patch: int = PATCH, fs: int = FS) -> torch.Tensor:
+    """``(n,)`` signal -> ``(n // patch, 37)`` spectral features of every patch, for the spectral twin of the
+    codes (plan S3): log power of the 6 bands of the earlier twin (``SPEC_WIN`` of
+    :mod:`physioex.train.bin.concept_rationale`) and of 1 Hz bins from 0.5 to 30.5 Hz (``spec_fine``), both
+    on the patch itself under a Hann window, and the log line length (mean absolute difference)."""
+    P = len(x) // patch
+    w = x[: P * patch].reshape(P, patch).float()
+    p = torch.fft.rfft((w - w.mean(1, keepdim=True)) * torch.hann_window(patch, periodic=False, device=x.device),
+                       dim=1).abs() ** 2
+    f = torch.fft.rfftfreq(patch, 1 / fs).to(x.device)
+    cols = [p[:, (f >= lo) & (f < hi)].sum(1) for lo, hi in TWIN_BANDS.values()]
+    cols += [p[:, (f >= lo) & (f < lo + 1)].sum(1) for lo in np.arange(0.5, 30.5, 1.0)]
+    ll = w.diff(dim=1).abs().mean(1)
+    return torch.log(torch.cat([torch.stack(cols, 1), ll[:, None]], 1) + 1e-6)
+
+
+def _nearest(r: torch.Tensor, C: torch.Tensor, chunk: int = 1 << 18) -> torch.Tensor:
+    c2 = (C * C).sum(1)
+    return torch.cat([(c2[None] - 2 * r[i:i + chunk] @ C.T).argmin(1) for i in range(0, len(r), chunk)])
+
+
+def _kmeans_torch(r: torch.Tensor, k: int, iters: int, g: torch.Generator) -> torch.Tensor:
+    """Lloyd iterations from ``k`` random points; an empty cluster takes a random point again."""
+    C = r[torch.randperm(len(r), generator=g, device=r.device)[:k]].clone()
+    for _ in range(iters):
+        idx = _nearest(r, C)
+        cnt = torch.bincount(idx, minlength=k).float()
+        s = torch.zeros_like(C).index_add_(0, idx, r)
+        empty = cnt == 0
+        C = torch.where(empty[:, None], C, s / cnt.clamp_min(1)[:, None])
+        if empty.any():
+            C[empty] = r[torch.randint(len(r), (int(empty.sum()),), generator=g, device=r.device)]
+    return C
+
+
+class SpectralTwin:
+    """Residual k-means of the z-scored :func:`patch_spectra`: ``levels`` codebooks of ``n_codes``, the K
+    and L of the codec, so the twin's codes have the same shape and vocabulary size (plan S3)."""
+
+    def __init__(self, mean: torch.Tensor, std: torch.Tensor, codebooks: torch.Tensor):
+        self.mean, self.std, self.codebooks = mean, std, codebooks  # (D,), (D,), (L, K, D)
+
+    @classmethod
+    def fit(cls, feats: torch.Tensor, n_codes: int, levels: int, iters: int = 25, seed: int = 0) -> "SpectralTwin":
+        mean, std = feats.mean(0), feats.std(0).clamp_min(1e-6)
+        r = (feats - mean) / std
+        g = torch.Generator(device=feats.device).manual_seed(seed)
+        cbs = []
+        for _ in range(levels):
+            C = _kmeans_torch(r, n_codes, iters, g)
+            r = r - C[_nearest(r, C)]
+            cbs.append(C)
+        return cls(mean, std, torch.stack(cbs))
+
+    def codes(self, feats: torch.Tensor, levels: Optional[int] = None) -> torch.Tensor:
+        r = (feats - self.mean) / self.std
+        out = []
+        for C in self.codebooks[: levels or len(self.codebooks)]:
+            idx = _nearest(r, C)
+            r = r - C[idx]
+            out.append(idx)
+        return torch.stack(out, 1)
+
+    def residual_r2(self, feats: torch.Tensor, levels: int) -> float:
+        """R^2 of the z-scored features reconstructed from the first ``levels`` codebooks."""
+        r = (feats - self.mean) / self.std
+        q = torch.zeros_like(r)
+        for C, idx in zip(self.codebooks[:levels], self.codes(feats, levels).T):
+            q = q + C[idx]
+        return float(1 - ((r - q) ** 2).sum() / ((r - r.mean(0)) ** 2).sum())
+
+    def state_dict(self) -> dict:
+        return {"mean": self.mean.cpu(), "std": self.std.cpu(), "codebooks": self.codebooks.cpu()}
+
+    @classmethod
+    def from_state(cls, sd: dict, device=None) -> "SpectralTwin":
+        return cls(*(sd[k].to(device) for k in ("mean", "std", "codebooks")))
