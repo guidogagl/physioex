@@ -46,6 +46,24 @@ geometric extrapolation of ``1 - R^2`` over the levels stops near whitened R^2 0
 * ``ctx_enc``: the same on the encoder latents before quantisation. The codes of a patch then depend on its
   neighbours (an event leaks into the codes around it), which the plan's surprise and removal steps pay for.
 
+Revision 3 (27.11.2026, after the pilots P0-P4 of xmai-lab/sleep-lens#24). Measured on held-out nights: without
+rounding, the trained codecs reach whitened R^2 0.89 (RVQ, 128-d) and 0.83 (FSQ, 216 dims), and the rounding costs
+0.04 and 0.015 on top. The cap is the autoencoder, not the bits. A linear KLT of the whitened patches keeps 0.875 of
+the variance at 128 components and 0.975 at 160. The FSQ with 108 dimensions saturated its ``tanh`` bound from
+the first steps (every value at the bound, no gradient). Options, all off by default:
+
+* ``dec_out="white"``: the decoder draws the whitened patch ``w_hat``; the loss compares it with ``A * x``
+  directly, and ``x_hat = gain / A(z) * w_hat`` by a fixed causal FIR of ``INV_TAPS`` samples
+  (:meth:`Whitener.inverse`). The inverse of the pool filter keeps 4.5e-7 of its impulse-response energy beyond
+  1 s and 1.2e-11 beyond 2 s, so the truncated inverse is exact in practice and an edit still stays local: it
+  reaches at most ``INV_TAPS - 1`` samples further (``receptive_patches`` grows by 2);
+* ``arch="skip"``: a linear path from the whitened patch to the latent and from the latent to ``w_hat`` (needs
+  ``dec_out="white"``), added to the convolutional ones, so the linear (KLT-like) solution is in reach from the
+  start; ``arch="linear"``: only the linear paths, the reference transform codec;
+* ``fsq_norm``: batch normalisation without affine parameters on the FSQ projection before the bound (running
+  statistics in eval). It keeps the inputs of ``tanh`` near unit scale per dimension without removing the
+  amplitude of a patch, as a per-patch layer norm would.
+
 Input: ``(B, n)`` clean EEG at 100 Hz, ``RobustScale`` units (cache of the clean channels); ``n`` is
 cut to a multiple of 200. Sleep stages and concept labels are never used.
 """
@@ -74,6 +92,7 @@ DEC_DILATIONS = ((1,), (1, 3), (1, 3, 9))  # residual units after each upsamplin
 STFT_WINDOWS = (25, 50, 100, 200, 400)
 BAND = (0.5, 35.0)
 ZERO_RUN = 100  # crops with >= 1 s of exact zeros (padding beyond the recording) are dropped
+INV_TAPS = 256  # causal FIR of the inverse whitener (dec_out="white")
 
 
 # ----------------------------------------------------------------------------
@@ -138,6 +157,16 @@ class Whitener(nn.Module):
         h = F.pad(h, (self.order, 0), mode="reflect" if pad == "reflect" else "constant")
         e = F.conv1d(h, self.a.flip(0).view(1, 1, -1))  # conv1d correlates: flipped taps convolve
         return (e / self.gain).reshape(shape)
+
+    def inverse(self, e: torch.Tensor, taps: int = INV_TAPS) -> torch.Tensor:
+        """``(..., n) -> (..., n)``: ``gain / A(z)`` applied to ``e`` as a causal FIR of ``taps`` samples (zero
+        history). ``A`` is minimum phase, so ``1 / A`` is stable and its impulse response decays; ``taps``
+        bounds how far an edit of ``e`` moves the output."""
+        n_fft = 4096
+        h = torch.fft.irfft(float(self.gain) / torch.fft.rfft(self.a.double(), n=n_fft), n=n_fft)[:taps]
+        shape = e.shape
+        y = F.pad(e.reshape(-1, 1, shape[-1]).float(), (taps - 1, 0))
+        return F.conv1d(y, h.float().flip(0).view(1, 1, -1)).reshape(shape)
 
 
 def has_zero_run(x: torch.Tensor, run: int = ZERO_RUN) -> torch.Tensor:
@@ -237,6 +266,17 @@ class PatchDecoder(nn.Module):
         return self.post(self.up(self.frame(h)))[:, 0]
 
 
+class LinearPatchDecoder(nn.Module):
+    """``(B, P, dim) -> (B, P * 200)``: one linear map per patch (``arch="linear"`` and ``"skip"``)."""
+
+    def __init__(self, dim: int):
+        super().__init__()
+        self.lin = nn.Linear(dim, PATCH)
+
+    def forward(self, z: torch.Tensor) -> torch.Tensor:
+        return self.lin(z).reshape(z.shape[0], -1)
+
+
 class FSQ(nn.Module):
     """Finite scalar quantisation (Mentzer et al., ICLR 2024). Each of ``groups * group`` dimensions is
     bounded by ``tanh`` and rounded to one of ``levels`` (odd) integers ``-h .. h``, ``h = (levels - 1) / 2``,
@@ -317,33 +357,41 @@ class PatchCodec(nn.Module):
                  q_dropout: float = 0.5, order: int = 32, stft_weight: float = 0.1, restart_after: int = 30,
                  crop_sec: float = 16.0, upsample: str = "convT", fs: int = FS, quantizer: str = "rvq",
                  fsq_levels: int = 9, fsq_group: int = 4, whiten: str = "patch", ctx_enc: int = 0,
-                 ctx_dec: int = 0):
+                 ctx_dec: int = 0, dec_out: str = "raw", arch: str = "conv", fsq_norm: bool = False):
         super().__init__()
         assert fs == FS, "PatchCodec: 100 Hz only"
         assert quantizer in ("rvq", "fsq") and whiten in ("patch", "signal")
+        assert dec_out in ("raw", "white") and arch in ("conv", "skip", "linear")
+        assert arch == "conv" or dec_out == "white", "the linear paths draw the whitened patch"
         self.fs, self.patch = fs, PATCH
-        self.quantizer, self.whiten = quantizer, whiten
+        self.quantizer, self.whiten, self.dec_out, self.arch = quantizer, whiten, dec_out, arch
         self.dim, self.max_levels, self.vq_levels = dim, levels, levels
         self.q_dropout, self.stft_weight = q_dropout, stft_weight
         self.crop = int(round(crop_sec * fs)) // PATCH * PATCH
         self.whitener = Whitener(order, fs)
-        self.encoder = PatchEncoder(width, dim, fs)
+        self.encoder = nn.Linear(PATCH, dim) if arch == "linear" else PatchEncoder(width, dim, fs)
+        self.enc_skip = nn.Linear(PATCH, dim) if arch == "skip" else None
         self.enc_ctx = PatchContext(dim, ctx_enc)
+        self.fsq_bn = None
         if quantizer == "rvq":
             self.rvq = ResidualVQ(levels, codes, dim, restart_after=restart_after)
             self.n_codes = codes
         else:
             self.fsq = FSQ(levels, fsq_group, fsq_levels)
             self.fsq_in, self.fsq_out = nn.Linear(dim, self.fsq.dims), nn.Linear(self.fsq.dims, dim)
+            if fsq_norm:
+                self.fsq_bn = nn.BatchNorm1d(self.fsq.dims, affine=False)
             self.n_codes = self.fsq.n_codes
         self.dec_ctx = PatchContext(dim, ctx_dec)
         self.upsample = upsample
-        self.decoder = PatchDecoder(width, dim, upsample)
+        self.decoder = LinearPatchDecoder(dim) if arch == "linear" else PatchDecoder(width, dim, upsample)
+        self.dec_skip = LinearPatchDecoder(dim) if arch == "skip" else None
         self.bypass_vq = False
         # the codes of patch i see the signal of patches i - encoder_reach .. i + ctx_enc; the output inside
-        # patch i depends on the codes of patches i - receptive_patches .. i + receptive_patches
+        # patch i depends on the codes of patches i - receptive_patches .. i + receptive_patches (the inverse
+        # whitener of dec_out="white" reaches INV_TAPS - 1 samples back, i.e. 2 more patches)
         self.encoder_reach = ctx_enc + (1 if whiten == "signal" else 0)
-        self.receptive_patches = ctx_dec + 1
+        self.receptive_patches = ctx_dec + 1 + (math.ceil((INV_TAPS - 1) / PATCH) if dec_out == "white" else 0)
 
     def _k(self) -> int:
         """Levels used now: a random prefix in training (quantizer dropout), ``vq_levels`` in eval."""
@@ -360,13 +408,18 @@ class PatchCodec(nn.Module):
             w = self.whitener(x).reshape(B * P, PATCH)
         else:  # history reflected inside every patch
             w = self.whitener(x.reshape(B * P, PATCH))
-        return self.enc_ctx(self.encoder(w).view(B, P, -1))
+        z = self.encoder(w)
+        if self.enc_skip is not None:
+            z = z + self.enc_skip(w)
+        return self.enc_ctx(z.view(B, P, -1))
 
     def quantize(self, z: torch.Tensor, k: Optional[int] = None):
         """``(B, P, dim)`` -> quantized latents, codes ``(B, P, k)`` and commitment loss (0 for FSQ)."""
         B, P, D = z.shape
         if self.quantizer == "fsq":
             u = self.fsq_in(z)
+            if self.fsq_bn is not None:
+                u = self.fsq_bn(u.reshape(-1, u.shape[-1])).view(u.shape)
             if self.bypass_vq:  # bounded, not rounded
                 return self.fsq_out(self.fsq.bound(u) / self.fsq.half), None, z.new_zeros(())
             q, codes = self.fsq(u, self._k() if k is None else k)
@@ -383,8 +436,16 @@ class PatchCodec(nn.Module):
             return self.fsq_out(self.fsq.lookup(codes))
         return self.rvq.lookup(codes.reshape(B * P, k)).view(B, P, -1)
 
+    def _draw(self, zq: torch.Tensor) -> torch.Tensor:
+        """Decoder output in its own domain: the signal, or the whitened signal (``dec_out="white"``)."""
+        h = self.dec_ctx(zq)
+        y = self.decoder(h)
+        return y if self.dec_skip is None else y + self.dec_skip(h)
+
     def decode(self, zq: torch.Tensor) -> torch.Tensor:
-        return self.decoder(self.dec_ctx(zq))
+        """``(B, P, dim) -> (B, P * 200)`` signal in the units of the input."""
+        y = self._draw(zq)
+        return self.whitener.inverse(y) if self.dec_out == "white" else y
 
     def decode_codes(self, codes: torch.Tensor) -> torch.Tensor:
         """``(B, P, k)`` -> ``(B, P * 200)`` waveform."""
@@ -402,6 +463,9 @@ class PatchCodec(nn.Module):
     def forward(self, x: torch.Tensor) -> Dict[str, torch.Tensor]:
         z = self.encode(x)
         zq, codes, commit = self.quantize(z)
+        if self.dec_out == "white":
+            y = self._draw(zq)
+            return {"wave": self.whitener.inverse(y), "white": y, "codes": codes, "commit": commit}
         return {"wave": self.decode(zq), "codes": codes, "commit": commit}
 
     def loss(self, out: Dict[str, torch.Tensor], x: torch.Tensor):
@@ -409,7 +473,8 @@ class PatchCodec(nn.Module):
         convergence) + RVQ commitment. Returns ``(loss, whitened R^2, extra)``."""
         w = out["wave"].float()
         x = x[:, : w.shape[-1]].float()
-        ww, xw = self.whitener(w), self.whitener(x)
+        xw = self.whitener(x)  # the same filtering as the encoder input of whiten="signal"
+        ww = out["white"].float() if "white" in out else self.whitener(w)
         mse = (ww - xw).pow(2).mean(1)
         mag, _ = stft_losses(ww, xw, windows=STFT_WINDOWS, phase_win=0)
         loss = (mse + self.stft_weight * mag).mean() + out["commit"]
@@ -527,7 +592,9 @@ def build_from_args(a: dict) -> PatchCodec:
                       crop_sec=a["crop_sec"], upsample=a.get("upsample", "convT"),  # no key: runs before 27.11.2026
                       quantizer=a.get("quantizer", "rvq"), fsq_levels=a.get("fsq_levels", 9),
                       fsq_group=a.get("fsq_group", 4), whiten=a.get("whiten", "patch"), ctx_enc=a.get("ctx_enc", 0),
-                      ctx_dec=a.get("ctx_dec", 0))  # no keys: runs before revision 2 (27.11.2026)
+                      ctx_dec=a.get("ctx_dec", 0),  # no keys: runs before revision 2 (27.11.2026)
+                      dec_out=a.get("dec_out", "raw"), arch=a.get("arch", "conv"),
+                      fsq_norm=a.get("fsq_norm", False))  # no keys: runs before revision 3
 
 
 # ---------------------------------------------------------------------------- spectral twin (S3, #20)

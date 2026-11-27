@@ -137,6 +137,11 @@ def main(argv=None):
                    help="signal: whitening filter over the whole crop with its true history (revision 2)")
     f.add_argument("--ctx-enc", type=int, default=0, help="patches of context of the encoder on each side (even)")
     f.add_argument("--ctx-dec", type=int, default=0, help="patches of context of the decoder on each side (even)")
+    f.add_argument("--dec-out", choices=("raw", "white"), default="raw",
+                   help="white: the decoder draws the whitened patch, a fixed inverse FIR gives the signal (revision 3)")
+    f.add_argument("--arch", choices=("conv", "skip", "linear"), default="conv",
+                   help="skip: linear paths added to the convolutional ones; linear: linear paths only (dec-out white)")
+    f.add_argument("--fsq-norm", action="store_true", help="batch norm (no affine) before the FSQ bound")
     f.add_argument("--crop-sec", type=float, default=16.0)
     f.add_argument("--whiten-batches", type=int, default=50)
     f.add_argument("--vq-warmup", type=int, default=2000,
@@ -265,7 +270,8 @@ def _fit(a, t0):
     model = PatchCodec(width=a.width, dim=a.dim, codes=a.codes, levels=a.levels, q_dropout=a.q_dropout, order=a.order,
                        stft_weight=a.stft_weight, restart_after=a.restart_after, crop_sec=a.crop_sec,
                        upsample=a.upsample, quantizer=a.quantizer, fsq_levels=a.fsq_levels, fsq_group=a.fsq_group,
-                       whiten=a.whiten, ctx_enc=a.ctx_enc, ctx_dec=a.ctx_dec).to(device)
+                       whiten=a.whiten, ctx_enc=a.ctx_enc, ctx_dec=a.ctx_dec, dec_out=a.dec_out, arch=a.arch,
+                       fsq_norm=a.fsq_norm).to(device)
     n_par = sum(p.numel() for p in model.parameters())
     print(f"[patch_codec] windows: train {n_tr}, valid {n_va}; {n_par / 1e6:.2f} M parameters, "
           f"{model.bits_per_patch()} bits per 2 s patch at {a.levels} levels", flush=True)

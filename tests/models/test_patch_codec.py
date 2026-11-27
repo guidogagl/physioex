@@ -313,8 +313,12 @@ def test_encoder_reach_with_signal_whitening_and_context():
     assert torch.all(d2[3:9] > 0) and torch.all(d2[[0, 1, 2, 9, 10, 11, 12]] == 0)
 
 
-@pytest.mark.parametrize("kw", [{}, {"quantizer": "fsq", "levels": 3, "fsq_levels": 5, "fsq_group": 2,
-                                     "q_dropout": 0.0, "whiten": "signal", "ctx_enc": 2, "ctx_dec": 2}])
+_FSQ_KW = {"quantizer": "fsq", "levels": 3, "fsq_levels": 5, "fsq_group": 2, "q_dropout": 0.0, "whiten": "signal"}
+
+
+@pytest.mark.parametrize("kw", [{}, {**_FSQ_KW, "ctx_enc": 2, "ctx_dec": 2},
+                                {**_FSQ_KW, "ctx_dec": 2, "dec_out": "white", "arch": "skip", "fsq_norm": True},
+                                {**_FSQ_KW, "dec_out": "white", "arch": "linear", "fsq_norm": True}])
 def test_chunked_coding_equals_one_pass(kw):
     from physioex.train.bin.patch_codec import decode_signal, encode_signal
 
@@ -328,3 +332,58 @@ def test_chunked_coding_equals_one_pass(kw):
         c1 = m.codes(sig[None])[0]
         assert torch.equal(encode_signal(m, sig, m.max_levels, chunk=4), c1)
         assert torch.allclose(decode_signal(m, c1, chunk=4), m.decode_codes(c1[None])[0], atol=1e-5)
+
+
+def test_inverse_whitener_round_trip():
+    """gain / A(z) as a causal FIR of INV_TAPS samples undoes the whitening filter (zero history on both sides)."""
+    w = Whitener()
+    w.fit_psd(*welch_psd(_ar_noise(4, 8000)))
+    w.gain.fill_(0.5)
+    x = torch.randn(3, 3000)
+    y = w.inverse(w(x, pad="zeros"))
+    assert float((y - x).pow(2).mean() / x.pow(2).mean()) < 1e-6
+
+
+def test_white_output_receptive_field_and_loss():
+    """dec_out="white", arch="skip", ctx_dec = 2: the codes of patch i move the output of patches i - 3 .. i + 5
+    only (the inverse FIR reaches 255 samples forward), within the declared receptive_patches = 5; the loss
+    compares the drawn whitened patch with A * x."""
+    torch.manual_seed(0)
+    m = PatchCodec(width=8, dim=16, codes=32, levels=2, ctx_dec=2, dec_out="white", arch="skip").eval()
+    assert m.receptive_patches == 5
+    with torch.no_grad():
+        m.whitener.fit_psd(*welch_psd(_ar_noise(4, 4000)))
+        for p in m.parameters():
+            p.add_(0.05 * torch.randn_like(p))
+        z = torch.randn(1, 17, 16)
+        y0 = m.decode(z)
+        z1 = z.clone()
+        z1[0, 8] += torch.randn(16)
+        d = (m.decode(z1) - y0).abs()[0].view(17, PATCH).amax(1)
+        assert torch.all(d[[0, 1, 2, 3, 4, 14, 15, 16]] <= 1e-6 * d.max())
+        assert torch.all(d[5:13] > 0)
+        x = torch.randn(2, 8 * PATCH)
+        out = m(x)
+        assert set(out) >= {"wave", "white"} and out["wave"].shape == out["white"].shape == x.shape
+        loss, r2, _ = m.loss(out, x)
+        assert torch.isfinite(loss)
+        xw = m.whitener(x)
+        assert torch.allclose(r2, 1 - (out["white"] - xw).pow(2).mean() / xw.var(), atol=1e-4)
+
+
+def test_fsq_norm_keeps_the_bound_unsaturated():
+    """Encoder latents far beyond the tanh bound (the dead start of pilot P2, sleep-lens#24): without the norm
+    almost every input of the bound saturates; with it almost none does, and the codes still follow the latents."""
+    sat = {}
+    for norm in (False, True):
+        torch.manual_seed(0)
+        m = PatchCodec(width=8, dim=16, levels=2, quantizer="fsq", fsq_levels=5, fsq_group=2, q_dropout=0.0,
+                       fsq_norm=norm).train()
+        z = 1e3 * torch.randn(8, 6, 16)
+        u = m.fsq_in(z)
+        if norm:
+            u = m.fsq_bn(u.reshape(-1, u.shape[-1])).view(u.shape)
+        sat[norm] = float((torch.tanh(u).abs() > 0.99).float().mean())
+        zq, codes, _ = m.quantize(z)
+        assert codes.unique().numel() > 1 and torch.isfinite(zq).all()
+    assert sat[False] > 0.9 and sat[True] < 0.05
