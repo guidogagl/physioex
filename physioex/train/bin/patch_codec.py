@@ -5,8 +5,9 @@
     python -m physioex.train.bin.patch_codec eval --run RUN [--cache-dir C] [--per-unit 10] [--prefixes 1 2 4 8]
     python -m physioex.train.bin.patch_codec dump --run RUN [--train] [--nights-from DUMP/meta.json] [--out RUN/dump]
 
-``fit``: whitening filter on the training pool (``whitener.json``), then encoder, RVQ and decoder
-together on 16 s crops at a random alignment (site-balanced windows of the train split; validation
+``fit``: whitening filter on the training pool (``whitener.json``), then encoder, quantiser (RVQ, or FSQ
+with ``--quantizer fsq``; revision 2 also adds ``--whiten signal``, ``--ctx-enc`` and ``--ctx-dec``, see
+:mod:`physioex.models.patch_codec`) and decoder together on 16 s crops at a random alignment (site-balanced windows of the train split; validation
 windows of the val split). Writes ``ckpt/``, ``model.pt`` (best validation checkpoint), ``eval.json``
 (validation crops, per prefix of levels) and ``run.json`` (``model: patch_codec``).
 
@@ -28,6 +29,9 @@ the period) and decoded for every prefix of levels. Metrics on the scored epochs
   Since 26.11.2026 (decision after the pilot, xmai-lab/sleep-lens#19) the gate is ``on_over_off`` <= 1.1:
   that median over the median of the same ratio off the grid (0.25 Hz + multiples of 0.5 Hz), because
   ``x`` itself gave 1.066 on the grid in the pilot. The registered statistic stays in the report;
+* fidelity (revision 2, 27.11.2026): whitened R^2 of the scored samples of the nights >= 0.95
+  (``r2_w_nights``; the raw R^2 ``r2_raw_nights`` is reported). FSQ models without nested dropout are
+  evaluated at full depth only (:func:`model_prefixes`);
 * phase test (reported, no gate): whitened R^2 of 30 s epochs coded alone, real epochs against
   phase-randomised surrogates with the same amplitude spectrum.
 
@@ -55,6 +59,7 @@ import socket
 import subprocess
 import sys
 import time
+from typing import Optional
 
 import numpy as np
 import torch
@@ -62,7 +67,7 @@ import torch
 from physioex.models.recon_eval import load_best
 from physioex.train.bin.msvq import _merged_data, _merged_loaders
 
-GATE = {"f1": 0.9, "logpow": 0.9, "seam": 1.1, "comb": 1.1}
+GATE = {"f1": 0.9, "logpow": 0.9, "seam": 1.1, "comb": 1.1, "r2": 0.95}  # r2: revision 2, 27.11.2026
 GATE_BANDS = ("1", "2-4", "5-8", "9-12", "13-16", "17-30")
 #: pool units with a test split (the healthy units of concept_scan without the out-of-pool controls)
 EVAL_UNITS = ("ccshs", "dcsm", "hmc", "hpap_lab_full", "mass_ss02", "mass_ss03", "mass_ss04", "mass_ss05", "mesa",
@@ -80,6 +85,14 @@ def _git(*cmd):
 
 def default_prefixes(levels: int):
     return sorted({k for k in (1, 2, 4, 6, 8, 12, 16, 20, 24, 28, 32) if k <= levels} | {levels})
+
+
+def model_prefixes(model):
+    """Prefixes worth evaluating: every default prefix when the model was trained on prefixes (RVQ, or FSQ with
+    nested dropout ``q_dropout > 0``), else the full depth only."""
+    if model.quantizer == "fsq" and not model.q_dropout:
+        return [model.max_levels]
+    return default_prefixes(model.max_levels)
 
 
 def main(argv=None):
@@ -116,6 +129,14 @@ def main(argv=None):
     f.add_argument("--upsample", choices=("convT", "resize"), default="convT",
                    help="decoder upsampling: transposed convolution, or repeat + convolution (stopped early, job 1669985)")
     f.add_argument("--restart-after", type=int, default=30)
+    f.add_argument("--quantizer", choices=("rvq", "fsq"), default="rvq",
+                   help="fsq: finite scalar quantisation; --levels then counts groups of --fsq-group dimensions")
+    f.add_argument("--fsq-levels", type=int, default=9, help="values per FSQ dimension (odd)")
+    f.add_argument("--fsq-group", type=int, default=4, help="FSQ dimensions per code (fsq_levels ** group < 32768)")
+    f.add_argument("--whiten", choices=("patch", "signal"), default="patch",
+                   help="signal: whitening filter over the whole crop with its true history (revision 2)")
+    f.add_argument("--ctx-enc", type=int, default=0, help="patches of context of the encoder on each side (even)")
+    f.add_argument("--ctx-dec", type=int, default=0, help="patches of context of the decoder on each side (even)")
     f.add_argument("--crop-sec", type=float, default=16.0)
     f.add_argument("--whiten-batches", type=int, default=50)
     f.add_argument("--vq-warmup", type=int, default=2000,
@@ -243,7 +264,8 @@ def _fit(a, t0):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = PatchCodec(width=a.width, dim=a.dim, codes=a.codes, levels=a.levels, q_dropout=a.q_dropout, order=a.order,
                        stft_weight=a.stft_weight, restart_after=a.restart_after, crop_sec=a.crop_sec,
-                       upsample=a.upsample).to(device)
+                       upsample=a.upsample, quantizer=a.quantizer, fsq_levels=a.fsq_levels, fsq_group=a.fsq_group,
+                       whiten=a.whiten, ctx_enc=a.ctx_enc, ctx_dec=a.ctx_dec).to(device)
     n_par = sum(p.numel() for p in model.parameters())
     print(f"[patch_codec] windows: train {n_tr}, valid {n_va}; {n_par / 1e6:.2f} M parameters, "
           f"{model.bits_per_patch()} bits per 2 s patch at {a.levels} levels", flush=True)
@@ -251,7 +273,7 @@ def _fit(a, t0):
     json.dump(winfo, open(os.path.join(a.out, "whitener.json"), "w"), indent=1)
     print(f"[patch_codec] whitener {winfo}", flush=True)
     opt = torch.optim.AdamW(model.parameters(), lr=a.lr, weight_decay=1e-4)
-    if a.vq_warmup > 0:
+    if a.vq_warmup > 0 and a.quantizer == "rvq":  # FSQ has no codebook to initialise
         wlog = warmup_continuous(model, tr, opt, a.vq_warmup, device, a.grad_clip or None)
         t1 = time.time()
         nk = kmeans_init_rvq(model, tr, device, a.kmeans_per_code)
@@ -269,7 +291,7 @@ def _fit(a, t0):
     print(f"[patch_codec] best checkpoint {best}", flush=True)
     torch.save(model.state_dict(), os.path.join(a.out, "model.pt"))
     device = next(model.parameters()).device
-    ev = _valid_prefixes(model, va, a.eval_batches, device, default_prefixes(a.levels))
+    ev = _valid_prefixes(model, va, a.eval_batches, device, model_prefixes(model))
     ev["n_params"] = n_par
     json.dump(ev, open(os.path.join(a.out, "eval.json"), "w"), indent=1)
     print("[patch_codec] valid " + " ".join(f"L{k}: r2_w {v['r2_w']:.3f} r2_raw {v['r2_raw']:.3f}"
@@ -302,15 +324,27 @@ def load_codec(run_dir: str, device):
 
 @torch.no_grad()
 def encode_signal(model, sig: torch.Tensor, levels: int, chunk: int = 2048) -> torch.Tensor:
-    """``(n,)`` contiguous signal -> ``(n // 200, levels)`` codes; the encoder is local, so chunks are exact."""
-    step = chunk * model.patch
-    return torch.cat([model.codes(sig[i:i + step][None], levels)[0] for i in range(0, len(sig), step)])
+    """``(n,)`` contiguous signal -> ``(n // 200, levels)`` codes, equal to one coding of the whole signal.
+    Chunks overlap by the encoder's reach (``model.encoder_reach`` patches, plus one) on each side; a local
+    encoder needs none."""
+    reach = getattr(model, "encoder_reach", 0)
+    P = len(sig) // model.patch
+    if not reach:
+        step = chunk * model.patch
+        return torch.cat([model.codes(sig[i:i + step][None], levels)[0] for i in range(0, P * model.patch, step)])
+    m, out = reach + 1, []
+    for s in range(0, P, chunk):
+        lo, hi = max(0, s - m), min(P, s + chunk + m)
+        c = model.codes(sig[lo * model.patch:hi * model.patch][None], levels)[0]
+        out.append(c[s - lo:s - lo + min(chunk, P - s)])
+    return torch.cat(out)
 
 
 @torch.no_grad()
-def decode_signal(model, codes: torch.Tensor, chunk: int = 2048, margin: int = 2) -> torch.Tensor:
-    """``(P, k)`` codes -> ``(P * 200,)``. Chunks overlap by ``margin`` patches on each side: with the
-    ±1 patch receptive field the result equals one decode of the whole sequence."""
+def decode_signal(model, codes: torch.Tensor, chunk: int = 2048, margin: Optional[int] = None) -> torch.Tensor:
+    """``(P, k)`` codes -> ``(P * 200,)``. Chunks overlap by ``margin`` patches on each side (default: the
+    decoder's receptive field plus one), so the result equals one decode of the whole sequence."""
+    margin = margin or getattr(model, "receptive_patches", 1) + 1
     P, out = len(codes), []
     for s in range(0, P, chunk):
         lo, hi = max(0, s - margin), min(P, s + chunk + margin)
@@ -334,6 +368,7 @@ def _dump(a):
     run, model = load_codec(a.run, device)
     ra = run["args"]
     levels = a.levels or model.max_levels
+    assert model.n_codes <= 32767, "dump: codes are stored as int16"
     cache = a.cache_dir or ra.get("cache_dir_src") or ra.get("cache_dir")
     out = a.out or os.path.join(a.run, "dump")
     os.makedirs(out, exist_ok=True)
@@ -486,7 +521,7 @@ def _eval(a):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     run, model = load_codec(a.run, device)
     ra = run["args"]
-    prefixes = a.prefixes or default_prefixes(model.max_levels)
+    prefixes = a.prefixes or model_prefixes(model)
     cache = a.cache_dir or ra.get("cache_dir_src") or ra.get("cache_dir")
     md = build_test(a.splits or ra["splits"], [ra["channel"]], channel_pipelines(ra), 1, cache,
                     units=a.units.split(","), memmap_cache_size=4, trim_mode="main_period")
@@ -499,6 +534,8 @@ def _eval(a):
     seam = {k: np.zeros(6) for k in prefixes}  # seam sum, n; interior sum, n; patch-centre sum, n (control)
     comb = {k: [0.0, 0] for k in prefixes}
     comb_x = [0.0, 0]
+    fid = {k: np.zeros(2) for k in prefixes}  # whitened and raw squared error over the scored samples
+    tot = np.zeros(5)  # sum and sum of squares of the whitened and raw signal over the scored samples, count
     phase = {k: {"real": np.zeros(2), "surr": np.zeros(2)} for k in prefixes}  # SSE, SST
     sub_x, sub_h = [], {k: [] for k in prefixes}
     used = []
@@ -519,6 +556,8 @@ def _eval(a):
         near = ((pos % model.patch) < SEAM) | ((pos % model.patch) >= model.patch - SEAM)
         centre = ((pos % model.patch) >= model.patch // 2 - SEAM) & ((pos % model.patch) < model.patch // 2 + SEAM)
         xw = W(sig[None])[0]
+        xs_w, xs_r = xw[in_scored].double(), sig[in_scored].double()
+        tot += [float(xs_w.sum()), float(xs_w.pow(2).sum()), float(xs_r.sum()), float(xs_r.pow(2).sum()), len(xs_w)]
         p_, n_ = _welch_sum(xw)
         comb_x[0], comb_x[1] = comb_x[0] + p_, comb_x[1] + n_
         sub = np.sort(rng.choice(len(ts), min(a.per_night, len(ts)), replace=False))
@@ -536,6 +575,7 @@ def _eval(a):
             cnt[k].setdefault(unit, np.zeros((R, 3)))
             cnt[k][unit] += c
             ew = (W(h[None])[0] - xw).pow(2)
+            fid[k] += [float(ew[in_scored].sum()), float((h - sig)[in_scored].pow(2).sum())]
             seam[k] += [float(ew[near & in_scored].sum()), int((near & in_scored).sum()),
                         float(ew[~near & in_scored].sum()), int((~near & in_scored).sum()),
                         float(ew[centre & in_scored].sum()), int((centre & in_scored).sum())]
@@ -560,6 +600,8 @@ def _eval(a):
            "comb_control_x": {"median": float(np.median(ctrl)), "max": float(ctrl.max()),
                               "median_offgrid": float(np.median(ctrl_off))}, "prefix": {}}
 
+    sst_w, sst_r = tot[1] - tot[0] ** 2 / max(tot[4], 1), tot[3] - tot[2] ** 2 / max(tot[4], 1)
+
     def f1(c):
         tp, fp, fn = c
         return float(2 * tp / (2 * tp + fp + fn)) if tp + fp + fn else 1.0
@@ -576,12 +618,15 @@ def _eval(a):
         lines, off = _line_ratios(pk, freqs), _line_ratios(pk, freqs, offset=0.25)
         comb_rel = float(np.median(lines) / np.median(off))
         ph = {n: float(1 - v[0] / max(v[1], 1e-12)) for n, v in phase[k].items()}
+        r2_w, r2_r = float(1 - fid[k][0] / max(sst_w, 1e-12)), float(1 - fid[k][1] / max(sst_r, 1e-12))
         registered = {"f1": all(g0[r]["f1"] >= GATE["f1"] for r in RULES),
                       "logpow": all(br["logpow"][b] >= GATE["logpow"] for b in GATE_BANDS),
-                      "seam": seam_ratio <= GATE["seam"], "comb": float(np.median(lines)) <= GATE["comb"]}
+                      "seam": seam_ratio <= GATE["seam"], "comb": float(np.median(lines)) <= GATE["comb"],
+                      "r2": r2_w >= GATE["r2"]}  # whitened R^2 of the scored nights (revision 2)
         checks = {**registered, "comb": comb_rel <= GATE["comb"]}  # binding since 26.11.2026
         controlled = {**checks, "seam": seam_centre <= GATE["seam"]}
-        res["prefix"][str(k)] = {"bits_per_patch": model.bits_per_patch(k), "gate0": g0, "gate0_per_unit": per_unit,
+        res["prefix"][str(k)] = {"bits_per_patch": model.bits_per_patch(k), "r2_w_nights": r2_w, "r2_raw_nights": r2_r,
+                                 "gate0": g0, "gate0_per_unit": per_unit,
                                  "band_r2": br, "seam_ratio": seam_ratio, "seam_vs_centre": seam_centre,
                                  "comb": {"median": float(np.median(lines)), "max": float(lines.max()),
                                           "worst_hz": float(0.5 * (1 + int(lines.argmax()))),
@@ -591,7 +636,7 @@ def _eval(a):
                                  "checks": checks, "pass": all(checks.values()),
                                  "checks_registered": registered, "pass_registered": all(registered.values()),
                                  "checks_controlled": controlled, "pass_controlled": all(controlled.values())}
-        print(f"[patch_codec eval] L{k}: " + " ".join(f"{r} {g0[r]['f1']:.3f}" for r in RULES)
+        print(f"[patch_codec eval] L{k}: R2 w {r2_w:.4f} raw {r2_r:.4f} | " + " ".join(f"{r} {g0[r]['f1']:.3f}" for r in RULES)
               + f" | logpow min {min(br['logpow'][b] for b in GATE_BANDS):.3f} | seam {seam_ratio:.3f}"
               + f" (vs centre {seam_centre:.3f}) | comb {np.median(lines):.3f} (on/off {comb_rel:.3f})"
               + f" | phase gap {ph['real'] - ph['surr']:+.3f} | pass {all(checks.values())}"

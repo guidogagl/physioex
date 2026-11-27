@@ -1,13 +1,15 @@
 """PatchCodec (2 s patch tokenizer, xmai-lab/sleep-lens#19): shapes, locality of encoder and decoder,
-RVQ prefixes, whitening filter, crops, trainer step, continuity across patch boundaries. CPU, small models."""
+RVQ prefixes, FSQ and the context options of revision 2, chunked coding, whitening filter, crops, trainer step, continuity across patch boundaries. CPU, small models."""
 from __future__ import annotations
+
+import math
 
 import numpy as np
 import pytest
 import torch
 
 from physioex.models.patch_codec import (
-    PATCH, PatchCodec, PatchCodecTrainer, Whitener, crops, has_zero_run, kmeans_init_rvq, levinson,
+    FSQ, PATCH, PatchCodec, PatchContext, PatchCodecTrainer, Whitener, crops, has_zero_run, kmeans_init_rvq, levinson,
     warmup_continuous, welch_psd,
 )
 
@@ -233,3 +235,96 @@ def test_subset_splits_same_number_per_item():
         idx = [sp[k]["train"].index(x) for x in sub[k]["train"]]
         assert idx == sorted(idx)  # original order kept
     assert sub["mesa"] == sp["mesa"]  # not an item: untouched
+
+
+# ---------------------------------------------------------------------------- revision 2 (27.11.2026)
+
+
+def test_fsq_codes_round_trip_prefix_and_straight_through():
+    q = FSQ(groups=3, group=2, levels=5)
+    u = (1.5 * torch.randn(64, 6)).requires_grad_()
+    v, c = q(u)
+    assert c.shape == (64, 3) and int(c.min()) >= 0 and int(c.max()) < q.n_codes == 25
+    assert set((v.detach() * q.half).round().unique().tolist()) == {-2.0, -1.0, 0.0, 1.0, 2.0}
+    assert torch.allclose(q.lookup(c), v.detach(), atol=1e-6)
+    v.sum().backward()
+    assert torch.all(u.grad[u.detach().abs() < 5] != 0)  # straight through the rounding (tanh slope only)
+    v2, c2 = q(u.detach(), k=2)
+    assert c2.shape == (64, 2) and torch.all(v2[:, 4:] == 0) and torch.equal(c2, c[:, :2])
+    assert torch.allclose(q.lookup(c2), v2, atol=1e-6)
+
+
+def test_fsq_codec_shapes_bits_and_decode_codes():
+    torch.manual_seed(0)
+    m = PatchCodec(width=8, dim=16, levels=3, quantizer="fsq", fsq_levels=5, fsq_group=2, q_dropout=0.0).eval()
+    x = torch.randn(2, 1650)
+    out = m(x)
+    assert out["wave"].shape == (2, 8 * PATCH) and out["codes"].shape == (2, 8, 3)
+    assert m.n_codes == 25 and m.bits_per_patch() == round(3 * 2 * math.log2(5))
+    c = m.codes(x)
+    assert torch.equal(c, out["codes"])
+    assert torch.allclose(m.decode_codes(c), out["wave"], atol=1e-5)
+    assert m.codes(x, levels=1).shape == (2, 8, 1)
+    assert kmeans_init_rvq(m, [], "cpu") == 0  # no codebook
+
+
+def test_patch_context_is_identity_at_init():
+    z = torch.randn(2, 7, 16)
+    assert torch.equal(PatchContext(16, 4)(z), z) and torch.equal(PatchContext(16, 0)(z), z)
+    assert not list(PatchContext(16, 0).parameters())
+
+
+def test_decoder_receptive_field_with_context():
+    """ctx_dec = 2: the output inside patch i depends on the codes of i - 3 .. i + 3 only."""
+    torch.manual_seed(0)
+    m = PatchCodec(width=8, dim=16, codes=32, levels=2, ctx_dec=2).eval()
+    assert m.receptive_patches == 3
+    with torch.no_grad():
+        for p in list(m.decoder.parameters()) + list(m.dec_ctx.parameters()):
+            p.add_(0.05 * torch.randn_like(p))
+        z = torch.randn(1, 13, 16)
+        y0 = m.decode(z)
+        z1 = z.clone()
+        z1[0, 6] += torch.randn(16)
+        d = (m.decode(z1) - y0).abs()[0].view(13, PATCH).amax(1)
+    assert torch.all(d[[0, 1, 2, 10, 11, 12]] <= 1e-6 * d.max())
+    assert torch.all(d[3:10] > 0)
+
+
+def test_encoder_reach_with_signal_whitening_and_context():
+    """whiten="signal", ctx_enc = 2: the codes of patch i see patches i - 3 .. i + 2 (the whitening filter carries
+    the last 32 samples of patch i - 1 into patch i)."""
+    torch.manual_seed(0)
+    m = PatchCodec(width=8, dim=16, codes=32, levels=2, whiten="signal", ctx_enc=2).eval()
+    assert m.encoder_reach == 3
+    with torch.no_grad():
+        m.whitener.fit_psd(*welch_psd(_ar_noise(4, 4000)))
+        for p in m.enc_ctx.parameters():
+            p.add_(0.05 * torch.randn_like(p))
+        x = torch.randn(1, 13 * PATCH)
+        z0 = m.encode(x)
+        x1 = x.clone()
+        x1[0, 6 * PATCH:6 * PATCH + 50] += torch.randn(50)  # start of patch 6
+        d1 = (m.encode(x1) - z0).abs().amax(-1)[0]
+        x2 = x.clone()
+        x2[0, 6 * PATCH - 10:6 * PATCH] += torch.randn(10)  # end of patch 5: reaches the start of patch 6
+        d2 = (m.encode(x2) - z0).abs().amax(-1)[0]
+    assert torch.all(d1[4:9] > 0) and torch.all(d1[[0, 1, 2, 3, 9, 10, 11, 12]] == 0)
+    assert torch.all(d2[3:9] > 0) and torch.all(d2[[0, 1, 2, 9, 10, 11, 12]] == 0)
+
+
+@pytest.mark.parametrize("kw", [{}, {"quantizer": "fsq", "levels": 3, "fsq_levels": 5, "fsq_group": 2,
+                                     "q_dropout": 0.0, "whiten": "signal", "ctx_enc": 2, "ctx_dec": 2}])
+def test_chunked_coding_equals_one_pass(kw):
+    from physioex.train.bin.patch_codec import decode_signal, encode_signal
+
+    torch.manual_seed(0)
+    m = PatchCodec(**{"width": 8, "dim": 16, "codes": 32, "levels": 2, **kw}).eval()
+    with torch.no_grad():
+        m.whitener.fit_psd(*welch_psd(_ar_noise(4, 4000)))
+        for p in m.parameters():
+            p.add_(0.05 * torch.randn_like(p))
+        sig = torch.randn(23 * PATCH + 77)
+        c1 = m.codes(sig[None])[0]
+        assert torch.equal(encode_signal(m, sig, m.max_levels, chunk=4), c1)
+        assert torch.allclose(decode_signal(m, c1, chunk=4), m.decode_codes(c1[None])[0], atol=1e-5)

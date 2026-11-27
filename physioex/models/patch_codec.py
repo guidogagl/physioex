@@ -29,6 +29,23 @@ below 4 Hz). The decoder draws ``x_hat`` in the units of the input. Departure fr
 ("de-whitening after the decoder"): no inverse all-pole filter follows the decoder, because its
 infinite tail would carry an edit beyond ± 1 patch; the loss is still computed in the whitened domain.
 
+Revision 2 (27.11.2026, after the negative S2 gate of the first codec, xmai-lab/sleep-lens#19): fidelity
+first, bits are free. With one 128-d latent per patch the RVQ gained ~0.5 dB per 4 levels at 28-32 levels, and a
+geometric extrapolation of ``1 - R^2`` over the levels stops near whitened R^2 0.87, while every code was in use
+(perplexity ~700-740 of 1024). Options of the revision, all off by default so earlier runs load unchanged:
+
+* ``quantizer="fsq"``: :class:`FSQ` instead of the RVQ. The encoder latent (``dim``) is projected to
+  ``levels * fsq_group`` dimensions, each rounded to one of ``fsq_levels`` values; ``fsq_group`` dimensions
+  make one code, so a patch still has ``levels`` codes (``levels`` counts groups, not residual levels);
+* ``whiten="signal"``: the whitening filter runs over the whole signal with its true history instead of a
+  history reflected inside every patch, so the first 0.32 s of a patch are whitened correctly. The codes of
+  patch ``i`` then also depend on the last 32 samples of patch ``i - 1``;
+* ``ctx_dec``: :class:`PatchContext` on the quantised latents before the decoder, output inside patch ``i``
+  from the codes of ``i - ctx_dec - 1 .. i + ctx_dec + 1`` (``receptive_patches``); an edit of the codes of a
+  span changes the signal within that span ± ``receptive_patches``;
+* ``ctx_enc``: the same on the encoder latents before quantisation. The codes of a patch then depend on its
+  neighbours (an event leaks into the codes around it), which the plan's surprise and removal steps pay for.
+
 Input: ``(B, n)`` clean EEG at 100 Hz, ``RobustScale`` units (cache of the clean channels); ``n`` is
 cut to a multiple of 200. Sleep stages and concept labels are never used.
 """
@@ -220,24 +237,113 @@ class PatchDecoder(nn.Module):
         return self.post(self.up(self.frame(h)))[:, 0]
 
 
+class FSQ(nn.Module):
+    """Finite scalar quantisation (Mentzer et al., ICLR 2024). Each of ``groups * group`` dimensions is
+    bounded by ``tanh`` and rounded to one of ``levels`` (odd) integers ``-h .. h``, ``h = (levels - 1) / 2``,
+    returned as values in [-1, 1]; the gradient passes straight through the rounding. Every level owns a cell
+    of the same width in the bounded domain. ``group`` consecutive dimensions make one code of
+    ``levels ** group`` values (mixed radix). No codebook: nothing to initialise, no commitment loss, no dead
+    codes. A prefix of ``k`` groups leaves the other dimensions at 0, the middle level."""
+
+    def __init__(self, groups: int, group: int = 4, levels: int = 9):
+        super().__init__()
+        assert levels % 2 == 1 and levels >= 3, "FSQ: odd levels (0 is the middle level)"
+        self.groups, self.group, self.levels = groups, group, levels
+        self.dims, self.half = groups * group, (levels - 1) // 2
+        self.register_buffer("radix", levels ** torch.arange(group), persistent=False)
+
+    @property
+    def n_codes(self) -> int:
+        return self.levels ** self.group
+
+    def bound(self, u: torch.Tensor) -> torch.Tensor:
+        return torch.tanh(u.float()) * (self.half + 0.5 - 1e-3)
+
+    def codes_of(self, r: torch.Tensor) -> torch.Tensor:
+        """Integer levels ``(..., dims)`` -> codes ``(..., groups)``."""
+        d = (r + self.half).long().view(*r.shape[:-1], self.groups, self.group)
+        return (d * self.radix).sum(-1)
+
+    def forward(self, u: torch.Tensor, k: Optional[int] = None):
+        """``(..., dims)`` -> values ``(..., dims)`` in [-1, 1] and codes ``(..., k)`` of the first ``k`` groups."""
+        k = self.groups if k is None else k
+        b = self.bound(u)
+        r = torch.round(b)
+        q = b + (r - b).detach()
+        if k < self.groups:
+            q = q * (torch.arange(self.dims, device=q.device) < k * self.group)
+        return q / self.half, self.codes_of(r.detach())[..., :k]
+
+    def lookup(self, codes: torch.Tensor) -> torch.Tensor:
+        """Codes ``(..., k)`` of the first ``k`` groups -> values ``(..., dims)`` (the other groups at 0)."""
+        k = codes.shape[-1]
+        d = torch.div(codes.long()[..., None], self.radix, rounding_mode="floor") % self.levels
+        v = (d - self.half).float().flatten(-2) / self.half
+        return F.pad(v, (0, (self.groups - k) * self.group))
+
+
+class PatchContext(nn.Module):
+    """Residual convolutions along the sequence of patch latents ``(B, P, dim) -> (B, P, dim)``: ``radius / 2``
+    blocks of two 3-tap convolutions, so the output at patch ``i`` sees patches ``i - radius .. i + radius``
+    (zeros beyond the ends). The second convolution of every block starts at zero: identity at
+    initialisation. No normalisation across patches, which would carry information along the whole
+    sequence. ``radius = 0``: identity without parameters (state dicts of earlier runs load unchanged)."""
+
+    def __init__(self, dim: int, radius: int = 0):
+        super().__init__()
+        assert radius >= 0 and radius % 2 == 0, "PatchContext: even radius"
+        self.radius = radius
+        self.blocks = nn.ModuleList()
+        for _ in range(radius // 2):
+            c1, c2 = nn.Conv1d(dim, dim, 3, padding=1), nn.Conv1d(dim, dim, 3, padding=1)
+            nn.init.zeros_(c2.weight)
+            nn.init.zeros_(c2.bias)
+            self.blocks.append(nn.Sequential(nn.GELU(), c1, nn.GELU(), c2))
+
+    def forward(self, z: torch.Tensor) -> torch.Tensor:
+        if not len(self.blocks):
+            return z
+        h = z.transpose(1, 2)
+        for b in self.blocks:
+            h = h + b(h)
+        return h.transpose(1, 2)
+
+
 class PatchCodec(nn.Module):
-    """Encoder local to the 2 s patch, RVQ, decoder with ±1 patch receptive field (module docstring)."""
+    """Encoder on the 2 s patch (plus ``ctx_enc`` patches), RVQ or FSQ, decoder with ±``receptive_patches``
+    patches of receptive field (module docstring)."""
 
     def __init__(self, width: int = 64, dim: int = 128, codes: int = 1024, levels: int = 8,
                  q_dropout: float = 0.5, order: int = 32, stft_weight: float = 0.1, restart_after: int = 30,
-                 crop_sec: float = 16.0, upsample: str = "convT", fs: int = FS):
+                 crop_sec: float = 16.0, upsample: str = "convT", fs: int = FS, quantizer: str = "rvq",
+                 fsq_levels: int = 9, fsq_group: int = 4, whiten: str = "patch", ctx_enc: int = 0,
+                 ctx_dec: int = 0):
         super().__init__()
         assert fs == FS, "PatchCodec: 100 Hz only"
+        assert quantizer in ("rvq", "fsq") and whiten in ("patch", "signal")
         self.fs, self.patch = fs, PATCH
-        self.dim, self.n_codes, self.max_levels, self.vq_levels = dim, codes, levels, levels
+        self.quantizer, self.whiten = quantizer, whiten
+        self.dim, self.max_levels, self.vq_levels = dim, levels, levels
         self.q_dropout, self.stft_weight = q_dropout, stft_weight
         self.crop = int(round(crop_sec * fs)) // PATCH * PATCH
         self.whitener = Whitener(order, fs)
         self.encoder = PatchEncoder(width, dim, fs)
-        self.rvq = ResidualVQ(levels, codes, dim, restart_after=restart_after)
+        self.enc_ctx = PatchContext(dim, ctx_enc)
+        if quantizer == "rvq":
+            self.rvq = ResidualVQ(levels, codes, dim, restart_after=restart_after)
+            self.n_codes = codes
+        else:
+            self.fsq = FSQ(levels, fsq_group, fsq_levels)
+            self.fsq_in, self.fsq_out = nn.Linear(dim, self.fsq.dims), nn.Linear(self.fsq.dims, dim)
+            self.n_codes = self.fsq.n_codes
+        self.dec_ctx = PatchContext(dim, ctx_dec)
         self.upsample = upsample
         self.decoder = PatchDecoder(width, dim, upsample)
         self.bypass_vq = False
+        # the codes of patch i see the signal of patches i - encoder_reach .. i + ctx_enc; the output inside
+        # patch i depends on the codes of patches i - receptive_patches .. i + receptive_patches
+        self.encoder_reach = ctx_enc + (1 if whiten == "signal" else 0)
+        self.receptive_patches = ctx_dec + 1
 
     def _k(self) -> int:
         """Levels used now: a random prefix in training (quantizer dropout), ``vq_levels`` in eval."""
@@ -249,24 +355,36 @@ class PatchCodec(nn.Module):
         """``(B, n) -> (B, P, dim)`` continuous latents, ``P = n // 200``."""
         B, n = x.shape
         P = n // PATCH
-        p = x[:, : P * PATCH].reshape(B * P, PATCH)
-        return self.encoder(self.whitener(p)).view(B, P, -1)
+        x = x[:, : P * PATCH]
+        if self.whiten == "signal":  # true history: the first 32 samples of a patch see the previous patch
+            w = self.whitener(x).reshape(B * P, PATCH)
+        else:  # history reflected inside every patch
+            w = self.whitener(x.reshape(B * P, PATCH))
+        return self.enc_ctx(self.encoder(w).view(B, P, -1))
 
     def quantize(self, z: torch.Tensor, k: Optional[int] = None):
-        """``(B, P, dim)`` -> quantized latents, codes ``(B, P, k)`` and commitment loss."""
+        """``(B, P, dim)`` -> quantized latents, codes ``(B, P, k)`` and commitment loss (0 for FSQ)."""
         B, P, D = z.shape
+        if self.quantizer == "fsq":
+            u = self.fsq_in(z)
+            if self.bypass_vq:  # bounded, not rounded
+                return self.fsq_out(self.fsq.bound(u) / self.fsq.half), None, z.new_zeros(())
+            q, codes = self.fsq(u, self._k() if k is None else k)
+            return self.fsq_out(q), codes, z.new_zeros(())
         if self.bypass_vq:
             return z.float(), None, z.new_zeros(())
         zq, codes, loss = self.rvq(z.reshape(B * P, D), self._k() if k is None else k)
         return zq.view(B, P, D), codes.view(B, P, -1), loss
 
     def embed(self, codes: torch.Tensor) -> torch.Tensor:
-        """``(B, P, k)`` codes (any prefix of levels) -> ``(B, P, dim)``."""
+        """``(B, P, k)`` codes (any prefix of levels or groups) -> ``(B, P, dim)``."""
         B, P, k = codes.shape
+        if self.quantizer == "fsq":
+            return self.fsq_out(self.fsq.lookup(codes))
         return self.rvq.lookup(codes.reshape(B * P, k)).view(B, P, -1)
 
     def decode(self, zq: torch.Tensor) -> torch.Tensor:
-        return self.decoder(zq)
+        return self.decoder(self.dec_ctx(zq))
 
     def decode_codes(self, codes: torch.Tensor) -> torch.Tensor:
         """``(B, P, k)`` -> ``(B, P * 200)`` waveform."""
@@ -302,7 +420,8 @@ class PatchCodec(nn.Module):
         return loss, _r2(ww, xw), extra
 
     def bits_per_patch(self, levels: Optional[int] = None) -> int:
-        return int(round((levels or self.vq_levels) * math.log2(self.n_codes)))
+        per = self.fsq.group * math.log2(self.fsq.levels) if self.quantizer == "fsq" else math.log2(self.n_codes)
+        return int(round((levels or self.vq_levels) * per))
 
 
 def crops(x: torch.Tensor, n: int, training: bool) -> torch.Tensor:
@@ -383,6 +502,8 @@ def kmeans_init_rvq(model: PatchCodec, loader, device, per_code: int = 20, max_b
     number of vectors."""
     from physioex.data.collate import stack_channels
 
+    if model.quantizer != "rvq":
+        return 0
     was = model.training
     model.eval()
     need, acc, n = per_code * model.n_codes, [], 0
@@ -403,7 +524,10 @@ def build_from_args(a: dict) -> PatchCodec:
     """Untrained :class:`PatchCodec` from the ``args`` of a ``run.json`` (``model: patch_codec``)."""
     return PatchCodec(width=a["width"], dim=a["dim"], codes=a["codes"], levels=a["levels"], q_dropout=a["q_dropout"],
                       order=a["order"], stft_weight=a["stft_weight"], restart_after=a["restart_after"],
-                      crop_sec=a["crop_sec"], upsample=a.get("upsample", "convT"))  # no key: runs before 27.11.2026
+                      crop_sec=a["crop_sec"], upsample=a.get("upsample", "convT"),  # no key: runs before 27.11.2026
+                      quantizer=a.get("quantizer", "rvq"), fsq_levels=a.get("fsq_levels", 9),
+                      fsq_group=a.get("fsq_group", 4), whiten=a.get("whiten", "patch"), ctx_enc=a.get("ctx_enc", 0),
+                      ctx_dec=a.get("ctx_dec", 0))  # no keys: runs before revision 2 (27.11.2026)
 
 
 # ---------------------------------------------------------------------------- spectral twin (S3, #20)
