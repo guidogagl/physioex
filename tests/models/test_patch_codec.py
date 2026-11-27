@@ -162,6 +162,17 @@ def test_trainer_step_runs_and_backpropagates():
     assert {"mse_w", "stft_w", "commit", "r2_raw", "perplexity_1"} <= set(extra)
 
 
+def test_validation_loss_is_one_minus_r2():
+    """The Trainer keeps the checkpoint and stops early on the lowest validation loss: for the codec that loss
+    is 1 - whitened R^2, not the training loss with its commitment term."""
+    m = _small(crop_sec=8.0).eval()
+    batch = {"channel_order": ["EEG_clean"], "signals": {"EEG_clean": _ar_noise(4, 3000)[:, None]}}
+    with torch.no_grad():
+        loss, r2, extra = PatchCodecTrainer._step(m, batch, None, torch.device("cpu"))
+    torch.testing.assert_close(loss, 1 - r2)
+    assert "loss_train" in extra
+
+
 def test_warmup_then_kmeans_initialises_every_level():
     m = _small(crop_sec=8.0)
     loader = [{"channel_order": ["EEG_clean"], "signals": {"EEG_clean": _ar_noise(4, 3000, seed=i)[:, None]}}

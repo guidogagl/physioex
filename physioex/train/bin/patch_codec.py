@@ -109,8 +109,8 @@ def main(argv=None):
     f.add_argument("--q-dropout", type=float, default=0.5)
     f.add_argument("--order", type=int, default=32, help="order of the LPC whitening filter")
     f.add_argument("--stft-weight", type=float, default=0.1)
-    f.add_argument("--upsample", choices=("resize", "convT"), default="resize",
-                   help="decoder upsampling: repeat + convolution, or transposed convolution (pilot 26.11.2026)")
+    f.add_argument("--upsample", choices=("convT", "resize"), default="convT",
+                   help="decoder upsampling: transposed convolution, or repeat + convolution (stopped early, job 1669985)")
     f.add_argument("--restart-after", type=int, default=30)
     f.add_argument("--crop-sec", type=float, default=16.0)
     f.add_argument("--whiten-batches", type=int, default=50)

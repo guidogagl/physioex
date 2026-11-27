@@ -10,10 +10,11 @@ One residual-VQ code stack per non-overlapping 2 s patch (200 samples at 100 Hz)
   ``levels`` levels, EMA codebooks, dead-code restart, quantizer dropout (with probability
   ``q_dropout`` a random prefix of levels), so one model serves every prefix;
 * **decoder**: the latent of each patch is unfolded into 5 frames of 0.4 s, then convolutions over the
-  whole sequence of patches upsample to 100 Hz (strides 5, 4, 2). Each upsampling step repeats every sample
-  ``s`` times and convolves with ``s`` or ``s + 1`` taps (``upsample="resize"``). The transposed convolution
-  of the pilot of 26.11.2026 (``"convT"``) turned the mean of its input into a fixed pattern with the period
-  of its stride, seen as lines at 12.5 and 25 Hz in the residual. The receptive field is shorter than
+  whole sequence of patches upsample to 100 Hz (strides 5, 4, 2) with transposed convolutions
+  (``upsample="convT"``). They leave a weak pattern locked to the patch grid on the 12.5 Hz harmonics
+  (pilot of 26.11.2026). Repeating every sample ``s`` times and convolving (``"resize"``) was tried in
+  job 1669985 and stopped early: after 2,500 steps it had a larger locked pattern (12.5 Hz, 32-35 Hz) and
+  a slower warm-up. The receptive field is shorter than
   ±200 samples, so the output inside patch ``i`` depends only on the codes of patches ``i - 1``, ``i``
   and ``i + 1`` (``tests/models/test_patch_codec.py``). An edit of the codes of a span changes the
   signal only within that span ± 1 patch. Adjacent patches are drawn by the same convolutions across
@@ -185,7 +186,7 @@ class PatchEncoder(nn.Module):
         return self.out(self.down(self.stem(p[:, None])))
 
 
-def _up(c_in: int, c_out: int, s: int, dilations, mode: str = "resize") -> nn.Sequential:
+def _up(c_in: int, c_out: int, s: int, dilations, mode: str = "convT") -> nn.Sequential:
     """Upsampling by ``s``. ``"resize"``: repeat each sample ``s`` times, then a convolution of ``s`` taps
     (``s + 1`` when ``s`` is even): a constant input stays constant and each output sees at most two input
     samples. ``"convT"``: transposed convolution of ``2 s`` taps (pilot of 26.11.2026)."""
@@ -203,7 +204,7 @@ def _up(c_in: int, c_out: int, s: int, dilations, mode: str = "resize") -> nn.Se
 class PatchDecoder(nn.Module):
     """``(B, P, dim) -> (B, P * 200)``, receptive field shorter than ±200 samples."""
 
-    def __init__(self, width: int = 64, dim: int = 128, upsample: str = "resize"):
+    def __init__(self, width: int = 64, dim: int = 128, upsample: str = "convT"):
         super().__init__()
         ch = [width * 2 ** i for i in range(len(DEC_STRIDES), -1, -1)]
         self.c0 = ch[0]
@@ -224,7 +225,7 @@ class PatchCodec(nn.Module):
 
     def __init__(self, width: int = 64, dim: int = 128, codes: int = 1024, levels: int = 8,
                  q_dropout: float = 0.5, order: int = 32, stft_weight: float = 0.1, restart_after: int = 30,
-                 crop_sec: float = 16.0, upsample: str = "resize", fs: int = FS):
+                 crop_sec: float = 16.0, upsample: str = "convT", fs: int = FS):
         super().__init__()
         assert fs == FS, "PatchCodec: 100 Hz only"
         self.fs, self.patch = fs, PATCH
@@ -319,7 +320,8 @@ def crops(x: torch.Tensor, n: int, training: bool) -> torch.Tensor:
 
 
 class PatchCodecTrainer(Trainer):
-    """Trainer for :class:`PatchCodec`; ``acc`` is the whitened R^2 of the crop. Call
+    """Trainer for :class:`PatchCodec`; ``acc`` is the whitened R^2 of the crop, and the validation loss is
+    ``1 - acc``, so the best checkpoint and early stopping follow the reconstruction. Call
     :func:`fit_whitener` first; use ``log_confusion_matrix=False``."""
 
     @staticmethod
@@ -331,7 +333,13 @@ class PatchCodecTrainer(Trainer):
         x = crops(x.reshape(len(x), -1).to(device), model.crop, model.training)
         with _autocast(device):
             out = model(x)
-        return model.loss(out, x)
+        loss, r2, extra = model.loss(out, x)
+        if not model.training:
+            # validation: the Trainer keeps the checkpoint and stops early on the lowest loss. The commitment
+            # term can grow while R^2 still rises (job 1669985), so select on the whitened R^2 at full depth.
+            extra["loss_train"] = float(loss)
+            loss = 1 - r2
+        return loss, r2, extra
 
 
 def warmup_continuous(model: PatchCodec, loader, opt, steps: int, device, grad_clip: Optional[float] = 1.0,
