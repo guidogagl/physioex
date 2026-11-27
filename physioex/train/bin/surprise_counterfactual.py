@@ -88,7 +88,7 @@ def load_night(a, unit, sid, L, scale_js):
     stage = np.full(n_tok, -1, np.int64)
     stage[tok] = np.repeat(y[keep], T)
     masks = {}
-    srcs = [("", load_refs(pr))] + ([("m1:", dict(np.load(pm)))] if os.path.exists(pm) else [])
+    srcs = [("", load_refs(pr))] + ([("m1:", load_refs(pm))] if os.path.exists(pm) else [])  # both bit-packed
     for pre, mm in srcs:
         for k, v in mm.items():
             v = np.asarray(v)

@@ -125,6 +125,7 @@ def main(argv=None):
     ap_.add_argument("--seed", type=int, default=0)
     a = ap_.parse_args(argv)
     from physioex.train.bin.concept_refs_eval import IOU, bootstrap, events, night_counts, prf
+    from physioex.train.bin.concept_scan import load_refs  # refs/ and m1/ masks are bit-packed
 
     t0 = time.time()
     rng = np.random.default_rng(a.seed)
@@ -143,20 +144,20 @@ def main(argv=None):
                 pr = os.path.join(a.dump, "refs", unit, f)
                 if not (f.endswith(".npz") and os.path.exists(ps) and os.path.exists(pt) and os.path.exists(pr)):
                     continue
-                refs = np.load(pr)
-                if ref_key not in refs.files:
+                refs = load_refs(pr)
+                if ref_key not in refs:
                     continue
                 d = np.load(os.path.join(ud, f))
                 m1p = os.path.join(a.dump, "m1", unit, f)
-                m1 = np.load(m1p) if os.path.exists(m1p) else None
+                m1 = load_refs(m1p) if os.path.exists(m1p) else None
                 ts, y = d["ts"], np.repeat(np.asarray(d["y"]), T)
                 sc, tw = aligned_scores(np.load(ps), ts), aligned_scores(np.load(pt), ts)
                 ok = np.isfinite(sc) & np.isfinite(tw)
-                masks = {k: refs[k].astype(bool) for k in refs.files
-                         if not k.startswith("_") and not k.endswith("_epoch") and refs[k].shape == sc.shape}
+                masks = {k: v for k, v in refs.items()
+                         if not k.startswith("_") and not k.endswith("_epoch") and v.shape == sc.shape}
                 if m1 is not None:
-                    masks.update({f"m1:{k}": m1[k].astype(bool) for k in m1.files
-                                  if not k.startswith("_") and not k.endswith("_epoch") and m1[k].shape == sc.shape})
+                    masks.update({f"m1:{k}": v for k, v in m1.items()
+                                  if not k.startswith("_") and not k.endswith("_epoch") and v.shape == sc.shape})
                 rule = {}
                 for r in rules:
                     src, key = r.split(":", 1)

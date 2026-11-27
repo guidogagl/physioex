@@ -187,6 +187,14 @@ def test_spectral_twin_codes_and_r2():
     assert torch.equal(tw2.codes(feats, 2), c[:, :2])
 
 
+def _packed(**masks):
+    """Token masks in the layout of the concept_scan dump: bit-packed, with ``_len_<key>`` = length."""
+    out = {}
+    for k, v in masks.items():
+        out[k], out[f"_len_{k}"] = np.packbits(np.asarray(v, bool)), np.array(len(v))
+    return out
+
+
 def test_surprise_eval_on_synthetic_nights(tmp_path):
     """The codes' surprise follows the expert KC, the twin's is noise: AP codes > twin and the gate passes."""
     import json
@@ -206,9 +214,9 @@ def test_surprise_eval_on_synthetic_nights(tmp_path):
         for d in dirs.values():
             d.mkdir(parents=True, exist_ok=True)
         np.savez(dirs["dump"] / f"{sid}.npz", ts=ts, y=y)
-        np.savez(dirs["dump/refs"] / f"{sid}.npz", k_complex_vis1=ref, k_complex_vis2=np.roll(ref, 1),
-                 k_complex_rule=np.roll(ref, 2), _len_x=np.zeros(1))
-        np.savez(dirs["dump/m1"] / f"{sid}.npz", kc_m1=ref & (rng.random(len(ref)) < 0.5))
+        np.savez(dirs["dump/refs"] / f"{sid}.npz", **_packed(k_complex_vis1=ref, k_complex_vis2=np.roll(ref, 1),
+                                                             k_complex_rule=np.roll(ref, 2)))
+        np.savez(dirs["dump/m1"] / f"{sid}.npz", **_packed(kc_m1=ref & (rng.random(len(ref)) < 0.5)))
         e0 = 5  # the surprise starts 5 epochs before the first dumped epoch
         s = rng.standard_normal((n + 5) * 60)
         s[5 * 60:][ref] += 3.0
