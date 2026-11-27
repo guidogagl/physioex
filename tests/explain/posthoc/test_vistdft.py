@@ -15,7 +15,6 @@ from physioex.explain.posthoc.vistdft import (
     STFTIntegratedGradients,
     STFTLayer,
     STFTSaliency,
-    _ISTFTObserveFn,
 )
 
 # ---------------------------------------------------------------------------

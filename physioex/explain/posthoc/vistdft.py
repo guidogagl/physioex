@@ -58,89 +58,6 @@ class STFTLayer(torch.nn.Module):
         return X
 
 
-class _ISTFTObserveFn(torch.autograd.Function):
-    """Custom autograd for ISTFT with explicit backward (STFT of grad).
-
-    forward receives 10 inputs (after ctx):
-        x, n_fft, hop_length, win_length, window, center, normalized, onesided, length, real_valued
-    backward must return exactly 10 gradient values.
-
-    When ``real_valued=True`` the input is a real tensor with
-    ``[Re(X), Im(X)]`` concatenated along dim=-2.
-    """
-
-    @staticmethod
-    def forward(
-        ctx,
-        x,
-        n_fft,
-        hop_length,
-        win_length,
-        window,
-        center,
-        normalized,
-        onesided,
-        length,
-        real_valued,
-    ):
-        ctx.n_fft = n_fft
-        ctx.hop_length = hop_length
-        ctx.win_length = win_length
-        ctx.center = center
-        ctx.normalized = normalized
-        ctx.onesided = onesided
-        ctx.length = length
-        ctx.real_valued = real_valued
-
-        if window is not None:
-            window = window.to(device=x.device, dtype=x.real.dtype)
-        ctx.save_for_backward(window)
-
-        if real_valued:
-            n_freq = x.shape[-2] // 2
-            x_complex = torch.complex(x[..., :n_freq, :], x[..., n_freq:, :])
-        else:
-            x_complex = x
-
-        return torch.istft(
-            x_complex,
-            n_fft=n_fft,
-            hop_length=hop_length,
-            win_length=win_length,
-            window=window,
-            center=center,
-            normalized=normalized,
-            onesided=onesided,
-            length=length,
-        )
-
-    @staticmethod
-    def backward(ctx, grad_output):
-        (window,) = ctx.saved_tensors
-        if window is not None:
-            window = window.to(device=grad_output.device, dtype=grad_output.real.dtype)
-
-        grad2d = grad_output.reshape(-1, grad_output.shape[-1])
-        G = torch.stft(
-            grad2d,
-            n_fft=ctx.n_fft,
-            hop_length=ctx.hop_length,
-            win_length=ctx.win_length,
-            window=window,
-            center=ctx.center,
-            normalized=ctx.normalized,
-            onesided=ctx.onesided,
-            return_complex=True,
-        )
-        G = G.reshape(*grad_output.shape[:-1], G.shape[-2], G.shape[-1])
-        if ctx.real_valued:
-            grad_input = torch.cat([G.real, G.imag], dim=-2)
-        else:
-            grad_input = G
-        # 10 inputs → 10 return values
-        return grad_input, None, None, None, None, None, None, None, None, None
-
-
 class ISTFTLayer(torch.nn.Module):
     """Compute the inverse STFT with a differentiable backward pass.
 
@@ -179,17 +96,27 @@ class ISTFTLayer(torch.nn.Module):
     def forward(self, x):
         orig_shape = x.shape[:-2]
         x2d = x.reshape(-1, x.shape[-2], x.shape[-1])
-        y2d = _ISTFTObserveFn.apply(
-            x2d,
-            self.n_fft,
-            self.hop_length,
-            self.win_length,
-            self.window,
-            self.center,
-            self.normalized,
-            self.onesided,
-            self.length,
-            self.real_valued,
+        window = (
+            self.window.to(device=x.device, dtype=x.real.dtype)
+            if self.window is not None
+            else None
+        )
+        if self.real_valued:
+            n_freq = x2d.shape[-2] // 2
+            x_complex = torch.complex(x2d[..., :n_freq, :], x2d[..., n_freq:, :])
+        else:
+            x_complex = x2d
+
+        y2d = torch.istft(
+            x_complex,
+            n_fft=self.n_fft,
+            hop_length=self.hop_length,
+            win_length=self.win_length,
+            window=window,
+            center=self.center,
+            normalized=self.normalized,
+            onesided=self.onesided,
+            length=self.length,
         )
         return y2d.reshape(*orig_shape, self.length)
 
