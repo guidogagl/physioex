@@ -293,8 +293,11 @@ def ola_window(margin: int, device=None, dtype=torch.float32) -> torch.Tensor:
     ``2 margin`` samples, 1 in between. The falling ramp of a patch and the rising ramp of the next one overlap
     on the ``2 margin`` samples around their boundary and sum to 1 there."""
     assert 0 < 2 * margin <= PATCH, "ola_window: 0 < margin <= PATCH / 2"
-    r = torch.sin(0.5 * math.pi * (torch.arange(2 * margin, device=device, dtype=dtype) + 0.5) / (2 * margin)) ** 2
-    return torch.cat([r, torch.ones(PATCH - 2 * margin, device=device, dtype=dtype), 1 - r])
+    r = torch.sin(0.5 * math.pi * (torch.arange(2 * margin, device=device, dtype=torch.float64) + 0.5)
+                  / (2 * margin)) ** 2
+    # the falling ramp is the rising one reversed, which equals 1 - r without its cancellation: in bf16 the last
+    # value of r rounds to 1 and 1 - r to 0 (a zero divisor in overlap_add, NaN gradients; jobs 1683880-1683881)
+    return torch.cat([r, torch.ones(PATCH - 2 * margin, device=device, dtype=torch.float64), r.flip(0)]).to(dtype)
 
 
 def overlap_add(y: torch.Tensor, margin: int) -> torch.Tensor:
@@ -302,11 +305,13 @@ def overlap_add(y: torch.Tensor, margin: int) -> torch.Tensor:
     -> ``(B, P * PATCH)``: windowed by :func:`ola_window`, summed, divided by the sum of the windows (1 except
     within ``margin`` samples of the two ends of the sequence)."""
     B, P, S = y.shape
-    w = ola_window(margin, y.device, y.dtype)
+    dt = torch.float64 if y.dtype == torch.float64 else torch.float32  # never bf16 (autocast): see ola_window
+    w = ola_window(margin, y.device, dt)
     n = (P - 1) * PATCH + S
-    out = F.fold((y * w).transpose(1, 2), (1, n), (1, S), stride=(1, PATCH)).view(B, n)
+    out = F.fold((y.to(dt) * w).transpose(1, 2), (1, n), (1, S), stride=(1, PATCH)).view(B, n)
     den = F.fold(w.view(1, S, 1).expand(1, S, P), (1, n), (1, S), stride=(1, PATCH)).view(1, n)
-    return (out / den)[:, margin:margin + P * PATCH]
+    keep = slice(margin, margin + P * PATCH)  # divide the kept samples only: there the sum of the windows is >= 1/2
+    return out[:, keep] / den[:, keep]
 
 
 class PatchDecoder(nn.Module):

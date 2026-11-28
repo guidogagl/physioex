@@ -59,6 +59,18 @@ def test_overlap_add_is_the_identity_on_segments_of_one_signal():
     torch.testing.assert_close(out, sine[:, M:M + P * PATCH])  # no step at the boundaries
 
 
+def test_overlap_add_bf16_has_finite_gradients():
+    # jobs 1683880-1683881: in bf16 the falling ramp 1 - r had a 0 at its end, so the sum of the windows was 0 at
+    # the last sample and the backward of the division gave 0 / 0 = NaN, spread to every weight by the clipping
+    w = ola_window(M, dtype=torch.bfloat16)
+    assert torch.all(w > 0) and torch.equal(w, w.flip(0))
+    y = torch.randn(2, 5, PATCH + 2 * M, dtype=torch.bfloat16, requires_grad=True)
+    out = overlap_add(y, M)
+    assert out.dtype == torch.float32 and torch.isfinite(out).all()
+    out.pow(2).sum().backward()
+    assert torch.isfinite(y.grad).all() and y.grad.abs().sum() > 0
+
+
 def test_overlap_add_cross_fades_disagreeing_segments():
     y = torch.zeros(1, 2, PATCH + 2 * M)
     y[0, 1] = 1.0  # two constant segments that disagree by 1
