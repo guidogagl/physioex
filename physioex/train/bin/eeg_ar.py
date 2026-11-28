@@ -14,7 +14,13 @@ held-out NLL and perplexity per unit on the dump's ``eval`` nights).
 ``score``: surprise of every code of the chosen nights (:func:`physioex.models.eeg_ar.score_codes`, each
 grid separately), the patch surprise ``S = sum_l (nll - H)`` and its mean over the 4 grids on the 0.5 s
 token grid. One ``<out>/<unit>/<sid>.npz`` per night: ``s`` (tokens), ``S<o>`` (patches of grid ``o``),
-``nll<o>`` and ``ent<o>`` (``(P, L)`` float16), ``e0``, ``n``, ``y``; ``<out>/meta.json``.
+``nll<o>`` and ``ent<o>`` (``(P, L)`` float16), ``e0``, ``n``, ``y``; ``<out>/meta.json``. With the patch
+model (:class:`~physioex.models.eeg_ar.PatchAR`, 208 codes per patch) ``nll<o>`` and ``ent<o>`` are summed per
+run of equal vocabularies (``(P, runs)``: the gains, then the coefficients), to keep the files small.
+
+``--model``: ``flat`` (:class:`~physioex.models.eeg_ar.EEGAR`, one token per code) or ``patch``
+(:class:`~physioex.models.eeg_ar.PatchAR`, one place per patch, a softmax per level); ``auto`` takes ``patch``
+when the dump records one vocabulary per level (``level_sizes``, the transform codec), else ``flat``.
 """
 from __future__ import annotations
 
@@ -30,7 +36,7 @@ import time
 import numpy as np
 import torch
 
-from physioex.models.eeg_ar import BOS, EEGAR, MID, build_from_args, collate, make_example, score_codes, token_scores
+from physioex.models.eeg_ar import EEGAR, PatchAR, build_from_args, score_codes, token_scores
 
 GRIDS = ("c0", "c50", "c100", "c150")
 
@@ -50,6 +56,7 @@ def main(argv=None):
     f.add_argument("--dump", required=True, help="code dump folder (meta.json + <unit>/<sid>.npz)")
     f.add_argument("--out", required=True)
     f.add_argument("--levels", type=int, default=0, help="first levels of the codes; 0: all of the dump")
+    f.add_argument("--model", choices=("auto", "flat", "patch"), default="auto")
     f.add_argument("--window", type=int, default=150, help="patches per training window (150 = 5 min)")
     f.add_argument("--fim", type=float, default=0.2)
     f.add_argument("--max-span", type=int, default=10, help="longest FIM middle, patches")
@@ -97,7 +104,9 @@ def split_train_val(meta: dict, every: int = 40):
     return [k for i, k in enumerate(tr) if i % every], [k for i, k in enumerate(tr) if not i % every]
 
 
-def sample_examples(rng, nights: dict, keys, n: int, window: int, n_codes: int, fim: float, max_span: int):
+def sample_items(rng, nights: dict, keys, n: int, window: int, fim: float, max_span: int):
+    """``n`` windows ``(codes (window, L), span or None)``: night, grid and start uniform, ``fim`` of them with
+    a FIM middle of 1 to ``max_span`` patches."""
     out = []
     for _ in range(n):
         arr = nights[keys[rng.integers(len(keys))]][rng.integers(len(GRIDS))]
@@ -107,35 +116,48 @@ def sample_examples(rng, nights: dict, keys, n: int, window: int, n_codes: int, 
             ln = int(rng.integers(1, max_span + 1))
             a = int(rng.integers(1, window - ln))
             span = (a, a + ln)
-        out.append(make_example(arr[s: s + window], n_codes, span))
+        out.append((arr[s: s + window], span))
     return out
 
 
 @torch.no_grad()
-def evaluate(model, examples, batch: int, device):
-    """NLL per level (plain targets) and mean NLL of FIM middle codes over a fixed list of examples."""
+def evaluate(model, items, batch: int, device):
+    """NLL per level (plain targets) and mean NLL of FIM middle codes over a fixed list of items. With one
+    vocabulary per level, also the NLL per patch and per run of levels (gains, coefficients)."""
     model.eval()
     L = model.levels
     s_l, n_l, s_mid, n_mid = np.zeros(L), np.zeros(L), 0.0, 0
-    for i in range(0, len(examples), batch):
-        ex = examples[i: i + batch]
-        b = {k: v.to(device) for k, v in collate(ex).items()}
+    for i in range(0, len(items), batch):
+        b = {k: v.to(device) for k, v in model.make_batch(items[i: i + batch]).items()}
         with torch.autocast(device_type=device.type, dtype=torch.bfloat16, enabled=device.type == "cuda"):
-            nll, _ = model.nll_entropy(b)
-        nll = nll.float().cpu().numpy()
-        for k, e in enumerate(ex):
-            ok = e["tgt"] >= 0
-            if e["inp"][0] != BOS:  # FIM layout: the targets from the MID sentinel on are the middle
-                mid = ok & (np.arange(len(ok)) >= np.flatnonzero(e["inp"] == MID)[0])
-                s_mid += nll[k][mid].sum()
-                n_mid += int(mid.sum())
-            else:
-                np.add.at(s_l, e["lev"][ok], nll[k][ok])
-                np.add.at(n_l, e["lev"][ok], 1)
+            nll, lev, part = model.code_nll(b)
+        nll, lev, part = nll.float().cpu().numpy(), lev.cpu().numpy(), part.cpu().numpy()
+        s_l += np.bincount(lev[part == 0], weights=nll[part == 0], minlength=L)
+        n_l += np.bincount(lev[part == 0], minlength=L)
+        s_mid += float(nll[part == 1].sum())
+        n_mid += int((part == 1).sum())
     model.train()
     per = s_l / np.maximum(n_l, 1)
-    return {"nll": float(s_l.sum() / max(n_l.sum(), 1)), "nll_per_level": per.round(4).tolist(),
-            "nll_fim_middle": float(s_mid / max(n_mid, 1)) if n_mid else None}
+    out = {"nll": float(s_l.sum() / max(n_l.sum(), 1)), "nll_per_level": per.round(4).tolist(),
+           "nll_fim_middle": float(s_mid / max(n_mid, 1)) if n_mid else None}
+    if isinstance(model, PatchAR):
+        out["nll_patch"] = float(per.sum())
+        out["nll_runs"] = [float(per[l0:l0 + n].sum()) for l0, n, _ in model.runs]
+        out["log_v_runs"] = [float(n * np.log(v)) for _, n, v in model.runs]  # uniform prediction, for scale
+    return out
+
+
+def level_sizes(meta: dict):
+    """One vocabulary per level, from the dump or from its codec run (transform codec); ``None`` otherwise."""
+    if meta.get("level_sizes"):
+        return [int(v) for v in meta["level_sizes"]]
+    if meta.get("run") and os.path.exists(os.path.join(meta["run"], "run.json")):
+        from physioex.train.bin.patch_codec import load_codec
+
+        _, codec = load_codec(meta["run"], torch.device("cpu"))
+        if hasattr(codec, "level_sizes"):
+            return codec.level_sizes()[: int(meta["levels"])]
+    return None
 
 
 # ---------------------------------------------------------------------------- fit
@@ -148,6 +170,10 @@ def _fit(a):
     meta = json.load(open(os.path.join(a.dump, "meta.json")))
     n_codes = int(meta["n_codes"])
     levels = a.levels or int(meta["levels"])
+    sizes = level_sizes(meta) if a.model in ("auto", "patch") else None
+    kind = "patch" if (a.model == "patch" or (a.model == "auto" and sizes)) else "flat"
+    if kind == "patch":
+        assert sizes and levels == len(sizes), "the patch model needs one vocabulary per level, all levels"
     tr, va = split_train_val(meta)
     if a.max_nights:
         tr, va = tr[: a.max_nights], va[: max(1, a.max_nights // 10)]
@@ -157,17 +183,22 @@ def _fit(a):
     print(f"[eeg_ar] {len(tr)} train / {len(va)} validation nights, {levels} levels x {n_codes} codes "
           f"({(time.time() - t0) / 60:.1f} min)", flush=True)
     vrng = np.random.default_rng(12345)
-    val = (sample_examples(vrng, nights, va, a.val_windows // 2, a.window, n_codes, 0.0, a.max_span)
-           + sample_examples(vrng, nights, va, a.val_windows // 2, a.window, n_codes, 1.0, a.max_span))
-    model = EEGAR(n_codes=n_codes, levels=levels, d_model=a.d_model, layers=a.layers, heads=a.heads,
-                  dropout=a.dropout).to(device)
+    val = (sample_items(vrng, nights, va, a.val_windows // 2, a.window, 0.0, a.max_span)
+           + sample_items(vrng, nights, va, a.val_windows // 2, a.window, 1.0, a.max_span))
+    if kind == "patch":
+        model = PatchAR(sizes, d_model=a.d_model, layers=a.layers, heads=a.heads, dropout=a.dropout).to(device)
+    else:
+        model = EEGAR(n_codes=n_codes, levels=levels, d_model=a.d_model, layers=a.layers, heads=a.heads,
+                      dropout=a.dropout).to(device)
     n_par = sum(p.numel() for p in model.parameters())
     decay = [p for p in model.parameters() if p.dim() >= 2]
     no_decay = [p for p in model.parameters() if p.dim() < 2]
     opt = torch.optim.AdamW([{"params": decay, "weight_decay": a.weight_decay}, {"params": no_decay, "weight_decay": 0.0}],
                             lr=a.lr, betas=(0.9, 0.95), fused=device.type == "cuda")
     args = {k: v for k, v in vars(a).items()}
-    args.update({"n_codes": n_codes, "levels": levels, "model": "eeg_ar"})
+    args.update({"n_codes": n_codes, "levels": levels, "model": "patch_ar" if kind == "patch" else "eeg_ar"})
+    if kind == "patch":
+        args["sizes"] = sizes
     run = {"issue": f"xmai-lab/sleep-lens#{a.issue}", "args": args, "git_sha": _git("rev-parse", "HEAD"),
            "host": socket.gethostname(), "job_id": os.environ.get("SLURM_JOB_ID"), "n_params": n_par,
            "dump": os.path.abspath(a.dump), "dump_run": meta.get("run"), "dump_git_sha": meta.get("git_sha"),
@@ -190,8 +221,8 @@ def _fit(a):
     while step < total:
         for g in opt.param_groups:
             g["lr"] = lr_at(step)
-        ex = sample_examples(rng, nights, tr, a.batch, a.window, n_codes, a.fim, a.max_span)
-        b = {k: v.to(device, non_blocking=True) for k, v in collate(ex).items()}
+        it = sample_items(rng, nights, tr, a.batch, a.window, a.fim, a.max_span)
+        b = {k: v.to(device, non_blocking=True) for k, v in model.make_batch(it).items()}
         with torch.autocast(device_type=device.type, dtype=torch.bfloat16, enabled=device.type == "cuda"):
             loss, _ = model(b)
         opt.zero_grad(set_to_none=True)
@@ -217,9 +248,11 @@ def _fit(a):
                 rec["best"] = True
             log.write(json.dumps(rec) + "\n")
             log.flush()
+            extra = (f" patch {ev['nll_patch']:.2f} runs " + "/".join(f"{v:.2f}" for v in ev["nll_runs"])
+                     if "nll_patch" in ev else "")
             print(f"[eeg_ar] step {step}/{total} train {rec['train_loss']:.4f} val {ev['nll']:.4f} "
-                  f"fim-mid {ev['nll_fim_middle']:.4f} ({rec['minutes']:.1f} min){' *' if rec.get('best') else ''}",
-                  flush=True)
+                  f"fim-mid {ev['nll_fim_middle']:.4f}{extra} ({rec['minutes']:.1f} min)"
+                  f"{' *' if rec.get('best') else ''}", flush=True)
         if time.time() - t0 > a.max_hours * 3600:
             print("[eeg_ar] time budget reached", flush=True)
             break
@@ -239,10 +272,13 @@ def _fit(a):
         keys = [k for k in keys if min(len(x) for x in hn[k]) >= a.window]
         if not keys:
             continue
-        ex = sample_examples(hrng, hn, keys, a.heldout_per_night * len(keys), a.window, n_codes, 0.0, a.max_span)
+        ex = sample_items(hrng, hn, keys, a.heldout_per_night * len(keys), a.window, 0.0, a.max_span)
         ev = evaluate(model, ex, a.batch, device)
         res[unit] = {"nights": len(keys), "nll": ev["nll"], "ppl": float(np.exp(ev["nll"])),
                      "nll_per_level": ev["nll_per_level"]}
+        for k in ("nll_patch", "nll_runs"):
+            if k in ev:
+                res[unit][k] = ev[k]
     final = {"best_val_nll": best, "val": evaluate(model, val, a.batch, device), "heldout": res,
              "steps": step, "minutes": (time.time() - t0) / 60, "log_k": math.log(n_codes)}
     json.dump(final, open(os.path.join(a.out, "eval.json"), "w"), indent=1)
@@ -275,6 +311,8 @@ def _score(a):
     om = json.load(open(mp)) if os.path.exists(mp) else {"nights": {}}
     om.update({"run": os.path.abspath(a.run), "dump": os.path.abspath(dump), "git_sha": _git("rev-parse", "HEAD"),
                "levels": model.levels, "window": run["args"]["window"], "hop": a.hop, "offsets": meta["offsets"]})
+    if isinstance(model, PatchAR):
+        om["nll_ent_runs"] = [list(r) for r in model.runs]
     W, L = run["args"]["window"], model.levels
     for i, k in enumerate(keys):
         path = os.path.join(out, f"{k}.npz")
@@ -286,6 +324,9 @@ def _score(a):
         for g, o in zip(GRIDS, meta["offsets"]):
             nll, ent = score_codes(model, np.ascontiguousarray(z[g][:, :L]), W, a.hop, a.batch, device)
             per_grid[o] = (nll - ent).sum(1)
+            if isinstance(model, PatchAR):  # sums per run of levels (gains, coefficients)
+                nll = np.stack([nll[:, l0:l0 + n].sum(1) for l0, n, _ in model.runs], 1)
+                ent = np.stack([ent[:, l0:l0 + n].sum(1) for l0, n, _ in model.runs], 1)
             arr[f"nll{o}"], arr[f"ent{o}"], arr[f"S{o}"] = nll.astype(np.float16), ent.astype(np.float16), per_grid[o]
         s = token_scores(per_grid, int(z["n"]), meta["patch"], 50).astype(np.float32)
         os.makedirs(os.path.dirname(path), exist_ok=True)

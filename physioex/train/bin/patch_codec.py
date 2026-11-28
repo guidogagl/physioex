@@ -55,7 +55,10 @@ and ``y`` (stage of every epoch of the period, -1 when not scored); ``<out>/meta
 ``--twin-out DIR`` also writes the spectral twin of the codes in the same layout (S3, xmai-lab/sleep-lens#20):
 :func:`~physioex.models.patch_codec.patch_spectra` of every patch, coded by a residual k-means with the
 codec's K and levels (:class:`~physioex.models.patch_codec.SpectralTwin`, fitted on ``--twin-fit-nights``
-train nights of the same call, ``twin.pt`` and ``twin_fit.json``).
+train nights of the same call, ``twin.pt`` and ``twin_fit.json``). With ``--twin-kind zerophase`` (codecs with
+``zero_phase`` coding: the transform codec) the twin is the codec itself on the zero-phase version of every
+whitened patch (:func:`~physioex.models.patch_codec.zero_phase_patches`): same codes and vocabularies, the patch
+spectrum without its phase, nothing fitted.
 """
 import argparse
 import json
@@ -183,6 +186,8 @@ def main(argv=None):
     d.add_argument("--out", default=None, help="default: <run>/dump")
     d.add_argument("--twin-out", default=None,
                    help="also write the spectral twin of the codes here (S3): residual k-means of patch spectra")
+    d.add_argument("--twin-kind", choices=("kmeans", "zerophase"), default="kmeans",
+                   help="kmeans: residual k-means of patch spectra; zerophase: the codec on zero-phase patches")
     d.add_argument("--twin-fit-nights", type=int, default=300, help="train nights for the twin's codebooks")
     d.add_argument("--twin-fit-vectors", type=int, default=1_000_000)
     t = sub.add_parser("transform", help="reference transform codec of revision 4 (no training), from a pilot run")
@@ -358,19 +363,19 @@ def load_codec(run_dir: str, device):
 
 
 @torch.no_grad()
-def encode_signal(model, sig: torch.Tensor, levels: int, chunk: int = 2048) -> torch.Tensor:
+def encode_signal(model, sig: torch.Tensor, levels: int, chunk: int = 2048, **kw) -> torch.Tensor:
     """``(n,)`` contiguous signal -> ``(n // 200, levels)`` codes, equal to one coding of the whole signal.
     Chunks overlap by the encoder's reach (``model.encoder_reach`` patches, plus one) on each side; a local
-    encoder needs none."""
+    encoder needs none. ``kw`` goes to ``model.codes`` (``zero_phase`` of the transform codec)."""
     reach = getattr(model, "encoder_reach", 0)
     P = len(sig) // model.patch
     if not reach:
         step = chunk * model.patch
-        return torch.cat([model.codes(sig[i:i + step][None], levels)[0] for i in range(0, P * model.patch, step)])
+        return torch.cat([model.codes(sig[i:i + step][None], levels, **kw)[0] for i in range(0, P * model.patch, step)])
     m, out = reach + 1, []
     for s in range(0, P, chunk):
         lo, hi = max(0, s - m), min(P, s + chunk + m)
-        c = model.codes(sig[lo * model.patch:hi * model.patch][None], levels)[0]
+        c = model.codes(sig[lo * model.patch:hi * model.patch][None], levels, **kw)[0]
         out.append(c[s - lo:s - lo + min(chunk, P - s)])
     return torch.cat(out)
 
@@ -419,8 +424,11 @@ def _dump(a):
         jobs += ev[: a.max_nights] if a.max_nights else ev
     mp = os.path.join(out, "meta.json")
     meta = json.load(open(mp)) if os.path.exists(mp) else {"nights": {}}
-    meta.update({"run": os.path.abspath(a.run), "git_sha": _git("rev-parse", "HEAD"), "levels": levels,
+    sha = _git("rev-parse", "HEAD")  # a dump resumed or completed by a later call keeps the sha of its codes
+    meta.update({"run": os.path.abspath(a.run), "git_sha": meta.get("git_sha") if meta["nights"] else sha, "levels": levels,
                  "n_codes": model.n_codes, "offsets": list(OFFSETS), "patch": model.patch, "fs": model.fs})
+    if hasattr(model, "level_sizes"):
+        meta["level_sizes"] = model.level_sizes()[:levels]
     print(f"[patch_codec dump] {len(jobs)} nights ({sum(g == 'train' for g, _, _ in jobs)} train), "
           f"{levels} levels -> {out}", flush=True)
     readers, skipped = {}, []
@@ -446,7 +454,15 @@ def _dump(a):
         return torch.from_numpy(np.ascontiguousarray(x[e0:e1].reshape(-1))).to(device), y, ts, e0, e1
 
     twin, tmeta, tmp = None, None, None
-    if a.twin_out:  # spectral twin of the codes (S3, #20): fitted once on train nights, then coded alongside
+    zero_twin = bool(a.twin_out) and a.twin_kind == "zerophase"
+    if zero_twin:  # spectral twin of the codes (S3, #20): the codec on zero-phase patches, nothing to fit
+        os.makedirs(a.twin_out, exist_ok=True)
+        tmp = os.path.join(a.twin_out, "meta.json")
+        tmeta = json.load(open(tmp)) if os.path.exists(tmp) else {"nights": {}}
+        tmeta.update({k: meta[k] for k in meta if k != "nights"})
+        tmeta.update({"twin_of": os.path.abspath(out), "features": "zero_phase",
+                      "git_sha": tmeta.get("git_sha") if tmeta["nights"] else sha})
+    elif a.twin_out:  # spectral twin of the codes (S3, #20): fitted once on train nights, then coded alongside
         from physioex.models.patch_codec import SpectralTwin, patch_spectra
 
         os.makedirs(a.twin_out, exist_ok=True)
@@ -476,7 +492,9 @@ def _dump(a):
         path = os.path.join(out, unit, f"{sid}.npz")
         need = not (key in meta["nights"] and os.path.exists(path))
         tpath = os.path.join(a.twin_out, unit, f"{sid}.npz") if twin is not None else None
-        need_twin = twin is not None and not (key in tmeta["nights"] and os.path.exists(tpath))
+        if zero_twin:
+            tpath = os.path.join(a.twin_out, unit, f"{sid}.npz")
+        need_twin = (twin is not None or zero_twin) and not (key in tmeta["nights"] and os.path.exists(tpath))
         if not (need or need_twin):
             continue
         got = period(unit, sid)
@@ -492,7 +510,12 @@ def _dump(a):
             np.savez(path, e0=e0, n=len(sig), y=y[e0:e1].astype(np.int8), **arr)
             meta["nights"][key] = info
         if need_twin:
-            arr = {f"c{o}": twin.codes(patch_spectra(sig[o:]), levels).cpu().numpy().astype(np.int16) for o in OFFSETS}
+            if zero_twin:
+                arr = {f"c{o}": encode_signal(model, sig[o:], levels, zero_phase=True).cpu().numpy().astype(np.int16)
+                       for o in OFFSETS}
+            else:
+                arr = {f"c{o}": twin.codes(patch_spectra(sig[o:]), levels).cpu().numpy().astype(np.int16)
+                       for o in OFFSETS}
             os.makedirs(os.path.dirname(tpath), exist_ok=True)
             np.savez(tpath, e0=e0, n=len(sig), y=y[e0:e1].astype(np.int8), **arr)
             tmeta["nights"][key] = info

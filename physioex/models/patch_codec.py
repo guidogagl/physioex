@@ -574,12 +574,15 @@ class TransformCodec(nn.Module):
         """Unit of each coefficient after the gain: ``sqrt(lam)`` with one gain, 1 with block gains."""
         return self.lam.sqrt() if self.groups == 1 else torch.ones_like(self.lam)
 
-    def encode(self, x: torch.Tensor) -> torch.Tensor:
+    def encode(self, x: torch.Tensor, zero_phase: bool = False) -> torch.Tensor:
         """``(B, n) -> (B, P, G + PATCH)``: log2 RMS of the KLT coefficients of each block (with one block, of the
-        whitened patch), then the coefficients over the RMS of their block, in units of :meth:`_scale`."""
+        whitened patch), then the coefficients over the RMS of their block, in units of :meth:`_scale`.
+        ``zero_phase``: each whitened patch is first replaced by :func:`zero_phase_patches` (spectral twin, S3)."""
         B, n = x.shape
         P, G = n // PATCH, self.groups
         w = self.whitener(x[:, : P * PATCH]).reshape(B, P, PATCH)
+        if zero_phase:
+            w = zero_phase_patches(w)
         p = (w @ self.U).reshape(B, P, G, self.ng)
         rms = p.pow(2).mean(-1).sqrt().clamp_min(2.0 ** self.gain_min)
         c = (p / rms[..., None]).reshape(B, P, PATCH) / self._scale()
@@ -618,11 +621,25 @@ class TransformCodec(nn.Module):
         return self.decode(self.embed(codes))
 
     @torch.no_grad()
-    def codes(self, x: torch.Tensor, levels: Optional[int] = None) -> torch.Tensor:
-        return self.quantize(self.encode(x))[1]
+    def codes(self, x: torch.Tensor, levels: Optional[int] = None, zero_phase: bool = False) -> torch.Tensor:
+        return self.quantize(self.encode(x, zero_phase))[1]
+
+    def level_sizes(self) -> list:
+        """Vocabulary of each code of a patch: the ``G`` gains, then the ``PATCH`` coefficients."""
+        return [self.gain_levels] * self.groups + [2 * self.half + 1] * PATCH
 
     def bits_per_patch(self, levels: Optional[int] = None) -> int:
         return int(round(self.groups * math.log2(self.gain_levels) + PATCH * math.log2(2 * self.half + 1)))
+
+
+def zero_phase_patches(w: torch.Tensor) -> torch.Tensor:
+    """``(..., n)`` patches -> the pulses with the same DFT magnitude and a linear phase, symmetric around sample
+    ``n // 2``: the patch spectrum without its phase, for the spectral twin of the codes (S3, sleep-lens #20)."""
+    n = w.shape[-1]
+    X = torch.fft.rfft(w if w.dtype == torch.float64 else w.float(), dim=-1)
+    mag = X.abs()
+    ang = -2 * math.pi * (n // 2) / n * torch.arange(X.shape[-1], device=w.device, dtype=mag.dtype)
+    return torch.fft.irfft(torch.polar(mag, ang.expand_as(mag)), n=n, dim=-1).to(w.dtype)
 
 
 def crops(x: torch.Tensor, n: int, training: bool) -> torch.Tensor:

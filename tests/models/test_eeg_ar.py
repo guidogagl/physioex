@@ -232,3 +232,157 @@ def test_surprise_eval_on_synthetic_nights(tmp_path):
     assert r["gate"]["sets"]["dreams_kc"]["pass"] and not r["gate"]["pass"]  # no spindle set: the gate is incomplete
     ev = r["sets"]["dreams_kc"]["events"]
     assert ev["codes"]["recall"] > ev["twin"]["recall"] and ev["codes"]["explained"] > ev["codes"]["explained_shifted"]
+
+
+# ---------------------------------------------------------------------------- PatchAR (S3 rev. 2, codec 3)
+from physioex.models.eeg_ar import P_BOS, P_MID, P_PATCH, P_PRE, P_SUF, PatchAR, build_from_args, patch_example  # noqa: E402
+
+SIZES = [6, 6, 3, 3, 3]  # two "gains" then three "coefficients", as the transform codec lays them out
+
+
+def _ptiny(seed=0):
+    torch.manual_seed(seed)
+    return PatchAR(SIZES, d_model=32, layers=2, heads=4)
+
+
+def _pcodes(W, seed=0):
+    rng = np.random.default_rng(seed)
+    return np.stack([rng.integers(0, v, W) for v in SIZES], 1)
+
+
+@pytest.mark.parametrize("span", [None, (1, 2), (3, 7), (5, 9)])
+def test_patch_layout_every_patch_is_a_target_once(span):
+    W = 10
+    ex = patch_example(W, span)
+    n = W + 1 if span is None else W + 3
+    assert len(ex["kind"]) == W + 3 and (ex["kind"][n:] == 0).all()
+    tg = ex["nxt"][ex["nxt"] >= 0]
+    assert sorted(tg.tolist()) == list(range(W))  # each patch predicted exactly once
+    k, src, pos = ex["kind"][:n], ex["src"][:n], ex["pos"][:n]
+    assert (pos[k == P_PATCH] == src[k == P_PATCH] + 1).all()  # a patch keeps its place in the window
+    for j in np.flatnonzero(ex["nxt"][:n] >= 0):  # the place after j holds the target, at position target + 1
+        assert pos[j + 1] == ex["nxt"][j] + 1 and k[j + 1] == P_PATCH
+    if span is None:
+        assert k[0] == P_BOS
+    else:
+        a, b = span
+        assert k[0] == P_PRE and k[a + 1] == P_SUF and k[W - b + a + 2] == P_MID
+        assert pos[a + 1] == b and pos[W - b + a + 2] == a  # a sentinel sits just before what it announces
+
+
+def test_patch_forward_backward_and_args():
+    m = _ptiny()
+    assert m.runs == [(0, 2, 6), (2, 3, 3)]
+    items = [(_pcodes(12, s), None if s % 2 else (2, 5)) for s in range(4)]
+    loss, info = m(m.make_batch(items))
+    assert torch.isfinite(loss) and abs(float(loss) - np.mean(np.log(SIZES))) < 0.3  # near uniform at init
+    loss.backward()
+    assert all(p.grad is not None for p in m.parameters())
+    a = {"model": "patch_ar", "sizes": SIZES, "d_model": 32, "layers": 2, "heads": 4}
+    m2 = build_from_args(a)
+    m2.load_state_dict(m.state_dict())
+    assert isinstance(m2, PatchAR) and m2.levels == 5 and m2.n_codes == 6
+
+
+def test_patch_causal_and_code_nll_parts():
+    m = _ptiny().eval()
+    c = _pcodes(20, 1)
+    n1, e1 = m.score_windows([c])
+    c2 = c.copy()
+    c2[12:] = (c2[12:] + 1) % np.array(SIZES)
+    n2, e2 = m.score_windows([c2])
+    assert np.allclose(n1[0, :12], n2[0, :12], atol=1e-5)  # earlier patches do not see patch 12 ...
+    assert np.allclose(e1[0, :13], e2[0, :13], atol=1e-5)  # ... and patch 12 is predicted before it is seen
+    assert not np.allclose(e1[0, 13:], e2[0, 13:], atol=1e-5)
+    assert (e1 > 0).all() and (e1 <= np.log(SIZES) + 1e-5).all()
+    b = m.make_batch([(c, None), (c, (4, 7))])
+    nll, lev, part = m.code_nll(b)
+    assert len(nll) == len(lev) == len(part) == 2 * 20 * 5
+    assert int((part == 0).sum()) == 20 * 5 and int((part == 1).sum()) == 3 * 5  # the middle: patches 4, 5, 6
+
+
+def test_patch_rare_code_gives_a_surprise_peak():
+    """Trained on a periodic patch sequence, the model is most surprised by a code it never saw."""
+    m = _ptiny()
+    seq = np.stack([np.arange(400) % 4, (np.arange(400) + 1) % 4, np.arange(400) % 2,
+                    (np.arange(400) + 1) % 2, np.zeros(400, np.int64)], 1)
+    opt = torch.optim.AdamW(m.parameters(), lr=3e-3)
+    rng = np.random.default_rng(0)
+    for _ in range(150):
+        ss = rng.integers(0, 400 - 12, 16)
+        loss, _ = m(m.make_batch([(seq[s:s + 12], None) for s in ss]))
+        opt.zero_grad()
+        loss.backward()
+        opt.step()
+    m.eval()
+    test = seq[:60].copy()
+    test[30, 0] = 5  # never seen
+    nll, ent = score_codes(m, test, window=12, hop=6, batch=4)
+    S = (nll - ent).sum(1)
+    assert S.argmax() == 30
+    assert S[30] > 5 * max(np.median(np.abs(S)), 0.1)
+    Sw = window_surprise(m, [(test[20:32], 8, 12)])[0]
+    assert Sw.argmax() == 2  # patch 30 is the third of 28 .. 31
+
+
+def _ptrain_fim(seq, steps=300, window=12, seed=0):
+    m = _ptiny(seed)
+    opt = torch.optim.AdamW(m.parameters(), lr=3e-3)
+    rng = np.random.default_rng(seed)
+    for _ in range(steps):
+        items = []
+        for _ in range(16):
+            s = int(rng.integers(0, len(seq) - window))
+            span = None
+            if rng.random() < 0.5:
+                a = int(rng.integers(1, window - 2))
+                span = (a, int(rng.integers(a + 1, min(window - 1, a + 4) + 1)))
+            items.append((seq[s:s + window], span))
+        loss, _ = m(m.make_batch(items))
+        opt.zero_grad()
+        loss.backward()
+        opt.step()
+    return m.eval()
+
+
+def test_patch_infill_and_closure_rule():
+    seq = np.stack([np.arange(400) % 4, (np.arange(400) + 1) % 4, np.arange(400) % 2,
+                    (np.arange(400) + 1) % 2, np.zeros(400, np.int64)], 1)
+    m = _ptrain_fim(seq)
+    g = torch.Generator().manual_seed(0)
+    w = torch.from_numpy(seq[:12])
+    out = m.infill(w, 3, 6, n_samples=4, generator=g)
+    assert out.shape == (4, 3, 5) and (out.numpy() < np.array(SIZES)).all()
+    assert (out.numpy() == seq[3:6][None]).mean() > 0.9  # the periodic codes come back
+    w2 = w.clone()
+    w2[3:6] = 0  # the middle of the input is never read
+    g1, g2 = torch.Generator().manual_seed(1), torch.Generator().manual_seed(1)
+    assert torch.equal(m.infill(w, 3, 6, 2, generator=g1), m.infill(w2, 3, 6, 2, generator=g2))
+    burst = seq[:60].copy()
+    burst[30:33, 0] = 5
+    b, fill = close_event(m, burst, 30, thr=1.0, window=12, generator=g)
+    assert b == 33 and fill.shape == (3, 5) and int(fill[:, 0].max()) < 4
+    trans = np.concatenate([seq[:30], np.tile([5, 5, 2, 2, 2], (30, 1))])
+    assert close_event(m, trans, 30, thr=1.0, window=12, generator=g) == (None, None)
+
+
+def test_zero_phase_patches_keep_the_spectrum():
+    from physioex.models.patch_codec import zero_phase_patches
+
+    x = torch.randn(3, 7, 200, dtype=torch.float64)
+    z = zero_phase_patches(x)
+    assert z.dtype == x.dtype and z.shape == x.shape
+    assert torch.allclose(torch.fft.rfft(z).abs(), torch.fft.rfft(x).abs(), atol=1e-8)
+    assert torch.allclose(z[..., 1:100], z[..., 101:].flip(-1), atol=1e-8)  # symmetric around sample 100
+    assert torch.allclose(zero_phase_patches(z), z, atol=1e-8)  # idempotent
+
+
+def test_patch_hidden_codes_follow_the_scoring_windows():
+    from physioex.models.eeg_ar import hidden_codes
+
+    m = _ptiny().eval()
+    c = _pcodes(30, 2)
+    H = hidden_codes(m, c, window=12, hop=6, batch=2)
+    assert H.shape == (30, 32) and np.isfinite(H).all()
+    assert np.allclose(H[:12], m.patch_states([c[:12]])[0], atol=1e-5)  # first window: all its patches
+    assert np.allclose(H[12:18], m.patch_states([c[6:18]])[0][6:], atol=1e-5)  # then the last hop of each window

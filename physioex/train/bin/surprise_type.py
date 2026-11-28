@@ -8,10 +8,15 @@ The plan reads the type of an event from the codes of its span, with prototypes 
 
 Rules fixed before the first result (27.11.2026):
 
-* **token feature**: for the codes, the codec latent of the first ``L`` levels (``PatchCodec.embed``) of the 4
+* **token feature** (``--feature latent``, codec 1): for the codes, the codec latent of the first ``L`` levels
+  (``PatchCodec.embed``) of the 4
   patches (grids shifted by 0, 0.5, 1 and 1.5 s) that cover the 0.5 s token, averaged; for the spectral twin,
   the z-scored patch spectra rebuilt from its first ``L`` codebooks, averaged the same way. Each night's
-  features are centred by their mean over the night's sleep tokens (N1-R) of the dumped epochs;
+  features are centred by their mean over the night's sleep tokens (N1-R) of the dumped epochs. With codec 3
+  (``--feature ar``, registered 28.11 before any result: the transform codec has no learned latent, and its
+  coefficients follow the phase of the signal) the patch feature is the state of the AR on that dump
+  (:func:`~physioex.models.eeg_ar.hidden_codes`, the place that reads the patch), for the codes and for the
+  zero-phase twin alike, then averaged and centred the same way;
 * **prototypes**: mean centred feature over the sleep tokens of each class on the pool test nights of the
   ``concept_scan`` dump (12 units; never DREAMS or MASS SS01). Classes (:data:`CLASSES`): K-complex =
   ``k_complex_rule`` or ``m1:kc_m1``; spindle = ``spindle_rule``; arousal = ``m1:arousal_m1``; vertex = ``vertex``
@@ -168,6 +173,10 @@ def main(argv=None):
     ap.add_argument("--surprise", default=None, help="surprise of the AR on the codes")
     ap.add_argument("--twin-surprise", default=None, help="surprise of the AR on the twin")
     ap.add_argument("--levels", type=int, required=True)
+    ap.add_argument("--feature", choices=("latent", "ar"), default="latent",
+                    help="latent: codec latent and twin codebooks (codec 1); ar: state of the AR on each dump (codec 3)")
+    ap.add_argument("--ar", default=None, help="--feature ar: AR run on the codes")
+    ap.add_argument("--twin-ar", default=None, help="--feature ar: AR run on the twin's codes")
     ap.add_argument("--out", required=True)
     ap.add_argument("--max-nights", type=int, default=0, help="per unit; smoke tests")
     ap.add_argument("--seed", type=int, default=0)
@@ -180,19 +189,32 @@ def main(argv=None):
 
     t0 = time.time()
     dev = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    _, codec = load_codec(a.codec, dev)
-    tw = SpectralTwin.from_state(torch.load(os.path.join(a.twin, "twin.pt"), map_location="cpu"), dev)
     L = a.levels
+    if a.feature == "ar":  # codec 3 (S3 rev. 2): the state of each AR on its own codes, codes and twin alike
+        from physioex.models.eeg_ar import hidden_codes
+        from physioex.train.bin.eeg_ar import load_model
 
-    @torch.no_grad()
-    def feats_fn(c):
-        c = torch.from_numpy(np.asarray(c[:, :L], np.int64)).to(dev)
-        return codec.embed(c[None])[0].float().cpu().numpy()
+        run_c, ar_c = load_model(a.ar, dev)
+        run_t, ar_t = load_model(a.twin_ar, dev)
 
-    @torch.no_grad()
-    def twin_fn(c):
-        c = torch.from_numpy(np.asarray(c[:, :L], np.int64)).to(dev)
-        return sum(tw.codebooks[l][c[:, l]] for l in range(L)).float().cpu().numpy()
+        def feats_fn(c):
+            return hidden_codes(ar_c, np.ascontiguousarray(c[:, :ar_c.levels]), int(run_c["args"]["window"]))
+
+        def twin_fn(c):
+            return hidden_codes(ar_t, np.ascontiguousarray(c[:, :ar_t.levels]), int(run_t["args"]["window"]))
+    else:
+        _, codec = load_codec(a.codec, dev)
+        tw = SpectralTwin.from_state(torch.load(os.path.join(a.twin, "twin.pt"), map_location="cpu"), dev)
+
+        @torch.no_grad()
+        def feats_fn(c):
+            c = torch.from_numpy(np.asarray(c[:, :L], np.int64)).to(dev)
+            return codec.embed(c[None])[0].float().cpu().numpy()
+
+        @torch.no_grad()
+        def twin_fn(c):
+            c = torch.from_numpy(np.asarray(c[:, :L], np.int64)).to(dev)
+            return sum(tw.codebooks[l][c[:, l]] for l in range(L)).float().cpu().numpy()
 
     def nights_of(unit):
         ud = os.path.join(a.scan, unit)

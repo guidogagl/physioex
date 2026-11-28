@@ -16,6 +16,14 @@ excess over what the model itself expected, so the noisy fine levels add little 
 in the original window, and a sentinel takes the position just before the token it announces, so in
 both layouts a position predicts the token at the next position, and the model knows how long the hole
 is. :meth:`EEGAR.infill` samples the middle of a span with the prefix and suffix around it.
+
+**PatchAR** (S3 rev. 2, codec 3 = transform codec rev. 4b: 8 block gains of 400 codes and 200 coefficients of
+31 codes per patch). With 208 codes per patch the flat sequence (31,200 tokens for 5 min) is out of reach, so
+:class:`PatchAR` runs over patches: a patch enters as the sum of the embeddings of its codes (one table per
+level), and the output of a place gives one softmax per level for the patch at the next place, independent
+given the past (factorized). Same sequence layouts at the patch level (plain and FIM, sentinels, positions),
+same surprise ``S = sum_l (nll_l - H_l)`` over the 208 codes of a patch. Both models expose ``make_batch``,
+``score_windows``, ``code_nll`` and ``infill``, which the scoring and editing functions below use.
 """
 from __future__ import annotations
 
@@ -176,6 +184,29 @@ class EEGAR(nn.Module):
         nll[keep], ent[keep] = n_k, e_k
         return nll, ent
 
+    def make_batch(self, items) -> Dict[str, torch.Tensor]:
+        """``items``: ``[(codes (W, L), span or None)]`` -> batch of :func:`make_example` sequences."""
+        return collate([make_example(np.asarray(c), self.n_codes, sp) for c, sp in items])
+
+    @torch.no_grad()
+    def score_windows(self, windows, device=None) -> Tuple[np.ndarray, np.ndarray]:
+        """Plain layout: ``nll`` and entropy ``(B, W, L)`` of every code of windows of equal length."""
+        device = device or self.emb.weight.device
+        W, L = np.asarray(windows[0]).shape
+        b = {k: v.to(device) for k, v in self.make_batch([(c, None) for c in windows]).items()}
+        with torch.autocast(device_type=device.type, dtype=torch.bfloat16, enabled=device.type == "cuda"):
+            n, e = self.nll_entropy(b)
+        n, e = n[:, : W * L].float().cpu().numpy(), e[:, : W * L].float().cpu().numpy()  # plain: target j = code j
+        return n.reshape(-1, W, L), e.reshape(-1, W, L)
+
+    @torch.no_grad()
+    def code_nll(self, batch: Dict[str, torch.Tensor]):
+        """``nll``, level and part (0 plain, 1 FIM middle, 2 rest of a FIM sequence) of every target code."""
+        nll, _ = self.nll_entropy(batch)
+        keep = batch["tgt"] != IGNORE
+        part = _layout_part(batch["inp"][:, 0] == BOS, batch["inp"] == MID)
+        return nll[keep], batch["lev"][keep], part[keep]
+
     @torch.no_grad()
     def infill(self, codes: torch.Tensor, a: int, b: int, n_samples: int = 8, temperature: float = 1.0,
                generator: Optional[torch.Generator] = None) -> torch.Tensor:
@@ -203,39 +234,242 @@ class EEGAR(nn.Module):
         return out.view(n_samples, b - a, L)
 
 
-def build_from_args(a: dict) -> EEGAR:
+def _layout_part(plain: torch.Tensor, is_mid: torch.Tensor) -> torch.Tensor:
+    """``plain (B,)``, ``is_mid (B, S)`` (the MID sentinel) -> ``(B, S)``: 0 in a plain sequence, 1 from the
+    MID sentinel on (its targets are the middle), 2 before it."""
+    S = is_mid.shape[1]
+    at = torch.where(is_mid.any(1), is_mid.float().argmax(1), torch.full_like(plain, S, dtype=torch.long))
+    part = torch.where(torch.arange(S, device=is_mid.device)[None] >= at[:, None], 1, 2)
+    return torch.where(plain[:, None], 0, part)
+
+
+# ---------------------------------------------------------------------------- patch-level model (S3 rev. 2)
+P_PAD, P_BOS, P_PRE, P_SUF, P_MID, P_PATCH = range(6)
+
+
+def patch_example(W: int, span: Optional[Tuple[int, int]] = None) -> Dict[str, np.ndarray]:
+    """Index arrays of one :class:`PatchAR` sequence over a window of ``W`` patches (the codes travel apart).
+
+    ``span = (a, b)``: FIM layout ``[PRE] 0 .. a-1 [SUF] b .. W-1 [MID] a .. b-1`` (``1 <= a < b < W``);
+    ``None``: ``[BOS] 0 .. W-1``. Length ``W + 3`` (padded with ``P_PAD``). ``kind``: ``P_PATCH`` or the
+    sentinel at each place; ``src``: the window patch read at each place (0 at a sentinel, unused); ``pos``:
+    rotary position (a patch keeps its place in the window, a sentinel takes the place just before the patch
+    it announces, as in :func:`make_example`); ``nxt``: the window patch expected at the next place, or -1."""
+    idx = np.arange(W)
+    if span is None:
+        kind = np.r_[P_BOS, np.full(W, P_PATCH)]
+        src, pos = np.r_[-1, idx], np.r_[0, idx + 1]
+    else:
+        a, b = span
+        assert 1 <= a < b < W, (a, b, W)
+        kind = np.r_[P_PRE, np.full(a, P_PATCH), P_SUF, np.full(W - b, P_PATCH), P_MID, np.full(b - a, P_PATCH)]
+        src = np.r_[-1, idx[:a], -1, idx[b:], -1, idx[a:b]]
+        pos = np.r_[0, idx[:a] + 1, b, idx[b:] + 1, a, idx[a:b] + 1]
+    nxt = np.r_[src[1:], -1]  # a sentinel is never a target: its place is known
+    n, S = len(kind), W + 3
+    out = {"kind": np.full(S, P_PAD, np.int64), "src": np.zeros(S, np.int64), "pos": np.zeros(S, np.int64),
+           "nxt": np.full(S, -1, np.int64)}
+    out["kind"][:n], out["src"][:n], out["pos"][:n], out["nxt"][:n] = kind, np.maximum(src, 0), pos, nxt
+    return out
+
+
+class PatchAR(nn.Module):
+    """Decoder-only transformer over patches, for codes with one vocabulary per level (module docstring)."""
+
+    def __init__(self, sizes, d_model: int = 512, layers: int = 12, heads: int = 8, dropout: float = 0.0,
+                 rope_base: float = 10000.0):
+        super().__init__()
+        self.sizes = [int(v) for v in sizes]
+        self.levels, self.n_codes, self.d = len(self.sizes), max(self.sizes), d_model
+        self.register_buffer("offsets", torch.as_tensor(np.r_[0, np.cumsum(self.sizes)[:-1]], dtype=torch.long),
+                             persistent=False)
+        runs = []  # (first level, levels, vocabulary) of each run of equal vocabularies
+        for l, v in enumerate(self.sizes):
+            if runs and runs[-1][2] == v:
+                runs[-1][1] += 1
+            else:
+                runs.append([l, 1, v])
+        self.runs = [tuple(r) for r in runs]
+        self.emb = nn.Embedding(sum(self.sizes), d_model)  # one row per (level, code)
+        self.special = nn.Embedding(P_PATCH, d_model)  # PAD, BOS, PRE, SUF, MID
+        self.blocks = nn.ModuleList([_Block(d_model, heads, dropout=dropout) for _ in range(layers)])
+        self.norm = nn.LayerNorm(d_model)
+        self.head = nn.Linear(d_model, sum(self.sizes))
+        dh = d_model // heads
+        self.register_buffer("inv_freq", rope_base ** (-torch.arange(0, dh, 2).float() / dh), persistent=False)
+        nn.init.normal_(self.emb.weight, std=0.02 / math.sqrt(self.levels))  # a patch is a sum of L rows
+        nn.init.normal_(self.special.weight, std=0.02)
+        nn.init.normal_(self.head.weight, std=0.02)
+        nn.init.zeros_(self.head.bias)
+        for blk in self.blocks:
+            for lin in (blk.qkv, blk.fc1):
+                nn.init.normal_(lin.weight, std=0.02)
+            for lin in (blk.proj, blk.fc2):
+                nn.init.normal_(lin.weight, std=0.02 / math.sqrt(2 * layers))
+
+    def hidden(self, codes: torch.Tensor, kind: torch.Tensor, src: torch.Tensor, pos: torch.Tensor) -> torch.Tensor:
+        """``codes (B, W, L)``, ``kind``/``src``/``pos (B, S)`` -> ``(B, S, d)``."""
+        B, S = kind.shape
+        c = codes.gather(1, src[..., None].expand(B, S, self.levels)).long() + self.offsets
+        x = F.embedding_bag(c.reshape(B * S, self.levels), self.emb.weight, mode="sum").view(B, S, self.d)
+        x = torch.where((kind == P_PATCH)[..., None], x, self.special(kind.clamp_max(P_PATCH - 1)))
+        ang = pos.float()[..., None] * self.inv_freq
+        cos, sin = ang.cos()[:, :, None].to(x.dtype), ang.sin()[:, :, None].to(x.dtype)
+        for blk in self.blocks:
+            x = blk(x, cos, sin)
+        return self.norm(x)
+
+    def log_probs(self, h: torch.Tensor):
+        """``h (..., d)`` -> one ``(..., levels of the run, vocabulary)`` log-softmax per run of ``runs``."""
+        z = self.head(h).float()
+        out, k = [], 0
+        for _, n, v in self.runs:
+            out.append(torch.log_softmax(z[..., k:k + n * v].reshape(*z.shape[:-1], n, v), -1))
+            k += n * v
+        return out
+
+    def _nll(self, lps, tgt: torch.Tensor) -> torch.Tensor:
+        """Log-probabilities per run and targets ``(M, L)`` -> ``nll (M, L)``."""
+        return torch.cat([-lp.gather(-1, tgt[:, l0:l0 + n, None].long())[..., 0]
+                          for (l0, n, _), lp in zip(self.runs, lps)], 1)
+
+    def _targets(self, batch: Dict[str, torch.Tensor]):
+        B, S = batch["kind"].shape
+        keep = batch["nxt"] >= 0
+        tgt = batch["codes"].gather(1, batch["nxt"].clamp_min(0)[..., None].expand(B, S, self.levels))
+        return keep, tgt[keep]
+
+    def forward(self, batch: Dict[str, torch.Tensor]) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:
+        """Mean cross-entropy over the target codes, and its sum per level and the number of target patches."""
+        h = self.hidden(batch["codes"], batch["kind"], batch["src"], batch["pos"])
+        keep, tgt = self._targets(batch)
+        nll = self._nll(self.log_probs(h[keep]), tgt)
+        return nll.mean(), {"sum": nll.detach().sum(0), "n": keep.sum()}
+
+    @torch.no_grad()
+    def nll_entropy(self, batch: Dict[str, torch.Tensor]) -> Tuple[torch.Tensor, torch.Tensor]:
+        """Per-code ``nll`` and entropy (nats), ``(B, S, L)`` each (0 at places without a target)."""
+        h = self.hidden(batch["codes"], batch["kind"], batch["src"], batch["pos"])
+        keep, tgt = self._targets(batch)
+        B, S = keep.shape
+        nll = torch.zeros(B, S, self.levels, device=h.device)
+        ent = torch.zeros(B, S, self.levels, device=h.device)
+        lps = self.log_probs(h[keep])
+        nll[keep] = self._nll(lps, tgt)
+        ent[keep] = torch.cat([-(lp.exp() * lp).sum(-1) for lp in lps], 1)
+        return nll, ent
+
+    def make_batch(self, items) -> Dict[str, torch.Tensor]:
+        """``items``: ``[(codes (W, L), span or None)]``, one ``W`` -> ``codes (B, W, L)`` and the index arrays."""
+        out = collate([patch_example(len(c), sp) for c, sp in items])
+        out["codes"] = torch.from_numpy(np.stack([np.asarray(c) for c, _ in items]).astype(np.int16))
+        return out
+
+    @torch.no_grad()
+    def score_windows(self, windows, device=None) -> Tuple[np.ndarray, np.ndarray]:
+        """Plain layout: ``nll`` and entropy ``(B, W, L)`` of every code of windows of equal length."""
+        device = device or self.emb.weight.device
+        W = len(windows[0])
+        b = {k: v.to(device) for k, v in self.make_batch([(c, None) for c in windows]).items()}
+        with torch.autocast(device_type=device.type, dtype=torch.bfloat16, enabled=device.type == "cuda"):
+            n, e = self.nll_entropy(b)
+        return n[:, :W].float().cpu().numpy(), e[:, :W].float().cpu().numpy()  # plain: place k targets patch k
+
+    @torch.no_grad()
+    def patch_states(self, windows, device=None) -> np.ndarray:
+        """Plain layout: last-layer state ``(B, W, d)`` of the place that reads each patch (place ``k + 1`` reads
+        patch ``k``), for windows of equal length: the AR's feature of a patch and its past (S5 type, codec 3)."""
+        device = device or self.emb.weight.device
+        W = len(windows[0])
+        b = {k: v.to(device) for k, v in self.make_batch([(c, None) for c in windows]).items()}
+        with torch.autocast(device_type=device.type, dtype=torch.bfloat16, enabled=device.type == "cuda"):
+            h = self.hidden(b["codes"], b["kind"], b["src"], b["pos"])
+        return h[:, 1:W + 1].float().cpu().numpy()
+
+    @torch.no_grad()
+    def code_nll(self, batch: Dict[str, torch.Tensor]):
+        """``nll``, level and part (0 plain, 1 FIM middle, 2 rest of a FIM sequence) of every target code."""
+        nll, _ = self.nll_entropy(batch)
+        keep = batch["nxt"] >= 0
+        part = _layout_part(batch["kind"][:, 0] == P_BOS, batch["kind"] == P_MID)[keep]
+        lev = torch.arange(self.levels, device=nll.device).expand(len(part), self.levels)
+        return nll[keep].reshape(-1), lev.reshape(-1), part[:, None].expand(-1, self.levels).reshape(-1)
+
+    @torch.no_grad()
+    def infill(self, codes: torch.Tensor, a: int, b: int, n_samples: int = 8, temperature: float = 1.0,
+               generator: Optional[torch.Generator] = None) -> torch.Tensor:
+        """Sample patches ``a .. b - 1`` of a window ``codes (W, L)`` given the rest (FIM), every code of a patch
+        from its own softmax. Returns ``(n_samples, b - a, L)``. One forward per sampled patch (no cache)."""
+        W, L = codes.shape
+        dev = self.emb.weight.device
+        ex = {k: v.to(dev).repeat(n_samples, 1) for k, v in collate([patch_example(W, (a, b))]).items()}
+        cw = codes.to(dev).long()[None].repeat(n_samples, 1, 1)
+        start = W + 3 - (b - a)  # place of the first middle patch in the FIM layout
+        for t in range(b - a):
+            j = start - 1 + t  # place whose target is middle patch a + t (the MID sentinel for t = 0)
+            h = self.hidden(cw, ex["kind"][:, : j + 1], ex["src"][:, : j + 1], ex["pos"][:, : j + 1])[:, j]
+            new = []
+            for lp in self.log_probs(h):  # (n_samples, levels of the run, vocabulary)
+                p = torch.softmax(lp / temperature, -1)
+                new.append(torch.multinomial(p.reshape(-1, p.shape[-1]), 1, generator=generator).view(p.shape[:-1]))
+            cw[:, a + t] = torch.cat(new, 1)
+        return cw[:, a:b]
+
+
+def build_from_args(a: dict):
+    if a.get("model") == "patch_ar":
+        return PatchAR(sizes=a["sizes"], d_model=a["d_model"], layers=a["layers"], heads=a["heads"],
+                       dropout=a.get("dropout", 0.0))
     return EEGAR(n_codes=a["n_codes"], levels=a["levels"], d_model=a["d_model"], layers=a["layers"],
                  heads=a["heads"], dropout=a.get("dropout", 0.0))
 
 
+def _device(model) -> torch.device:
+    return next(model.parameters()).device
+
+
 # ---------------------------------------------------------------------------- scoring
+def _slide(fn, codes: np.ndarray, window: int, hop: int, batch: int):
+    """Per-patch outputs of a whole night from sliding windows of ``min(window, P)`` patches: ``fn(windows)``
+    gives arrays ``(B, W, ...)``; each patch is taken once, from the first window where it lies in the last
+    ``hop`` patches (all patches of the first window)."""
+    P = len(codes)
+    W = min(window, P)
+    starts = list(range(0, P - W + 1, hop))
+    if starts[-1] + W < P:
+        starts.append(P - W)
+    outs, done = None, 0
+    for i in range(0, len(starts), batch):
+        ss = starts[i: i + batch]
+        res = fn([codes[s: s + W] for s in ss])
+        if outs is None:
+            outs = [np.zeros((P,) + r.shape[2:], np.float32) for r in res]
+        for k, s in enumerate(ss):
+            lo = max(done, s)
+            if lo < s + W:
+                for o, r in zip(outs, res):
+                    o[lo: s + W] = r[k][lo - s:]
+                done = s + W
+    return outs
+
+
 @torch.no_grad()
-def score_codes(model: EEGAR, codes: np.ndarray, window: int = 150, hop: int = 75, batch: int = 8,
+def hidden_codes(model, codes: np.ndarray, window: int = 150, hop: int = 75, batch: int = 8, device=None) -> np.ndarray:
+    """``(P, d)`` state of the patch model on every patch of a night (:meth:`PatchAR.patch_states`), with the
+    windows of :func:`score_codes`."""
+    device = device or _device(model)
+    return _slide(lambda ws: (model.patch_states(ws, device),), codes, window, hop, batch)[0]
+
+
+@torch.no_grad()
+def score_codes(model, codes: np.ndarray, window: int = 150, hop: int = 75, batch: int = 8,
                 device=None) -> Tuple[np.ndarray, np.ndarray]:
     """``nll`` and entropy ``(P, L)`` of every code of a night, plain layout, sliding windows of ``window``
     patches: each patch is scored once, in the first window where it lies in the last ``hop`` patches
     (all patches of the first window), so after the first window it has at least ``window - hop``
     patches of context."""
-    device = device or model.emb.weight.device
-    P, L = codes.shape
-    W = min(window, P)
-    starts = list(range(0, P - W + 1, hop))
-    if starts[-1] + W < P:
-        starts.append(P - W)
-    nll, ent = np.zeros((P, L), np.float32), np.zeros((P, L), np.float32)
-    done = 0
-    for i in range(0, len(starts), batch):
-        ss = starts[i: i + batch]
-        b = {k: v.to(device) for k, v in collate([make_example(codes[s: s + W], model.n_codes) for s in ss]).items()}
-        with torch.autocast(device_type=device.type, dtype=torch.bfloat16, enabled=device.type == "cuda"):
-            n, e = model.nll_entropy(b)
-        n, e = n[:, : W * L].float().cpu().numpy(), e[:, : W * L].float().cpu().numpy()  # plain: target j = code j
-        for k, s in enumerate(ss):
-            lo = max(done, s)
-            if lo < s + W:
-                nll[lo: s + W] = n[k].reshape(W, L)[lo - s:]
-                ent[lo: s + W] = e[k].reshape(W, L)[lo - s:]
-                done = s + W
+    device = device or _device(model)
+    nll, ent = _slide(lambda ws: model.score_windows(ws, device), codes, window, hop, batch)
     return nll, ent
 
 
@@ -261,13 +495,13 @@ def token_scores(per_grid: Dict[int, np.ndarray], n_samples: int, patch: int = 2
 
 # ---------------------------------------------------------------------------- edits (S6, #23)
 @torch.no_grad()
-def window_surprise(model: EEGAR, items, batch: int = 16, device=None):
+def window_surprise(model, items, batch: int = 16, device=None):
     """Surprise ``S = sum_l (nll - H)`` per patch of short stretches, plain layout, one window each.
 
     ``items``: list of ``(codes (W, L), lo, hi)``; returns one ``(hi - lo,)`` array per item, the patches
     ``lo .. hi - 1`` of its window scored with the window's earlier patches as context. Windows of the
     same length are batched."""
-    device = device or model.emb.weight.device
+    device = device or _device(model)
     out = [None] * len(items)
     by_len: Dict[int, list] = {}
     for i, (c, lo, hi) in enumerate(items):
@@ -275,15 +509,11 @@ def window_surprise(model: EEGAR, items, batch: int = 16, device=None):
     for _, idx in by_len.items():
         for j in range(0, len(idx), batch):
             ii = idx[j: j + batch]
-            b = {k: v.to(device) for k, v in collate([make_example(np.asarray(items[i][0]), model.n_codes)
-                                                      for i in ii]).items()}
-            with torch.autocast(device_type=device.type, dtype=torch.bfloat16, enabled=device.type == "cuda"):
-                n, e = model.nll_entropy(b)
-            s = (n - e).float().cpu().numpy()
+            n, e = model.score_windows([np.asarray(items[i][0]) for i in ii], device)
+            s = (n - e).sum(-1)
             for k, i in enumerate(ii):
-                c, lo, hi = items[i]
-                W, L = np.asarray(c).shape
-                out[i] = s[k, : W * L].reshape(W, L).sum(1)[lo:hi]
+                _, lo, hi = items[i]
+                out[i] = s[k][lo:hi]
     return out
 
 
@@ -296,7 +526,7 @@ def window_around(P: int, lo: int, hi: int, window: int, centre: bool = True) ->
 
 
 @torch.no_grad()
-def close_event(model: EEGAR, codes: np.ndarray, a: int, thr: float, max_len: int = 10, follow: int = 3,
+def close_event(model, codes: np.ndarray, a: int, thr: float, max_len: int = 10, follow: int = 3,
                 window: int = 150, temperature: float = 1.0, generator: Optional[torch.Generator] = None):
     """Closure rule of the plan (rev. 1, point 5). From the start patch ``a`` the end ``b`` grows up to
     ``a + max_len``; for each ``b`` the stretch ``a .. b - 1`` is refilled by FIM (one sample) and the
@@ -304,7 +534,7 @@ def close_event(model: EEGAR, codes: np.ndarray, a: int, thr: float, max_len: in
     The end is the first ``b`` whose ``follow`` patches have a mean surprise ``<= thr``. Returns
     ``(b, fill (b - a, L))``, or ``(None, None)`` when no ``b`` works: a state transition, not an event."""
     P, L = codes.shape
-    dev = model.emb.weight.device
+    dev = _device(model)
     for b in range(a + 1, min(a + max_len, P - follow) + 1):
         s = window_around(P, a, b, window)
         W = min(window, P)
