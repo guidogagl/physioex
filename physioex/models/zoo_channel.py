@@ -14,6 +14,10 @@ Epoch encoders (``epoch``):
             STFT + filterbank, fixed dB scale  -> Linear(nfilt, 128) -> block x4
     rawcnn  raw_scale -> multi-scale Conv1d (0.5 / 1 / 4 s) -> 2-s / 1-s framing conv -> dilated ConvBlock x4 (1,2,4,8)
     patch   raw_scale -> 2-s patches, 1-s hop -> Linear(200, 128) + PE -> Transformer x4
+    rawcnnbp / patchbp
+            as rawcnn / patch, but the epoch is first band-limited to the band the STFT encoders read (EEG/EOG
+            0.39-32.0 Hz, EMG 10.2-44.9 Hz: FFT mask over the 3000-sample epoch, DC removed). Control of the raw
+            encoders: same input band as the spectral front-end, raw waveform otherwise (xmai-lab/sleep-mechinterp#41)
 
 Sequence encoders (``seq``): gru (ChannelNet), tf (PE + Transformer), s4d, mamba, mlstm, slstm, tcn (ConvBlock with
 dilations 1, 2, 4, 8: receptive field 31 epochs). ``ZooChannel(m, "lstm", "gru")`` has the layer structure of
@@ -36,7 +40,8 @@ from physioex.models.sleeptransformer import PositionalEncoding
 from physioex.models.zoo_blocks import (ConvBlock, MambaBlock, MLSTMBlock, PatchStem, RawMultiScaleStem, RNNBlock,
                                         S4DBlock, SLSTMBlock, TransformerBlock, raw_scale)
 
-EPOCH_ENCODERS = ("lstm", "tf", "s4d", "mamba", "mlstm", "slstm", "rawcnn", "patch")
+EPOCH_ENCODERS = ("lstm", "tf", "s4d", "mamba", "mlstm", "slstm", "rawcnn", "patch", "rawcnnbp", "patchbp")
+RAW_BAND = {"EEG": (0.39, 32.0), "EOG": (0.39, 32.0), "EMG": (10.2, 44.9)}
 SEQ_ENCODERS = ("gru", "tf", "s4d", "mamba", "mlstm", "slstm", "tcn")
 TF_BINS = slice(1, 129)
 DILATIONS = (1, 2, 4, 8)
@@ -45,7 +50,7 @@ DILATIONS = (1, 2, 4, 8)
 def make_block(kind: str, i: int, d: int, d_in: int, dropout: float) -> nn.Module:
     if kind in ("lstm", "gru"):
         return RNNBlock(kind, d_in if i == 0 else d, d)
-    if kind in ("tf", "patch"):
+    if kind in ("tf", "patch", "patchbp"):
         return TransformerBlock(d, dropout=dropout)
     if kind == "s4d":
         return S4DBlock(d, dropout=dropout)
@@ -55,7 +60,7 @@ def make_block(kind: str, i: int, d: int, d_in: int, dropout: float) -> nn.Modul
         return MLSTMBlock(d, dropout=dropout)
     if kind == "slstm":
         return SLSTMBlock(d, dropout=dropout)
-    if kind in ("rawcnn", "tcn"):
+    if kind in ("rawcnn", "rawcnnbp", "tcn"):
         return ConvBlock(d, DILATIONS[i], dropout=dropout)
     raise ValueError(kind)
 
@@ -83,11 +88,15 @@ class ZooChannel(nn.Module):
         elif epoch == "tf":
             self.frontend = SpectralFrontend()
             self.pe_epoch = PositionalEncoding(d)
-        elif epoch == "rawcnn":
+        elif epoch in ("rawcnn", "rawcnnbp"):
             self.raw_stem = RawMultiScaleStem(d)
         else:                                              # patch
             self.raw_stem = PatchStem(d)
             self.pe_epoch = PositionalEncoding(d)
+        if epoch.endswith("bp"):
+            f = torch.fft.rfftfreq(3000, d=1 / 100.0)
+            lo, hi = RAW_BAND[modality]
+            self.register_buffer("band_mask", ((f >= lo) & (f <= hi)).float(), persistent=False)
         self.epoch_blocks = nn.ModuleList(make_block(epoch, i, d, d_in, dropout) for i in range(n_epoch))
         self.attention = AttentionLayer(d, attention)
         self.e_norm = nn.LayerNorm(d)
@@ -114,10 +123,12 @@ class ZooChannel(nn.Module):
         """(B, L, 3000) -> (frame features (B*L, 29, d_in), input record (B, L, 29, ·))."""
         B, L, _ = x.shape
         k = self.epoch_kind
-        if k in ("rawcnn", "patch"):
+        if k in ("rawcnn", "patch", "rawcnnbp", "patchbp"):
+            if k.endswith("bp"):                                           # band-limit as the STFT front-end
+                x = torch.fft.irfft(torch.fft.rfft(x, dim=-1) * self.band_mask, n=x.shape[-1], dim=-1)
             xr = raw_scale(x, offset_db)                                   # (B, L, 3000) in [-1, 1]
             h = self.raw_stem(xr.reshape(B * L, -1))                       # (B*L, 29, d)
-            if k == "patch":
+            if k in ("patch", "patchbp"):
                 h = self.pe_epoch(h)
             return h, xr.unfold(-1, 200, 100)                              # record: the scaled raw frames
         off = None if offset_db is None else offset_db.view(B, 1, 1, 1)

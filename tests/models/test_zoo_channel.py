@@ -149,3 +149,11 @@ def test_frozen_rnn_branches_backward_on_cuda():
     logits, _, _ = mm(x)
     logits.sum().backward()
     assert all(p.grad is not None for n, p in mm.named_parameters() if n.startswith("conn."))
+
+
+def test_band_limited_raw_input():
+    m = ZooChannel("EEG", "rawcnnbp", "gru").eval()
+    t = torch.arange(3000) / 100.0
+    x = (torch.sin(2 * torch.pi * 10 * t) + 3 + torch.sin(2 * torch.pi * 40 * t) + torch.sin(2 * torch.pi * 0.1 * t))
+    xb = torch.fft.irfft(torch.fft.rfft(x.view(1, 1, -1), dim=-1) * m.band_mask, n=3000, dim=-1).flatten()
+    torch.testing.assert_close(xb, torch.sin(2 * torch.pi * 10 * t), atol=1e-3, rtol=0)   # DC, 0.1 Hz, 40 Hz removed (fp32 FFT)
