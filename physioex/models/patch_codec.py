@@ -75,8 +75,32 @@ the reference that a trained codec has to beat at the same bits. On 8 DCSM night
 saturated on loud patches: relative error 0.21-0.28 on the loudest 1 %, with 5-24 % of the ``tanh`` inputs at the
 bound.
 
+Revision 5 (28.11.2026, revision 2 of the plan of xmai-lab/sleep-lens#17, sub-issue #25): a learned codec again,
+with weak supervision from the sleep stages. All options are off by default:
+
+* ``margin`` (lapped patches): the encoder reads the whitened patch with ``margin`` samples of the neighbours on
+  each side, and the decoder draws ``PATCH + 2 margin`` samples per patch, weighted by a fixed window whose
+  raised-cosine ramps of ``2 margin`` samples cross the patch boundaries and sum to 1 there (overlap-add,
+  normalised by the window sum at the ends of the sequence). Pilot Q2 had its seam error 1.32 times the error
+  inside the patch, and the linear-only codec had 1.00; a patch-local encoder with zero padding sees the edges of
+  its patch with less context. The codes of a patch then depend on ``margin`` samples of each neighbour, and an
+  edit reaches ``margin`` samples further;
+* ``zero_phase``: the codec of the spectral twin. Every whitened patch is replaced by
+  :func:`zero_phase_patches` in the encoder input and in the reconstruction target, so the model sees only the
+  magnitude spectrum of each patch, with the same architecture, data and losses;
+* ``sem_dims``: the first ``sem_dims`` FSQ dimensions are the semantic group ``g_s``, the only part read by
+  :class:`StageMIL`, a gated-attention multiple-instance head (Ilse et al., ICML 2018). The head predicts the stage
+  of each 30 s epoch from the ``g_s`` of its 15 patches, pooled by attention, so the evidence has to sit in single
+  patches (an epoch is N2 because of a few patches, not because every patch looks like N2). Its cross-entropy
+  (class weights from the stage counts of the warm-up, label smoothing) reaches the encoder with weight
+  ``stage_lambda`` after ``stage_warmup`` steps; before, and always with weight 0, the head trains on detached
+  values, as a probe. A negative ``stage_weight`` sets ``stage_lambda`` once, at the end of the warm-up, to
+  ``-stage_weight`` times the ratio of the mean reconstruction loss to the mean cross-entropy of the last
+  ``STAGE_WINDOW`` steps.
+
 Input:``(B, n)`` clean EEG at 100 Hz, ``RobustScale`` units (cache of the clean channels); ``n`` is
-cut to a multiple of 200. Sleep stages and concept labels are never used.
+cut to a multiple of 200. Concept labels are never used. Sleep stages are used only by :class:`StageMIL`
+(revision 5), as weak labels of whole 30 s epochs.
 """
 from __future__ import annotations
 
@@ -104,6 +128,9 @@ STFT_WINDOWS = (25, 50, 100, 200, 400)
 BAND = (0.5, 35.0)
 ZERO_RUN = 100  # crops with >= 1 s of exact zeros (padding beyond the recording) are dropped
 INV_TAPS = 256  # causal FIR of the inverse whitener (dec_out="white")
+EPOCH = 30 * FS  # samples of a scored epoch
+N_STAGES = 5  # W, N1, N2, N3, R (labels 0..4; anything else is not scored)
+STAGE_WINDOW = 200  # steps averaged to set stage_lambda at the end of the warm-up (stage_weight < 0)
 
 
 # ----------------------------------------------------------------------------
@@ -230,14 +257,17 @@ def fit_whitener(model: "PatchCodec", loader, max_batches: int = 50) -> dict:
 
 
 class PatchEncoder(nn.Module):
-    """``(M, 200)`` whitened patches -> ``(M, dim)``; nothing crosses the patch boundary."""
+    """``(M, n_in)`` whitened patches (``n_in = 200``, or ``200 + 2 margin`` with lapped patches) -> ``(M, dim)``;
+    nothing crosses the input window."""
 
-    def __init__(self, width: int = 64, dim: int = 128, fs: int = FS):
+    def __init__(self, width: int = 64, dim: int = 128, fs: int = FS, n_in: int = PATCH):
         super().__init__()
+        frames, rem = divmod(n_in, math.prod(ENC_STRIDES))
+        assert not rem, f"PatchEncoder: input of {n_in} samples, not a multiple of {math.prod(ENC_STRIDES)}"
         ch = [width * 2 ** i for i in range(len(ENC_STRIDES) + 1)]
         self.stem = MultiScaleStem(width, stem_kernels(fs))
         self.down = nn.Sequential(*[_down(ch[i], ch[i + 1], s) for i, s in enumerate(ENC_STRIDES)])
-        self.out = nn.Sequential(nn.ELU(), nn.Flatten(), nn.Linear(ch[-1] * FRAMES, dim))
+        self.out = nn.Sequential(nn.ELU(), nn.Flatten(), nn.Linear(ch[-1] * frames, dim))
 
     def forward(self, p: torch.Tensor) -> torch.Tensor:
         return self.out(self.down(self.stem(p[:, None])))
@@ -258,14 +288,38 @@ def _up(c_in: int, c_out: int, s: int, dilations, mode: str = "convT") -> nn.Seq
     return nn.Sequential(nn.ELU(), *up, *[_ResUnit(c_out, d) for d in dilations])
 
 
-class PatchDecoder(nn.Module):
-    """``(B, P, dim) -> (B, P * 200)``, receptive field shorter than ±200 samples."""
+def ola_window(margin: int, device=None, dtype=torch.float32) -> torch.Tensor:
+    """Synthesis window of a lapped patch, ``(PATCH + 2 margin,)``: a raised-cosine ramp over the first and the last
+    ``2 margin`` samples, 1 in between. The falling ramp of a patch and the rising ramp of the next one overlap
+    on the ``2 margin`` samples around their boundary and sum to 1 there."""
+    assert 0 < 2 * margin <= PATCH, "ola_window: 0 < margin <= PATCH / 2"
+    r = torch.sin(0.5 * math.pi * (torch.arange(2 * margin, device=device, dtype=dtype) + 0.5) / (2 * margin)) ** 2
+    return torch.cat([r, torch.ones(PATCH - 2 * margin, device=device, dtype=dtype), 1 - r])
 
-    def __init__(self, width: int = 64, dim: int = 128, upsample: str = "convT"):
+
+def overlap_add(y: torch.Tensor, margin: int) -> torch.Tensor:
+    """``(B, P, PATCH + 2 margin)`` segments, segment ``i`` on the samples ``200 i - margin .. 200 (i + 1) + margin``
+    -> ``(B, P * PATCH)``: windowed by :func:`ola_window`, summed, divided by the sum of the windows (1 except
+    within ``margin`` samples of the two ends of the sequence)."""
+    B, P, S = y.shape
+    w = ola_window(margin, y.device, y.dtype)
+    n = (P - 1) * PATCH + S
+    out = F.fold((y * w).transpose(1, 2), (1, n), (1, S), stride=(1, PATCH)).view(B, n)
+    den = F.fold(w.view(1, S, 1).expand(1, S, P), (1, n), (1, S), stride=(1, PATCH)).view(1, n)
+    return (out / den)[:, margin:margin + P * PATCH]
+
+
+class PatchDecoder(nn.Module):
+    """``(B, P, dim) -> (B, P * 200)``, receptive field shorter than ±200 samples. With ``margin > 0`` (lapped
+    patches) every patch is drawn on its own, ``PATCH + 2 margin`` samples, then :func:`overlap_add`."""
+
+    def __init__(self, width: int = 64, dim: int = 128, upsample: str = "convT", margin: int = 0):
         super().__init__()
+        frames, rem = divmod(PATCH + 2 * margin, math.prod(DEC_STRIDES))
+        assert not rem, f"PatchDecoder: segment of {PATCH + 2 * margin} samples, not a multiple of {math.prod(DEC_STRIDES)}"
         ch = [width * 2 ** i for i in range(len(DEC_STRIDES), -1, -1)]
-        self.c0 = ch[0]
-        self.unfold = nn.Linear(dim, ch[0] * FRAMES)
+        self.c0, self.frames, self.margin = ch[0], frames, margin
+        self.unfold = nn.Linear(dim, ch[0] * frames)
         self.frame = nn.Conv1d(ch[0], ch[0], 3, padding=1)
         self.up = nn.Sequential(*[_up(ch[i], ch[i + 1], s, DEC_DILATIONS[i], upsample)
                                   for i, s in enumerate(DEC_STRIDES)])
@@ -273,18 +327,25 @@ class PatchDecoder(nn.Module):
 
     def forward(self, z: torch.Tensor) -> torch.Tensor:
         B, P, _ = z.shape
+        if self.margin:
+            h = self.unfold(z).view(B * P, self.c0, self.frames)
+            return overlap_add(self.post(self.up(self.frame(h)))[:, 0].view(B, P, -1), self.margin)
         h = self.unfold(z).view(B, P, self.c0, FRAMES).permute(0, 2, 1, 3).reshape(B, self.c0, P * FRAMES)
         return self.post(self.up(self.frame(h)))[:, 0]
 
 
 class LinearPatchDecoder(nn.Module):
-    """``(B, P, dim) -> (B, P * 200)``: one linear map per patch (``arch="linear"`` and ``"skip"``)."""
+    """``(B, P, dim) -> (B, P * 200)``: one linear map per patch (``arch="linear"`` and ``"skip"``), to
+    ``PATCH + 2 margin`` samples and :func:`overlap_add` with lapped patches."""
 
-    def __init__(self, dim: int):
+    def __init__(self, dim: int, margin: int = 0):
         super().__init__()
-        self.lin = nn.Linear(dim, PATCH)
+        self.margin = margin
+        self.lin = nn.Linear(dim, PATCH + 2 * margin)
 
     def forward(self, z: torch.Tensor) -> torch.Tensor:
+        if self.margin:
+            return overlap_add(self.lin(z), self.margin)
         return self.lin(z).reshape(z.shape[0], -1)
 
 
@@ -360,6 +421,40 @@ class PatchContext(nn.Module):
         return h.transpose(1, 2)
 
 
+class StageMIL(nn.Module):
+    """Gated-attention multiple-instance head (Ilse et al., ICML 2018): ``(nb, K, d)`` bags of ``K`` patches ->
+    stage logits ``(nb, N_STAGES)`` and attention ``(nb, K)``. Each patch is embedded on its own (``phi``); the
+    only interaction between patches is the attention-weighted mean, so the evidence for a stage has to be visible
+    in single patches."""
+
+    def __init__(self, d_in: int, hidden: int = 64, att: int = 32, n_classes: int = N_STAGES):
+        super().__init__()
+        self.phi = nn.Sequential(nn.Linear(d_in, hidden), nn.GELU(), nn.Linear(hidden, hidden), nn.GELU())
+        self.V, self.U, self.w = nn.Linear(hidden, att), nn.Linear(hidden, att), nn.Linear(att, 1)
+        self.cls = nn.Linear(hidden, n_classes)
+
+    def forward(self, g: torch.Tensor):
+        h = self.phi(g.float())
+        a = torch.softmax(self.w(torch.tanh(self.V(h)) * torch.sigmoid(self.U(h)))[..., 0], -1)
+        return self.cls((a[..., None] * h).sum(1)), a
+
+
+def stage_bags(offsets: torch.Tensor, n: int, labels: torch.Tensor):
+    """Bags of the 30 s epochs that lie whole inside crops of ``n`` samples starting at ``offsets`` ``(B,)`` (samples
+    from the start of a window whose epoch ``e`` has the stage ``labels[:, e]``). Returns ``(crop, first patch,
+    stage)`` of every bag with a scored stage: the bag is the ``EPOCH // PATCH`` patches of the crop whose centre
+    lies in the epoch, starting at that patch."""
+    B, L = labels.shape
+    o = offsets.long()
+    e = torch.div(o + EPOCH - 1, EPOCH, rounding_mode="floor")[:, None] + torch.arange(n // EPOCH + 1, device=o.device)
+    ok = ((e + 1) * EPOCH <= (o + n)[:, None]) & (e < L)
+    y = labels.long().gather(1, e.clamp(max=L - 1))
+    ok &= (y >= 0) & (y < N_STAGES)
+    p0 = torch.div(e * EPOCH - o[:, None] - PATCH // 2 + PATCH - 1, PATCH, rounding_mode="floor")
+    b = torch.arange(B, device=o.device)[:, None].expand_as(e)
+    return b[ok], p0[ok], y[ok]
+
+
 class PatchCodec(nn.Module):
     """Encoder on the 2 s patch (plus ``ctx_enc`` patches), RVQ or FSQ, decoder with ±``receptive_patches``
     patches of receptive field (module docstring)."""
@@ -369,21 +464,27 @@ class PatchCodec(nn.Module):
                  crop_sec: float = 16.0, upsample: str = "convT", fs: int = FS, quantizer: str = "rvq",
                  fsq_levels: int = 9, fsq_group: int = 4, whiten: str = "patch", ctx_enc: int = 0,
                  ctx_dec: int = 0, dec_out: str = "raw", arch: str = "conv", fsq_norm: bool = False,
-                 fsq_scale: float = 1.0):
+                 fsq_scale: float = 1.0, margin: int = 0, zero_phase: bool = False, sem_dims: int = 0,
+                 stage_weight: float = 0.0, stage_warmup: int = 0, stage_smoothing: float = 0.1):
         super().__init__()
         assert fs == FS, "PatchCodec: 100 Hz only"
         assert quantizer in ("rvq", "fsq") and whiten in ("patch", "signal")
         assert dec_out in ("raw", "white") and arch in ("conv", "skip", "linear")
         assert arch == "conv" or dec_out == "white", "the linear paths draw the whitened patch"
         assert fsq_scale > 0, "fsq_scale > 0"
+        assert not margin or (whiten == "signal" and dec_out == "white"), "lapped patches: whiten signal, dec_out white"
+        assert not zero_phase or (whiten == "signal" and dec_out == "white"), "zero_phase: whiten signal, dec_out white"
+        assert not sem_dims or quantizer == "fsq", "sem_dims: FSQ dimensions"
         self.fs, self.patch = fs, PATCH
         self.quantizer, self.whiten, self.dec_out, self.arch = quantizer, whiten, dec_out, arch
         self.dim, self.max_levels, self.vq_levels = dim, levels, levels
         self.q_dropout, self.stft_weight = q_dropout, stft_weight
         self.crop = int(round(crop_sec * fs)) // PATCH * PATCH
+        self.margin, self.zero_phase = int(margin), bool(zero_phase)
+        n_in = PATCH + 2 * self.margin
         self.whitener = Whitener(order, fs)
-        self.encoder = nn.Linear(PATCH, dim) if arch == "linear" else PatchEncoder(width, dim, fs)
-        self.enc_skip = nn.Linear(PATCH, dim) if arch == "skip" else None
+        self.encoder = nn.Linear(n_in, dim) if arch == "linear" else PatchEncoder(width, dim, fs, n_in)
+        self.enc_skip = nn.Linear(n_in, dim) if arch == "skip" else None
         self.enc_ctx = PatchContext(dim, ctx_enc)
         self.fsq_bn, self.fsq_scale = None, float(fsq_scale)
         if quantizer == "rvq":
@@ -397,14 +498,29 @@ class PatchCodec(nn.Module):
             self.n_codes = self.fsq.n_codes
         self.dec_ctx = PatchContext(dim, ctx_dec)
         self.upsample = upsample
-        self.decoder = LinearPatchDecoder(dim) if arch == "linear" else PatchDecoder(width, dim, upsample)
-        self.dec_skip = LinearPatchDecoder(dim) if arch == "skip" else None
+        self.decoder = (LinearPatchDecoder(dim, self.margin) if arch == "linear"
+                        else PatchDecoder(width, dim, upsample, self.margin))
+        self.dec_skip = LinearPatchDecoder(dim, self.margin) if arch == "skip" else None
         self.bypass_vq = False
-        # the codes of patch i see the signal of patches i - encoder_reach .. i + ctx_enc; the output inside
-        # patch i depends on the codes of patches i - receptive_patches .. i + receptive_patches (the inverse
-        # whitener of dec_out="white" reaches INV_TAPS - 1 samples back, i.e. 2 more patches)
-        self.encoder_reach = ctx_enc + (1 if whiten == "signal" else 0)
-        self.receptive_patches = ctx_dec + 1 + (math.ceil((INV_TAPS - 1) / PATCH) if dec_out == "white" else 0)
+        # the codes of patch i see the signal of patches i - encoder_reach .. i + ctx_enc (+ 1 with lapped
+        # patches); the output inside patch i depends on the codes of patches i - receptive_patches ..
+        # i + receptive_patches (the inverse whitener of dec_out="white" reaches INV_TAPS - 1 samples back, i.e. 2
+        # more patches; lapped patches add one)
+        self.encoder_reach = ctx_enc + (1 if whiten == "signal" or self.margin else 0)
+        self.receptive_patches = (ctx_dec + 1 + (math.ceil((INV_TAPS - 1) / PATCH) if dec_out == "white" else 0)
+                                  + (1 if self.margin else 0))
+        self.sem_dims = int(sem_dims)
+        self.stage_head = None
+        if self.sem_dims:
+            assert self.sem_dims <= self.fsq.dims
+            assert stage_weight >= 0 or stage_warmup > 0, "stage_weight < 0 sets stage_lambda at the end of a warm-up"
+            self.stage_head = StageMIL(self.sem_dims)
+            self.stage_weight, self.stage_warmup = float(stage_weight), int(stage_warmup)
+            self.stage_smoothing = float(stage_smoothing)
+            self.register_buffer("stage_lambda", torch.tensor(max(0.0, float(stage_weight))))
+            self.register_buffer("stage_counts", torch.zeros(N_STAGES))
+            self.register_buffer("stage_steps", torch.zeros((), dtype=torch.long))
+            self._stage_hist = []  # (reconstruction loss, cross-entropy) of the last STAGE_WINDOW warm-up steps
 
     def _k(self) -> int:
         """Levels used now: a random prefix in training (quantizer dropout), ``vq_levels`` in eval."""
@@ -412,13 +528,27 @@ class PatchCodec(nn.Module):
             return int(torch.randint(1, self.max_levels + 1, ()))
         return self.max_levels if self.training else self.vq_levels
 
+    def white_target(self, x: torch.Tensor) -> torch.Tensor:
+        """``(B, n) -> (B, P * 200)``: the whitened signal the codec reconstructs (``whiten="signal"``), each patch
+        replaced by its zero-phase pulse with ``zero_phase``."""
+        B, n = x.shape
+        P = n // PATCH
+        w = self.whitener(x[:, : P * PATCH])
+        if self.zero_phase:
+            w = zero_phase_patches(w.reshape(B, P, PATCH)).reshape(B, P * PATCH)
+        return w
+
     def encode(self, x: torch.Tensor) -> torch.Tensor:
         """``(B, n) -> (B, P, dim)`` continuous latents, ``P = n // 200``."""
         B, n = x.shape
         P = n // PATCH
         x = x[:, : P * PATCH]
         if self.whiten == "signal":  # true history: the first 32 samples of a patch see the previous patch
-            w = self.whitener(x).reshape(B * P, PATCH)
+            w = self.white_target(x)
+            if self.margin:  # lapped patches: margin samples of each neighbour (reflected at the two ends)
+                w = F.pad(w[:, None], (self.margin, self.margin), mode="reflect")[:, 0]
+                w = w.unfold(1, PATCH + 2 * self.margin, PATCH)
+            w = w.reshape(B * P, -1)
         else:  # history reflected inside every patch
             w = self.whitener(x.reshape(B * P, PATCH))
         z = self.encoder(w)
@@ -433,15 +563,18 @@ class PatchCodec(nn.Module):
             u = self.fsq_bn(u.reshape(-1, u.shape[-1])).view(u.shape)
         return u if self.fsq_scale == 1.0 else u * self.fsq_scale
 
-    def quantize(self, z: torch.Tensor, k: Optional[int] = None):
-        """``(B, P, dim)`` -> quantized latents, codes ``(B, P, k)`` and commitment loss (0 for FSQ)."""
+    def quantize(self, z: torch.Tensor, k: Optional[int] = None, values: bool = False):
+        """``(B, P, dim)`` -> quantized latents, codes ``(B, P, k)`` and commitment loss (0 for FSQ); with
+        ``values`` (FSQ only), also the quantised FSQ values ``(B, P, fsq.dims)`` in [-1, 1]."""
         B, P, D = z.shape
         if self.quantizer == "fsq":
             u = self._fsq_u(z)
             if self.bypass_vq:  # bounded, not rounded
-                return self.fsq_out(self.fsq.bound(u) / self.fsq.half), None, z.new_zeros(())
+                q = self.fsq.bound(u) / self.fsq.half
+                return (self.fsq_out(q), None, z.new_zeros(())) + ((q,) if values else ())
             q, codes = self.fsq(u, self._k() if k is None else k)
-            return self.fsq_out(q), codes, z.new_zeros(())
+            return (self.fsq_out(q), codes, z.new_zeros(())) + ((q,) if values else ())
+        assert not values, "values: FSQ only"
         if self.bypass_vq:
             return z.float(), None, z.new_zeros(())
         zq, codes, loss = self.rvq(z.reshape(B * P, D), self._k() if k is None else k)
@@ -480,18 +613,71 @@ class PatchCodec(nn.Module):
 
     def forward(self, x: torch.Tensor) -> Dict[str, torch.Tensor]:
         z = self.encode(x)
-        zq, codes, commit = self.quantize(z)
+        sem = None
+        if self.sem_dims:
+            zq, codes, commit, q = self.quantize(z, values=True)
+            sem = q[..., : self.sem_dims]
+        else:
+            zq, codes, commit = self.quantize(z)
         if self.dec_out == "white":
             y = self._draw(zq)
-            return {"wave": self.whitener.inverse(y), "white": y, "codes": codes, "commit": commit}
-        return {"wave": self.decode(zq), "codes": codes, "commit": commit}
+            out = {"wave": self.whitener.inverse(y), "white": y, "codes": codes, "commit": commit}
+        else:
+            out = {"wave": self.decode(zq), "codes": codes, "commit": commit}
+        if sem is not None:
+            out["sem"] = sem
+        return out
+
+    @torch.no_grad()
+    def sem_values(self, x: torch.Tensor) -> torch.Tensor:
+        """``(B, n) -> (B, P, sem_dims)`` quantised values of the semantic group ``g_s`` (eval mode)."""
+        was = self.training
+        self.eval()
+        q = self.quantize(self.encode(x), self.max_levels, values=True)[3]
+        self.train(was)
+        return q[..., : self.sem_dims]
+
+    def stage_loss(self, sem: torch.Tensor, offsets: torch.Tensor, labels: torch.Tensor, n: int,
+                   recon: Optional[torch.Tensor] = None):
+        """Cross-entropy of :class:`StageMIL` on the whole epochs of the crops (:func:`stage_bags`) and the
+        weight it gets in the total loss. In training this also counts the step, the stage counts of the warm-up
+        (class weights) and, with ``stage_weight < 0``, sets ``stage_lambda`` at the end of the warm-up. The
+        encoder sees the cross-entropy only after the warm-up and with ``stage_lambda > 0``; otherwise the head
+        trains on detached values (weight 1, a probe). Returns ``(ce, weight, extra)``; ``ce`` is ``None`` when
+        no crop holds a whole scored epoch."""
+        b, p0, y = stage_bags(offsets, n, labels)
+        if not len(y):
+            return None, 0.0, {}
+        warm = bool(self.stage_steps < self.stage_warmup)
+        if self.training and warm:
+            self.stage_counts += torch.bincount(y, minlength=N_STAGES).float()
+        live = (not warm) and float(self.stage_lambda) > 0
+        g = sem if live else sem.detach()
+        bags = g[b[:, None], p0[:, None] + torch.arange(EPOCH // PATCH, device=g.device)]
+        logits, att = self.stage_head(bags)
+        cnt = self.stage_counts + 1.0
+        weight = (cnt.sum() / (N_STAGES * cnt)).clamp(0.2, 5.0)
+        ce = F.cross_entropy(logits.float(), y, weight=weight, label_smoothing=self.stage_smoothing)
+        extra = {"stage_ce": float(ce), "stage_acc": float((logits.argmax(-1) == y).float().mean()),
+                 "stage_lambda": float(self.stage_lambda), "stage_bags": int(len(y)),
+                 "stage_att_max": float(att.max(-1).values.mean())}
+        if self.training:
+            self.stage_steps += 1
+            if warm and self.stage_weight < 0 and recon is not None:
+                self._stage_hist = (self._stage_hist + [(float(recon), float(ce))])[-STAGE_WINDOW:]
+                if int(self.stage_steps) == self.stage_warmup:
+                    r, c = np.mean(self._stage_hist, axis=0)
+                    self.stage_lambda.fill_(-self.stage_weight * r / max(c, 1e-6))
+                    print(f"[patch_codec] stage_lambda {float(self.stage_lambda):.4g} (reconstruction {r:.4g}, "
+                          f"cross-entropy {c:.4g}, last {len(self._stage_hist)} warm-up steps)", flush=True)
+        return ce, (float(self.stage_lambda) if live else 1.0), extra
 
     def loss(self, out: Dict[str, torch.Tensor], x: torch.Tensor):
         """Whitened MSE + ``stft_weight`` x whitened multi-resolution STFT (log magnitude + spectral
         convergence) + RVQ commitment. Returns ``(loss, whitened R^2, extra)``."""
         w = out["wave"].float()
         x = x[:, : w.shape[-1]].float()
-        xw = self.whitener(x)  # the same filtering as the encoder input of whiten="signal"
+        xw = self.white_target(x) if self.whiten == "signal" else self.whitener(x)  # the encoder's filtering
         ww = out["white"].float() if "white" in out else self.whitener(w)
         mse = (ww - xw).pow(2).mean(1)
         mag, _ = stft_losses(ww, xw, windows=STFT_WINDOWS, phase_win=0)
@@ -620,6 +806,15 @@ class TransformCodec(nn.Module):
     def decode_codes(self, codes: torch.Tensor) -> torch.Tensor:
         return self.decode(self.embed(codes))
 
+    def coefficients(self, codes: torch.Tensor) -> torch.Tensor:
+        """Codes ``(B, P, G + PATCH)`` -> the dequantised KLT coefficients of the whitened patch ``(B, P, PATCH)``,
+        gains applied (``_draw`` is their product with ``U.T``): the patch feature of codec 3 in the semantic
+        gates of revision 5 (:mod:`physioex.train.bin.semantic_gates`)."""
+        zq, G = self.embed(codes), self.groups
+        B, P, _ = zq.shape
+        p = (zq[..., G:] * self._scale()).reshape(B, P, G, self.ng) * torch.exp2(zq[..., :G])[..., None]
+        return p.reshape(B, P, PATCH)
+
     @torch.no_grad()
     def codes(self, x: torch.Tensor, levels: Optional[int] = None, zero_phase: bool = False) -> torch.Tensor:
         return self.quantize(self.encode(x, zero_phase))[1]
@@ -645,21 +840,44 @@ def zero_phase_patches(w: torch.Tensor) -> torch.Tensor:
 def crops(x: torch.Tensor, n: int, training: bool) -> torch.Tensor:
     """``(B, L) -> (B', n)``: one crop per window, at a random offset in training (patch grid at a
     random alignment with the epochs) and centred in eval; crops with a zero run are dropped."""
+    return crop_windows(x, n, training)[0]
+
+
+def crop_windows(x: torch.Tensor, n: int, training: bool):
+    """:func:`crops` that also returns the offsets ``(B',)`` of the crops in their windows and the kept rows
+    ``(B,)`` (bool), to crop per-epoch labels the same way."""
     B, L = x.shape
     if L <= n:
         c = x[:, : L // PATCH * PATCH]
+        o = torch.zeros(B, dtype=torch.long, device=x.device)
     else:
         o = (torch.randint(0, L - n + 1, (B,), device=x.device) if training
              else torch.full((B,), (L - n) // 2, device=x.device))
         c = x.gather(1, o[:, None] + torch.arange(n, device=x.device))
     keep = ~has_zero_run(c)
-    return c[keep] if keep.any() else c
+    if not keep.any():
+        keep = torch.ones_like(keep)
+    return c[keep], o[keep], keep
 
 
 class PatchCodecTrainer(Trainer):
     """Trainer for :class:`PatchCodec`; ``acc`` is the whitened R^2 of the crop, and the validation loss is
     ``1 - acc``, so the best checkpoint and early stopping follow the reconstruction. Call
-    :func:`fit_whitener` first; use ``log_confusion_matrix=False``."""
+    :func:`fit_whitener` first; use ``log_confusion_matrix=False``. With ``log_every > 0`` the training steps
+    print the mean whitened R^2 and stage metrics of every ``log_every`` steps (revision 5)."""
+
+    log_every = 0
+    _hist: list = []
+
+    @staticmethod
+    def _log(r2: float, extra: dict) -> None:
+        h = PatchCodecTrainer._hist
+        h.append({"r2_w": r2, **{k: v for k, v in extra.items() if k.startswith("stage_") or k == "mse_w"}})
+        if len(h) >= PatchCodecTrainer.log_every:
+            keys = sorted({k for d in h for k in d})
+            print("[patch_codec train] " + " ".join(f"{k} {np.mean([d[k] for d in h if k in d]):.4g}" for k in keys),
+                  flush=True)
+            h.clear()
 
     @staticmethod
     def _step(model, batch, loss_fn, device):
@@ -667,10 +885,19 @@ class PatchCodecTrainer(Trainer):
         from physioex.models.msvq import _autocast
 
         x = stack_channels(batch)[:, :, 0].float()
-        x = crops(x.reshape(len(x), -1).to(device), model.crop, model.training)
+        x, offsets, keep = crop_windows(x.reshape(len(x), -1).to(device), model.crop, model.training)
         with _autocast(device):
             out = model(x)
         loss, r2, extra = model.loss(out, x)
+        if getattr(model, "stage_head", None) is not None and "sem" in out:
+            labels = batch["labels"].to(device)[keep]
+            ce, weight, sx = model.stage_loss(out["sem"], offsets, labels, x.shape[-1], recon=loss.detach())
+            if ce is not None:
+                extra.update(sx)
+                if model.training:
+                    loss = loss + weight * ce
+        if model.training and PatchCodecTrainer.log_every:
+            PatchCodecTrainer._log(float(r2), extra)
         if not model.training:
             # validation: the Trainer keeps the checkpoint and stops early on the lowest loss. The commitment
             # term can grow while R^2 still rises (job 1669985), so select on the whitened R^2 at full depth.
@@ -753,7 +980,10 @@ def build_from_args(a: dict):
                       ctx_dec=a.get("ctx_dec", 0),  # no keys: runs before revision 2 (27.11.2026)
                       dec_out=a.get("dec_out", "raw"), arch=a.get("arch", "conv"),
                       fsq_norm=a.get("fsq_norm", False),  # no keys: runs before revision 3
-                      fsq_scale=a.get("fsq_scale", 1.0))  # no key: runs before 28.11.2026
+                      fsq_scale=a.get("fsq_scale") or 1.0,  # no key (or None): runs before 28.11.2026
+                      margin=int(round(a.get("ola_sec", 0.0) * FS)), zero_phase=a.get("zero_phase", False),
+                      sem_dims=a.get("sem_dims", 0), stage_weight=a.get("stage_weight", 0.0),
+                      stage_warmup=a.get("stage_warmup", 0))  # no keys: runs before revision 5
 
 
 # ---------------------------------------------------------------------------- spectral twin (S3, #20)

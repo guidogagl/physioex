@@ -16,7 +16,10 @@ Rules fixed before the first result (27.11.2026):
   (``--feature ar``, registered 28.11 before any result: the transform codec has no learned latent, and its
   coefficients follow the phase of the signal) the patch feature is the state of the AR on that dump
   (:func:`~physioex.models.eeg_ar.hidden_codes`, the place that reads the patch), for the codes and for the
-  zero-phase twin alike, then averaged and centred the same way;
+  zero-phase twin alike, then averaged and centred the same way. With the learned tokenizer of revision 5
+  (``--feature sem``, plan rev. 2 of 28.11.2026) the patch feature is the semantic group g_s (the quantised values
+  of the first ``sem_dims`` FSQ dimensions) of the codec and of the twin codec C (``--twin-codec``, its codes in
+  ``--twin``); the semantic gates of T2 are in :mod:`physioex.train.bin.semantic_gates`;
 * **prototypes**: mean centred feature over the sleep tokens of each class on the pool test nights of the
   ``concept_scan`` dump (12 units; never DREAMS or MASS SS01). Classes (:data:`CLASSES`): K-complex =
   ``k_complex_rule`` or ``m1:kc_m1``; spindle = ``spindle_rule``; arousal = ``m1:arousal_m1``; vertex = ``vertex``
@@ -173,8 +176,10 @@ def main(argv=None):
     ap.add_argument("--surprise", default=None, help="surprise of the AR on the codes")
     ap.add_argument("--twin-surprise", default=None, help="surprise of the AR on the twin")
     ap.add_argument("--levels", type=int, required=True)
-    ap.add_argument("--feature", choices=("latent", "ar"), default="latent",
-                    help="latent: codec latent and twin codebooks (codec 1); ar: state of the AR on each dump (codec 3)")
+    ap.add_argument("--feature", choices=("latent", "ar", "sem"), default="latent",
+                    help="latent: codec latent and twin codebooks (codec 1); ar: state of the AR on each dump (codec 3); "
+                         "sem: the semantic group g_s of the codec and of the twin codec C (revision 5)")
+    ap.add_argument("--twin-codec", default=None, help="--feature sem: run of the twin codec C (its codes: --twin)")
     ap.add_argument("--ar", default=None, help="--feature ar: AR run on the codes")
     ap.add_argument("--twin-ar", default=None, help="--feature ar: AR run on the twin's codes")
     ap.add_argument("--out", required=True)
@@ -202,6 +207,19 @@ def main(argv=None):
 
         def twin_fn(c):
             return hidden_codes(ar_t, np.ascontiguousarray(c[:, :ar_t.levels]), int(run_t["args"]["window"]))
+    elif a.feature == "sem":  # revision 5: g_s of the tokenizer A and of its spectral twin C (``--levels`` unused)
+        from physioex.train.bin.semantic_gates import feature_fns
+
+        fa = feature_fns(load_codec(a.codec, torch.device("cpu"))[1])["sem"]
+        ft = feature_fns(load_codec(a.twin_codec, torch.device("cpu"))[1])["sem"]
+
+        @torch.no_grad()
+        def feats_fn(c):
+            return fa(torch.from_numpy(np.asarray(c, np.int64))).float().numpy()
+
+        @torch.no_grad()
+        def twin_fn(c):
+            return ft(torch.from_numpy(np.asarray(c, np.int64))).float().numpy()
     else:
         _, codec = load_codec(a.codec, dev)
         tw = SpectralTwin.from_state(torch.load(os.path.join(a.twin, "twin.pt"), map_location="cpu"), dev)

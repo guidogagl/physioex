@@ -37,7 +37,7 @@ class _Codec:
         self.E = torch.randn(L, K, D, generator=g)
 
     def embed(self, c):
-        return sum(self.E[l][c[..., l]] for l in range(L))
+        return sum(self.E[l].to(c.device)[c[..., l]] for l in range(L))  # CPU or GPU, as surprise_type picks
 
 
 def _night(rng, n_ep, events, code_of, unit_dir, sid, twin_random=True):

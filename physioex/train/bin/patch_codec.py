@@ -44,6 +44,21 @@ the period) and decoded for every prefix of levels. Metrics on the scored epochs
 ``L*`` is the shortest prefix that passes every gate (``L_star``; ``L_star_registered`` with the comb
 statistic of the plan, ``L_star_controlled`` with both controls). Writes ``gates.json``: aggregate numbers only.
 
+Revision 5 (28.11.2026, xmai-lab/sleep-lens#17 rev. 2): a learned tokenizer with weak supervision from the sleep
+stages. ``fit`` takes ``--ola-sec`` (lapped patches: the encoder reads, and the decoder synthesises, ``PATCH + 2 m``
+samples with a fixed sin^2 cross-fade, overlap-added; ``2 m`` must be a multiple of the 40 samples of a frame, so
+``m`` is a multiple of 0.2 s; the plan asked for 0.25 s, revision 5 uses 0.2 s),
+``--zero-phase`` (the spectral twin C: input and target are the zero-phase version of every whitened patch),
+``--sem-dims`` (the first FSQ dimensions are the semantic group read by the gated-attention MIL head of the stage,
+:class:`~physioex.models.patch_codec.StageMIL`, over the whole scored epochs inside a crop), ``--stage-weight``
+(lambda; < 0: fixed once at the end of the warm-up so that lambda CE = ``|w|`` x the reconstruction loss) and
+``--stage-warmup`` (steps of reconstruction only, the head trains on detached values). ``--stage-weight 0`` keeps
+the head as a probe (the run B). ``eval.json`` then reports the stage accuracy and kappa of the head on the
+validation crops (``stage``). ``eval`` adds gate v2 (:data:`GATE_V2`, the relaxed fidelity gate of T1):
+F1 >= 0.85 (alpha >= 0.80) and log power >= 0.90 at 2-50 Hz (>= 0.80 at 1 Hz) without the gaps of the clean
+channel, seam <= 1.1, and the comb per unit (``comb_per_unit``: error on/off <= max(1.1, on/off of ``x``));
+``checks_v2``, ``pass_v2`` and ``L_star_v2``. The whitened R^2 is reported only.
+
 ``dump``: the codes of whole main sleep periods for the autoregressive model (S3) and the evaluation
 (S5): ``--train`` takes the train nights of the run's splits (``splits_train_subset.json``), and
 ``--nights-from`` takes the nights of an existing dump (``concept_scan``: pool test, MASS SS01,
@@ -78,6 +93,13 @@ from physioex.train.bin.msvq import _merged_data, _merged_loaders
 
 GATE = {"f1": 0.9, "logpow": 0.9, "seam": 1.1, "comb": 1.1, "r2": 0.95}  # r2: revision 2, 27.11.2026
 GATE_BANDS = ("1", "2-4", "5-8", "9-12", "13-16", "17-30")
+#: revision 5 (28.11.2026, xmai-lab/sleep-lens#17 rev. 2, T1): the relaxed gate of the learned tokenizer (the decoder
+#: must be usable, not near-lossless), on the eval without the gaps of the clean channel (FLAT_SD). The comb is
+#: judged per unit, error on/off <= max(1.1, on/off of x): MASS SS02/SS04/SS05 carry the lines in the signal itself
+#: (x on/off 2.39-2.44), and the error must not add lines of its own. The whitened R^2 is reported, with no threshold.
+GATE_V2 = {"f1": {"kc": 0.85, "swa": 0.85, "spindle": 0.85, "alpha": 0.80},
+           "logpow": {"1": 0.80, "2-4": 0.90, "5-8": 0.90, "9-12": 0.90, "13-16": 0.90, "17-30": 0.90, "31-50": 0.90},
+           "seam": 1.1, "comb_unit": 1.1}
 #: pool units with a test split (the healthy units of concept_scan without the out-of-pool controls)
 EVAL_UNITS = ("ccshs", "dcsm", "hmc", "hpap_lab_full", "mass_ss02", "mass_ss03", "mass_ss04", "mass_ss05", "mesa",
               "mros", "sleepedf", "wsc_visit1")
@@ -158,6 +180,18 @@ def main(argv=None):
     f.add_argument("--fsq-norm", action="store_true", help="batch norm (no affine) before the FSQ bound")
     f.add_argument("--fsq-scale", type=float, default=1.0,
                    help="scale of the (normalised) FSQ input before tanh; 0.5 ~ MSE-optimal for a Gaussian latent")
+    f.add_argument("--ola-sec", type=float, default=0.0,
+                   help="lapped patches (revision 5): margin read by the encoder and drawn by the decoder on each side")
+    f.add_argument("--zero-phase", action="store_true",
+                   help="spectral twin (revision 5): zero-phase patches in the encoder input and in the target")
+    f.add_argument("--sem-dims", type=int, default=0,
+                   help="first FSQ dimensions read by the stage MIL head (semantic group g_s); 0: no stage head")
+    f.add_argument("--stage-weight", type=float, default=0.0,
+                   help="weight of the stage cross-entropy after the warm-up; < 0: set once at the end of the "
+                        "warm-up to -w x (reconstruction loss / cross-entropy); 0: the head is a probe")
+    f.add_argument("--stage-warmup", type=int, default=2000, help="steps of reconstruction only (the head trains)")
+    f.add_argument("--log-every", type=int, default=0,
+                   help="print the mean whitened R^2 and stage metrics of every N training steps (0: off)")
     f.add_argument("--crop-sec", type=float, default=16.0)
     f.add_argument("--whiten-batches", type=int, default=50)
     f.add_argument("--vq-warmup", type=int, default=2000,
@@ -294,6 +328,36 @@ def _valid_prefixes(model, loader, n_batches, device, prefixes):
     return out
 
 
+@torch.no_grad()
+def _valid_stage(model, loader, n_batches, device) -> dict:
+    """Stage head on the whole epochs of centred validation crops: accuracy, Cohen's kappa, bags per stage,
+    ``stage_lambda`` (reported only, revision 5)."""
+    from physioex.data.collate import stack_channels
+    from physioex.models.patch_codec import EPOCH, N_STAGES, PATCH, crop_windows, stage_bags
+
+    model.eval()
+    ys, ps = [], []
+    for _, b in zip(range(n_batches), loader):
+        x = stack_channels(b)[:, :, 0].float()
+        x, o, keep = crop_windows(x.reshape(len(x), -1).to(device), model.crop, False)
+        bi, p0, y = stage_bags(o, x.shape[-1], b["labels"].to(device)[keep])
+        if not len(y):
+            continue
+        g = model.sem_values(x)
+        logits, _ = model.stage_head(g[bi[:, None], p0[:, None] + torch.arange(EPOCH // PATCH, device=g.device)])
+        ys.append(y.cpu())
+        ps.append(logits.argmax(-1).cpu())
+    if not ys:
+        return {"bags": 0}
+    y, p = torch.cat(ys).numpy(), torch.cat(ps).numpy()
+    cm = np.zeros((N_STAGES, N_STAGES))
+    np.add.at(cm, (y, p), 1)
+    n = cm.sum()
+    po, pe = np.trace(cm) / n, (cm.sum(0) * cm.sum(1)).sum() / n ** 2
+    return {"bags": int(n), "accuracy": float(po), "kappa": float((po - pe) / (1 - pe)) if pe < 1 else 0.0,
+            "per_stage": cm.sum(1).astype(int).tolist(), "stage_lambda": float(model.stage_lambda)}
+
+
 def _fit(a, t0):
     from physioex.models.patch_codec import (PatchCodec, PatchCodecTrainer, fit_whitener, kmeans_init_rvq,
                                             warmup_continuous)
@@ -305,7 +369,9 @@ def _fit(a, t0):
                        stft_weight=a.stft_weight, restart_after=a.restart_after, crop_sec=a.crop_sec,
                        upsample=a.upsample, quantizer=a.quantizer, fsq_levels=a.fsq_levels, fsq_group=a.fsq_group,
                        whiten=a.whiten, ctx_enc=a.ctx_enc, ctx_dec=a.ctx_dec, dec_out=a.dec_out, arch=a.arch,
-                       fsq_norm=a.fsq_norm, fsq_scale=a.fsq_scale).to(device)
+                       fsq_norm=a.fsq_norm, fsq_scale=a.fsq_scale, margin=int(round(a.ola_sec * 100)),
+                       zero_phase=a.zero_phase, sem_dims=a.sem_dims, stage_weight=a.stage_weight,
+                       stage_warmup=a.stage_warmup).to(device)
     n_par = sum(p.numel() for p in model.parameters())
     print(f"[patch_codec] windows: train {n_tr}, valid {n_va}; {n_par / 1e6:.2f} M parameters, "
           f"{model.bits_per_patch()} bits per 2 s patch at {a.levels} levels", flush=True)
@@ -321,6 +387,7 @@ def _fit(a, t0):
         json.dump({"warmup": wlog, "kmeans_vectors": nk}, open(os.path.join(a.out, "warmup.json"), "w"), indent=1)
     n_val = a.epochs * max(1, round(1 / a.valid_ratio))  # the Trainer steps the scheduler at each validation
     sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, n_val, eta_min=a.lr / 20)
+    PatchCodecTrainer.log_every = a.log_every
     model = PatchCodecTrainer.train(model, (tr, va), checkpoint_path=os.path.join(a.out, "ckpt"), max_epochs=a.epochs,
                                     lr=a.lr, weight_decay=1e-4, valid_interval_ratio=a.valid_ratio,
                                     log_confusion_matrix=False, early_stopping_patience=a.patience,
@@ -333,6 +400,9 @@ def _fit(a, t0):
     device = next(model.parameters()).device
     ev = _valid_prefixes(model, va, a.eval_batches, device, model_prefixes(model))
     ev["n_params"] = n_par
+    if getattr(model, "stage_head", None) is not None:
+        ev["stage"] = _valid_stage(model, va, a.eval_batches, device)
+        print(f"[patch_codec] stage head (validation): {ev['stage']}", flush=True)
     json.dump(ev, open(os.path.join(a.out, "eval.json"), "w"), indent=1)
     print("[patch_codec] valid " + " ".join(f"L{k}: r2_w {v['r2_w']:.3f} r2_raw {v['r2_raw']:.3f}"
                                            for k, v in ev.items() if k.isdigit()), flush=True)
@@ -343,6 +413,8 @@ def _fit(a, t0):
            "job_id": os.environ.get("SLURM_JOB_ID"), "merged": md.report, "best_checkpoint": best,
            "splits": {"train": train_ids, "valid": valid_ids, "test": []},
            "windows": {"train": n_tr, "valid": n_va}, "minutes": round((time.time() - t0) / 60, 1)}
+    if getattr(model, "stage_head", None) is not None:  # revision 5: the lambda set at the end of the warm-up
+        run["stage_lambda"] = float(model.stage_lambda)
     json.dump(run, open(os.path.join(a.out, "run.json"), "w"), indent=1, default=str)
     print("[patch_codec] DONE", flush=True)
 
@@ -686,6 +758,8 @@ def _eval(a):
     seam = {k: np.zeros(6) for k in prefixes}  # seam sum, n; interior sum, n; patch-centre sum, n (control)
     comb = {k: [0.0, 0] for k in prefixes}
     comb_x = [0.0, 0]
+    comb_u = {k: {} for k in prefixes}  # the same per unit (gate v2)
+    comb_xu = {}
     fid = {k: np.zeros(2) for k in prefixes}  # whitened and raw squared error over the scored samples
     tot = np.zeros(5)  # sum and sum of squares of the whitened and raw signal over the scored samples, count
     phase = {k: {"real": np.zeros(2), "surr": np.zeros(2)} for k in prefixes}  # SSE, SST
@@ -714,6 +788,8 @@ def _eval(a):
         tot += [float(xs_w.sum()), float(xs_w.pow(2).sum()), float(xs_r.sum()), float(xs_r.pow(2).sum()), len(xs_w)]
         p_, n_ = _welch_sum(xw)
         comb_x[0], comb_x[1] = comb_x[0] + p_, comb_x[1] + n_
+        cu = comb_xu.setdefault(unit, [0.0, 0])
+        cu[0], cu[1] = cu[0] + p_, cu[1] + n_
         sub = np.sort(rng.choice(len(ts), min(a.per_night, len(ts)), replace=False))
         sub_x.append(X[sub].cpu().numpy())
         ph = torch.from_numpy(np.sort(rng.choice(len(ts), min(a.phase_per_night, len(ts)), replace=False))).to(device)
@@ -740,6 +816,8 @@ def _eval(a):
                         float(ew[centre & in_scored].sum()), int((centre & in_scored).sum())]
             p_, n_ = _welch_sum(W(h[None])[0] - xw)
             comb[k][0], comb[k][1] = comb[k][0] + p_, comb[k][1] + n_
+            cu = comb_u[k].setdefault(unit, [0.0, 0])
+            cu[0], cu[1] = cu[0] + p_, cu[1] + n_
             sub_h[k].append(H[sub].cpu().numpy())
             for name, src, cc in (("real", Xp, cp), ("surr", Sp, cs)):
                 hw, tw = W(model.decode_codes(cc[:, :, :k])), W(src)
@@ -756,7 +834,7 @@ def _eval(a):
     ctrl, ctrl_off = _line_ratios(px, freqs), _line_ratios(px, freqs, offset=0.25)
     res = {"run": os.path.abspath(a.run), "n_nights": len(used),
            "units": {u: sum(1 for n in used if n.startswith(u + "/")) for u in a.units.split(",")},
-           "n_band_epochs": int(len(xs)), "gate": {**GATE, "bands": GATE_BANDS},
+           "n_band_epochs": int(len(xs)), "gate": {**GATE, "bands": GATE_BANDS, "v2": GATE_V2},
            "comb_control_x": {"median": float(np.median(ctrl)), "max": float(ctrl.max()),
                               "median_offgrid": float(np.median(ctrl_off))}, "prefix": {},
            "flat": {"sd_below": FLAT_SD, "band_seconds": int(len(keep)), "band_seconds_flat": int((~keep).sum()),
@@ -796,6 +874,18 @@ def _eval(a):
         # amendment of 28.11.2026: F1 and log power without the gaps of the clean channel (FLAT_SD); binding from then
         valid = {**checks, "f1": all(g0v[r]["f1"] >= GATE["f1"] for r in RULES),
                  "logpow": all(lp_v[b] >= GATE["logpow"] for b in GATE_BANDS)}
+        comb_units = {}
+        for u, (pu, nu) in sorted(comb_u[k].items()):
+            if not nu or not comb_xu.get(u, [0, 0])[1]:
+                continue
+            pe, pxu = pu / nu, comb_xu[u][0] / comb_xu[u][1]
+            e_r = float(np.median(_line_ratios(pe, freqs)) / np.median(_line_ratios(pe, freqs, offset=0.25)))
+            x_r = float(np.median(_line_ratios(pxu, freqs)) / np.median(_line_ratios(pxu, freqs, offset=0.25)))
+            comb_units[u] = {"error_on_off": e_r, "x_on_off": x_r, "pass": e_r <= max(GATE_V2["comb_unit"], x_r)}
+        checks_v2 = {"f1": all(g0v[r]["f1"] >= GATE_V2["f1"][r] for r in RULES),
+                     "logpow": all(lp_v[b] >= t for b, t in GATE_V2["logpow"].items()),
+                     "seam": seam_ratio <= GATE_V2["seam"],
+                     "comb_unit": bool(comb_units) and all(v["pass"] for v in comb_units.values())}
         res["prefix"][str(k)] = {"bits_per_patch": model.bits_per_patch(k), "r2_w_nights": r2_w, "r2_raw_nights": r2_r,
                                  "gate0": g0, "gate0_per_unit": per_unit,
                                  "band_r2": br, "seam_ratio": seam_ratio, "seam_vs_centre": seam_centre,
@@ -808,15 +898,19 @@ def _eval(a):
                                  "checks_registered": registered, "pass_registered": all(registered.values()),
                                  "checks_controlled": controlled, "pass_controlled": all(controlled.values()),
                                  "gate0_valid": g0v, "gate0_valid_per_unit": per_unit_v, "logpow_valid": lp_v,
-                                 "checks_valid": valid, "pass_valid": all(valid.values())}
+                                 "checks_valid": valid, "pass_valid": all(valid.values()),
+                                 "comb_per_unit": comb_units, "checks_v2": checks_v2, "pass_v2": all(checks_v2.values())}
         print(f"[patch_codec eval] L{k}: R2 w {r2_w:.4f} raw {r2_r:.4f} | " + " ".join(f"{r} {g0[r]['f1']:.3f}" for r in RULES)
               + f" | logpow min {min(br['logpow'][b] for b in GATE_BANDS):.3f} | seam {seam_ratio:.3f}"
               + f" (vs centre {seam_centre:.3f}) | comb {np.median(lines):.3f} (on/off {comb_rel:.3f})"
               + f" | phase gap {ph['real'] - ph['surr']:+.3f} | pass {all(checks.values())}"
               + f" (registered {all(registered.values())}, controlled {all(controlled.values())})"
               + " | without gaps: " + " ".join(f"{r} {g0v[r]['f1']:.3f}" for r in RULES)
-              + f" logpow min {min(lp_v[b] for b in GATE_BANDS):.3f} pass {all(valid.values())}",
-              flush=True)
+              + f" logpow min {min(lp_v[b] for b in GATE_BANDS):.3f} pass {all(valid.values())}"
+              + " | v2: " + " ".join(f"{c} {v}" for c, v in checks_v2.items())
+              + (" (worst unit comb " + max(((u, v["error_on_off"] / max(GATE_V2["comb_unit"], v["x_on_off"]))
+                                             for u, v in comb_units.items()), key=lambda t: t[1])[0] + ")"
+                 if comb_units else ""), flush=True)
     passing = [k for k in prefixes if res["prefix"][str(k)]["pass"]]
     res["L_star"] = min(passing) if passing else None
     passing_r = [k for k in prefixes if res["prefix"][str(k)]["pass_registered"]]
@@ -825,12 +919,14 @@ def _eval(a):
     res["L_star_controlled"] = min(passing_c) if passing_c else None
     passing_v = [k for k in prefixes if res["prefix"][str(k)]["pass_valid"]]
     res["L_star_valid"] = min(passing_v) if passing_v else None
+    passing_2 = [k for k in prefixes if res["prefix"][str(k)]["pass_v2"]]
+    res["L_star_v2"] = min(passing_2) if passing_2 else None
     res["minutes"] = round((time.time() - t0) / 60, 1)
     res["git_sha"] = _git("rev-parse", "HEAD")
     out = a.out or os.path.join(a.run, "gates.json")
     json.dump(res, open(out, "w"), indent=1)
     print(f"[patch_codec eval] L* = {res['L_star']} (controlled {res['L_star_controlled']}, without gaps "
-          f"{res['L_star_valid']}) -> {out}", flush=True)
+          f"{res['L_star_valid']}, gate v2 {res['L_star_v2']}) -> {out}", flush=True)
     print("[patch_codec eval] DONE", flush=True)
 
 
