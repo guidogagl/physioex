@@ -434,11 +434,11 @@ def test_flat_seconds_and_logpow_kept():
 # ---------------------------------------------------------------------------- transform codec (revision 4)
 
 
-def _transform_codec(delta: float = 0.35, clip: float = 8.0):
+def _transform_codec(delta: float = 0.35, clip: float = 8.0, groups: int = 1):
     from physioex.models.patch_codec import TransformCodec
 
     torch.manual_seed(0)
-    m = TransformCodec(delta=delta, clip=clip).eval()
+    m = TransformCodec(delta=delta, clip=clip, groups=groups).eval()
     x = _ar_noise(8, 60 * PATCH, seed=1)
     m.whitener.fit_psd(*welch_psd(x))
     with torch.no_grad():
@@ -465,10 +465,10 @@ def test_transform_codec_bypass_is_lossless_and_codes_round_trip():
         assert torch.allclose(m.decode_codes(c), m.decode(m.quantize(z)[0]))
 
 
-@pytest.mark.parametrize("delta", [0.5, 0.25])
-def test_transform_codec_relative_error_is_delta2_over_12_at_every_amplitude(delta):
+@pytest.mark.parametrize("delta,groups", [(0.5, 1), (0.25, 1), (0.35, 8)])
+def test_transform_codec_relative_error_is_delta2_over_12_at_every_amplitude(delta, groups):
     """Gain-shape coding: whitened error ~ delta^2 / 12 of the whitened power, for a quiet and a loud signal."""
-    m = _transform_codec(delta=delta)
+    m = _transform_codec(delta=delta, groups=groups)
     x = _ar_noise(2, 120 * PATCH, seed=3) * torch.tensor([[0.2], [10.0]])
     with torch.no_grad():
         xw = m.whitener(x)
@@ -476,15 +476,16 @@ def test_transform_codec_relative_error_is_delta2_over_12_at_every_amplitude(del
     assert torch.allclose(rel, torch.full_like(rel, delta ** 2 / 12), rtol=0.15)
 
 
-def test_transform_codec_locality():
+@pytest.mark.parametrize("groups", [1, 8])
+def test_transform_codec_locality(groups):
     """The codes of patch i move the output of patches i .. i + 2 only (the inverse FIR reaches 255 samples
     forward); a change of the signal from the start of patch 7 leaves the codes of patches 0-6 unchanged."""
-    m = _transform_codec()
+    m = _transform_codec(groups=groups)
     with torch.no_grad():
         x = _ar_noise(1, 12 * PATCH, seed=4)
         c = m.codes(x)
         c1 = c.clone()
-        c1[0, 5, 1:] = m.half  # every coefficient of patch 5 to the middle level
+        c1[0, 5, groups:] = m.half  # every coefficient of patch 5 to the middle level
         d = (m.decode_codes(c1) - m.decode_codes(c)).abs()[0].view(12, PATCH).amax(1)
         assert torch.all(d[:5] <= 1e-6 * d.max()) and torch.all(d[8:] <= 1e-6 * d.max()) and d[5] > 0
         x1 = x.clone()
@@ -507,3 +508,48 @@ def test_transform_codec_from_args_prefixes_bits_and_chunks():
     assert m2.half == 20 and m2.bits_per_patch() == round(math.log2(320) + PATCH * math.log2(41))
     assert torch.equal(encode_signal(m2, sig, m2.max_levels, chunk=4), c1)
     assert torch.allclose(decode_signal(m2, c1, chunk=4), m2.decode_codes(c1[None])[0], atol=1e-5)
+
+
+def test_transform_blocks_never_clip():
+    """Revision 4b: with one gain per block of 25 KLT directions every coefficient is at most
+    sqrt(25) 2^(gain_step / 2) after the rounded gain, so the rounding is never clipped: not on spikes, steps and
+    flat gaps, nor on the extreme shape (the energy of a block in one coefficient, gain rounded down by half a step)."""
+    m = _transform_codec(delta=0.35, groups=8)
+    assert m.ng == 25 and m.half == math.ceil(5 * 2 ** 0.025 / 0.35) and m.max_levels == PATCH + 8
+    x = _ar_noise(1, 40 * PATCH, seed=6)
+    x[0, 7 * PATCH + 50] += 200.0
+    x[0, 20 * PATCH + 3:] += 30.0
+    x[0, 30 * PATCH:31 * PATCH] = 0.0
+    with torch.no_grad():
+        z = m.encode(x)
+        z2 = z.clone()
+        z2[0, :, 8:] = 0.0
+        z2[0, :, 8 + 25 * torch.arange(8)] = 5.0  # first coefficient of every block, all its energy
+        z2[0, :, :8] = m.gain_min + (100 + 0.4999) * m.gain_step  # true gain just below the rounding midpoint
+        for zz in (z, z2):
+            zq, codes, _ = m.quantize(zz)
+            gi = codes[..., :8].float()
+            r = torch.exp2(zz[..., :8] - (m.gain_min + gi * m.gain_step))
+            c = (zz[..., 8:].reshape(1, -1, 8, 25) * r[..., None]).reshape(zz.shape[0], -1, PATCH)
+            assert float((zq[..., 8:] - c).abs().max()) <= m.delta / 2 + 1e-5
+        assert int(codes[..., 8:].max()) == 2 * m.half  # the extreme shape reaches the last level, not beyond
+
+
+def test_transform_blocks_from_args_bits_and_chunks():
+    from physioex.models.patch_codec import build_from_args
+    from physioex.train.bin.patch_codec import decode_signal, encode_signal, model_prefixes
+
+    m = _transform_codec(delta=0.35, groups=8)
+    m2 = build_from_args({"arch": "transform", "tc_delta": 0.35, "tc_clip": 8.0, "tc_gain_step": 0.05,
+                          "tc_gain_min": -10.0, "tc_gain_levels": 320, "order": 32, "tc_groups": 8}).eval()
+    m2.load_state_dict(m.state_dict())
+    sig = _ar_noise(1, 23 * PATCH + 77, seed=7)[0]
+    c1 = m2.codes(sig[None])[0]
+    assert c1.shape == (23, PATCH + 8) and torch.equal(c1, m.codes(sig[None])[0])
+    assert model_prefixes(m2) == [PATCH + 8]
+    assert m2.bits_per_patch() == round(8 * math.log2(320) + PATCH * math.log2(2 * m2.half + 1))
+    assert torch.equal(encode_signal(m2, sig, m2.max_levels, chunk=4), c1)
+    assert torch.allclose(decode_signal(m2, c1, chunk=4), m2.decode_codes(c1[None])[0], atol=1e-5)
+    m2.bypass_vq = True
+    xw = m2.whitener(sig[None])[:, : 23 * PATCH]
+    assert float((m2._draw(m2.quantize(m2.encode(sig[None]))[0]) - xw).pow(2).mean() / xw.pow(2).mean()) < 1e-10

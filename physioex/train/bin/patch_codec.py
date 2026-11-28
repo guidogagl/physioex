@@ -4,11 +4,12 @@
         [--local-cache] --out RUN [--levels 8 --steps-per-epoch 5000 --epochs 30 --batch 128]
     python -m physioex.train.bin.patch_codec eval --run RUN [--cache-dir C] [--per-unit 10] [--prefixes 1 2 4 8]
     python -m physioex.train.bin.patch_codec dump --run RUN [--train] [--nights-from DUMP/meta.json] [--out RUN/dump]
-    python -m physioex.train.bin.patch_codec transform --from-run RUN --out DIR [--deltas 0.35,0.25]
+    python -m physioex.train.bin.patch_codec transform --from-run RUN --out DIR [--deltas 0.35,0.25] [--groups 8]
 
 ``transform`` (revision 4, 28.11.2026): the reference transform codec without training
 (:class:`~physioex.models.patch_codec.TransformCodec`), with the whitener, splits and pipeline of ``RUN``; one run
-directory ``DIR/d<delta>`` per step, read by ``eval`` and ``dump`` like a trained run.
+directory ``DIR/d<delta>`` per step (``DIR/d<delta>_g<G>`` with ``--groups G``, revision 4b: one gain per block of
+KLT directions, nothing clipped), read by ``eval`` and ``dump`` like a trained run.
 
 ``fit``: whitening filter on the training pool (``whitener.json``), then encoder, quantiser (RVQ, or FSQ
 with ``--quantizer fsq``; revision 2 also adds ``--whiten signal``, ``--ctx-enc`` and ``--ctx-dec``, see
@@ -192,6 +193,8 @@ def main(argv=None):
     t.add_argument("--gain-step", type=float, default=0.05, help="step of log2 RMS")
     t.add_argument("--gain-min", type=float, default=-10.0)
     t.add_argument("--gain-levels", type=int, default=320)
+    t.add_argument("--groups", type=int, default=1,
+                   help="blocks of KLT directions with their own gain (revision 4b; 1 = revision 4, with --clip)")
     t.add_argument("--nights", type=int, default=300, help="train nights for the basis")
     t.add_argument("--patches-per-night", type=int, default=500)
     t.add_argument("--cache-dir", default=None, help="default: the run's source cache")
@@ -616,14 +619,14 @@ def _transform(a):
     print(f"[patch_codec transform] basis {fit}", flush=True)
     for d in (float(v) for v in a.deltas.split(",")):
         m = TransformCodec(delta=d, clip=a.clip, gain_step=a.gain_step, gain_min=a.gain_min,
-                           gain_levels=a.gain_levels, order=ra["order"])
+                           gain_levels=a.gain_levels, order=ra["order"], groups=a.groups)
         m.load_state_dict(base.state_dict())
-        out = os.path.join(a.out, f"d{d:g}")
+        out = os.path.join(a.out, f"d{d:g}" + (f"_g{a.groups}" if a.groups > 1 else ""))
         os.makedirs(out, exist_ok=True)
         torch.save(m.state_dict(), os.path.join(out, "model.pt"))
         args = {**ra, "arch": "transform", "quantizer": "transform", "tc_delta": d, "tc_clip": a.clip,
                 "tc_gain_step": a.gain_step, "tc_gain_min": a.gain_min, "tc_gain_levels": a.gain_levels,
-                "from_run": os.path.abspath(a.from_run), "out": out}
+                "tc_groups": a.groups, "from_run": os.path.abspath(a.from_run), "out": out}
         run = {"args": args, "git_sha": _git("rev-parse", "HEAD"), "git_dirty": bool(_git("status", "--porcelain")),
                "physioex_version": getattr(physioex, "__version__", None), "host": socket.gethostname(),
                "job_id": os.environ.get("SLURM_JOB_ID"), "basis": fit, "bits_per_patch": m.bits_per_patch(),

@@ -525,17 +525,30 @@ class TransformCodec(nn.Module):
     clipping), so the error of a patch has the second moment of its shape scaled by ``delta^2 / 12`` and the
     whitened R^2 is about ``1 - delta^2 / 12``, at every amplitude. The codes of a patch depend on that patch and
     on the 32-sample history of the whitening; the error of a patch does not depend on its neighbours. Codes per
-    patch: the gain, then the ``PATCH`` coefficients (``max_levels = PATCH + 1``; no prefixes)."""
+    patch: the gain, then the ``PATCH`` coefficients (``max_levels = PATCH + 1``; no prefixes).
+
+    ``groups = G > 1`` (revision 4b, 28.11.2026): the clipping of revision 4 hit the KLT directions of smallest
+    variance (``lam`` down to 1e-3, 30-50 Hz) in 2.8 % of the patches of DCSM and capped the whitened R^2 near
+    0.975. Here the ``PATCH`` directions, in the order of ``lam``, form ``G`` blocks of ``PATCH / G``; each block
+    has its own gain (``log2`` RMS of its KLT coefficients, same step and levels) and its coefficients are divided
+    by its rounded gain, without ``sqrt(lam)``. The sum of squares of a block is then ``PATCH / G`` times the ratio
+    of the true to the rounded gain, so ``|c| <= sqrt(PATCH / G) 2^(gain_step / 2)``: with
+    ``half = ceil(that / delta)`` nothing is ever clipped (``clip`` is unused), and every block of every patch
+    keeps a rounding error of ``delta^2 / 12`` of its energy. Codes per patch: the ``G`` gains, then the
+    coefficients (``max_levels = PATCH + G``)."""
 
     def __init__(self, delta: float = 0.35, clip: float = 8.0, gain_step: float = 0.05, gain_min: float = -10.0,
-                 gain_levels: int = 320, order: int = 32, fs: int = FS):
+                 gain_levels: int = 320, order: int = 32, fs: int = FS, groups: int = 1):
         super().__init__()
-        assert fs == FS and delta > 0 and clip > 0 and gain_levels > 1
+        assert fs == FS and delta > 0 and clip > 0 and gain_levels > 1 and groups >= 1 and PATCH % groups == 0
         self.fs, self.patch = fs, PATCH
         self.quantizer, self.whiten, self.dec_out, self.arch = "transform", "signal", "white", "transform"
-        self.delta, self.clip, self.half = float(delta), float(clip), int(math.ceil(clip / delta))
+        self.groups, self.ng = int(groups), PATCH // int(groups)
+        self.delta, self.clip = float(delta), float(clip)
+        bound = clip if groups == 1 else math.sqrt(self.ng) * 2.0 ** (gain_step / 2)
+        self.half = int(math.ceil(bound / delta - 1e-9))
         self.gain_step, self.gain_min, self.gain_levels = float(gain_step), float(gain_min), int(gain_levels)
-        self.max_levels = self.vq_levels = PATCH + 1
+        self.max_levels = self.vq_levels = PATCH + self.groups
         self.q_dropout = 0.0
         self.n_codes = max(self.gain_levels, 2 * self.half + 1)
         self.whitener = Whitener(order, fs)
@@ -557,36 +570,46 @@ class TransformCodec(nn.Module):
         return {"patches": len(s), "lam_max": float(self.lam[0]), "lam_min": float(self.lam[-1]),
                 "variance_top": {str(k): float(frac[k - 1]) for k in (64, 128, 160, 180)}}
 
+    def _scale(self) -> torch.Tensor:
+        """Unit of each coefficient after the gain: ``sqrt(lam)`` with one gain, 1 with block gains."""
+        return self.lam.sqrt() if self.groups == 1 else torch.ones_like(self.lam)
+
     def encode(self, x: torch.Tensor) -> torch.Tensor:
-        """``(B, n) -> (B, P, PATCH + 1)``: log2 RMS of the whitened patch, then the KLT coefficients of the patch
-        over its RMS, in units of ``sqrt(lam)``."""
+        """``(B, n) -> (B, P, G + PATCH)``: log2 RMS of the KLT coefficients of each block (with one block, of the
+        whitened patch), then the coefficients over the RMS of their block, in units of :meth:`_scale`."""
         B, n = x.shape
-        P = n // PATCH
+        P, G = n // PATCH, self.groups
         w = self.whitener(x[:, : P * PATCH]).reshape(B, P, PATCH)
-        rms = w.pow(2).mean(-1).sqrt().clamp_min(2.0 ** self.gain_min)
-        c = (w / rms[..., None]) @ self.U / self.lam.sqrt()
-        return torch.cat([rms.log2()[..., None], c], -1)
+        p = (w @ self.U).reshape(B, P, G, self.ng)
+        rms = p.pow(2).mean(-1).sqrt().clamp_min(2.0 ** self.gain_min)
+        c = (p / rms[..., None]).reshape(B, P, PATCH) / self._scale()
+        return torch.cat([rms.log2(), c], -1)
 
     def embed(self, codes: torch.Tensor) -> torch.Tensor:
-        """Codes ``(B, P, PATCH + 1)`` -> dequantised values."""
-        c = codes.float()
-        return torch.cat([self.gain_min + c[..., :1] * self.gain_step, (c[..., 1:] - self.half) * self.delta], -1)
+        """Codes ``(B, P, G + PATCH)`` -> dequantised values."""
+        c, G = codes.float(), self.groups
+        return torch.cat([self.gain_min + c[..., :G] * self.gain_step, (c[..., G:] - self.half) * self.delta], -1)
 
     def quantize(self, z: torch.Tensor, k: Optional[int] = None):
-        """``(B, P, PATCH + 1)`` -> dequantised values, codes and 0 (``k`` is ignored: no prefixes). The shape is
-        rescaled to the rounded gain before it is rounded."""
+        """``(B, P, G + PATCH)`` -> dequantised values, codes and 0 (``k`` is ignored: no prefixes). Each block is
+        rescaled to its rounded gain before it is rounded."""
         if self.bypass_vq:
             return z, None, z.new_zeros(())
-        gi = torch.round((z[..., 0] - self.gain_min) / self.gain_step).clamp(0, self.gain_levels - 1)
-        c = z[..., 1:] * torch.exp2(z[..., :1] - (self.gain_min + gi * self.gain_step)[..., None])
+        B, P, _ = z.shape
+        G = self.groups
+        gi = torch.round((z[..., :G] - self.gain_min) / self.gain_step).clamp(0, self.gain_levels - 1)
+        r = torch.exp2(z[..., :G] - (self.gain_min + gi * self.gain_step))
+        c = (z[..., G:].reshape(B, P, G, self.ng) * r[..., None]).reshape(B, P, PATCH)
         ci = torch.round(c / self.delta).clamp(-self.half, self.half) + self.half
-        codes = torch.cat([gi[..., None], ci], -1).long()
+        codes = torch.cat([gi, ci], -1).long()
         return self.embed(codes), codes, z.new_zeros(())
 
     def _draw(self, zq: torch.Tensor) -> torch.Tensor:
         """Whitened signal ``(B, P * PATCH)`` from dequantised values."""
         B, P, _ = zq.shape
-        return (torch.exp2(zq[..., :1]) * ((zq[..., 1:] * self.lam.sqrt()) @ self.U.T)).reshape(B, P * PATCH)
+        G = self.groups
+        p = (zq[..., G:] * self._scale()).reshape(B, P, G, self.ng) * torch.exp2(zq[..., :G])[..., None]
+        return (p.reshape(B, P, PATCH) @ self.U.T).reshape(B, P * PATCH)
 
     def decode(self, zq: torch.Tensor) -> torch.Tensor:
         return self.whitener.inverse(self._draw(zq))
@@ -599,7 +622,7 @@ class TransformCodec(nn.Module):
         return self.quantize(self.encode(x))[1]
 
     def bits_per_patch(self, levels: Optional[int] = None) -> int:
-        return int(round(math.log2(self.gain_levels) + PATCH * math.log2(2 * self.half + 1)))
+        return int(round(self.groups * math.log2(self.gain_levels) + PATCH * math.log2(2 * self.half + 1)))
 
 
 def crops(x: torch.Tensor, n: int, training: bool) -> torch.Tensor:
@@ -703,7 +726,8 @@ def build_from_args(a: dict):
     :class:`TransformCodec` (``arch="transform"``, revision 4) with its basis still at the identity."""
     if a.get("arch") == "transform":
         return TransformCodec(delta=a["tc_delta"], clip=a["tc_clip"], gain_step=a["tc_gain_step"],
-                              gain_min=a["tc_gain_min"], gain_levels=a["tc_gain_levels"], order=a["order"])
+                              gain_min=a["tc_gain_min"], gain_levels=a["tc_gain_levels"], order=a["order"],
+                              groups=a.get("tc_groups", 1))
     return PatchCodec(width=a["width"], dim=a["dim"], codes=a["codes"], levels=a["levels"], q_dropout=a["q_dropout"],
                       order=a["order"], stft_weight=a["stft_weight"], restart_after=a["restart_after"],
                       crop_sec=a["crop_sec"], upsample=a.get("upsample", "convT"),  # no key: runs before 27.11.2026
