@@ -410,3 +410,22 @@ def test_fsq_scale_shrinks_the_rounding_error():
 
     m1, m05, m11 = centroid_mse(1.0, 9), centroid_mse(0.5, 9), centroid_mse(1.0, 11)
     assert 0.058 < m1 < 0.070 and 0.025 < m05 < 0.033 and m05 < 0.6 * m1 and m05 < m11
+
+
+def test_flat_seconds_and_logpow_kept():
+    """Amendment of 28.11.2026 (sleep-lens #24): a gap of the clean channel (constant after the scale) has a true band
+    power of ~0, so against the 1e-6 floor of the log any reconstruction noise there dominates the log-power R^2;
+    ``logpow_kept`` computes the same R^2 without those seconds."""
+    from physioex.models.recon_eval import band_r2
+    from physioex.train.bin.patch_codec import flat_seconds, logpow_kept
+
+    rng = np.random.default_rng(0)
+    x = rng.standard_normal((4, 3000)).astype(np.float32)
+    x[1, 300:600] = -0.01  # a 3 s gap: constant
+    flat = flat_seconds(torch.from_numpy(x), 100)
+    assert flat.shape == (4, 30) and int(flat.sum()) == 3 and bool(flat[1, 3:6].all())
+    h = x + 0.02 * rng.standard_normal(x.shape).astype(np.float32)  # reconstruction with a small noise floor
+    keep = ~flat.reshape(-1).numpy()
+    every, kept = band_r2(h, x)["logpow"], logpow_kept(h, x, keep)
+    assert kept["5-8"] > 0.95 and every["5-8"] < 0.8
+    assert np.isclose(logpow_kept(h, x, np.ones(len(keep), bool))["5-8"], every["5-8"], atol=1e-6)

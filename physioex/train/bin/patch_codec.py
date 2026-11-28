@@ -74,6 +74,11 @@ EVAL_UNITS = ("ccshs", "dcsm", "hmc", "hpap_lab_full", "mass_ss02", "mass_ss03",
               "mros", "sleepedf", "wsc_visit1")
 SEAM = 10  # samples on each side of a patch boundary (0.1 s)
 COMB_SEG = 4000  # Welch segment of the comb test: 40 s, 0.025 Hz bins
+#: a 1 s segment with a smaller sd (RobustScale units, ~1e-3 of a typical second) is flat: a gap of the clean channel,
+#: filled with zeros by ``NanToZero`` and constant after the scale. Amendment of 28.11.2026 (xmai-lab/sleep-lens#24):
+#: 0.3 % of the seconds of the eval sample are flat, with a true band power ~1e-37 of the median; against the 1e-6
+#: floor of the log they carried 85-91 % of the squared log error of the 2-30 Hz bands of pilot Q2.
+FLAT_SD = 1e-3
 
 
 def _git(*cmd):
@@ -506,6 +511,22 @@ def _welch_sum(x: torch.Tensor, seg: int = COMB_SEG):
     return torch.fft.rfft(s, dim=-1).abs().pow(2).sum(0).cpu().numpy(), s.shape[0]
 
 
+def flat_seconds(x: torch.Tensor, fs: int = 100) -> torch.Tensor:
+    """``(..., n)`` -> ``(..., n // fs)`` bool: the 1 s segments whose sd is below :data:`FLAT_SD`."""
+    n = x.shape[-1] // fs * fs
+    return x[..., :n].reshape(*x.shape[:-1], -1, fs).float().std(-1) < FLAT_SD
+
+
+def logpow_kept(pred: np.ndarray, target: np.ndarray, keep: np.ndarray, fs: int = 100) -> dict:
+    """R^2 of the log band power per 1 s segment, as ``logpow`` of :func:`~physioex.models.recon_eval.band_r2`,
+    over the segments in ``keep`` only (``(M * n // fs,)`` bool, segments in the order of ``reshape(-1, fs)``)."""
+    from physioex.models.recon_eval import BANDS, r2
+
+    fp = np.abs(np.fft.rfft(pred.reshape(-1, fs)[keep], axis=1)) ** 2
+    ft = np.abs(np.fft.rfft(target.reshape(-1, fs)[keep], axis=1)) ** 2
+    return {name: r2(np.log10(fp[:, a:b].sum(1) + 1e-6), np.log10(ft[:, a:b].sum(1) + 1e-6)) for a, b, name in BANDS}
+
+
 def _pick_nights(test, unit_names, units, per_unit, seed):
     rng = np.random.default_rng(seed)
     out = []
@@ -539,6 +560,8 @@ def _eval(a):
     W = model.whitener
     R = len(RULES)
     cnt = {k: {"all": np.zeros((R, 3))} for k in prefixes}  # tp, fp, fn per rule
+    cnt_v = {k: {"all": np.zeros((R, 3))} for k in prefixes}  # the same over the epochs without a flat second
+    n_ep = np.zeros(2)  # scored epochs: all, with a flat second
     seam = {k: np.zeros(6) for k in prefixes}  # seam sum, n; interior sum, n; patch-centre sum, n (control)
     comb = {k: [0.0, 0] for k in prefixes}
     comb_x = [0.0, 0]
@@ -555,6 +578,8 @@ def _eval(a):
         sig = torch.from_numpy(x[e0:e1].reshape(-1)).to(device)
         sc = torch.from_numpy(ts - e0).to(device)
         X = sig.view(-1, 3000)[sc]
+        ok = ~flat_seconds(X, model.fs).any(-1)  # epochs without a gap of the clean channel
+        n_ep += [len(X), int((~ok).sum())]
         codes = encode_signal(model, sig, model.max_levels)
         m0 = rule_masks(X, model.fs, 60) > 0
         pos = torch.arange(len(sig), device=device)
@@ -582,6 +607,11 @@ def _eval(a):
             cnt[k]["all"] += c
             cnt[k].setdefault(unit, np.zeros((R, 3)))
             cnt[k][unit] += c
+            cv = torch.stack([(m0 & m1)[ok].sum((0, 1)), (~m0 & m1)[ok].sum((0, 1)), (m0 & ~m1)[ok].sum((0, 1))],
+                             -1).cpu().numpy()
+            cnt_v[k]["all"] += cv
+            cnt_v[k].setdefault(unit, np.zeros((R, 3)))
+            cnt_v[k][unit] += cv
             ew = (W(h[None])[0] - xw).pow(2)
             fid[k] += [float(ew[in_scored].sum()), float((h - sig)[in_scored].pow(2).sum())]
             seam[k] += [float(ew[near & in_scored].sum()), int((near & in_scored).sum()),
@@ -600,13 +630,16 @@ def _eval(a):
 
     freqs = np.fft.rfftfreq(COMB_SEG, 1 / model.fs)
     xs = np.concatenate(sub_x)
+    keep = ~flat_seconds(torch.from_numpy(xs), model.fs).reshape(-1).numpy()  # band sample: seconds that are not flat
     px = comb_x[0] / max(comb_x[1], 1)
     ctrl, ctrl_off = _line_ratios(px, freqs), _line_ratios(px, freqs, offset=0.25)
     res = {"run": os.path.abspath(a.run), "n_nights": len(used),
            "units": {u: sum(1 for n in used if n.startswith(u + "/")) for u in a.units.split(",")},
            "n_band_epochs": int(len(xs)), "gate": {**GATE, "bands": GATE_BANDS},
            "comb_control_x": {"median": float(np.median(ctrl)), "max": float(ctrl.max()),
-                              "median_offgrid": float(np.median(ctrl_off))}, "prefix": {}}
+                              "median_offgrid": float(np.median(ctrl_off))}, "prefix": {},
+           "flat": {"sd_below": FLAT_SD, "band_seconds": int(len(keep)), "band_seconds_flat": int((~keep).sum()),
+                    "scored_epochs": int(n_ep[0]), "scored_epochs_with_flat_second": int(n_ep[1])}}
 
     sst_w, sst_r = tot[1] - tot[0] ** 2 / max(tot[4], 1), tot[3] - tot[2] ** 2 / max(tot[4], 1)
 
@@ -614,11 +647,17 @@ def _eval(a):
         tp, fp, fn = c
         return float(2 * tp / (2 * tp + fp + fn)) if tp + fp + fn else 1.0
 
+    def gate0(cn):
+        return ({r: {"f1": f1(cn["all"][i]), "n_ref": int(cn["all"][i][0] + cn["all"][i][2]),
+                     "n_hat": int(cn["all"][i][0] + cn["all"][i][1])} for i, r in enumerate(RULES)},
+                {u: {r: f1(v[i]) for i, r in enumerate(RULES)} for u, v in cn.items() if u != "all"})
+
     for k in prefixes:
-        br = band_r2(np.concatenate(sub_h[k]), xs)
-        g0 = {r: {"f1": f1(cnt[k]["all"][i]), "n_ref": int(cnt[k]["all"][i][0] + cnt[k]["all"][i][2]),
-                  "n_hat": int(cnt[k]["all"][i][0] + cnt[k]["all"][i][1])} for i, r in enumerate(RULES)}
-        per_unit = {u: {r: f1(v[i]) for i, r in enumerate(RULES)} for u, v in cnt[k].items() if u != "all"}
+        hs = np.concatenate(sub_h[k])
+        br = band_r2(hs, xs)
+        lp_v = logpow_kept(hs, xs, keep, model.fs)
+        g0, per_unit = gate0(cnt[k])
+        g0v, per_unit_v = gate0(cnt_v[k])
         s = seam[k]
         seam_ratio = float((s[0] / max(s[1], 1)) / max(s[2] / max(s[3], 1), 1e-12))
         seam_centre = float((s[0] / max(s[1], 1)) / max(s[4] / max(s[5], 1), 1e-12))
@@ -633,6 +672,9 @@ def _eval(a):
                       "r2": r2_w >= GATE["r2"]}  # whitened R^2 of the scored nights (revision 2)
         checks = {**registered, "comb": comb_rel <= GATE["comb"]}  # binding since 26.11.2026
         controlled = {**checks, "seam": seam_centre <= GATE["seam"]}
+        # amendment of 28.11.2026: F1 and log power without the gaps of the clean channel (FLAT_SD); binding from then
+        valid = {**checks, "f1": all(g0v[r]["f1"] >= GATE["f1"] for r in RULES),
+                 "logpow": all(lp_v[b] >= GATE["logpow"] for b in GATE_BANDS)}
         res["prefix"][str(k)] = {"bits_per_patch": model.bits_per_patch(k), "r2_w_nights": r2_w, "r2_raw_nights": r2_r,
                                  "gate0": g0, "gate0_per_unit": per_unit,
                                  "band_r2": br, "seam_ratio": seam_ratio, "seam_vs_centre": seam_centre,
@@ -643,12 +685,16 @@ def _eval(a):
                                                 "gap": ph["real"] - ph["surr"]},
                                  "checks": checks, "pass": all(checks.values()),
                                  "checks_registered": registered, "pass_registered": all(registered.values()),
-                                 "checks_controlled": controlled, "pass_controlled": all(controlled.values())}
+                                 "checks_controlled": controlled, "pass_controlled": all(controlled.values()),
+                                 "gate0_valid": g0v, "gate0_valid_per_unit": per_unit_v, "logpow_valid": lp_v,
+                                 "checks_valid": valid, "pass_valid": all(valid.values())}
         print(f"[patch_codec eval] L{k}: R2 w {r2_w:.4f} raw {r2_r:.4f} | " + " ".join(f"{r} {g0[r]['f1']:.3f}" for r in RULES)
               + f" | logpow min {min(br['logpow'][b] for b in GATE_BANDS):.3f} | seam {seam_ratio:.3f}"
               + f" (vs centre {seam_centre:.3f}) | comb {np.median(lines):.3f} (on/off {comb_rel:.3f})"
               + f" | phase gap {ph['real'] - ph['surr']:+.3f} | pass {all(checks.values())}"
-              + f" (registered {all(registered.values())}, controlled {all(controlled.values())})",
+              + f" (registered {all(registered.values())}, controlled {all(controlled.values())})"
+              + " | without gaps: " + " ".join(f"{r} {g0v[r]['f1']:.3f}" for r in RULES)
+              + f" logpow min {min(lp_v[b] for b in GATE_BANDS):.3f} pass {all(valid.values())}",
               flush=True)
     passing = [k for k in prefixes if res["prefix"][str(k)]["pass"]]
     res["L_star"] = min(passing) if passing else None
@@ -656,11 +702,14 @@ def _eval(a):
     res["L_star_registered"] = min(passing_r) if passing_r else None
     passing_c = [k for k in prefixes if res["prefix"][str(k)]["pass_controlled"]]
     res["L_star_controlled"] = min(passing_c) if passing_c else None
+    passing_v = [k for k in prefixes if res["prefix"][str(k)]["pass_valid"]]
+    res["L_star_valid"] = min(passing_v) if passing_v else None
     res["minutes"] = round((time.time() - t0) / 60, 1)
     res["git_sha"] = _git("rev-parse", "HEAD")
     out = a.out or os.path.join(a.run, "gates.json")
     json.dump(res, open(out, "w"), indent=1)
-    print(f"[patch_codec eval] L* = {res['L_star']} (controlled {res['L_star_controlled']}) -> {out}", flush=True)
+    print(f"[patch_codec eval] L* = {res['L_star']} (controlled {res['L_star_controlled']}, without gaps "
+          f"{res['L_star_valid']}) -> {out}", flush=True)
     print("[patch_codec eval] DONE", flush=True)
 
 
