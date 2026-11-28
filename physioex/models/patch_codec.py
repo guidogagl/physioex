@@ -69,7 +69,13 @@ the first steps (every value at the bound, no gradient). Options, all off by def
   ``tanh`` is close to the MSE-optimal compander of a Gaussian (Panter-Dite, ``2 Phi(u / sqrt 3) - 1``): 0.029
   with 9 levels, 0.020 with 11, against 0.050 with 11 levels at unit scale.
 
-Input: ``(B, n)`` clean EEG at 100 Hz, ``RobustScale`` units (cache of the clean channels); ``n`` is
+Revision 4 (28.11.2026, after the pilots Q2 and Q3s of xmai-lab/sleep-lens#24): :class:`TransformCodec`, a
+gain-shape transform codec without training (KLT of the pool, the same relative step for every coefficient), as
+the reference that a trained codec has to beat at the same bits. On 8 DCSM nights, the linear FSQ codec (Q3s)
+saturated on loud patches: relative error 0.21-0.28 on the loudest 1 %, with 5-24 % of the ``tanh`` inputs at the
+bound.
+
+Input:``(B, n)`` clean EEG at 100 Hz, ``RobustScale`` units (cache of the clean channels); ``n`` is
 cut to a multiple of 200. Sleep stages and concept labels are never used.
 """
 from __future__ import annotations
@@ -501,6 +507,101 @@ class PatchCodec(nn.Module):
         return int(round((levels or self.vq_levels) * per))
 
 
+class TransformCodec(nn.Module):
+    """Gain-shape transform codec of the whitened 2 s patch, without training: the reference of revision 4
+    (28.11.2026, xmai-lab/sleep-lens#24). Whitening, patch grid, inverse whitener and code interface are those of
+    :class:`PatchCodec` with ``whiten="signal"`` and ``dec_out="white"``, so ``patch_codec eval`` and ``dump`` run
+    unchanged.
+
+    * gain: ``log2`` of the RMS of the whitened patch, rounded to ``gain_step`` (code ``0 .. gain_levels - 1``
+      from ``gain_min``);
+    * shape: the whitened patch over the rounded gain, in the KLT basis ``U`` of the pool (eigenvalues ``lam``
+      of the second moment of the shapes, mean 1); coefficient ``j`` in units of ``sqrt(lam_j)``, rounded to a
+      step ``delta`` and clipped to ``±half * delta`` (``half = ceil(clip / delta)``): ``2 half + 1`` levels per
+      coefficient;
+    * decoder: ``w_hat = 2^g U (sqrt(lam) c)``, then the inverse whitener.
+
+    Every coefficient keeps the same relative rounding error, ``delta^2 / 12`` of its variance (up to the
+    clipping), so the error of a patch has the second moment of its shape scaled by ``delta^2 / 12`` and the
+    whitened R^2 is about ``1 - delta^2 / 12``, at every amplitude. The codes of a patch depend on that patch and
+    on the 32-sample history of the whitening; the error of a patch does not depend on its neighbours. Codes per
+    patch: the gain, then the ``PATCH`` coefficients (``max_levels = PATCH + 1``; no prefixes)."""
+
+    def __init__(self, delta: float = 0.35, clip: float = 8.0, gain_step: float = 0.05, gain_min: float = -10.0,
+                 gain_levels: int = 320, order: int = 32, fs: int = FS):
+        super().__init__()
+        assert fs == FS and delta > 0 and clip > 0 and gain_levels > 1
+        self.fs, self.patch = fs, PATCH
+        self.quantizer, self.whiten, self.dec_out, self.arch = "transform", "signal", "white", "transform"
+        self.delta, self.clip, self.half = float(delta), float(clip), int(math.ceil(clip / delta))
+        self.gain_step, self.gain_min, self.gain_levels = float(gain_step), float(gain_min), int(gain_levels)
+        self.max_levels = self.vq_levels = PATCH + 1
+        self.q_dropout = 0.0
+        self.n_codes = max(self.gain_levels, 2 * self.half + 1)
+        self.whitener = Whitener(order, fs)
+        self.register_buffer("U", torch.eye(PATCH))
+        self.register_buffer("lam", torch.ones(PATCH))
+        self.bypass_vq = False
+        self.encoder_reach = 1  # the whitening history reaches the last order samples of the previous patch
+        self.receptive_patches = math.ceil((INV_TAPS - 1) / PATCH)  # the inverse FIR reaches 255 samples forward
+
+    @torch.no_grad()
+    def fit_basis(self, shapes: torch.Tensor) -> dict:
+        """``(M, PATCH)`` whitened patches over their RMS -> ``U`` and ``lam`` (descending, mean 1)."""
+        s = shapes.double()
+        ev, U = torch.linalg.eigh(s.T @ s / len(s))
+        ev, U = ev.flip(0).clamp_min(1e-12), U.flip(1)
+        self.U.copy_(U.float())
+        self.lam.copy_((ev / ev.mean()).float())
+        frac = (ev / ev.sum()).cumsum(0)
+        return {"patches": len(s), "lam_max": float(self.lam[0]), "lam_min": float(self.lam[-1]),
+                "variance_top": {str(k): float(frac[k - 1]) for k in (64, 128, 160, 180)}}
+
+    def encode(self, x: torch.Tensor) -> torch.Tensor:
+        """``(B, n) -> (B, P, PATCH + 1)``: log2 RMS of the whitened patch, then the KLT coefficients of the patch
+        over its RMS, in units of ``sqrt(lam)``."""
+        B, n = x.shape
+        P = n // PATCH
+        w = self.whitener(x[:, : P * PATCH]).reshape(B, P, PATCH)
+        rms = w.pow(2).mean(-1).sqrt().clamp_min(2.0 ** self.gain_min)
+        c = (w / rms[..., None]) @ self.U / self.lam.sqrt()
+        return torch.cat([rms.log2()[..., None], c], -1)
+
+    def embed(self, codes: torch.Tensor) -> torch.Tensor:
+        """Codes ``(B, P, PATCH + 1)`` -> dequantised values."""
+        c = codes.float()
+        return torch.cat([self.gain_min + c[..., :1] * self.gain_step, (c[..., 1:] - self.half) * self.delta], -1)
+
+    def quantize(self, z: torch.Tensor, k: Optional[int] = None):
+        """``(B, P, PATCH + 1)`` -> dequantised values, codes and 0 (``k`` is ignored: no prefixes). The shape is
+        rescaled to the rounded gain before it is rounded."""
+        if self.bypass_vq:
+            return z, None, z.new_zeros(())
+        gi = torch.round((z[..., 0] - self.gain_min) / self.gain_step).clamp(0, self.gain_levels - 1)
+        c = z[..., 1:] * torch.exp2(z[..., :1] - (self.gain_min + gi * self.gain_step)[..., None])
+        ci = torch.round(c / self.delta).clamp(-self.half, self.half) + self.half
+        codes = torch.cat([gi[..., None], ci], -1).long()
+        return self.embed(codes), codes, z.new_zeros(())
+
+    def _draw(self, zq: torch.Tensor) -> torch.Tensor:
+        """Whitened signal ``(B, P * PATCH)`` from dequantised values."""
+        B, P, _ = zq.shape
+        return (torch.exp2(zq[..., :1]) * ((zq[..., 1:] * self.lam.sqrt()) @ self.U.T)).reshape(B, P * PATCH)
+
+    def decode(self, zq: torch.Tensor) -> torch.Tensor:
+        return self.whitener.inverse(self._draw(zq))
+
+    def decode_codes(self, codes: torch.Tensor) -> torch.Tensor:
+        return self.decode(self.embed(codes))
+
+    @torch.no_grad()
+    def codes(self, x: torch.Tensor, levels: Optional[int] = None) -> torch.Tensor:
+        return self.quantize(self.encode(x))[1]
+
+    def bits_per_patch(self, levels: Optional[int] = None) -> int:
+        return int(round(math.log2(self.gain_levels) + PATCH * math.log2(2 * self.half + 1)))
+
+
 def crops(x: torch.Tensor, n: int, training: bool) -> torch.Tensor:
     """``(B, L) -> (B', n)``: one crop per window, at a random offset in training (patch grid at a
     random alignment with the epochs) and centred in eval; crops with a zero run are dropped."""
@@ -597,8 +698,12 @@ def kmeans_init_rvq(model: PatchCodec, loader, device, per_code: int = 20, max_b
     return len(z)
 
 
-def build_from_args(a: dict) -> PatchCodec:
-    """Untrained :class:`PatchCodec` from the ``args`` of a ``run.json`` (``model: patch_codec``)."""
+def build_from_args(a: dict):
+    """Untrained :class:`PatchCodec` from the ``args`` of a ``run.json`` (``model: patch_codec``), or a
+    :class:`TransformCodec` (``arch="transform"``, revision 4) with its basis still at the identity."""
+    if a.get("arch") == "transform":
+        return TransformCodec(delta=a["tc_delta"], clip=a["tc_clip"], gain_step=a["tc_gain_step"],
+                              gain_min=a["tc_gain_min"], gain_levels=a["tc_gain_levels"], order=a["order"])
     return PatchCodec(width=a["width"], dim=a["dim"], codes=a["codes"], levels=a["levels"], q_dropout=a["q_dropout"],
                       order=a["order"], stft_weight=a["stft_weight"], restart_after=a["restart_after"],
                       crop_sec=a["crop_sec"], upsample=a.get("upsample", "convT"),  # no key: runs before 27.11.2026

@@ -429,3 +429,81 @@ def test_flat_seconds_and_logpow_kept():
     every, kept = band_r2(h, x)["logpow"], logpow_kept(h, x, keep)
     assert kept["5-8"] > 0.95 and every["5-8"] < 0.8
     assert np.isclose(logpow_kept(h, x, np.ones(len(keep), bool))["5-8"], every["5-8"], atol=1e-6)
+
+
+# ---------------------------------------------------------------------------- transform codec (revision 4)
+
+
+def _transform_codec(delta: float = 0.35, clip: float = 8.0):
+    from physioex.models.patch_codec import TransformCodec
+
+    torch.manual_seed(0)
+    m = TransformCodec(delta=delta, clip=clip).eval()
+    x = _ar_noise(8, 60 * PATCH, seed=1)
+    m.whitener.fit_psd(*welch_psd(x))
+    with torch.no_grad():
+        w = m.whitener(x).reshape(-1, PATCH)
+        m.fit_basis(w / w.pow(2).mean(1, keepdim=True).sqrt())
+    return m
+
+
+def test_transform_codec_bypass_is_lossless_and_codes_round_trip():
+    """Without rounding the transform codec is the identity on the whitened patches, at any amplitude; codes ->
+    decode equals quantize -> decode; one code for the gain and one per coefficient, inside ``n_codes``."""
+    m = _transform_codec()
+    x = _ar_noise(2, 30 * PATCH, seed=2) * torch.tensor([[1.0], [7.0]])
+    with torch.no_grad():
+        z = m.encode(x)
+        assert z.shape == (2, 30, PATCH + 1)
+        m.bypass_vq = True
+        w_hat = m._draw(m.quantize(z)[0])
+        m.bypass_vq = False
+        xw = m.whitener(x)
+        assert float((w_hat - xw).pow(2).mean() / xw.pow(2).mean()) < 1e-10
+        c = m.codes(x)
+        assert c.shape == (2, 30, PATCH + 1) and int(c.min()) >= 0 and int(c.max()) < m.n_codes
+        assert torch.allclose(m.decode_codes(c), m.decode(m.quantize(z)[0]))
+
+
+@pytest.mark.parametrize("delta", [0.5, 0.25])
+def test_transform_codec_relative_error_is_delta2_over_12_at_every_amplitude(delta):
+    """Gain-shape coding: whitened error ~ delta^2 / 12 of the whitened power, for a quiet and a loud signal."""
+    m = _transform_codec(delta=delta)
+    x = _ar_noise(2, 120 * PATCH, seed=3) * torch.tensor([[0.2], [10.0]])
+    with torch.no_grad():
+        xw = m.whitener(x)
+        rel = (m._draw(m.quantize(m.encode(x))[0]) - xw).pow(2).mean(1) / xw.pow(2).mean(1)
+    assert torch.allclose(rel, torch.full_like(rel, delta ** 2 / 12), rtol=0.15)
+
+
+def test_transform_codec_locality():
+    """The codes of patch i move the output of patches i .. i + 2 only (the inverse FIR reaches 255 samples
+    forward); a change of the signal from the start of patch 7 leaves the codes of patches 0-6 unchanged."""
+    m = _transform_codec()
+    with torch.no_grad():
+        x = _ar_noise(1, 12 * PATCH, seed=4)
+        c = m.codes(x)
+        c1 = c.clone()
+        c1[0, 5, 1:] = m.half  # every coefficient of patch 5 to the middle level
+        d = (m.decode_codes(c1) - m.decode_codes(c)).abs()[0].view(12, PATCH).amax(1)
+        assert torch.all(d[:5] <= 1e-6 * d.max()) and torch.all(d[8:] <= 1e-6 * d.max()) and d[5] > 0
+        x1 = x.clone()
+        x1[0, 7 * PATCH:] += torch.randn(5 * PATCH)
+        assert torch.equal(m.codes(x1)[0, :7], c[0, :7])
+
+
+def test_transform_codec_from_args_prefixes_bits_and_chunks():
+    from physioex.models.patch_codec import build_from_args
+    from physioex.train.bin.patch_codec import decode_signal, encode_signal, model_prefixes
+
+    m = _transform_codec(delta=0.3, clip=6.0)
+    m2 = build_from_args({"arch": "transform", "tc_delta": 0.3, "tc_clip": 6.0, "tc_gain_step": 0.05,
+                          "tc_gain_min": -10.0, "tc_gain_levels": 320, "order": 32}).eval()
+    m2.load_state_dict(m.state_dict())
+    sig = _ar_noise(1, 23 * PATCH + 77, seed=5)[0]
+    c1 = m2.codes(sig[None])[0]
+    assert torch.equal(c1, m.codes(sig[None])[0])
+    assert model_prefixes(m2) == [PATCH + 1]
+    assert m2.half == 20 and m2.bits_per_patch() == round(math.log2(320) + PATCH * math.log2(41))
+    assert torch.equal(encode_signal(m2, sig, m2.max_levels, chunk=4), c1)
+    assert torch.allclose(decode_signal(m2, c1, chunk=4), m2.decode_codes(c1[None])[0], atol=1e-5)

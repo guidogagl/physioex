@@ -4,6 +4,11 @@
         [--local-cache] --out RUN [--levels 8 --steps-per-epoch 5000 --epochs 30 --batch 128]
     python -m physioex.train.bin.patch_codec eval --run RUN [--cache-dir C] [--per-unit 10] [--prefixes 1 2 4 8]
     python -m physioex.train.bin.patch_codec dump --run RUN [--train] [--nights-from DUMP/meta.json] [--out RUN/dump]
+    python -m physioex.train.bin.patch_codec transform --from-run RUN --out DIR [--deltas 0.35,0.25]
+
+``transform`` (revision 4, 28.11.2026): the reference transform codec without training
+(:class:`~physioex.models.patch_codec.TransformCodec`), with the whitener, splits and pipeline of ``RUN``; one run
+directory ``DIR/d<delta>`` per step, read by ``eval`` and ``dump`` like a trained run.
 
 ``fit``: whitening filter on the training pool (``whitener.json``), then encoder, quantiser (RVQ, or FSQ
 with ``--quantizer fsq``; revision 2 also adds ``--whiten signal``, ``--ctx-enc`` and ``--ctx-dec``, see
@@ -94,8 +99,8 @@ def default_prefixes(levels: int):
 
 def model_prefixes(model):
     """Prefixes worth evaluating: every default prefix when the model was trained on prefixes (RVQ, or FSQ with
-    nested dropout ``q_dropout > 0``), else the full depth only."""
-    if model.quantizer == "fsq" and not model.q_dropout:
+    nested dropout ``q_dropout > 0``), else the full depth only (also the transform codec of revision 4)."""
+    if model.quantizer == "transform" or (model.quantizer == "fsq" and not model.q_dropout):
         return [model.max_levels]
     return default_prefixes(model.max_levels)
 
@@ -179,11 +184,25 @@ def main(argv=None):
                    help="also write the spectral twin of the codes here (S3): residual k-means of patch spectra")
     d.add_argument("--twin-fit-nights", type=int, default=300, help="train nights for the twin's codebooks")
     d.add_argument("--twin-fit-vectors", type=int, default=1_000_000)
+    t = sub.add_parser("transform", help="reference transform codec of revision 4 (no training), from a pilot run")
+    t.add_argument("--from-run", required=True, help="run whose whitener, splits, items and pipeline are reused")
+    t.add_argument("--out", required=True, help="directory: klt.pt (the basis), then one run directory per delta")
+    t.add_argument("--deltas", default="0.35", help="comma-separated relative steps; whitened R^2 ~ 1 - delta^2 / 12")
+    t.add_argument("--clip", type=float, default=8.0, help="coefficients clipped to ± clip standard deviations")
+    t.add_argument("--gain-step", type=float, default=0.05, help="step of log2 RMS")
+    t.add_argument("--gain-min", type=float, default=-10.0)
+    t.add_argument("--gain-levels", type=int, default=320)
+    t.add_argument("--nights", type=int, default=300, help="train nights for the basis")
+    t.add_argument("--patches-per-night", type=int, default=500)
+    t.add_argument("--cache-dir", default=None, help="default: the run's source cache")
+    t.add_argument("--seed", type=int, default=0)
     a = ap.parse_args(argv)
     if a.cmd == "eval":
         return _eval(a)
     if a.cmd == "dump":
         return _dump(a)
+    if a.cmd == "transform":
+        return _transform(a)
     a.model, a.dataset, a.load_fs, a.fs, a.root, a.resample = "patch_codec", None, None, None, None, None
     a.cache_dir_src = a.cache_dir or os.environ.get("PHYSIOEX_CACHE_DIR")
     os.makedirs(a.out, exist_ok=True)
@@ -537,6 +556,82 @@ def _pick_nights(test, unit_names, units, per_unit, seed):
         pick = np.sort(rng.choice(len(have), min(per_unit, len(have)), replace=False))
         out.extend((u, have[i][1], have[i][0]) for i in pick)
     return out
+
+
+def _transform(a):
+    """Reference transform codec of revision 4 (:class:`~physioex.models.patch_codec.TransformCodec`): the KLT of
+    the shapes (whitened patch over its RMS) of ``--patches-per-night`` random patches of ``--nights`` random train
+    nights of ``--from-run`` (its whitener, splits, items and pipeline), saved in ``<out>/klt.pt`` and reused when
+    present; then one run directory ``<out>/d<delta>`` per step, which ``eval`` and ``dump`` read like any run."""
+    import physioex
+    from physioex.data.merged import UNITS, cached_subjects
+    from physioex.models.patch_codec import PATCH, TransformCodec
+    from physioex.train.bin.pretrain_combo import Nights, open_unit
+
+    t0 = time.time()
+    ra = json.load(open(os.path.join(a.from_run, "run.json")))["args"]
+    cache = a.cache_dir or ra.get("cache_dir_src") or ra.get("cache_dir")
+    sd = torch.load(os.path.join(a.from_run, "model.pt"), map_location="cpu")
+    base = TransformCodec(order=ra["order"])
+    base.whitener.load_state_dict({k.split(".", 1)[1]: v for k, v in sd.items() if k.startswith("whitener.")})
+    os.makedirs(a.out, exist_ok=True)
+    kp = os.path.join(a.out, "klt.pt")
+    if os.path.exists(kp):
+        st = torch.load(kp)
+        base.U.copy_(st["U"])
+        base.lam.copy_(st["lam"])
+        fit = st["fit"]
+    else:
+        sp = json.load(open(ra["splits"]))
+        sites = sorted({u["site"] for it in ra["items"].split(",") for u in UNITS
+                        if u.get("item") == it and u["site"] in sp})
+        train = [(u, s) for site in sites for u, s in sp[site]["train"]]
+        rng = np.random.default_rng(a.seed)
+        pick = [train[i] for i in np.sort(rng.choice(len(train), min(a.nights, len(train)), replace=False))]
+        readers, shapes, used = {}, [], []
+        with torch.no_grad():
+            for unit, sid in pick:
+                if unit not in readers:
+                    ds = open_unit(unit, ra, cache)
+                    readers[unit] = (Nights(ds, ra), cached_subjects(ds))
+                night, cached = readers[unit]
+                if sid not in cached:  # a night outside the cache would start the cleaner
+                    continue
+                x, y, ts = night.get(sid)
+                if len(ts) < 20:
+                    continue
+                e0, e1 = int(ts.min()), int(ts.max()) + 1
+                w = base.whitener(torch.from_numpy(np.ascontiguousarray(x[e0:e1].reshape(-1))).float()[None])[0]
+                p = w[: len(w) // PATCH * PATCH].view(-1, PATCH)
+                rms = p.pow(2).mean(1).sqrt()
+                ok = torch.nonzero(rms > FLAT_SD).squeeze(1)  # patches inside a gap of the clean channel have no shape
+                if len(ok) == 0:
+                    continue
+                sel = ok[torch.from_numpy(rng.choice(len(ok), min(a.patches_per_night, len(ok)), replace=False))]
+                shapes.append(p[sel] / rms[sel, None])
+                used.append(f"{unit}/{sid}")
+        fit = base.fit_basis(torch.cat(shapes))
+        fit.update(nights=len(used), units=sorted({u.split("/")[0] for u in used}))
+        torch.save({"U": base.U, "lam": base.lam, "fit": fit, "nights": used}, kp)
+    print(f"[patch_codec transform] basis {fit}", flush=True)
+    for d in (float(v) for v in a.deltas.split(",")):
+        m = TransformCodec(delta=d, clip=a.clip, gain_step=a.gain_step, gain_min=a.gain_min,
+                           gain_levels=a.gain_levels, order=ra["order"])
+        m.load_state_dict(base.state_dict())
+        out = os.path.join(a.out, f"d{d:g}")
+        os.makedirs(out, exist_ok=True)
+        torch.save(m.state_dict(), os.path.join(out, "model.pt"))
+        args = {**ra, "arch": "transform", "quantizer": "transform", "tc_delta": d, "tc_clip": a.clip,
+                "tc_gain_step": a.gain_step, "tc_gain_min": a.gain_min, "tc_gain_levels": a.gain_levels,
+                "from_run": os.path.abspath(a.from_run), "out": out}
+        run = {"args": args, "git_sha": _git("rev-parse", "HEAD"), "git_dirty": bool(_git("status", "--porcelain")),
+               "physioex_version": getattr(physioex, "__version__", None), "host": socket.gethostname(),
+               "job_id": os.environ.get("SLURM_JOB_ID"), "basis": fit, "bits_per_patch": m.bits_per_patch(),
+               "expected_r2_w": 1 - d * d / 12, "minutes": round((time.time() - t0) / 60, 1)}
+        json.dump(run, open(os.path.join(out, "run.json"), "w"), indent=1, default=str)
+        print(f"[patch_codec transform] delta {d:g}: {m.bits_per_patch()} bits per patch, whitened R^2 about "
+              f"{1 - d * d / 12:.4f} -> {out}", flush=True)
+    print("[patch_codec transform] DONE", flush=True)
 
 
 def _eval(a):
